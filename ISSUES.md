@@ -24,6 +24,70 @@ request and exits. A persistent server mode is planned for v0.7.
 
 ## 🔧 Build & CI
 
+### Container Build fails: `aquasecurity/trivy-action@0.29.0` not found
+
+**Problem:** The Container Build workflow fails immediately with:
+`Unable to resolve action 'aquasecurity/trivy-action@0.29.0', unable to find version '0.29.0'`
+
+**Root cause:** The Trivy action version `0.29.0` does not exist or was retracted.
+The workflow file pins an invalid version.
+
+**Fix:** Update `.github/workflows/container.yml` to use a valid Trivy action version
+(e.g., `aquasecurity/trivy-action@0.28.0` or the latest stable).
+
+**Status:** ❌ Unresolved — needs workflow file update.
+
+### Security Scan: `kubescape/action` repository not found
+
+**Problem:** The K8s Manifest Validation job fails with:
+`Unable to resolve action kubescape/action, repository not found`
+
+**Root cause:** The Kubescape action repository may have been renamed, moved, or
+removed. The workflow references `kubescape/action` which no longer resolves.
+
+**Fix:** Update `.github/workflows/security-scan.yml` to use the correct Kubescape
+action path or replace with an alternative K8s manifest validation tool.
+
+**Status:** ❌ Unresolved — needs workflow file update.
+
+### Security Scan: Cargo Udeps reports unused dependencies (exit code 101)
+
+**Problem:** The `cargo-udeps` job exits with code 101, indicating unused
+dependencies were found. The job itself succeeds (the tool ran), but the exit
+code signals findings.
+
+**Status:** ⚠️ Informational — job succeeds, exit code is a warning signal.
+Needs review to determine if unused deps should be removed.
+
+### Security Scan: Cargo Outdated reports outdated dependencies (exit code 1)
+
+**Problem:** The `cargo-outdated` job exits with code 1, indicating outdated
+dependencies exist. The job itself succeeds, but the exit code signals findings.
+
+**Status:** ⚠️ Informational — job succeeds, exit code is a warning signal.
+Needs periodic review to keep deps up to date.
+
+### GitHub Actions: Node.js 20 deprecation warnings
+
+**Problem:** Multiple workflow jobs emit warnings that Node.js 20 actions are
+deprecated. Node.js 20 will be removed from the runner on September 16th, 2026.
+
+**Affected actions:** `actions/checkout@v4`, `github/codeql-action/upload-sarif@v3`
+
+**Fix:** Update affected actions to versions that support Node.js 24, or set
+`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` environment variable.
+
+**Status:** ⚠️ Warning — not blocking, but needs attention before Sep 2026.
+
+### GitHub Actions: CodeQL Action v3 deprecation (Dec 2026)
+
+**Problem:** CodeQL Action v3 will be deprecated in December 2026.
+
+**Fix:** Update all occurrences of `github/codeql-action/*@v3` to `@v4` in
+workflow files.
+
+**Status:** ⚠️ Warning — not blocking, but needs attention before Dec 2026.
+
 ### Container Build workflow may fail at "Set up job"
 
 **Problem:** The `Container Images` job in `.github/workflows/build.yml` may fail
