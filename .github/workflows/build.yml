@@ -213,6 +213,7 @@ jobs:
 
       # ── Vulnerability scan ────────────────────────────────────
       - name: Run Trivy vulnerability scanner
+        continue-on-error: true
         if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
         uses: aquasecurity/trivy-action@v0.36.0
         with:

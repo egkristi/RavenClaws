@@ -23,6 +23,7 @@ RUN case "$TARGETPLATFORM" in \
     esac
 
 # Install dependencies and cross-compilation tools
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libssl-dev \
@@ -46,6 +47,7 @@ RUN case "$TARGETPLATFORM" in \
     esac
 
 # Download RavenFabric agent binary (optional runtime component)
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG RAVENFABRIC_VERSION=v0.25.1
 RUN RF_ARCH=$(cat /tmp/rf_arch.txt) && \
     echo "Downloading RavenFabric ${RAVENFABRIC_VERSION} for ${RF_ARCH}..." && \

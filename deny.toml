@@ -10,18 +10,19 @@ targets = [
     { triple = "aarch64-apple-darwin" },
     { triple = "x86_64-unknown-linux-musl" },
 ]
+all-features = false
+no-default-features = false
+
+[output]
+feature-depth = 1
 
 [advisories]
-# Block the build on any advisory (CVE, yanked, unmaintained)
-vulnerability = "deny"
-unmaintained = "deny"
-unsound = "deny"
-yanked = "deny"
-notice = "deny"
 # Path to the advisory database (local clone)
 db-path = "~/.cargo/advisory-db"
 # Fetch the advisory database before checking
 db-urls = ["https://github.com/rustsec/advisory-db"]
+# Ignored advisories (none by default)
+ignore = []
 
 [licenses]
 # AGPLv3-or-later is our license. Allowed dependencies must be compatible.
@@ -44,26 +45,34 @@ allow = [
     "Python-2.0",
     "WTFPL",
     "Unlicense",
+    "AGPL-3.0-or-later",
+    "CDLA-Permissive-2.0",
 ]
-# Deny any license not explicitly allowed
-unlicensed = "deny"
-# Allow ambiguous licenses (ones we've manually reviewed)
-allow-osi-fsf-free = "neither"
 # Confidence threshold for license detection
 confidence-threshold = 0.8
-# Copyleft licenses we explicitly allow (after review)
-copyleft = "deny"
 # Exceptions for specific crates that use allowed copyleft licenses
 exceptions = [
     # Allow each exception with a reason
-    { allow = ["AGPL-3.0"], name = "ravenclaw", version = "*" },
+    { allow = ["AGPL-3.0-or-later"], name = "ravenclaw", version = "*" },
 ]
+
+[licenses.private]
+# Ignore workspace crates that aren't published
+ignore = false
+registries = []
 
 [bans]
 # Prevent multiple versions of the same crate
 multiple-versions = "deny"
-# Highlight duplicate versions but don't fail
-skip-tree = []
+# Allow wildcard dependencies
+wildcards = "allow"
+# Highlight duplicate versions
+highlight = "all"
+# Workspace default features
+workspace-default-features = "allow"
+external-default-features = "allow"
+# Allow workspace crates automatically
+allow-workspace = false
 # Specific crates to deny entirely
 deny = []
 # Skip these crates when checking for duplicates
@@ -71,10 +80,14 @@ skip = [
     # tokio-util is pulled in by multiple deps at different versions
     { name = "tokio-util", version = "0.7" },
 ]
+skip-tree = []
 
 [sources]
 # Only allow crates from crates.io (no git/path dependencies in release)
 unknown-registry = "deny"
 unknown-git = "deny"
-allow-registry = ["https://github.com/rustsec/advisory-db"]
+allow-registry = [
+    "https://github.com/rustsec/advisory-db",
+    "https://github.com/rust-lang/crates.io-index",
+]
 allow-git = []

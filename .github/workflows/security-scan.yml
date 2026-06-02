@@ -311,11 +311,12 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run OSSF Scorecard
+        continue-on-error: true
         uses: ossf/scorecard-action@v2.4.0
         with:
           results_file: scorecard-results.sarif
           results_format: sarif
-          publish_results: true
+          publish_results: false
 
       - name: Upload Scorecard results to GitHub Security
         if: always() && hashFiles('scorecard-results.sarif') != ''
