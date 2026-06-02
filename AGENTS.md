@@ -35,7 +35,7 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (88 tests, 8 modules) | ✅ Working |
+| Verification suite (94 tests, 8 modules) | ✅ Working |
 | `--exec` mode | ❌ Dead code — CLI arg parsed but never used |
 | Swarm mode | ❌ Stub — warns "not yet implemented", exits 0 |
 | Supervisor mode | ❌ Stub — warns "not yet implemented", exits 0 |
@@ -188,7 +188,7 @@ scripts/
 ### Running Tests
 
 ```bash
-./scripts/verify.sh --all          # Full suite (88 tests)
+./scripts/verify.sh --all          # Full suite (94 tests)
 ./scripts/verify.sh --quick        # Smoke test (litellm + local + security)
 ./scripts/verify.sh --litellm      # Single module
 ./scripts/verify.sh --build        # Build + all tests

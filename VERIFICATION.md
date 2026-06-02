@@ -146,27 +146,46 @@ The verification suite runs **94 tests** across **8 modules**, covering **4 depl
 ### Single-provider config (`tests/config/ravenclaw-test.toml`)
 ```toml
 [llm]
+provider = "litellm"
 endpoint = "http://localhost:4000"
 model = "best-coding"
-timeout_secs = 30
+timeout_secs = 60
 
 [security]
 require_tls = false
+audit_log = false
+
+[runtime]
+workdir = "/tmp/ravenclaw-test"
+max_agents = 5
+health_interval_secs = 10
 ```
 
 ### Multi-model config (`tests/config/ravenclaw-multi-test.toml`)
 ```toml
 [llm]
+provider = "litellm"
 endpoint = "http://localhost:4000"
 model = "best-coding"
-timeout_secs = 30
+timeout_secs = 60
 
-[llms]
-providers = [
-    { endpoint = "http://localhost:4000", model = "best-coding" },
-    { endpoint = "http://localhost:4000", model = "claude-sonnet" },
-    { endpoint = "http://localhost:4000", model = "deepseek-v4-pro" },
-]
+[[llms]]
+provider = "litellm"
+endpoint = "http://localhost:4000"
+model = "best-coding"
+timeout_secs = 60
+
+[[llms]]
+provider = "litellm"
+endpoint = "http://localhost:4000"
+model = "claude-sonnet"
+timeout_secs = 60
+
+[[llms]]
+provider = "litellm"
+endpoint = "http://localhost:4000"
+model = "deepseek-v4-pro"
+timeout_secs = 60
 
 [security]
 require_tls = false
@@ -258,6 +277,7 @@ The quick smoke test covers LiteLLM connectivity (4), local macOS binary (12), a
 | Kubernetes | 13 | 13 | 0 |
 | Security & Integrity | 8 | 8 | 0 |
 | Performance | 5 | 5 | 0 |
+| LLM Quality | 36 | 30 | 6 |
 | LLM Quality | 36 | 30 | 6 |
 
 Detailed logs: `target/verification-results/YYYYMMDD-HHMMSS-*.log`

@@ -11,6 +11,31 @@
 
 ---
 
+## Current State
+
+| Component | Status | Details |
+|---|---|---|
+| Single agent (single-provider) | ✅ Working | Sends prompt, logs response |
+| Single agent (multi-model) | ✅ Working | Iterates all providers, logs each response |
+| LLM providers (4) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama |
+| CLI & env-var overrides | ✅ Working | `--provider`, `--endpoint`, `--model` |
+| Config validation | ✅ Working | TLS enforcement, endpoint checks |
+| Container security | ✅ Working | Non-root, read-only FS, dropped caps |
+| Verification suite | ✅ Working | 94 tests, 8 modules, 4 targets |
+| Multi-model routing | Partial | Round-robin `next_client()` only, no intelligent routing |
+| `--exec` mode | ❌ Dead code | CLI arg parsed but never used |
+| Swarm mode | ❌ Stub | Warns "not yet implemented", exits 0 |
+| Supervisor mode | ❌ Stub | Warns "not yet implemented", exits 0 |
+| Tool-use / function calling | ❌ Not implemented | Agent cannot call tools |
+| Agent loop / ReAct planning | ❌ Not implemented | One-shot send-and-exit |
+| Streaming responses | ❌ Not implemented | `stream: None` hardcoded |
+| Conversation memory | ❌ Not implemented | In-memory only, lost on exit |
+| RavenFabric integration | ❌ Not implemented | Crate commented out in Cargo.toml |
+| GitHub Actions CI/CD | ❌ Not implemented | No workflow files exist |
+| Pre-built binaries | ❌ Not implemented | No releases published |
+
+---
+
 ## Priority: Critical — v0.1.0 Release Blockers
 
 *Fix critical issues. Ship a working developer preview. Establish trust.*
@@ -167,7 +192,11 @@
 | **Swarm mode** | Native (Rust) | Via plugins | Via Python | Via gateway | Varies |
 | **Deployment** | Binary, Docker, K8s | npm, Docker | pip, Docker | Bun, Docker | Varies |
 | **License** | AGPLv3 + Commercial | Proprietary? | MIT | MIT | Varies |
-| **Verification** | 88 tests, 8 modules, all targets | Limited | Community tests | Internal tests | Varies |
+| **Verification** | 94 tests, 8 modules, 4 targets | Limited | Community tests | Internal tests | Varies |
+| **Agent loop / ReAct** | ❌ Planned | ✅ | ✅ | ✅ | Varies |
+| **Tool-use / function calling** | ❌ Planned | ✅ | ✅ | ✅ | Varies |
+| **Streaming responses** | ❌ Planned | ✅ | ✅ | ✅ | Varies |
+| **Conversation memory** | ❌ Planned | ✅ | ❌ | ✅ | Varies |
 
 ### Key Battlegrounds
 
@@ -177,7 +206,7 @@
 
 3. **Simplicity** — One binary. Zero dependencies at runtime. No Python runtime, no Node runtime, no virtualenv. `./ravenclaw --mode single` and it works.
 
-4. **Verification** — Our 88-test suite across 8 modules and 5 deployment targets is already more comprehensive than any competitor. We will maintain this as a point of pride.
+4. **Verification** — Our 94-test suite across 8 modules and 4 deployment targets is already more comprehensive than any competitor. We will maintain this as a point of pride.
 
 5. **Open Source + Commercial** — AGPLv3 protects against cloud provider exploitation while the commercial license funds development. MIT alternatives (OpenManus, Vellum) risk the MongoDB/Elasticsearch fate.
 
