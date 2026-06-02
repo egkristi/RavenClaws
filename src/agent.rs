@@ -5,7 +5,7 @@
 use std::sync::Arc;
 use crate::config::Config;
 use crate::error::Result;
-use crate::llm::{ChatMessage, LiteLLMClient, LLMProviderTrait, MultiModelManager};
+use crate::llm::{ChatMessage, LLMProviderTrait, MultiModelManager};
 use tracing::{info, warn};
 
 /// Run a single autonomous agent (single-provider mode)

@@ -28,7 +28,7 @@ uuid = { version = "1.6", features = ["v4"] }
 # ravenfabric = "0.1"
 
 # Configuration
-config = { version = "0.14", default-features = false, features = ["toml", "env"] }
+config = { version = "0.15", default-features = false, features = ["toml"] }
 
 # Logging
 tracing = "0.1"

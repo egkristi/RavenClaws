@@ -4,7 +4,6 @@
 //! Supports multiple LLM providers: LiteLLM, OpenRouter, Ollama, OpenAI.
 
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -79,7 +78,7 @@ pub struct LLMConfig {
     pub timeout_secs: u64,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct RavenFabricConfig {
     /// RavenFabric endpoint
     #[serde(default)]
@@ -98,7 +97,7 @@ pub struct RavenFabricConfig {
     pub allowed_hosts: Vec<String>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct SecurityConfig {
     /// Require TLS for all connections
     #[serde(default = "default_true")]
@@ -113,7 +112,7 @@ pub struct SecurityConfig {
     pub audit_log: bool,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Default, Deserialize)]
 pub struct RuntimeConfig {
     /// Working directory
     #[serde(default = "default_workdir")]

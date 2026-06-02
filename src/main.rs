@@ -91,8 +91,10 @@ async fn main() -> anyhow::Result<()> {
         // Create multi-model manager
         let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
         
-        for (i, client) in (0..multi_llm.client_count()).map(|i| multi_llm.get_client(i).unwrap()) {
-            info!(provider = client.provider_name(), model = client.model(), "Provider initialized");
+        for i in 0..multi_llm.client_count() {
+            if let Some(client) = multi_llm.get_client(i) {
+                info!(provider = client.provider_name(), model = client.model(), "Provider initialized");
+            }
         }
         
         // Run agent based on mode with multi-model support
