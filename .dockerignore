@@ -1,0 +1,41 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Rust build artifacts
+target/
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# CI
+.github/
+
+# Kubernetes
+k8s/
+
+# Scripts
+scripts/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+LICENSE
+LICENSES/
+LICENSING.md
+
+# Config (use mounted volumes in production)
+config/litellm-config.yaml

@@ -1,0 +1,5 @@
+# Trivy vulnerability ignore list
+# Format: <vulnerability-id> [<optional expiration date>] <optional comment>
+
+# Example:
+# CVE-2023-12345 2025-12-31  # Being tracked in issue #42, low risk in our context
