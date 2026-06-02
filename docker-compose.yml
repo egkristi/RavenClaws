@@ -11,7 +11,6 @@ services:
       - RUST_LOG=debug
       - RAVENCLAW__LLM__ENDPOINT=http://litellm:4000
       - LITELLM_API_KEY=${LITELLM_API_KEY:-sk-test}
-      - RAVENCLAW__RAVENFABRIC__ENDPOINT=http://ravenfabric:8080
     volumes:
       - ./config:/config:ro
       - workspace:/workspace
@@ -43,7 +42,9 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # Optional: RavenFabric for swarm coordination
+  # Optional: RavenFabric for swarm/supervisor coordination
+  # Uncomment to enable multi-agent orchestration.
+  # RavenFabric agent binary is included in the RavenClaw container image.
   # ravenfabric:
   #   image: ravenfabric/ravenfabric:latest
   #   container_name: ravenfabric-dev

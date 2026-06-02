@@ -27,6 +27,9 @@ target "default" {
   description = "Build multi-arch container image"
   dockerfile = "Dockerfile"
   platforms = ["linux/amd64", "linux/arm64"]
+  args = {
+    RAVENFABRIC_VERSION = "v0.25.1"
+  }
   tags = concat(
     ["${REGISTRY}/${IMAGE_NAME}:latest"],
     VERSION != "" ? [

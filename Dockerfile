@@ -11,19 +11,32 @@ FROM --platform=$BUILDPLATFORM rust:1.86-slim-bookworm AS builder
 
 WORKDIR /app
 
-# Map TARGETPLATFORM to Rust target triple
+# Map TARGETPLATFORM to Rust target triple and RavenFabric arch
 ARG TARGETPLATFORM
 RUN case "$TARGETPLATFORM" in \
-        "linux/amd64")  echo "x86_64-unknown-linux-gnu" > /tmp/rust_target.txt ;; \
-        "linux/arm64")  echo "aarch64-unknown-linux-gnu" > /tmp/rust_target.txt ;; \
-        *)              echo "x86_64-unknown-linux-gnu" > /tmp/rust_target.txt ;; \
+        "linux/amd64")  echo "x86_64-unknown-linux-gnu" > /tmp/rust_target.txt \
+                        && echo "amd64" > /tmp/rf_arch.txt ;; \
+        "linux/arm64")  echo "aarch64-unknown-linux-gnu" > /tmp/rust_target.txt \
+                        && echo "arm64" > /tmp/rf_arch.txt ;; \
+        *)              echo "x86_64-unknown-linux-gnu" > /tmp/rust_target.txt \
+                        && echo "amd64" > /tmp/rf_arch.txt ;; \
     esac
 
 # Install dependencies and cross-compilation tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     libssl-dev \
+    curl \
+    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
+
+# Download RavenFabric agent binary (optional runtime component)
+ARG RAVENFABRIC_VERSION=v0.25.1
+RUN RF_ARCH=$(cat /tmp/rf_arch.txt) && \
+    curl -fsSL \
+      "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/ravenfabric-linux-${RF_ARCH}-agent" \
+      -o /app/ravenfabric-agent && \
+    chmod +x /app/ravenfabric-agent
 
 # Copy manifests
 COPY Cargo.toml Cargo.lock* ./
@@ -40,8 +53,11 @@ FROM gcr.io/distroless/cc-debian12:nonroot
 
 WORKDIR /app
 
-# Copy binary from known path in builder
+# Copy RavenClaw binary
 COPY --from=builder /app/ravenclaw /app/ravenclaw
+
+# Copy RavenFabric agent binary (optional — for swarm/supervisor modes)
+COPY --from=builder /app/ravenfabric-agent /app/ravenfabric-agent
 
 # Security: run as non-root, read-only filesystem
 USER nonroot

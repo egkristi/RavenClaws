@@ -16,7 +16,6 @@ metadata:
 type: Opaque
 stringData:
   LITELLM_API_KEY: "changeme"
-  RAVENFABRIC_TOKEN: "changeme"
 
 ---
 apiVersion: v1
@@ -31,10 +30,11 @@ data:
     model = "gpt-4o-mini"
     timeout_secs = 30
 
-    [ravenfabric]
-    endpoint = "http://ravenfabric.ravenclaw.svc:8080"
-    remote_exec = true
-    allowed_hosts = ["litellm.ravenclaw.svc", "ravenfabric.ravenclaw.svc"]
+    # Optional: RavenFabric for swarm/supervisor coordination
+    # [ravenfabric]
+    # endpoint = "http://ravenfabric.ravenclaw.svc:8080"
+    # remote_exec = true
+    # allowed_hosts = ["litellm.ravenclaw.svc", "ravenfabric.ravenclaw.svc"]
 
     [security]
     require_tls = false

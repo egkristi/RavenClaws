@@ -100,7 +100,7 @@ kubectl -n ravenclaw logs -l app.kubernetes.io/name=ravenclaw
 | `RAVENCLAW__LLM__MODEL` | Default model | `gpt-4o-mini` |
 | `LITELLM_API_KEY` | API key for LiteLLM/OpenRouter/OpenAI | (required for cloud) |
 | `RAVENCLAW__LLMS` | JSON array for multi-model config | — |
-| `RAVENCLAW__RAVENFABRIC__ENDPOINT` | RavenFabric endpoint | — |
+| `RAVENCLAW__RAVENFABRIC__ENDPOINT` | RavenFabric endpoint (optional) | — |
 | `RAVENCLAW__SECURITY__REQUIRE_TLS` | Enforce TLS | `true` |
 | `RAVENCLAW__RUNTIME__MAX_AGENTS` | Max concurrent agents | `10` |
 | `RUST_LOG` | Log level | `info` |
@@ -167,10 +167,11 @@ endpoint = "http://litellm:4000"
 model = "gpt-4o-mini"
 timeout_secs = 30
 
-[ravenfabric]
-endpoint = "http://ravenfabric:8080"
-remote_exec = true
-allowed_hosts = ["litellm", "ravenfabric"]
+# Optional: RavenFabric for swarm/supervisor coordination
+# [ravenfabric]
+# endpoint = "http://ravenfabric:8080"
+# remote_exec = true
+# allowed_hosts = ["litellm", "ravenfabric"]
 
 [security]
 require_tls = true
@@ -312,7 +313,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t ravenclaw:latest .
          ▼                          ▼
 ┌─────────────────┐      ┌──────────────────────┐
 │  RavenFabric    │      │   Deployment Targets  │
-│  (❌ Stub)      │      │  Binary · Docker · K8s │
+│  (optional)     │      │  Binary · Docker · K8s │
 └─────────────────┘      └──────────────────────┘
 ```
 
@@ -335,7 +336,7 @@ docker buildx build --platform linux/amd64,linux/arm64 -t ravenclaw:latest .
 | Agent loop / ReAct planning | ❌ Not implemented | One-shot send-and-exit |
 | Streaming responses | ❌ Not implemented | `stream: None` hardcoded |
 | Conversation memory | ❌ Not implemented | In-memory only, lost on exit |
-| RavenFabric integration | ❌ Not implemented | Crate commented out in Cargo.toml |
+| RavenFabric integration | Partial | Config struct exists, binary included in container, integration not yet wired |
 | GitHub Actions CI/CD | ❌ Not implemented | No workflow files exist |
 | Pre-built binaries | ❌ Not implemented | No releases published |
 
@@ -358,7 +359,7 @@ See [ROADMAP.md](ROADMAP.md) for the full prioritized feature plan.
 - Conversation memory across turns
 - Swarm & Supervisor mode implementations
 - Prompt injection defense
-- RavenFabric integration
+- RavenFabric integration (config + container binary ready, runtime wiring pending)
 
 ## Competitive Comparison
 

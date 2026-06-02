@@ -30,7 +30,7 @@
 | Agent loop / ReAct planning | ❌ Not implemented | One-shot send-and-exit |
 | Streaming responses | ❌ Not implemented | `stream: None` hardcoded |
 | Conversation memory | ❌ Not implemented | In-memory only, lost on exit |
-| RavenFabric integration | ❌ Not implemented | Crate commented out in Cargo.toml |
+| RavenFabric integration | Partial | Config struct exists, binary included in container, integration not yet wired |
 | GitHub Actions CI/CD | ❌ Not implemented | No workflow files exist |
 | Pre-built binaries | ❌ Not implemented | No releases published |
 
@@ -84,7 +84,7 @@
   - [ ] Task decomposition and assignment
   - [ ] Result aggregation and quality checking
   - [ ] Recursive sub-agent spawning
-- [ ] **Integrate RavenFabric** — Config struct and docker-compose placeholder exist, but no actual integration. Crate is commented out in Cargo.toml.
+- [ ] **Wire RavenFabric integration** — Config struct exists, binary included in container images, but runtime integration not yet implemented.
 - [ ] **Harden security**
   - [ ] Prompt injection defense — input sanitization, instruction boundary enforcement
   - [ ] Tool sandboxing — each tool call validated against allowlist

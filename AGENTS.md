@@ -43,7 +43,7 @@ src/
 | Agent loop / ReAct planning | ❌ Not implemented — one-shot send-and-exit |
 | Streaming responses | ❌ Not implemented — `stream: None` hardcoded |
 | Conversation memory | ❌ Not implemented — in-memory only, lost on exit |
-| RavenFabric integration | ❌ Not implemented — crate commented out in Cargo.toml |
+| RavenFabric integration | Partial — config struct exists, binary included in container, runtime wiring pending |
 | GitHub Actions CI/CD | ❌ Not implemented |
 | Pre-built binaries / releases | ❌ Not implemented |
 
