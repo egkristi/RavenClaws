@@ -185,12 +185,18 @@ health_interval_secs = 60
 
 ## Building from Source
 
+### Prerequisites
+
+- [Rust](https://rustup.rs/) 1.82+ (install via `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`)
+- For Linux cross-compilation on macOS: `brew install FiloSottile/musl-cross/musl-cross`
+
+### Build for Host
+
 ```bash
-# Clone
 git clone https://github.com/egkristi/RavenClaw
 cd RavenClaw
 
-# Build release
+# Build release for current platform
 cargo build --release
 
 # Run tests
@@ -198,6 +204,49 @@ cargo test
 
 # Build Docker image
 docker build -t ravenclaw:latest .
+```
+
+### Cross-Compile for All Architectures
+
+```bash
+# Install cross-compilation targets
+rustup target add \
+    x86_64-apple-darwin \
+    aarch64-apple-darwin \
+    x86_64-unknown-linux-gnu \
+    aarch64-unknown-linux-gnu \
+    x86_64-unknown-linux-musl
+
+# Build for all targets
+./scripts/build.sh --all
+
+# Build for a specific target
+./scripts/build.sh --target aarch64-unknown-linux-gnu
+```
+
+### Multi-Arch Docker Image
+
+```bash
+# Build and push multi-arch Docker image (linux/amd64 + linux/arm64)
+docker buildx build \
+    --platform linux/amd64,linux/arm64 \
+    -t ghcr.io/egkristi/ravenclaw:latest \
+    --push .
+```
+
+## Downloads
+
+Pre-built binaries are available for these architectures:
+
+| Architecture | Target Triple | File |
+|---|---|---|
+| Apple Silicon (M1+) | `aarch64-apple-darwin` | `ravenclaw-aarch64-apple-darwin` |
+| Intel Mac | `x86_64-apple-darwin` | `ravenclaw-x86_64-apple-darwin` |
+| Linux ARM64 | `aarch64-unknown-linux-gnu` | `ravenclaw-aarch64-unknown-linux-gnu` |
+| Linux x86_64 (glibc) | `x86_64-unknown-linux-gnu` | `ravenclaw-x86_64-unknown-linux-gnu` |
+| Linux x86_64 (musl/static) | `x86_64-unknown-linux-musl` | `ravenclaw-x86_64-unknown-linux-musl` |
+
+Docker images support both `linux/amd64` and `linux/arm64` platforms.
 ```
 
 ## Architecture

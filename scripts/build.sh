@@ -1,6 +1,6 @@
 #!/bin/bash
 # RavenClaw Build Script
-# Builds optimized release binary and Docker image
+# Builds optimized release binaries for multiple architectures
 
 set -euo pipefail
 
@@ -11,26 +11,95 @@ cd "$PROJECT_DIR"
 echo "🐦‍⬛ RavenClaw Build"
 echo "==================="
 
-# Build Rust binary
-echo "Building Rust binary..."
-cargo build --release --locked
+# Detect host architecture
+HOST_ARCH=$(rustc -vV | grep host | cut -d' ' -f2)
+echo "Host: $HOST_ARCH"
 
-# Show binary size
-BINARY_SIZE=$(du -h target/release/ravenclaw | cut -f1)
-echo "✅ Binary size: $BINARY_SIZE"
+# Define target architectures
+# Format: target_triple:output_name
+TARGETS=(
+    "aarch64-apple-darwin:ravenclaw-aarch64-apple-darwin"
+    "x86_64-apple-darwin:ravenclaw-x86_64-apple-darwin"
+    "aarch64-unknown-linux-gnu:ravenclaw-aarch64-unknown-linux-gnu"
+    "x86_64-unknown-linux-gnu:ravenclaw-x86_64-unknown-linux-gnu"
+    "x86_64-unknown-linux-musl:ravenclaw-x86_64-unknown-linux-musl"
+)
+
+# Parse arguments
+BUILD_ALL=false
+BUILD_TARGET=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --all) BUILD_ALL=true ;;
+        --target) BUILD_TARGET="$2"; shift ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+    shift
+done
+
+build_for_target() {
+    local target="$1"
+    local output_name="$2"
+    
+    echo ""
+    echo "▶ Building for $target..."
+    
+    if cargo build --release --locked --target "$target" 2>&1; then
+        local src="target/$target/release/ravenclaw"
+        local dst="target/release/$output_name"
+        cp "$src" "$dst"
+        local size=$(du -h "$dst" | cut -f1)
+        echo "  ✅ $output_name — $size"
+    else
+        echo "  ❌ $target build failed"
+        return 1
+    fi
+}
+
+# Build for host natively (fast path)
+echo ""
+echo "▶ Building for host ($HOST_ARCH)..."
+cargo build --release --locked
+HOST_SIZE=$(du -h target/release/ravenclaw | cut -f1)
+echo "  ✅ ravenclaw ($HOST_ARCH) — $HOST_SIZE"
+
+# Build for specific target or all
+if [[ -n "$BUILD_TARGET" ]]; then
+    for entry in "${TARGETS[@]}"; do
+        target="${entry%%:*}"
+        name="${entry#*:}"
+        if [[ "$target" == "$BUILD_TARGET" ]]; then
+            build_for_target "$target" "$name"
+            break
+        fi
+    done
+elif [[ "$BUILD_ALL" == "true" ]]; then
+    for entry in "${TARGETS[@]}"; do
+        target="${entry%%:*}"
+        name="${entry#*:}"
+        # Skip host (already built)
+        if [[ "$target" != "$HOST_ARCH" ]]; then
+            build_for_target "$target" "$name"
+        fi
+    done
+fi
 
 # Build Docker image (optional)
 if [[ "${BUILD_DOCKER:-false}" == "true" ]]; then
-    echo "Building Docker image..."
+    echo ""
+    echo "▶ Building Docker image..."
     docker build -t ravenclaw:latest .
-    echo "✅ Docker image built"
+    echo "  ✅ Docker image built"
 fi
 
 # Run tests (optional)
 if [[ "${RUN_TESTS:-false}" == "true" ]]; then
-    echo "Running tests..."
+    echo ""
+    echo "▶ Running tests..."
     cargo test --locked
-    echo "✅ Tests passed"
+    echo "  ✅ Tests passed"
 fi
 
-echo "Build complete!"
+echo ""
+echo "==================="
+echo "🐦‍⬛ Build complete!"
