@@ -1,4 +1,4 @@
-name: Build
+name: Build & Release
 
 on:
   push:
@@ -10,7 +10,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"
 
 jobs:
   # ── Lint & Test ──────────────────────────────────────────────
@@ -24,7 +23,7 @@ jobs:
           components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --check
-      - run: cargo clippy --locked -- -D warnings
+      - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
 
   # ── Cross-platform Binary Builds ─────────────────────────────
@@ -38,18 +37,23 @@ jobs:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             output: ravenclaw-x86_64-unknown-linux-gnu
+            archive: tar.gz
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             output: ravenclaw-aarch64-unknown-linux-gnu
+            archive: tar.gz
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
             output: ravenclaw-x86_64-unknown-linux-musl
+            archive: tar.gz
           - target: x86_64-apple-darwin
             os: macos-latest
             output: ravenclaw-x86_64-apple-darwin
+            archive: tar.gz
           - target: aarch64-apple-darwin
             os: macos-latest
             output: ravenclaw-aarch64-apple-darwin
+            archive: tar.gz
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -62,15 +66,27 @@ jobs:
           key: ${{ matrix.target }}
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
-      - name: Rename binary
+      - name: Package binary
         run: |
           mkdir -p dist
           cp target/${{ matrix.target }}/release/ravenclaw dist/${{ matrix.output }}
+          # Create compressed archive
+          cd dist
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            zip ${{ matrix.output }}.zip ${{ matrix.output }}
+          else
+            tar czf ${{ matrix.output }}.tar.gz ${{ matrix.output }}
+          fi
+          # Generate SHA256 checksum
+          shasum -a 256 ${{ matrix.output }} > ${{ matrix.output }}.sha256
+          if [[ -f ${{ matrix.output }}.tar.gz ]]; then
+            shasum -a 256 ${{ matrix.output }}.tar.gz >> ${{ matrix.output }}.sha256
+          fi
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.output }}
-          path: dist/${{ matrix.output }}
+          path: dist/*
           if-no-files-found: error
 
   # ── Multi-arch Docker Image ──────────────────────────────────
@@ -110,22 +126,60 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ── Release (tagged only) ────────────────────────────────────
+  # ── Publish to crates.io (tagged only) ───────────────────────
+  publish-cratesio:
+    name: Publish to crates.io
+    needs: [check]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish --locked
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  # ── GitHub Release (tagged only) ─────────────────────────────
   release:
-    name: Release
-    needs: [build-binaries, docker]
+    name: Create GitHub Release
+    needs: [build-binaries, docker, publish-cratesio]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: ravenclaw-*
           path: dist
           merge-multiple: true
-      - name: Create release
+      - name: Organize release assets
+        run: |
+          mkdir -p release-assets
+          # Move all archives, checksums, and binaries into release-assets
+          find dist -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.sha256" -o -type f ! -name ".*" \) -exec cp {} release-assets/ \;
+          ls -lh release-assets/
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          # Extract version from tag
+          TAG="${GITHUB_REF#refs/tags/}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          # Generate changelog from commits since last tag
+          git fetch --tags --force
+          PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1 || echo "")
+          if [[ -n "$PREV_TAG" ]]; then
+            git log --oneline --no-decorate "$PREV_TAG..HEAD" > changelog.txt
+          else
+            echo "Initial release" > changelog.txt
+          fi
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*
+          tag_name: ${{ steps.release_notes.outputs.tag }}
+          name: RavenClaw ${{ steps.release_notes.outputs.tag }}
+          body_path: changelog.txt
+          files: release-assets/*
           generate_release_notes: true
+          fail_on_unmatched_files: true

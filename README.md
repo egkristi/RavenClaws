@@ -2,6 +2,8 @@
 
 **Lightweight, secure Rust agent framework with multi-provider LLM support**
 
+[![License](https://img.shields.io/badge/license-AGPL--3.0--or--later-blue.svg)](LICENSES/AGPLv3.txt)
+
 Built for efficiency, security, and easy deployment. Supports LiteLLM, OpenRouter, Ollama, and OpenAI.
 
 ## Features
@@ -277,7 +279,12 @@ Docker images support both `linux/amd64` and `linux/arm64` platforms.
 
 ## License
 
-MIT — See [LICENSE](LICENSE)
+RavenClaw uses a dual-license model:
+
+- **AGPL-3.0-or-later** — open source core. Free for personal use, OSS projects, and commercial use up to 50 agents / $5M revenue.
+- **Commercial** — for large commercial deployments or embedding without AGPL obligations.
+
+See [LICENSING.md](LICENSING.md) for the full breakdown.
 
 ## Contributing
 
@@ -286,6 +293,8 @@ MIT — See [LICENSE](LICENSE)
 3. Commit changes (`git commit -am 'Add feature'`)
 4. Push (`git push origin feature/my-feature`)
 5. Open a Pull Request
+
+All contributions require signing a Contributor License Agreement (CLA) — see [LICENSING.md](LICENSING.md#contributor-license-agreement-cla).
 
 ---
 
