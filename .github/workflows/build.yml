@@ -10,6 +10,9 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  REGISTRY_GHCR: ghcr.io
+  REGISTRY_DOCKERHUB: index.docker.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   # ── Lint & Test ──────────────────────────────────────────────
@@ -70,14 +73,12 @@ jobs:
         run: |
           mkdir -p dist
           cp target/${{ matrix.target }}/release/ravenclaw dist/${{ matrix.output }}
-          # Create compressed archive
           cd dist
           if [[ "${{ matrix.archive }}" == "zip" ]]; then
             zip ${{ matrix.output }}.zip ${{ matrix.output }}
           else
             tar czf ${{ matrix.output }}.tar.gz ${{ matrix.output }}
           fi
-          # Generate SHA256 checksum
           shasum -a 256 ${{ matrix.output }} > ${{ matrix.output }}.sha256
           if [[ -f ${{ matrix.output }}.tar.gz ]]; then
             shasum -a 256 ${{ matrix.output }}.tar.gz >> ${{ matrix.output }}.sha256
@@ -89,34 +90,70 @@ jobs:
           path: dist/*
           if-no-files-found: error
 
-  # ── Multi-arch Docker Image ──────────────────────────────────
-  docker:
-    name: Docker
+  # ── Container Images (multi-arch, multi-registry) ────────────
+  containers:
+    name: Container Images
     needs: [check]
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+      security-events: write
+      attestations: write
+      id-token: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
+
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+
+      # ── Log in to registries ──────────────────────────────────
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ env.REGISTRY_GHCR }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        if: >
+          github.event_name != 'pull_request' &&
+          (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      # ── Generate metadata ─────────────────────────────────────
       - uses: docker/metadata-action@v5
         id: meta
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: |
+            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}
+            ${{ env.REGISTRY_DOCKERHUB }}/${{ env.IMAGE_NAME }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
             type=ref,event=branch
-            type=sha,prefix=
-      - uses: docker/build-push-action@v6
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+          labels: |
+            org.opencontainers.image.title=RavenClaw
+            org.opencontainers.image.description=Lightweight, secure Rust agent framework
+            org.opencontainers.image.vendor=Erling G M Kristiansen
+            org.opencontainers.image.version=${{ github.ref_name }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.licenses=AGPL-3.0-or-later
+
+      # ── Build and push to all registries ──────────────────────
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
@@ -125,6 +162,65 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
+
+      # ── Sign container (tagged releases only) ─────────────────
+      - name: Sign container with Cosign
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: sigstore/cosign-installer@v3
+
+      - name: Run Cosign sign
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cosign sign --yes "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
+        env:
+          COSIGN_EXPERIMENTAL: 1
+
+      # ── Attestation (tagged releases only) ────────────────────
+      - name: Generate artifact attestation
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+      # ── Vulnerability scan ────────────────────────────────────
+      - name: Run Trivy vulnerability scanner
+        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          image-ref: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          hide-progress: true
+
+      - name: Upload Trivy results to GitHub Security
+        if: always() && hashFiles('trivy-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+          category: container-scan
+
+      # ── SBOM ──────────────────────────────────────────────────
+      - name: Generate SBOM with Syft
+        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM as artifact
+        if: always() && hashFiles('sbom.spdx.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+          if-no-files-found: ignore
 
   # ── Publish to crates.io (tagged only) ───────────────────────
   publish-cratesio:
@@ -142,7 +238,7 @@ jobs:
   # ── GitHub Release (tagged only) ─────────────────────────────
   release:
     name: Create GitHub Release
-    needs: [build-binaries, docker, publish-cratesio]
+    needs: [build-binaries, containers, publish-cratesio]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -157,16 +253,13 @@ jobs:
       - name: Organize release assets
         run: |
           mkdir -p release-assets
-          # Move all archives, checksums, and binaries into release-assets
           find dist -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.sha256" -o -type f ! -name ".*" \) -exec cp {} release-assets/ \;
           ls -lh release-assets/
       - name: Generate release notes
         id: release_notes
         run: |
-          # Extract version from tag
           TAG="${GITHUB_REF#refs/tags/}"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          # Generate changelog from commits since last tag
           git fetch --tags --force
           PREV_TAG=$(git tag --sort=-creatordate | head -2 | tail -1 || echo "")
           if [[ -n "$PREV_TAG" ]]; then
