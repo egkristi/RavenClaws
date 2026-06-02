@@ -32,17 +32,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc-x86-64-linux-gnu \
     cmake \
     libc6-dev-arm64-cross \
+    libc6-dev-amd64-cross \
     linux-libc-dev-arm64-cross \
+    linux-libc-dev-amd64-cross \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure cargo for cross-compilation
 RUN case "$TARGETPLATFORM" in \
         "linux/amd64")  \
-            mkdir -p /root/.cargo && \
-            echo '[target.x86_64-unknown-linux-gnu]\nlinker = "x86_64-linux-gnu-gcc"' > /root/.cargo/config.toml ;; \
+            printf '[target.x86_64-unknown-linux-gnu]\nlinker = "x86_64-linux-gnu-gcc"\n' >> /usr/local/cargo/config.toml ;; \
         "linux/arm64")  \
-            mkdir -p /root/.cargo && \
-            echo '[target.aarch64-unknown-linux-gnu]\nlinker = "aarch64-linux-gnu-gcc"' > /root/.cargo/config.toml ;; \
+            printf '[target.aarch64-unknown-linux-gnu]\nlinker = "aarch64-linux-gnu-gcc"\n' >> /usr/local/cargo/config.toml ;; \
     esac
 
 # Download RavenFabric agent binary (optional runtime component)
@@ -55,10 +55,15 @@ RUN RF_ARCH=$(cat /tmp/rf_arch.txt) && \
     curl -fsSL \
       "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/SHA256SUMS" \
       -o /app/SHA256SUMS && \
-    grep "ravenfabric-linux-${RF_ARCH}-agent" /app/SHA256SUMS > /app/ravenfabric-agent.sha256 && \
-    sha256sum -c /app/ravenfabric-agent.sha256 && \
+    EXPECTED=$(grep "ravenfabric-linux-${RF_ARCH}-agent" /app/SHA256SUMS | cut -d' ' -f1) && \
+    ACTUAL=$(sha256sum /app/ravenfabric-agent | cut -d' ' -f1) && \
+    if [ "$EXPECTED" != "$ACTUAL" ]; then \
+      echo "SHA256 mismatch: expected $EXPECTED, got $ACTUAL"; \
+      exit 1; \
+    fi && \
+    echo "SHA256 match: $ACTUAL" && \
     chmod +x /app/ravenfabric-agent && \
-    rm /app/SHA256SUMS /app/ravenfabric-agent.sha256
+    rm /app/SHA256SUMS
 
 # Copy manifests
 COPY Cargo.toml Cargo.lock* ./
