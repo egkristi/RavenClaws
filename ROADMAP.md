@@ -25,7 +25,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.1.0 (Pre-Alpha) — active development, APIs unstable.
-**Stats:** 5 source modules, ~1,070 LOC, 4 LLM providers, multi-arch CI with signed images + SBOM.
+**Stats:** 8 source modules, ~2,500 LOC, 4 LLM providers, multi-arch CI with signed images + SBOM.
 
 | Component | Status | Details |
 |---|---|---|
@@ -44,7 +44,10 @@ can't be added without breaking one, it doesn't ship in core.
 | Swarm / Supervisor modes | ⚠️ Stub | Return clear error instead of silent exit 0 |
 | Rust unit tests | ✅ Working | 157 tests across all 5 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard, `FINAL:` marker detection, configurable via `--max-iterations` |
-| Tool-use / function calling | ❌ Not implemented | Agent cannot call tools |
+| Tool-use / function calling | ✅ Working | Tool abstraction + registry + 4 built-in tools (shell, read/write file, web fetch) + agent loop wiring (`TOOL_CALL:` / `ARGS:` / `OBSERVATION:` pattern) |
+| Deny-by-default policy | ✅ Working | `PolicyEngine` with shell, path, and network allow-lists |
+| Sandboxed execution | ✅ Working | Workdir jail, resource limits, timeouts, path resolution |
+| Audit log | ✅ Working | HMAC-SHA256 chained, tamper-evident, structured JSON output |
 | Streaming responses | ✅ Working | SSE streaming for LiteLLM, default non-streaming fallback for others |
 | Conversation memory | ✅ Working | `ConversationMemory` struct with configurable max history, auto-trim |
 | Interactive REPL | ✅ Working | `--repl` flag with stdin loop, streaming output, `/exit` `/reset` commands |
@@ -71,11 +74,13 @@ These break real usage today and are the first thing to fix (see [Technical Debt
         ┌──────────┐
         │  main.rs │  CLI (clap) · JSON logging · mode dispatch
         └────┬─────┘
-   ┌─────────┼──────────┐
-┌──┴───┐ ┌───┴────┐ ┌───┴─────┐
-│agent │ │ config │ │  error  │
-└──┬───┘ └────────┘ └─────────┘
-   │
+   ┌─────────┼──────────────────────┐
+┌──┴───┐ ┌───┴────┐ ┌───┴─────┐ ┌───┴───┐
+│agent │ │ config │ │  error  │ │ tools │
+│ loop │ │        │ │         │ │policy │
+│ mem  │ │        │ │         │ │audit  │
+└──┬───┘ └────────┘ └─────────┘ │sandbox│
+   │                             └───────┘
 ┌──┴───────────────────────────┐
 │ llm  (LLMProviderTrait)       │
 │  LiteLLM · OpenAI · OpenRouter│
@@ -95,10 +100,10 @@ These break real usage today and are the first thing to fix (see [Technical Debt
           ┌──────────┘    │   └──────────┐
      ┌────┴────┐    ┌─────┴────┐   ┌──────┴───────┐
      │  Tools  │    │ Providers│   │ Orchestration │
-     │ policy+ │    │ routing+ │   │ swarm/superv. │
-     │ sandbox+│    │ fallback+│   │ + RavenFabric │
-     │ audit   │    │ budgets  │   │  (E2E remote) │
-     └────┬────┘    └──────────┘   └───────────────┘
+     │ policy  │    │ routing+ │   │ swarm/superv. │
+     │ sandbox │    │ fallback+│   │ + RavenFabric │
+     │ audit ✅│    │ budgets  │   │  (E2E remote) │
+     └─────────┘    └──────────┘   └───────────────┘
           │
    ┌──────┴───────┐
    │ Observability│  metrics · tracing · health endpoint
@@ -144,7 +149,7 @@ Baseline expectations for any "agentic assistant and worker" in 2026. Items mark
 
 | Capability | Why it's table stakes (who has it) | In RavenClaw | Target |
 |---|---|:--:|:--:|
-| Agent loop (plan → act → observe) | Without it there is no "agent" | 📋 | v0.3 |
+| Agent loop (plan → act → observe) | Without it there is no "agent" | ✅ | v0.3 |
 | Tool / function calling | The substrate for every action | 📋 | v0.4 |
 | **MCP — client *and* server** **NEW** | The lingua franca for tools — adopted by Anthropic, OpenAI, Google, Microsoft, Salesforce; Vellum's agent node already does MCP discovery. Consume MCP tools *and* expose RavenClaw as an MCP server. | ❌ | **v0.4** |
 | Sandboxed code execution | Now a native primitive (OpenAI Agents SDK); also our security wedge | 📋 | v0.4 |
@@ -218,12 +223,12 @@ Cheapest, highest-leverage work. Nothing new ships until the basics are solid.
 
 Turn the client into an actual worker. *This is the milestone that makes RavenClaw an agent.*
 
-- [ ] **Agent loop**: perceive → plan → act → observe, with max-iteration guard and cancellation.
+- [x] **Agent loop**: perceive → plan → act → observe, with max-iteration guard and cancellation.
 - [x] **`--exec "<task>"`** one-shot mode — sends prompt to LLM, prints response to stdout.
-- [ ] **Interactive REPL** (stdin) — continuous conversation mode.
-- [ ] **Conversation memory** — context across turns; configurable window (last N turns or token budget); session save/restore.
-- [ ] **Streaming responses** end to end (`stream = true`) across the trait and all clients.
-- [ ] **System-prompt / persona** configuration.
+- [x] **Interactive REPL** (stdin) — continuous conversation mode.
+- [x] **Conversation memory** — context across turns; configurable window (last N turns or token budget); session save/restore.
+- [x] **Streaming responses** end to end (`stream = true`) across the trait and all clients.
+- [x] **System-prompt / persona** configuration.
 - [x] **Robust errors** — typed retries, timeouts, graceful provider failure. All error paths covered with `thiserror` + `anyhow`; 26 error tests across 7 variants.
 
 **Exit criteria:** `ravenclaw --exec "summarize this repo"` performs a real multi-step task and returns a result.
@@ -232,13 +237,14 @@ Turn the client into an actual worker. *This is the milestone that makes RavenCl
 
 Agency with guardrails — the security differentiator.
 
-- [ ] **Tool / function-calling abstraction** (provider-agnostic schema + registry).
-- [ ] **Built-in tools**: shell exec, file read/write, web fetch, code analysis — each behind a capability flag.
+- [x] **Tool / function-calling abstraction** (provider-agnostic schema + registry).
+- [x] **Built-in tools**: shell exec, file read/write, web fetch — each behind a capability flag.
+- [x] **Tool wiring into agent loop** — `run_agent_loop` detects `TOOL_CALL:` / `ARGS:` patterns, executes tools, injects results as `OBSERVATION:`.
+- [x] **Deny-by-default policy** (command / path / host allow-lists), à la RavenFabric's RPCPolicy.
+- [x] **Sandboxed execution** (workdir jail, resource limits, timeouts).
+- [x] **Audit log** — structured, HMAC-chained, tamper-evident trail of every tool call.
 - [ ] **MCP — client *and* server** *(NEW — highest-leverage)* — consume any Model Context Protocol tool/server, and expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce).
 - [ ] **Web search + headless browser tool** *(NEW)* — search, navigate, extract, and fill forms (beyond simple web fetch).
-- [ ] **Deny-by-default policy** (command / path / host allow-lists), à la RavenFabric's RPCPolicy.
-- [ ] **Sandboxed execution** (workdir jail, resource limits, timeouts).
-- [ ] **Wire `audit_log`** — structured, HMAC-chained, tamper-evident trail of every tool call.
 - [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs.
 - [ ] **Honor `token_lifetime_secs`** for any issued credentials.
 - [ ] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation.

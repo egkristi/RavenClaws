@@ -5,6 +5,7 @@
 use crate::config::Config;
 use crate::error::Result;
 use crate::llm::{ChatMessage, LLMProviderTrait, MultiModelManager};
+use crate::tools::{ToolCall, ToolRegistry, ToolResult};
 use futures::StreamExt;
 use std::sync::Arc;
 use tracing::{info, warn};
@@ -267,12 +268,15 @@ pub struct AgentLoopConfig {
     pub max_iterations: usize,
     /// System prompt for the agent loop (appended to base system prompt)
     pub loop_instructions: String,
+    /// Whether to enable tool use
+    pub enable_tools: bool,
 }
 
 impl Default for AgentLoopConfig {
     fn default() -> Self {
         Self {
             max_iterations: 10,
+            enable_tools: false,
             loop_instructions: concat!(
                 "You are in an agent loop. For each iteration, output:\n",
                 "THOUGHT: <your reasoning about what to do next>\n",
@@ -280,7 +284,11 @@ impl Default for AgentLoopConfig {
                 "RESULT: <the result of the action>\n\n",
                 "When the task is complete, output:\n",
                 "FINAL: <the final answer>\n\n",
-                "You must output exactly one THOUGHT/ACTION/RESULT or FINAL per response.",
+                "You must output exactly one THOUGHT/ACTION/RESULT or FINAL per response.\n\n",
+                "To use a tool, output:\n",
+                "TOOL_CALL: <tool_name>\n",
+                "ARGS: <JSON arguments>\n\n",
+                "After a tool call, the result will be injected as an OBSERVATION.",
             )
             .to_string(),
         }
@@ -305,7 +313,33 @@ pub async fn run_agent_loop(
     );
 
     // Build the combined system prompt with loop instructions
-    let combined_prompt = format!("{}\n\n{}", system_prompt, config.loop_instructions);
+    let mut combined_prompt = format!("{}\n\n{}", system_prompt, config.loop_instructions);
+
+    // If tools are enabled, add tool definitions to the system prompt
+    let registry = if config.enable_tools {
+        let reg = ToolRegistry::with_default_tools();
+        if !reg.is_empty() {
+            let tool_descriptions: Vec<String> = reg
+                .definitions()
+                .iter()
+                .map(|d| {
+                    format!(
+                        "- `{}`: {} (category: {:?})",
+                        d.name, d.description, d.category
+                    )
+                })
+                .collect();
+            combined_prompt.push_str("\n\nAvailable tools:\n");
+            combined_prompt.push_str(&tool_descriptions.join("\n"));
+            combined_prompt.push_str(
+                "\n\nTo call a tool, output:\nTOOL_CALL: <tool_name>\nARGS: <JSON arguments>\n\
+                 The tool result will be provided as an OBSERVATION in the next iteration.",
+            );
+        }
+        Some(reg)
+    } else {
+        None
+    };
 
     let mut memory = ConversationMemory::new(&combined_prompt, config.max_iterations * 2 + 2);
     let _history = memory.add_user_message(task);
@@ -338,12 +372,29 @@ pub async fn run_agent_loop(
         // Check if the agent signaled completion
         if content.contains("FINAL:") {
             info!(iteration = iteration, "Agent loop completed");
-            // Extract the final answer after "FINAL:"
             if let Some(final_idx) = content.find("FINAL:") {
                 let final_answer = content[final_idx + 6..].trim();
                 return Ok(final_answer.to_string());
             }
             return Ok(content.trim().to_string());
+        }
+
+        // ── Check for tool calls ──────────────────────────────────
+        if let Some(registry) = &registry {
+            if let Some(tool_result) = execute_tool_call(&content, registry).await {
+                let observation = format!(
+                    "OBSERVATION: Tool call result:\n{}",
+                    serde_json::to_string_pretty(&tool_result).unwrap_or_default()
+                );
+                memory.add_assistant_message(&observation);
+                info!(
+                    iteration = iteration,
+                    tool = %tool_result.tool_name,
+                    success = tool_result.success,
+                    "Tool call executed"
+                );
+                continue;
+            }
         }
 
         info!(
@@ -359,7 +410,6 @@ pub async fn run_agent_loop(
         "Agent loop reached max iterations"
     );
 
-    // Get the last assistant message as the best answer
     let history = memory.history();
     if history.len() > 1 {
         if let Some(last) = history.last() {
@@ -370,6 +420,47 @@ pub async fn run_agent_loop(
     Err(crate::error::RavenClawError::CommandExecution(
         "Agent loop reached max iterations without completing the task".to_string(),
     ))
+}
+
+/// Parse and execute a tool call from the LLM response content.
+/// Returns `Some(ToolResult)` if a tool call was found and executed, `None` otherwise.
+async fn execute_tool_call(content: &str, registry: &ToolRegistry) -> Option<ToolResult> {
+    // Look for TOOL_CALL: <name> followed by ARGS: <json>
+    let mut lines = content.lines();
+    let tool_call_line = lines.find(|l| l.trim().starts_with("TOOL_CALL:"))?;
+
+    let tool_name = tool_call_line
+        .trim()
+        .strip_prefix("TOOL_CALL:")
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())?;
+
+    // Find the ARGS line
+    let args_line = lines.find(|l| l.trim().starts_with("ARGS:"))?;
+    let args_str = args_line
+        .trim()
+        .strip_prefix("ARGS:")
+        .map(|s| s.trim())?;
+
+    let args: serde_json::Value = serde_json::from_str(args_str).ok()?;
+
+    let call = ToolCall {
+        name: tool_name.to_string(),
+        arguments: args,
+        id: None,
+    };
+
+    match registry.execute(call).await {
+        Ok(result) => Some(result),
+        Err(e) => Some(ToolResult {
+            tool_name: tool_name.to_string(),
+            success: false,
+            output: String::new(),
+            error: Some(e.to_string()),
+            exit_code: Some(1),
+            duration_ms: None,
+        }),
+    }
 }
 
 /// Run a single autonomous agent (single-provider mode)
@@ -1184,8 +1275,10 @@ mod tests {
         let config = AgentLoopConfig {
             max_iterations: 3,
             loop_instructions: "Custom instructions.".to_string(),
+            enable_tools: false,
         };
         assert_eq!(config.max_iterations, 3);
         assert_eq!(config.loop_instructions, "Custom instructions.");
+        assert!(!config.enable_tools);
     }
 }

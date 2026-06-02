@@ -4,9 +4,13 @@
 //! Supports multiple LLM providers: LiteLLM, OpenRouter, Ollama, OpenAI.
 
 mod agent;
+mod audit;
 mod config;
 mod error;
 mod llm;
+mod policy;
+mod sandbox;
+mod tools;
 
 use clap::Parser;
 use tracing::info;
@@ -105,6 +109,7 @@ async fn main() -> anyhow::Result<()> {
         let system_prompt = &config.llm.system_prompt;
         let loop_config = agent::AgentLoopConfig {
             max_iterations: args.max_iterations,
+            enable_tools: true,
             ..agent::AgentLoopConfig::default()
         };
 

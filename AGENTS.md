@@ -28,15 +28,19 @@ RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider 
 - **Repository:** https://github.com/egkristi/RavenClaw
 - **Build:** `cargo build --release` (~3MB stripped binary, ~7ms startup)
 
-### Architecture (5 modules)
+### Architecture (8 modules)
 
 ```
 src/
 ├── main.rs      — CLI entry point (clap), config loading, mode dispatch
-├── agent.rs     — Agent implementations (single, swarm stubs, supervisor stubs, REPL, ConversationMemory)
+├── agent.rs     — Agent implementations (single, swarm stubs, supervisor stubs, REPL, ConversationMemory, agent loop with tool wiring)
 ├── llm.rs       — LLM provider abstraction (trait + 4 clients + multi-model manager + streaming)
 ├── config.rs    — Config structs, TOML/env loading, validation
-└── error.rs     — Unified error types
+├── error.rs     — Unified error types
+├── tools.rs     — Tool abstraction (ToolImpl trait, ToolRegistry, ToolCall, ToolResult) + 4 built-in tools (shell, read/write file, web fetch)
+├── policy.rs    — Deny-by-default policy engine (shell, path, network allow-lists)
+├── audit.rs     — Tamper-evident audit log (HMAC-SHA256 chained, structured JSON)
+└── sandbox.rs   — Sandboxed execution (workdir jail, path resolution, resource limits, timeouts)
 ```
 
 ### Current State
@@ -49,7 +53,7 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (157 tests, 5 modules, 0 warnings) | ✅ Working |
+| Verification suite (274 tests, 8 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -57,8 +61,11 @@ src/
 | System prompt / persona | ✅ Working — `LLMConfig.system_prompt`, CLI `--system-prompt`, env var |
 | Swarm mode | ❌ Stub — returns error "not yet implemented" |
 | Supervisor mode | ❌ Stub — returns error "not yet implemented" |
-| Tool-use / function calling | ❌ Not implemented |
-| Agent loop / ReAct planning | ❌ Not implemented — one-shot send-and-exit |
+| Tool-use / function calling | ✅ Working — ToolImpl trait + ToolRegistry + 4 built-in tools + agent loop wiring |
+| Agent loop / ReAct planning | ✅ Working — perceive→plan→act→observe with max-iteration guard, tool call detection |
+| Deny-by-default policy | ✅ Working — PolicyEngine with shell/path/network allow-lists |
+| Sandboxed execution | ✅ Working — workdir jail, path resolution, resource limits, timeouts |
+| Tamper-evident audit log | ✅ Working — HMAC-SHA256 chained, structured JSON, verification |
 | RavenFabric integration | Partial — config struct exists, binary included in container, runtime wiring pending |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented — CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review |
@@ -163,10 +170,14 @@ If a feature cannot be tested (e.g., hardware-dependent), document the reason in
 | Module | Owns | Does NOT own |
 |---|---|---|
 | `main.rs` | CLI parsing, config loading, mode dispatch | Agent logic, LLM calls, config structs |
-| `agent.rs` | Agent run functions (single, swarm, supervisor) | LLM client creation, config parsing |
+| `agent.rs` | Agent run functions (single, swarm, supervisor, REPL, agent loop) | LLM client creation, config parsing |
 | `llm.rs` | `LLMProviderTrait`, client implementations, `MultiModelManager` | Agent logic, config structs |
 | `config.rs` | `Config`, `LLMConfig`, validation, env loading | Agent logic, HTTP requests |
 | `error.rs` | `RavenClawError` enum, `Result<T>` alias | Everything else |
+| `tools.rs` | `ToolImpl` trait, `ToolRegistry`, `ToolCall`, `ToolResult`, 4 built-in tools | Agent logic, LLM calls |
+| `policy.rs` | `PolicyEngine` with shell/path/network allow-lists | Tool execution, LLM calls |
+| `audit.rs` | `AuditLog` with HMAC-SHA256 chaining | Tool execution, policy decisions |
+| `sandbox.rs` | `Sandbox` with workdir jail, resource limits, timeouts | Tool execution, LLM calls |
 
 ### Adding a New LLM Provider
 

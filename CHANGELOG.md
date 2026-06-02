@@ -46,5 +46,17 @@ All notable changes to RavenClaw will be documented in this file.
 - OpenRouter and OpenAI clients now respect `config.endpoint` when non-empty, falling back to hardcoded defaults (enables mockito testing)
 - Docker multi-arch build: cross-linkers installed and cargo target linker configured per-platform
 
+### Added
+- **Tool / function-calling abstraction** — `ToolImpl` trait, `ToolRegistry`, `ToolDefinition`, `ToolCall`, `ToolResult` types in `src/tools.rs`
+- **4 built-in tools**: `ShellTool` (shell_exec), `ReadFileTool` (read_file), `WriteFileTool` (write_file), `WebFetchTool` (web_fetch) — each with JSON schema definitions
+- **Tool wiring into agent loop** — `run_agent_loop()` detects `TOOL_CALL:` / `ARGS:` patterns in LLM responses, executes tools via `ToolRegistry`, injects results as `OBSERVATION:` messages
+- **Deny-by-default policy engine** — `PolicyEngine` in `src/policy.rs` with shell command, file path, and network request allow-lists
+- **Sandboxed execution** — `Sandbox` in `src/sandbox.rs` with workdir jail, path resolution, resource limits, timeouts, temp file creation, filtered environment
+- **Tamper-evident audit log** — `AuditLog` in `src/audit.rs` with HMAC-SHA256 chaining, structured JSON output, verification against tampering
+- `enable_tools` field on `AgentLoopConfig` — when enabled, tool definitions are injected into the system prompt
+- 6 new dependencies: `hmac 0.12`, `sha2 0.10`, `hex 0.4`, `chrono 0.4`, `rand 0.8`, `url 2.5`
+- 100+ new tests across tools (30+), policy (30+), audit (20+), sandbox (15+), and agent loop tool wiring
+
 ### Changed
 - `RavenFabricConfig`, `SecurityConfig`, `RuntimeConfig` now use manual `Default` impls instead of `#[derive(Default)]` to ensure serde defaults match Rust defaults
+- Architecture expanded from 5 to 8 source modules (added `tools.rs`, `policy.rs`, `audit.rs`, `sandbox.rs`)

@@ -277,6 +277,25 @@ need periodic review.
 
 ## 🧪 Code Quality
 
+### Unused imports and dead code warnings (8 warnings)
+
+**Problem:** `cargo test` emits 8 warnings:
+- `unused import: std::collections::HashMap` in `audit.rs`
+- `unused import: warn` in `audit.rs`, `policy.rs`, `sandbox.rs`
+- `unused imports: info` and `warn` in `policy.rs`
+- `dead_code: NotInitialized` variant in `AuditError`
+- `dead_code: set_file_path`, `tool_result`, `entries` methods in `AuditLog`
+- `dead_code: default`, `config` methods in `Sandbox`
+- `dead_code: array` function in `JsonSchema`
+
+**Status:** ⚠️ Low priority — these are API surfaces for future use. Clean up when features are implemented.
+
+### Sandbox Drop race condition in tests
+
+**Problem:** Sandbox tests use `Drop` to clean up workdirs, but when tests run in parallel, one test's `Drop` can remove a directory another test is using. Fixed by using unique directory names per test.
+
+**Status:** ✅ Resolved — each test now uses a unique directory name.
+
 ### ~~`next_client()` round-robin method never called~~ ✅ Fixed
 
 **Problem:** `MultiModelManager::next_client()` in `src/llm.rs` implements

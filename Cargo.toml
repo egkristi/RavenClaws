@@ -47,6 +47,20 @@ futures = "0.3"
 # Environment
 dotenvy = "0.15"
 
+# HMAC-SHA256 for audit log chaining
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+
+# Date/time for audit timestamps
+chrono = { version = "0.4", features = ["serde"] }
+
+# Cryptographically secure random numbers
+rand = "0.8"
+
+# URL parsing for policy engine
+url = "2.5"
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockito = "1.5"

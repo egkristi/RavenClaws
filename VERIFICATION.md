@@ -42,12 +42,15 @@ Each module is **self-contained** and can be run independently:
 
 The verification suite runs **94 tests** across **8 modules**, covering **4 deployment targets**. Each test produces a detailed log in `target/verification-results/`.
 
+In addition, **274 Rust unit tests** run via `cargo test` covering all 8 source modules (agent, config, error, llm, tools, policy, audit, sandbox).
+
 ### Usage
 
 ```bash
 ./scripts/verify.sh                    # Run all 94 tests
 ./scripts/verify.sh --list             # List all available modules
 ./scripts/verify.sh --quick            # Quick smoke test (24 tests: litellm + local + security)
+cargo test                             # Run 274 Rust unit tests
 ./scripts/verify.sh --all              # Run all modules (same as no flag)
 ./scripts/verify.sh --litellm          # LiteLLM connectivity only
 ./scripts/verify.sh --local            # Local macOS binary only
