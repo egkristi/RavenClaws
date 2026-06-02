@@ -84,16 +84,16 @@ pub struct LiteLLMClient {
 }
 
 impl LiteLLMClient {
-    pub fn new(config: &LLMConfig) -> Self {
+    pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(config.timeout_secs))
             .build()
-            .expect("Failed to create HTTP client");
+            .map_err(|e| LLMError::RequestFailed(format!("Failed to create HTTP client: {}", e)))?;
         
-        Self {
+        Ok(Self {
             client,
             config: config.clone(),
-        }
+        })
     }
     
     fn build_request(&self, messages: Vec<ChatMessage>) -> ChatRequest {
@@ -168,16 +168,16 @@ pub struct OpenRouterClient {
 }
 
 impl OpenRouterClient {
-    pub fn new(config: &LLMConfig) -> Self {
+    pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(config.timeout_secs))
             .build()
-            .expect("Failed to create HTTP client");
+            .map_err(|e| LLMError::RequestFailed(format!("Failed to create HTTP client: {}", e)))?;
         
-        Self {
+        Ok(Self {
             client,
             config: config.clone(),
-        }
+        })
     }
 }
 
@@ -240,16 +240,16 @@ pub struct OllamaClient {
 }
 
 impl OllamaClient {
-    pub fn new(config: &LLMConfig) -> Self {
+    pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(config.timeout_secs))
             .build()
-            .expect("Failed to create HTTP client");
+            .map_err(|e| LLMError::RequestFailed(format!("Failed to create HTTP client: {}", e)))?;
         
-        Self {
+        Ok(Self {
             client,
             config: config.clone(),
-        }
+        })
     }
 }
 
@@ -335,16 +335,16 @@ pub struct OpenAIClient {
 }
 
 impl OpenAIClient {
-    pub fn new(config: &LLMConfig) -> Self {
+    pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
         let client = Client::builder()
             .timeout(std::time::Duration::from_secs(config.timeout_secs))
             .build()
-            .expect("Failed to create HTTP client");
+            .map_err(|e| LLMError::RequestFailed(format!("Failed to create HTTP client: {}", e)))?;
         
-        Self {
+        Ok(Self {
             client,
             config: config.clone(),
-        }
+        })
     }
 }
 
@@ -399,10 +399,10 @@ impl LLMProviderTrait for OpenAIClient {
 /// Factory function to create the appropriate client based on provider type
 pub fn create_client(config: &LLMConfig) -> Result<Arc<dyn LLMProviderTrait>, LLMError> {
     match config.provider {
-        LLMProvider::LiteLLM => Ok(Arc::new(LiteLLMClient::new(config))),
-        LLMProvider::OpenRouter => Ok(Arc::new(OpenRouterClient::new(config))),
-        LLMProvider::Ollama => Ok(Arc::new(OllamaClient::new(config))),
-        LLMProvider::OpenAI => Ok(Arc::new(OpenAIClient::new(config))),
+        LLMProvider::LiteLLM => Ok(Arc::new(LiteLLMClient::new(config)?)),
+        LLMProvider::OpenRouter => Ok(Arc::new(OpenRouterClient::new(config)?)),
+        LLMProvider::Ollama => Ok(Arc::new(OllamaClient::new(config)?)),
+        LLMProvider::OpenAI => Ok(Arc::new(OpenAIClient::new(config)?)),
     }
 }
 
@@ -448,7 +448,9 @@ mod tests {
             timeout_secs: 30,
         };
         
-        let _client = LiteLLMClient::new(&config);
+        let client = LiteLLMClient::new(&config).unwrap();
+        assert_eq!(client.provider_name(), "litellm");
+        assert_eq!(client.model(), "gpt-4o-mini");
     }
     
     #[test]
@@ -461,6 +463,209 @@ mod tests {
             timeout_secs: 30,
         };
         
-        let _client = OllamaClient::new(&config);
+        let client = OllamaClient::new(&config).unwrap();
+        assert_eq!(client.provider_name(), "ollama");
+        assert_eq!(client.model(), "llama3.1");
+    }
+    
+    #[test]
+    fn test_openai_client_creation() {
+        let config = LLMConfig {
+            provider: LLMProvider::OpenAI,
+            endpoint: String::new(),
+            model: "gpt-4o".to_string(),
+            api_key: Some("sk-test".to_string()),
+            timeout_secs: 60,
+        };
+        
+        let client = OpenAIClient::new(&config).unwrap();
+        assert_eq!(client.provider_name(), "openai");
+        assert_eq!(client.model(), "gpt-4o");
+    }
+    
+    #[test]
+    fn test_openrouter_client_creation() {
+        let config = LLMConfig {
+            provider: LLMProvider::OpenRouter,
+            endpoint: String::new(),
+            model: "anthropic/claude-sonnet-4-20250514".to_string(),
+            api_key: Some("sk-test".to_string()),
+            timeout_secs: 30,
+        };
+        
+        let client = OpenRouterClient::new(&config).unwrap();
+        assert_eq!(client.provider_name(), "openrouter");
+        assert_eq!(client.model(), "anthropic/claude-sonnet-4-20250514");
+    }
+    
+    #[test]
+    fn test_create_client_factory() {
+        let config = LLMConfig {
+            provider: LLMProvider::LiteLLM,
+            endpoint: "http://localhost:4000".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            api_key: Some("test".to_string()),
+            timeout_secs: 30,
+        };
+        
+        let client = create_client(&config).unwrap();
+        assert_eq!(client.provider_name(), "litellm");
+        assert_eq!(client.model(), "gpt-4o-mini");
+    }
+    
+    #[test]
+    fn test_multi_model_manager_empty() {
+        let manager = MultiModelManager::new(vec![]).unwrap();
+        assert_eq!(manager.client_count(), 0);
+        assert!(manager.get_client(0).is_none());
+    }
+    
+    #[test]
+    fn test_multi_model_manager_single() {
+        let config = LLMConfig {
+            provider: LLMProvider::LiteLLM,
+            endpoint: "http://localhost:4000".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            api_key: Some("test".to_string()),
+            timeout_secs: 30,
+        };
+        
+        let manager = MultiModelManager::new(vec![config]).unwrap();
+        assert_eq!(manager.client_count(), 1);
+        assert!(manager.get_client(0).is_some());
+        assert_eq!(manager.get_client(0).unwrap().provider_name(), "litellm");
+    }
+    
+    #[test]
+    fn test_multi_model_manager_multiple() {
+        let configs = vec![
+            LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://localhost:4000".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test".to_string()),
+                timeout_secs: 30,
+            },
+            LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+            },
+        ];
+        
+        let manager = MultiModelManager::new(configs).unwrap();
+        assert_eq!(manager.client_count(), 2);
+        assert_eq!(manager.get_client(0).unwrap().provider_name(), "litellm");
+        assert_eq!(manager.get_client(1).unwrap().provider_name(), "ollama");
+    }
+    
+    #[test]
+    fn test_multi_model_next_client_round_robin() {
+        let configs = vec![
+            LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://localhost:4000".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test".to_string()),
+                timeout_secs: 30,
+            },
+            LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+            },
+        ];
+        
+        let manager = MultiModelManager::new(configs).unwrap();
+        // Start at index 0, next should be index 1
+        let next = manager.next_client(0);
+        assert_eq!(next.provider_name(), "ollama");
+        // Next after index 1 wraps to index 0
+        let next = manager.next_client(1);
+        assert_eq!(next.provider_name(), "litellm");
+    }
+    
+    #[test]
+    fn test_chat_request_serialization() {
+        let request = ChatRequest {
+            model: "gpt-4o-mini".to_string(),
+            messages: vec![
+                ChatMessage {
+                    role: "system".to_string(),
+                    content: "You are a helpful assistant.".to_string(),
+                },
+                ChatMessage {
+                    role: "user".to_string(),
+                    content: "Hello!".to_string(),
+                },
+            ],
+            temperature: Some(0.7),
+            max_tokens: Some(2048),
+            stream: None,
+        };
+        
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(json.contains("gpt-4o-mini"));
+        assert!(json.contains("system"));
+        assert!(json.contains("user"));
+        assert!(json.contains("Hello!"));
+        assert!(json.contains("0.7"));
+        // stream: None should be skipped
+        assert!(!json.contains("stream"));
+    }
+    
+    #[test]
+    fn test_chat_response_deserialization() {
+        let json = r#"{
+            "id": "chat-123",
+            "object": "chat.completion",
+            "created": 1717000000,
+            "model": "gpt-4o-mini",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "Hello! How can I help you?"
+                    },
+                    "finish_reason": "stop"
+                }
+            ],
+            "usage": {
+                "prompt_tokens": 10,
+                "completion_tokens": 20,
+                "total_tokens": 30
+            }
+        }"#;
+        
+        let response: ChatResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(response.id, "chat-123");
+        assert_eq!(response.model, "gpt-4o-mini");
+        assert_eq!(response.choices.len(), 1);
+        assert_eq!(response.choices[0].message.role, "assistant");
+        assert_eq!(response.choices[0].message.content, "Hello! How can I help you?");
+        assert_eq!(response.usage.unwrap().total_tokens, 30);
+    }
+    
+    #[test]
+    fn test_llm_error_display() {
+        let err = LLMError::RequestFailed("timeout".to_string());
+        assert_eq!(format!("{}", err), "Request failed: timeout");
+        
+        let err = LLMError::AuthFailed;
+        assert_eq!(format!("{}", err), "Authentication failed");
+        
+        let err = LLMError::RateLimited;
+        assert_eq!(format!("{}", err), "Rate limit exceeded");
+        
+        let err = LLMError::InvalidResponse("bad json".to_string());
+        assert_eq!(format!("{}", err), "Invalid response: bad json");
+        
+        let err = LLMError::ProviderNotSupported("custom".to_string());
+        assert_eq!(format!("{}", err), "Provider not supported: custom");
     }
 }

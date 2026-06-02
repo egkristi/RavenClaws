@@ -127,6 +127,70 @@ simpler** — or deliberately not at all.
 
 ---
 
+## Features Required to Become the Preferred Alternative
+
+Being *preferred* is a two-step bar: first reach **parity** on the capabilities the
+field now treats as table stakes, then **win decisively** on the five pillars where
+the cloud incumbents structurally can't follow. This is the gap analysis, grounded in
+what the competition actually ships today.
+
+### Part 1 — Table stakes (reach parity)
+
+Baseline expectations for any "agentic assistant and worker" in 2026. Items marked
+**NEW** are gaps not yet in the phase plan below; they are folded into the noted phase.
+
+| Capability | Why it's table stakes (who has it) | In RavenClaw | Target |
+|---|---|:--:|:--:|
+| Agent loop (plan → act → observe) | Without it there is no "agent" | 📋 | v0.3 |
+| Tool / function calling | The substrate for every action | 📋 | v0.4 |
+| **MCP — client *and* server** **NEW** | The lingua franca for tools — adopted by Anthropic, OpenAI, Google, Microsoft, Salesforce; Vellum's agent node already does MCP discovery. Consume MCP tools *and* expose RavenClaw as an MCP server. | ❌ | **v0.4** |
+| Sandboxed code execution | Now a native primitive (OpenAI Agents SDK); also our security wedge | 📋 | v0.4 |
+| Persistent memory (short + long-term, vector recall) | Without it every session starts from zero | 📋 | v0.3 → v0.9 |
+| Web search + headless browser tool **NEW** | Manus and Perplexity Comet center on browse / summarize / fill-forms / compare | ❌ | **v0.4** |
+| File operations (read / write / edit) | Codex-style filesystem tools; core to "worker" | 📋 | v0.4 |
+| Sub-agents / swarm orchestration | Kimi K2.6 runs **300 sub-agents / 4,000 steps**; the sub-agent pattern beats monolithic on long-horizon work | 📋 | v0.6 |
+| Async / long-horizon background runs **NEW** | Manus's killer feature (cloud background); Kimi's 12-hour runs; persistent 24/7 agents | ⚠️ | **v0.7** |
+| Scheduling / triggers (cron, webhook, file-watch) **NEW** | Proactive, set-and-forget operation | ❌ | **v0.7** |
+| Streaming + intermediate results | First-class in Vellum; needed for interactive UX | 📋 | v0.3 |
+| Multi-modal input (images, PDFs, docs) **NEW** | Manus and Kimi are multimodal; a "worker" must read documents | ❌ | **v0.5** |
+| Connectors / integrations (OAuth: Drive, M365, Slack, GitHub, Notion) **NEW** | Claude-style connectors. Manus's weakness is *no* integrations — our opening | ❌ | **v0.6** |
+| Skills / plugins (portable capability bundles) | Claude Agent Skills: instructions + scripts + resources, progressive disclosure | 📋 | pull earlier → v0.5 |
+| Retries / provider fallback / fail-early | Vellum: retry, fall back to another provider, fail early | 📋 | v0.5 |
+| Evals + observability + run inspection **NEW** | Vellum/Microsoft: evals, middleware logging, session inspection | ⚠️ | **v0.7** + eval harness |
+| Human-in-the-loop approvals / guardrails **NEW** | Enterprises require guardrails + audit + HITL fallback | ❌ | **v0.4** |
+| Output artifacts (docs, sheets, slides, sites) **NEW** | Manus builds sites/apps/decks; Claude skills emit pptx/xlsx/docx/pdf | ❌ | v0.8 (via skills) |
+
+### Part 2 — Where RavenClaw wins (the "preferred" wedge)
+
+Parity gets RavenClaw onto the shortlist. These pillar-based advantages get it
+*chosen* — and the cloud incumbents (Manus, Perplexity, Kimi, Cowork-class) cannot
+match all of them at once without abandoning their model.
+
+| Differentiator | Why it beats the field | Pillars | Phase |
+|---|---|:--:|:--:|
+| **Local-first / self-hosted / air-gapped** | Manus is cloud-only with no free tier; Comet's "Local" mode is a browser, not a worker. RavenClaw runs fully offline incl. Ollama — data never leaves your control. | Secure · Simple | ✅ core, deepen v0.4 |
+| **Security model: deny-by-default policy + sandbox + tamper-evident audit** | The field bolts security on; enterprises must add guardrails/audit/HITL themselves. We ship it in core. | Secure | v0.4 |
+| **Memory-safe ~3 MB single binary, edge/embeddable** | No cloud agent runs on a Raspberry Pi or embeds inside another product. | Small · Efficient | ✅ |
+| **Provider-agnostic + cost-aware routing + budgets** | Not locked to one model vendor; route cheap → capable and cap spend. | Efficient · Robust | v0.5 |
+| **RavenFabric mesh: E2E-encrypted remote exec across a fleet** | Unique — competitors are single-host or single-cloud. Turns RavenClaw into a *distributed* workforce. | Robust | v0.6 |
+| **No telemetry · deterministic · reproducible · signed + SBOM** | Trust as a feature, verifiable end to end. | Secure | ✅ → v1.0 |
+| **Open core + commercial** | No lock-in, vs. proprietary cloud. | Simple | ✅ |
+
+### Part 3 — The five that move the needle most
+
+If focus is limited, these close the biggest "preferred" gap fastest:
+
+1. **MCP client + server (v0.4)** — instant access to the entire tool ecosystem instead of reinventing it. Single highest-leverage feature.
+2. **Agent loop + tools + sandbox (v0.3–v0.4)** — turns RavenClaw from a chat client into an actual worker.
+3. **Local-first privacy + the security model (v0.4)** — the wedge no cloud agent can copy.
+4. **Async / background + scheduling (v0.7)** — matches Manus's "assign-and-walk-away" and enables 24/7 agents.
+5. **RavenFabric distributed execution (v0.6)** — the capability *no competitor has*.
+
+> Table stakes get RavenClaw onto the shortlist. The pillars — local, secure, tiny,
+> open, distributed — are why it gets picked. Build parity fast; never compromise the wedge.
+
+---
+
 ## Phased Plan
 
 Versions are capability milestones, not dates. Each must keep all five pillars green.

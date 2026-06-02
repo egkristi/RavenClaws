@@ -15,7 +15,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 #[derive(Parser, Debug)]
 #[command(name = "ravenclaw")]
 #[command(author = "Erling G M Kristiansen")]
-#[command(version = "0.1.0")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(about = "Lightweight, secure Rust agent framework with multi-provider support", long_about = None)]
 struct Args {
     /// Configuration file path
@@ -82,6 +82,26 @@ async fn main() -> anyhow::Result<()> {
     
     info!(mode = %args.mode, "Configuration loaded");
 
+    // Handle --exec one-shot mode (overrides mode, uses first available provider)
+    if let Some(exec_prompt) = args.exec {
+        info!("Running in --exec one-shot mode");
+        if !config.llms.is_empty() {
+            let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
+            if let Some(client) = multi_llm.get_client(0) {
+                let response = agent::run_exec(client.clone(), &exec_prompt).await?;
+                println!("{}", response);
+            } else {
+                anyhow::bail!("No LLM providers available for --exec mode");
+            }
+        } else {
+            let llm = llm::create_client(&config.llm)?;
+            let response = agent::run_exec(llm, &exec_prompt).await?;
+            println!("{}", response);
+        }
+        info!("RavenClaw shutdown complete");
+        return Ok(());
+    }
+
     // Determine if multi-model or single-provider mode
     let has_multi_model = !config.llms.is_empty();
     
@@ -129,7 +149,7 @@ async fn main() -> anyhow::Result<()> {
         // Create appropriate client based on provider
         let llm = llm::create_client(&config.llm)?;
         info!(provider = llm.provider_name(), model = llm.model(), "Provider ready");
-        
+
         // Run agent based on mode
         match args.mode.as_str() {
             "single" => {
@@ -152,4 +172,87 @@ async fn main() -> anyhow::Result<()> {
 
     info!("RavenClaw shutdown complete");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    #[test]
+    fn test_cli_default_args() {
+        // Verify the CLI struct can be constructed with defaults
+        let args = Args::parse_from(&["ravenclaw"]);
+        assert_eq!(args.mode, "single");
+        assert!(!args.verbose);
+        assert!(args.config.is_none());
+        assert!(args.exec.is_none());
+        assert!(args.provider.is_none());
+        assert!(args.endpoint.is_none());
+        assert!(args.model.is_none());
+    }
+    
+    #[test]
+    fn test_cli_custom_args() {
+        let args = Args::parse_from(&[
+            "ravenclaw",
+            "--config", "/tmp/config.toml",
+            "--mode", "swarm",
+            "--verbose",
+            "--exec", "Hello",
+            "--provider", "ollama",
+            "--endpoint", "http://localhost:11434",
+            "--model", "llama3.1",
+        ]);
+        assert_eq!(args.config.unwrap(), "/tmp/config.toml");
+        assert_eq!(args.mode, "swarm");
+        assert!(args.verbose);
+        assert_eq!(args.exec.unwrap(), "Hello");
+        assert_eq!(args.provider.unwrap(), "ollama");
+        assert_eq!(args.endpoint.unwrap(), "http://localhost:11434");
+        assert_eq!(args.model.unwrap(), "llama3.1");
+    }
+    
+    #[test]
+    fn test_cli_short_args() {
+        let args = Args::parse_from(&[
+            "ravenclaw",
+            "-c", "/tmp/config.toml",
+            "-m", "supervisor",
+            "-v",
+            "-e", "test prompt",
+        ]);
+        assert_eq!(args.config.unwrap(), "/tmp/config.toml");
+        assert_eq!(args.mode, "supervisor");
+        assert!(args.verbose);
+        assert_eq!(args.exec.unwrap(), "test prompt");
+    }
+    
+    #[test]
+    fn test_cli_invalid_mode() {
+        let args = Args::parse_from(&["ravenclaw", "--mode", "invalid"]);
+        assert_eq!(args.mode, "invalid");
+        // The mode validation happens at runtime, not in clap
+    }
+    
+    #[test]
+    fn test_cli_provider_mapping() {
+        // Test that provider strings map correctly
+        let test_cases = vec![
+            ("litellm", config::LLMProvider::LiteLLM),
+            ("openrouter", config::LLMProvider::OpenRouter),
+            ("ollama", config::LLMProvider::Ollama),
+            ("openai", config::LLMProvider::OpenAI),
+            ("unknown", config::LLMProvider::LiteLLM), // default
+        ];
+        
+        for (input, expected) in test_cases {
+            let mapped = match input.to_lowercase().as_str() {
+                "openrouter" => config::LLMProvider::OpenRouter,
+                "ollama" => config::LLMProvider::Ollama,
+                "openai" => config::LLMProvider::OpenAI,
+                _ => config::LLMProvider::LiteLLM,
+            };
+            assert_eq!(mapped, expected, "Provider mapping failed for '{}'", input);
+        }
+    }
 }

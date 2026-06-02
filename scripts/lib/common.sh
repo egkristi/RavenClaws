@@ -167,6 +167,18 @@ check_llm_response_quality() {
             log_fail "Model $model_name — response too short"
             return 1
         fi
+    elif grep -q '"Exec response received"' "$log_file" 2>/dev/null; then
+        # Exec mode prints response to stdout (non-JSON lines in the log)
+        local exec_response
+        exec_response=$(grep -v '^{' "$log_file" 2>/dev/null | tr -d '[:space:]')
+        local exec_len=${#exec_response}
+        if [[ "$exec_len" -gt 0 ]]; then
+            log_ok "Model $model_name — responded (${exec_len} chars via exec)"
+            return 0
+        else
+            log_fail "Model $model_name — exec response empty"
+            return 1
+        fi
     elif grep -q '"LLM request failed"' "$log_file" 2>/dev/null; then
         log_fail "Model $model_name — LLM request failed"
         return 1
