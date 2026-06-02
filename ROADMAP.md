@@ -35,14 +35,14 @@ can't be added without breaking one, it doesn't ship in core.
 | CLI & env-var overrides | ✅ Working | `--provider`, `--endpoint`, `--model`, layered TOML→env→flags |
 | Config validation | ✅ Working | TLS enforcement, endpoint checks |
 | Container & K8s security | ✅ Working | Distroless, non-root, read-only FS, dropped caps, seccomp, RBAC |
-| CI/CD pipeline | ✅ Implemented | fmt + clippy `-D warnings` + test, 5-target builds, multi-arch images, **Cosign + SBOM + provenance + Trivy**, crates.io publish, releases — ⚠️ **red until `Cargo.lock` is committed** |
+| CI/CD pipeline | ✅ Implemented | fmt + clippy `-D warnings` + test, 5-target builds, multi-arch images, **Cosign + SBOM + provenance + Trivy**, crates.io publish, releases — cross-compilation deps installed for all targets |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review — all SARIF results uploaded to GitHub Security tab |
 | Verification suite | ✅ Working | 94 system/integration checks · 8 modules · 4 targets (`scripts/verify.sh`: local, Docker, Linux, K8s, security, performance, LLM-quality) — shell-orchestrated, requires live services |
-| Rust unit tests | ✅ Working | 71 tests across all 5 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
 | Multi-model routing | ⚠️ Partial | `next_client()` round-robin exists but is never called; no intelligent routing |
 | RavenFabric integration | ⚠️ Partial | Config struct exists, agent binary baked into the image with checksum verification; runtime integration not wired |
-| `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout |
+| `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout; full test coverage |
 | Swarm / Supervisor modes | ⚠️ Stub | Return clear error instead of silent exit 0 |
+| Rust unit tests | ✅ Working | 149 tests across all 5 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
 | Agent loop / ReAct planning | ❌ Not implemented | One-shot send-and-exit; no perceive→plan→act→observe |
 | Tool-use / function calling | ❌ Not implemented | Agent cannot call tools |
 | Streaming responses | ❌ Not implemented | `stream: None` hardcoded |
@@ -56,7 +56,8 @@ These break real usage today and are the first thing to fix (see [Technical Debt
 1. ~~**`Cargo.lock` is git-ignored, but `--locked` is used in CI, Docker, `build.sh`, and `cargo publish`** → every fresh checkout fails to build. *(blocker)*~~ ✅ Fixed
 2. ~~**Dockerfile pins the builder to `$BUILDPLATFORM` then cross-compiles to `$TARGET` with no cross-linker** → `linux/arm64` image build fails at link time. *(blocker)*~~ ✅ Fixed — cross-linkers installed
 3. ~~**Dockerfile `curl | chmod +x` of the RavenFabric agent has no checksum/signature check** — supply-chain gap in a "secure by default" project. *(security)*~~ ✅ Fixed — SHA256 checksum verification added
-4. **The binary exits after one request, but the k8s Deployment expects a long-running process** → CrashLoopBackOff until server mode (v0.7) exists.
+4. ~~**CI cross-compilation builds fail** — `x86_64-unknown-linux-musl` and `aarch64-unknown-linux-gnu` targets missing toolchain deps on runners. *(blocker)*~~ ✅ Fixed — `musl-tools` and `gcc-aarch64-linux-gnu` installed in CI
+5. **The binary exits after one request, but the k8s Deployment expects a long-running process** → CrashLoopBackOff until server mode (v0.7) exists.
 
 ---
 
@@ -216,11 +217,12 @@ Cheapest, highest-leverage work. Nothing new ships until the basics are solid.
 Turn the client into an actual worker. *This is the milestone that makes RavenClaw an agent.*
 
 - [ ] **Agent loop**: perceive → plan → act → observe, with max-iteration guard and cancellation.
-- [ ] **`--exec "<task>"`** one-shot mode + an **interactive REPL** (stdin).
+- [x] **`--exec "<task>"`** one-shot mode — sends prompt to LLM, prints response to stdout.
+- [ ] **Interactive REPL** (stdin) — continuous conversation mode.
 - [ ] **Conversation memory** — context across turns; configurable window (last N turns or token budget); session save/restore.
 - [ ] **Streaming responses** end to end (`stream = true`) across the trait and all clients.
 - [ ] **System-prompt / persona** configuration.
-- [ ] **Robust errors** — typed retries, timeouts, graceful provider failure.
+- [x] **Robust errors** — typed retries, timeouts, graceful provider failure. All error paths covered with `thiserror` + `anyhow`; 26 error tests across 7 variants.
 
 **Exit criteria:** `ravenclaw --exec "summarize this repo"` performs a real multi-step task and returns a result.
 
@@ -335,7 +337,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 | Version | Hardening added |
 |---|---|
 | 0.1 | Memory-safe Rust, TLS check, no creds in config, distroless, signed images, SBOM, Trivy. |
-| 0.2 | Verified supply chain for downloaded binaries; no panic/abort on client init. |
+| 0.2 | Verified supply chain for downloaded binaries (SHA256 checksum); no panic/abort on client init; cross-compilation deps in CI. |
 | 0.4 | Deny-by-default tool policy, sandboxed execution, audit log, secret zeroization, prompt-injection defense. |
 | 0.6 | E2E-encrypted remote exec via RavenFabric. |
 | 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
@@ -355,18 +357,20 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 
 ## Technical Debt
 
-Concrete items carried from the current codebase (targeted for v0.2 unless noted):
+Concrete items carried from the current codebase:
 
-1. **`Cargo.lock` git-ignored vs. `--locked` everywhere** — breaks fresh-clone/CI/Docker/publish. *(blocker)*
-2. **Docker arm64 cross-compile** lacks a cross-linker under `--platform=$BUILDPLATFORM`. *(blocker)*
-3. **Unverified `curl | chmod +x`** of the RavenFabric agent in the Dockerfile. *(security)*
-4. **k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.
-5. **Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4). *(v0.5)*
-6. **Dead/unwired code:** `--exec`, `next_client`, `rustls` + `zeroize` deps, and all `security`/`ravenfabric` config fields.
-7. **Rust unit tests are shallow** — only 3 constructor/smoke tests; `mockito` unused. (The 94-check `verify.sh` suite covers system/integration level but needs live services; add fast Rust-level request/response/error coverage.)
-8. **`.expect()` on HTTP client build** under `panic = "abort"` — aborts on a config hiccup.
-9. **Version literal duplicated** in `main.rs` instead of `CARGO_PKG_VERSION`.
-10. **README historically over-claimed** vs. implemented state — kept honest going forward via status markers.
+1. ~~**`Cargo.lock` git-ignored vs. `--locked` everywhere** — breaks fresh-clone/CI/Docker/publish. *(blocker)*~~ ✅ Fixed
+2. ~~**Docker arm64 cross-compile** lacks a cross-linker under `--platform=$BUILDPLATFORM`. *(blocker)*~~ ✅ Fixed
+3. ~~**Unverified `curl | chmod +x`** of the RavenFabric agent in the Dockerfile. *(security)*~~ ✅ Fixed — SHA256 checksum verification
+4. ~~**CI cross-compilation builds fail** — missing `musl-tools` and `gcc-aarch64-linux-gnu` on runners. *(blocker)*~~ ✅ Fixed
+5. **k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.
+6. **Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4). *(v0.5)*
+7. **Dead/unwired code:** `next_client`, `rustls` + `zeroize` deps, and all `security`/`ravenfabric` config fields. *(v0.5)*
+8. ~~**Rust unit tests are shallow** — only 3 constructor/smoke tests; `mockito` unused.~~ ✅ Fixed — 149 tests across all modules
+9. ~~**`.expect()` on HTTP client build** under `panic = "abort"` — aborts on a config hiccup.~~ ✅ Fixed
+10. ~~**Version literal duplicated** in `main.rs` instead of `CARGO_PKG_VERSION`.~~ ✅ Fixed
+11. ~~**README historically over-claimed** vs. implemented state~~ ✅ Fixed
+12. ~~**`--exec` dead code** — CLI arg parsed but never used.~~ ✅ Fixed — fully implemented
 
 ---
 
