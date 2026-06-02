@@ -1,0 +1,15 @@
+# RavenClaw Ollama test configuration (for when Ollama is available)
+[llm]
+provider = "ollama"
+endpoint = "http://localhost:11434"
+model = "llama3.1"
+timeout_secs = 60
+
+[security]
+require_tls = false
+audit_log = false
+
+[runtime]
+workdir = "/tmp/ravenclaw-test"
+max_agents = 5
+health_interval_secs = 10

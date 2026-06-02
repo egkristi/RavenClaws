@@ -1,15 +1,23 @@
 # RavenClaw — Multi-stage build for minimal production image
 # Supports: linux/amd64, linux/arm64
 # Usage: docker buildx build --platform linux/amd64,linux/arm64 -t ravenclaw:latest .
+# syntax=docker/dockerfile:1
 
 # Stage 1: Builder
-# syntax=docker/dockerfile:1
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
-FROM --platform=$BUILDPLATFORM rust:1.82-slim-bookworm AS builder
+FROM --platform=$BUILDPLATFORM rust:1.86-slim-bookworm AS builder
 
 WORKDIR /app
+
+# Map TARGETPLATFORM to Rust target triple
+ARG TARGETPLATFORM
+RUN case "$TARGETPLATFORM" in \
+        "linux/amd64")  echo "x86_64-unknown-linux-gnu" > /tmp/rust_target.txt ;; \
+        "linux/arm64")  echo "aarch64-unknown-linux-gnu" > /tmp/rust_target.txt ;; \
+        *)              echo "x86_64-unknown-linux-gnu" > /tmp/rust_target.txt ;; \
+    esac
 
 # Install dependencies and cross-compilation tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -22,28 +30,18 @@ COPY Cargo.toml Cargo.lock* ./
 COPY src/ ./src/
 
 # Build optimized release for the target platform
-ARG TARGETPLATFORM
-RUN case "$TARGETPLATFORM" in \
-        "linux/amd64")  TARGET="x86_64-unknown-linux-gnu" ;; \
-        "linux/arm64")  TARGET="aarch64-unknown-linux-gnu" ;; \
-        *)              TARGET="x86_64-unknown-linux-gnu" ;; \
-    esac && \
+RUN TARGET=$(cat /tmp/rust_target.txt) && \
     rustup target add "$TARGET" && \
-    cargo build --release --locked --target "$TARGET"
+    cargo build --release --locked --target "$TARGET" && \
+    cp "target/$TARGET/release/ravenclaw" /app/ravenclaw
 
 # Stage 2: Runtime (minimal)
 FROM gcr.io/distroless/cc-debian12:nonroot
 
 WORKDIR /app
 
-# Copy binary from builder
-ARG TARGETPLATFORM
-COPY --from=builder --chown=nonroot:nonroot \
-    /app/target/$(case "$TARGETPLATFORM" in \
-        "linux/amd64") echo "x86_64-unknown-linux-gnu" ;; \
-        "linux/arm64") echo "aarch64-unknown-linux-gnu" ;; \
-        *) echo "x86_64-unknown-linux-gnu" ;; \
-    esac)/release/ravenclaw .
+# Copy binary from known path in builder
+COPY --from=builder /app/ravenclaw /app/ravenclaw
 
 # Security: run as non-root, read-only filesystem
 USER nonroot

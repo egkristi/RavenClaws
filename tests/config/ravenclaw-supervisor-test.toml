@@ -1,0 +1,15 @@
+# RavenClaw supervisor mode test configuration
+[llm]
+provider = "litellm"
+endpoint = "http://localhost:4000"
+model = "best-coding"
+timeout_secs = 60
+
+[security]
+require_tls = false
+audit_log = false
+
+[runtime]
+workdir = "/tmp/ravenclaw-test"
+max_agents = 3
+health_interval_secs = 10
