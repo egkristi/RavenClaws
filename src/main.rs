@@ -33,15 +33,15 @@ struct Args {
     /// Run a one-shot command
     #[arg(short, long)]
     exec: Option<String>,
-    
+
     /// Provider type: litellm, openrouter, ollama, openai (overrides config)
     #[arg(long, env = "RAVENCLAW_PROVIDER")]
     provider: Option<String>,
-    
+
     /// LLM endpoint (overrides config)
     #[arg(long, env = "RAVENCLAW_ENDPOINT")]
     endpoint: Option<String>,
-    
+
     /// Model name (overrides config)
     #[arg(long, env = "RAVENCLAW_MODEL")]
     model: Option<String>,
@@ -54,8 +54,10 @@ async fn main() -> anyhow::Result<()> {
     // Initialize logging
     let log_level = if args.verbose { "debug" } else { "info" };
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| format!("ravenclaw={}", log_level).into()))
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| format!("ravenclaw={}", log_level).into()),
+        )
         .with(tracing_subscriber::fmt::layer().json())
         .init();
 
@@ -63,7 +65,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Load configuration
     let mut config = config::Config::load(args.config.as_deref())?;
-    
+
     // Apply CLI overrides
     if let Some(provider) = args.provider {
         config.llm.provider = match provider.to_lowercase().as_str() {
@@ -79,7 +81,7 @@ async fn main() -> anyhow::Result<()> {
     if let Some(model) = args.model {
         config.llm.model = model;
     }
-    
+
     info!(mode = %args.mode, "Configuration loaded");
 
     // Handle --exec one-shot mode (overrides mode, uses first available provider)
@@ -104,19 +106,23 @@ async fn main() -> anyhow::Result<()> {
 
     // Determine if multi-model or single-provider mode
     let has_multi_model = !config.llms.is_empty();
-    
+
     if has_multi_model {
         info!(providers = config.llms.len(), "Multi-model mode enabled");
-        
+
         // Create multi-model manager
         let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
-        
+
         for i in 0..multi_llm.client_count() {
             if let Some(client) = multi_llm.get_client(i) {
-                info!(provider = client.provider_name(), model = client.model(), "Provider initialized");
+                info!(
+                    provider = client.provider_name(),
+                    model = client.model(),
+                    "Provider initialized"
+                );
             }
         }
-        
+
         // Run agent based on mode with multi-model support
         match args.mode.as_str() {
             "single" => {
@@ -132,7 +138,10 @@ async fn main() -> anyhow::Result<()> {
                 agent::run_supervisor_multi(multi_llm, config).await?;
             }
             _ => {
-                anyhow::bail!("Unknown mode: {}. Use: single, swarm, or supervisor", args.mode);
+                anyhow::bail!(
+                    "Unknown mode: {}. Use: single, swarm, or supervisor",
+                    args.mode
+                );
             }
         }
     } else {
@@ -143,12 +152,16 @@ async fn main() -> anyhow::Result<()> {
             config::LLMProvider::Ollama => "Ollama",
             config::LLMProvider::OpenAI => "OpenAI",
         };
-        
+
         info!(provider = provider_name, endpoint = %config.llm.endpoint, model = %config.llm.model, "LLM client initialized");
-        
+
         // Create appropriate client based on provider
         let llm = llm::create_client(&config.llm)?;
-        info!(provider = llm.provider_name(), model = llm.model(), "Provider ready");
+        info!(
+            provider = llm.provider_name(),
+            model = llm.model(),
+            "Provider ready"
+        );
 
         // Run agent based on mode
         match args.mode.as_str() {
@@ -165,7 +178,10 @@ async fn main() -> anyhow::Result<()> {
                 agent::run_supervisor(llm, config).await?;
             }
             _ => {
-                anyhow::bail!("Unknown mode: {}. Use: single, swarm, or supervisor", args.mode);
+                anyhow::bail!(
+                    "Unknown mode: {}. Use: single, swarm, or supervisor",
+                    args.mode
+                );
             }
         }
     }
@@ -177,7 +193,7 @@ async fn main() -> anyhow::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_cli_default_args() {
         // Verify the CLI struct can be constructed with defaults
@@ -190,18 +206,24 @@ mod tests {
         assert!(args.endpoint.is_none());
         assert!(args.model.is_none());
     }
-    
+
     #[test]
     fn test_cli_custom_args() {
         let args = Args::parse_from(&[
             "ravenclaw",
-            "--config", "/tmp/config.toml",
-            "--mode", "swarm",
+            "--config",
+            "/tmp/config.toml",
+            "--mode",
+            "swarm",
             "--verbose",
-            "--exec", "Hello",
-            "--provider", "ollama",
-            "--endpoint", "http://localhost:11434",
-            "--model", "llama3.1",
+            "--exec",
+            "Hello",
+            "--provider",
+            "ollama",
+            "--endpoint",
+            "http://localhost:11434",
+            "--model",
+            "llama3.1",
         ]);
         assert_eq!(args.config.unwrap(), "/tmp/config.toml");
         assert_eq!(args.mode, "swarm");
@@ -211,29 +233,32 @@ mod tests {
         assert_eq!(args.endpoint.unwrap(), "http://localhost:11434");
         assert_eq!(args.model.unwrap(), "llama3.1");
     }
-    
+
     #[test]
     fn test_cli_short_args() {
         let args = Args::parse_from(&[
             "ravenclaw",
-            "-c", "/tmp/config.toml",
-            "-m", "supervisor",
+            "-c",
+            "/tmp/config.toml",
+            "-m",
+            "supervisor",
             "-v",
-            "-e", "test prompt",
+            "-e",
+            "test prompt",
         ]);
         assert_eq!(args.config.unwrap(), "/tmp/config.toml");
         assert_eq!(args.mode, "supervisor");
         assert!(args.verbose);
         assert_eq!(args.exec.unwrap(), "test prompt");
     }
-    
+
     #[test]
     fn test_cli_invalid_mode() {
         let args = Args::parse_from(&["ravenclaw", "--mode", "invalid"]);
         assert_eq!(args.mode, "invalid");
         // The mode validation happens at runtime, not in clap
     }
-    
+
     #[test]
     fn test_cli_provider_mapping() {
         // Test that provider strings map correctly
@@ -244,7 +269,7 @@ mod tests {
             ("openai", config::LLMProvider::OpenAI),
             ("unknown", config::LLMProvider::LiteLLM), // default
         ];
-        
+
         for (input, expected) in test_cases {
             let mapped = match input.to_lowercase().as_str() {
                 "openrouter" => config::LLMProvider::OpenRouter,

@@ -2,20 +2,24 @@
 //!
 //! Supports single-provider and multi-model (multi-provider) modes.
 
-use std::sync::Arc;
 use crate::config::Config;
 use crate::error::Result;
 use crate::llm::{ChatMessage, LLMProviderTrait, MultiModelManager};
+use std::sync::Arc;
 use tracing::{info, warn};
 
 /// Run a one-shot command via --exec mode
 /// Sends the prompt to the LLM and returns the response text.
 pub async fn run_exec(llm: Arc<dyn LLMProviderTrait>, prompt: &str) -> Result<String> {
-    info!(provider = llm.provider_name(), model = llm.model(), "Exec one-shot mode");
-    
+    info!(
+        provider = llm.provider_name(),
+        model = llm.model(),
+        "Exec one-shot mode"
+    );
+
     let system_prompt = "You are RavenClaw, a lightweight autonomous agent. \
         Be concise, efficient, and secure. Always validate inputs and outputs.";
-    
+
     let messages = vec![
         ChatMessage {
             role: "system".to_string(),
@@ -26,28 +30,39 @@ pub async fn run_exec(llm: Arc<dyn LLMProviderTrait>, prompt: &str) -> Result<St
             content: prompt.to_string(),
         },
     ];
-    
+
     let response = llm.chat(messages).await.map_err(|e| {
         crate::error::RavenClawError::CommandExecution(format!("LLM request failed: {}", e))
     })?;
-    
-    let content = response.choices.first()
+
+    let content = response
+        .choices
+        .first()
         .map(|c| c.message.content.clone())
-        .ok_or_else(|| crate::error::RavenClawError::CommandExecution(
-            "LLM returned empty response".to_string()
-        ))?;
-    
-    info!(provider = llm.provider_name(), model = llm.model(), "Exec response received");
+        .ok_or_else(|| {
+            crate::error::RavenClawError::CommandExecution(
+                "LLM returned empty response".to_string(),
+            )
+        })?;
+
+    info!(
+        provider = llm.provider_name(),
+        model = llm.model(),
+        "Exec response received"
+    );
     Ok(content)
 }
 
 /// Run a single autonomous agent (single-provider mode)
 pub async fn run_single(llm: Arc<dyn LLMProviderTrait>, _config: Config) -> Result<()> {
-    info!("Starting single agent mode with provider: {}", llm.provider_name());
-    
+    info!(
+        "Starting single agent mode with provider: {}",
+        llm.provider_name()
+    );
+
     let system_prompt = "You are RavenClaw, a lightweight autonomous agent. \
         Be concise, efficient, and secure. Always validate inputs and outputs.";
-    
+
     let messages = vec![
         ChatMessage {
             role: "system".to_string(),
@@ -58,7 +73,7 @@ pub async fn run_single(llm: Arc<dyn LLMProviderTrait>, _config: Config) -> Resu
             content: "Ready. Awaiting instructions.".to_string(),
         },
     ];
-    
+
     match llm.chat(messages).await {
         Ok(response) => {
             if let Some(choice) = response.choices.first() {
@@ -69,7 +84,7 @@ pub async fn run_single(llm: Arc<dyn LLMProviderTrait>, _config: Config) -> Resu
             warn!(error = %e, provider = llm.provider_name(), "LLM request failed");
         }
     }
-    
+
     Ok(())
 }
 
@@ -77,7 +92,7 @@ pub async fn run_single(llm: Arc<dyn LLMProviderTrait>, _config: Config) -> Resu
 pub async fn run_swarm(_llm: Arc<dyn LLMProviderTrait>, _config: Config) -> Result<()> {
     warn!("Swarm mode not yet implemented");
     Err(crate::error::RavenClawError::CommandExecution(
-        "Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string()
+        "Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string(),
     ))
 }
 
@@ -85,17 +100,21 @@ pub async fn run_swarm(_llm: Arc<dyn LLMProviderTrait>, _config: Config) -> Resu
 pub async fn run_supervisor(_llm: Arc<dyn LLMProviderTrait>, _config: Config) -> Result<()> {
     warn!("Supervisor mode not yet implemented");
     Err(crate::error::RavenClawError::CommandExecution(
-        "Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string()
+        "Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline."
+            .to_string(),
     ))
 }
 
 /// Run a single autonomous agent (multi-model mode)
 pub async fn run_single_multi(multi_llm: MultiModelManager, _config: Config) -> Result<()> {
-    info!("Starting single agent mode (multi-model) with {} providers", multi_llm.client_count());
-    
+    info!(
+        "Starting single agent mode (multi-model) with {} providers",
+        multi_llm.client_count()
+    );
+
     let system_prompt = "You are RavenClaw, a lightweight autonomous agent. \
         Be concise, efficient, and secure. Always validate inputs and outputs.";
-    
+
     let messages = vec![
         ChatMessage {
             role: "system".to_string(),
@@ -106,7 +125,7 @@ pub async fn run_single_multi(multi_llm: MultiModelManager, _config: Config) -> 
             content: "Ready. Awaiting instructions.".to_string(),
         },
     ];
-    
+
     // Test each configured provider
     for i in 0..multi_llm.client_count() {
         if let Some(client) = multi_llm.get_client(i) {
@@ -122,7 +141,7 @@ pub async fn run_single_multi(multi_llm: MultiModelManager, _config: Config) -> 
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -130,7 +149,7 @@ pub async fn run_single_multi(multi_llm: MultiModelManager, _config: Config) -> 
 pub async fn run_swarm_multi(_multi_llm: MultiModelManager, _config: Config) -> Result<()> {
     warn!("Swarm mode (multi-model) not yet implemented");
     Err(crate::error::RavenClawError::CommandExecution(
-        "Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string()
+        "Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string(),
     ))
 }
 
@@ -138,68 +157,73 @@ pub async fn run_swarm_multi(_multi_llm: MultiModelManager, _config: Config) -> 
 pub async fn run_supervisor_multi(_multi_llm: MultiModelManager, _config: Config) -> Result<()> {
     warn!("Supervisor mode (multi-model) not yet implemented");
     Err(crate::error::RavenClawError::CommandExecution(
-        "Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string()
+        "Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline."
+            .to_string(),
     ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_swarm_stub_returns_error() {
         let err = crate::error::RavenClawError::CommandExecution(
-            "Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string()
+            "Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline."
+                .to_string(),
         );
         assert_eq!(
             format!("{}", err),
             "Command execution failed: Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline."
         );
     }
-    
+
     #[test]
     fn test_supervisor_stub_returns_error() {
         let err = crate::error::RavenClawError::CommandExecution(
-            "Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string()
+            "Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline."
+                .to_string(),
         );
         assert_eq!(
             format!("{}", err),
             "Command execution failed: Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline."
         );
     }
-    
+
     #[test]
     fn test_exec_empty_response_error() {
         let err = crate::error::RavenClawError::CommandExecution(
-            "LLM returned empty response".to_string()
+            "LLM returned empty response".to_string(),
         );
         assert!(format!("{}", err).contains("LLM returned empty response"));
     }
-    
+
     #[test]
     fn test_swarm_multi_stub_returns_error() {
         let err = crate::error::RavenClawError::CommandExecution(
-            "Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string()
+            "Swarm mode is not yet implemented. See ROADMAP.md for the planned timeline."
+                .to_string(),
         );
         assert!(format!("{}", err).contains("Swarm mode"));
     }
-    
+
     #[test]
     fn test_supervisor_multi_stub_returns_error() {
         let err = crate::error::RavenClawError::CommandExecution(
-            "Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline.".to_string()
+            "Supervisor mode is not yet implemented. See ROADMAP.md for the planned timeline."
+                .to_string(),
         );
         assert!(format!("{}", err).contains("Supervisor mode"));
     }
-    
+
     #[test]
     fn test_run_exec_llm_error_message() {
         let err = crate::error::RavenClawError::CommandExecution(
-            "LLM request failed: connection refused".to_string()
+            "LLM request failed: connection refused".to_string(),
         );
         assert!(format!("{}", err).contains("LLM request failed"));
     }
-    
+
     #[test]
     fn test_run_single_logs_provider_name() {
         // Verify the function signature compiles and accepts the right types

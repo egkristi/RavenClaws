@@ -37,19 +37,19 @@ pub struct Config {
     /// LiteLLM configuration (single provider mode)
     #[serde(default)]
     pub llm: LLMConfig,
-    
+
     /// Multiple LLM configurations (multi-model mode)
     #[serde(default)]
     pub llms: Vec<LLMConfig>,
-    
+
     /// RavenFabric configuration
     #[serde(default)]
     pub ravenfabric: RavenFabricConfig,
-    
+
     /// Security settings
     #[serde(default)]
     pub security: SecurityConfig,
-    
+
     /// Runtime settings
     #[serde(default)]
     pub runtime: RuntimeConfig,
@@ -60,19 +60,19 @@ pub struct LLMConfig {
     /// Provider type: litellm, openrouter, ollama, openai
     #[serde(default)]
     pub provider: LLMProvider,
-    
+
     /// Endpoint URL (e.g., http://litellm:4000, http://localhost:11434, https://api.openai.com)
     #[serde(default)]
     pub endpoint: String,
-    
+
     /// Default model to use
     #[serde(default = "default_model")]
     pub model: String,
-    
+
     /// API key (prefer env var)
     #[serde(default)]
     pub api_key: Option<String>,
-    
+
     /// Request timeout in seconds
     #[serde(default = "default_timeout")]
     pub timeout_secs: u64,
@@ -83,15 +83,15 @@ pub struct RavenFabricConfig {
     /// RavenFabric endpoint
     #[serde(default)]
     pub endpoint: Option<String>,
-    
+
     /// Agent ID for identification
     #[serde(default)]
     pub agent_id: Option<String>,
-    
+
     /// Enable remote command execution
     #[serde(default = "default_true")]
     pub remote_exec: bool,
-    
+
     /// Allowed remote hosts (whitelist)
     #[serde(default)]
     pub allowed_hosts: Vec<String>,
@@ -113,11 +113,11 @@ pub struct SecurityConfig {
     /// Require TLS for all connections
     #[serde(default = "default_true")]
     pub require_tls: bool,
-    
+
     /// Maximum token lifetime in seconds
     #[serde(default = "default_token_lifetime")]
     pub token_lifetime_secs: u64,
-    
+
     /// Enable audit logging
     #[serde(default = "default_true")]
     pub audit_log: bool,
@@ -138,11 +138,11 @@ pub struct RuntimeConfig {
     /// Working directory
     #[serde(default = "default_workdir")]
     pub workdir: String,
-    
+
     /// Maximum concurrent agents
     #[serde(default = "default_max_agents")]
     pub max_agents: usize,
-    
+
     /// Health check interval in seconds
     #[serde(default = "default_health_interval")]
     pub health_interval_secs: u64,
@@ -203,27 +203,27 @@ impl Config {
     pub fn load(config_path: Option<&str>) -> Result<Self, ConfigError> {
         // Start with defaults from environment
         dotenvy::dotenv().ok();
-        
+
         let mut config_builder = config::Config::builder();
-        
+
         // Load from file if provided
         if let Some(path) = config_path {
-            config_builder = config_builder.add_source(config::File::with_name(path).required(false));
+            config_builder =
+                config_builder.add_source(config::File::with_name(path).required(false));
         }
-        
+
         // Load from environment (RAVENCLAW_* prefix)
-        config_builder = config_builder.add_source(
-            config::Environment::with_prefix("RAVENCLAW").separator("__")
-        );
-        
+        config_builder = config_builder
+            .add_source(config::Environment::with_prefix("RAVENCLAW").separator("__"));
+
         let config = config_builder
             .build()
             .map_err(|e| ConfigError::LoadError(e.to_string()))?;
-        
+
         let mut cfg: Config = config
             .try_deserialize()
             .map_err(|e| ConfigError::LoadError(e.to_string()))?;
-        
+
         // Override sensitive values from environment
         // Single provider mode
         if let Ok(key) = std::env::var("LITELLM_API_KEY") {
@@ -243,7 +243,7 @@ impl Config {
         if let Ok(model) = std::env::var("RAVENCLAW__LLM__MODEL") {
             cfg.llm.model = model;
         }
-        
+
         // Multi-provider mode
         if let Ok(keys) = std::env::var("RAVENCLAW__LLMS") {
             // Parse JSON array of LLM configs from env
@@ -251,59 +251,65 @@ impl Config {
                 cfg.llms = llms;
             }
         }
-        
+
         if let Ok(endpoint) = std::env::var("RAVENFABRIC_ENDPOINT") {
             cfg.ravenfabric.endpoint = Some(endpoint);
         }
-        
+
         // Validate
         cfg.validate()?;
-        
+
         Ok(cfg)
     }
-    
+
     /// Validate configuration
     fn validate(&self) -> Result<(), ConfigError> {
         // Validate single provider config
         if !self.llm.endpoint.is_empty() {
             self.validate_llm_config(&self.llm)?;
         }
-        
+
         // Validate multi-provider configs
         for (i, llm) in self.llms.iter().enumerate() {
             self.validate_llm_config(llm)
                 .map_err(|e| ConfigError::ValidationError(format!("LLM[{}]: {}", i, e)))?;
         }
-        
+
         // At least one provider must be configured
         if self.llm.endpoint.is_empty() && self.llms.is_empty() {
             return Err(ConfigError::ValidationError(
-                "At least one LLM provider must be configured (llm or llms)".to_string()
+                "At least one LLM provider must be configured (llm or llms)".to_string(),
             ));
         }
-        
+
         Ok(())
     }
-    
+
     fn validate_llm_config(&self, llm: &LLMConfig) -> Result<(), ConfigError> {
-        if llm.endpoint.is_empty() && llm.provider != LLMProvider::OpenAI && llm.provider != LLMProvider::OpenRouter {
+        if llm.endpoint.is_empty()
+            && llm.provider != LLMProvider::OpenAI
+            && llm.provider != LLMProvider::OpenRouter
+        {
             // OpenAI and OpenRouter have fixed endpoints
             return Err(ConfigError::ValidationError(
-                "LLM endpoint is required for this provider".to_string()
+                "LLM endpoint is required for this provider".to_string(),
             ));
         }
-        
+
         if self.security.require_tls && !llm.endpoint.is_empty() {
             if !llm.endpoint.starts_with("https://") {
                 // Allow localhost for development
-                if !llm.endpoint.contains("localhost") && !llm.endpoint.contains("127.0.0.1") && !llm.endpoint.contains("0.0.0.0") {
+                if !llm.endpoint.contains("localhost")
+                    && !llm.endpoint.contains("127.0.0.1")
+                    && !llm.endpoint.contains("0.0.0.0")
+                {
                     return Err(ConfigError::ValidationError(
-                        "TLS required but endpoint is not HTTPS".to_string()
+                        "TLS required but endpoint is not HTTPS".to_string(),
                     ));
                 }
             }
         }
-        
+
         Ok(())
     }
 }
@@ -311,12 +317,12 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_config() {
         std::env::set_var("LITELLM_API_KEY", "test-key");
         std::env::set_var("RAVENCLAW__LLM__ENDPOINT", "http://localhost:4000");
-        
+
         let config = Config::load(None).unwrap();
         assert_eq!(config.llm.model, "gpt-4o-mini");
         assert_eq!(config.llm.timeout_secs, 30);
@@ -325,31 +331,31 @@ mod tests {
         // Since we load via serde, it should be true
         assert!(config.security.require_tls);
     }
-    
+
     #[test]
     fn test_llm_provider_default() {
         assert_eq!(LLMProvider::default(), LLMProvider::LiteLLM);
     }
-    
+
     #[test]
     fn test_llm_provider_serde() {
         let json = r#""litellm""#;
         let provider: LLMProvider = serde_json::from_str(json).unwrap();
         assert_eq!(provider, LLMProvider::LiteLLM);
-        
+
         let json = r#""openai""#;
         let provider: LLMProvider = serde_json::from_str(json).unwrap();
         assert_eq!(provider, LLMProvider::OpenAI);
-        
+
         let json = r#""ollama""#;
         let provider: LLMProvider = serde_json::from_str(json).unwrap();
         assert_eq!(provider, LLMProvider::Ollama);
-        
+
         let json = r#""openrouter""#;
         let provider: LLMProvider = serde_json::from_str(json).unwrap();
         assert_eq!(provider, LLMProvider::OpenRouter);
     }
-    
+
     #[test]
     fn test_llm_config_default() {
         let config = LLMConfig::default();
@@ -359,7 +365,7 @@ mod tests {
         assert!(config.api_key.is_none());
         assert!(config.endpoint.is_empty());
     }
-    
+
     #[test]
     fn test_validate_missing_endpoint() {
         let config = Config {
@@ -379,12 +385,15 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("At least one LLM provider"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("At least one LLM provider"));
     }
-    
+
     #[test]
     fn test_validate_tls_required() {
         let config = Config {
@@ -404,13 +413,13 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("TLS required"));
     }
-    
+
     #[test]
     fn test_validate_tls_localhost_allowed() {
         let config = Config {
@@ -430,11 +439,11 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_validate_openai_no_endpoint_needed() {
         let config = Config {
@@ -454,7 +463,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         // OpenAI doesn't need an endpoint, but the llm.endpoint is empty
         // and the llm section is checked. Since llm.endpoint is empty,
         // validate() skips the llm check but then fails because no providers.
@@ -462,20 +471,18 @@ mod tests {
         let result = config.validate();
         assert!(result.is_err()); // No endpoint set for llm, and no llms
     }
-    
+
     #[test]
     fn test_validate_multi_provider() {
         let config = Config {
             llm: LLMConfig::default(),
-            llms: vec![
-                LLMConfig {
-                    provider: LLMProvider::Ollama,
-                    endpoint: "http://localhost:11434".to_string(),
-                    model: "llama3.1".to_string(),
-                    api_key: None,
-                    timeout_secs: 60,
-                },
-            ],
+            llms: vec![LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+            }],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
                 require_tls: false,
@@ -484,11 +491,11 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_ravenfabric_config_default() {
         let config = RavenFabricConfig::default();
@@ -497,7 +504,7 @@ mod tests {
         assert!(config.remote_exec);
         assert!(config.allowed_hosts.is_empty());
     }
-    
+
     #[test]
     fn test_security_config_default() {
         let config = SecurityConfig::default();
@@ -505,7 +512,7 @@ mod tests {
         assert_eq!(config.token_lifetime_secs, 3600);
         assert!(config.audit_log);
     }
-    
+
     #[test]
     fn test_runtime_config_default() {
         let config = RuntimeConfig::default();
@@ -513,19 +520,22 @@ mod tests {
         assert_eq!(config.max_agents, 10);
         assert_eq!(config.health_interval_secs, 60);
     }
-    
+
     #[test]
     fn test_config_error_display() {
         let err = ConfigError::LoadError("file not found".to_string());
         assert_eq!(format!("{}", err), "Failed to load config: file not found");
-        
+
         let err = ConfigError::ValidationError("bad field".to_string());
         assert_eq!(format!("{}", err), "Invalid configuration: bad field");
-        
+
         let err = ConfigError::MissingEnvVar("API_KEY".to_string());
-        assert_eq!(format!("{}", err), "Missing required environment variable: API_KEY");
+        assert_eq!(
+            format!("{}", err),
+            "Missing required environment variable: API_KEY"
+        );
     }
-    
+
     #[test]
     fn test_validate_openrouter_no_endpoint_needed() {
         let config = Config {
@@ -545,13 +555,13 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
         // so validate() skips llm check and fails because no providers
         let result = config.validate();
         assert!(result.is_err());
     }
-    
+
     #[test]
     fn test_validate_ollama_needs_endpoint() {
         let config = Config {
@@ -571,13 +581,13 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("At least one LLM provider"));
     }
-    
+
     #[test]
     fn test_validate_tls_localhost_ip_allowed() {
         let config = Config {
@@ -597,11 +607,11 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_validate_tls_wildcard_allowed() {
         let config = Config {
@@ -621,11 +631,11 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_validate_multi_provider_with_tls() {
         let config = Config {
@@ -654,24 +664,22 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_ok());
     }
-    
+
     #[test]
     fn test_validate_multi_provider_tls_failure() {
         let config = Config {
             llm: LLMConfig::default(),
-            llms: vec![
-                LLMConfig {
-                    provider: LLMProvider::LiteLLM,
-                    endpoint: "http://example.com:4000".to_string(),
-                    model: "gpt-4o-mini".to_string(),
-                    api_key: Some("key".to_string()),
-                    timeout_secs: 30,
-                },
-            ],
+            llms: vec![LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://example.com:4000".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("key".to_string()),
+                timeout_secs: 30,
+            }],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
                 require_tls: true,
@@ -680,13 +688,13 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
         };
-        
+
         let result = config.validate();
         assert!(result.is_err());
         let err = result.unwrap_err().to_string();
         assert!(err.contains("TLS required"));
     }
-    
+
     #[test]
     fn test_ravenfabric_config_custom() {
         let config = RavenFabricConfig {
@@ -700,7 +708,7 @@ mod tests {
         assert!(!config.remote_exec);
         assert_eq!(config.allowed_hosts.len(), 1);
     }
-    
+
     #[test]
     fn test_security_config_custom() {
         let config = SecurityConfig {
@@ -712,7 +720,7 @@ mod tests {
         assert_eq!(config.token_lifetime_secs, 7200);
         assert!(!config.audit_log);
     }
-    
+
     #[test]
     fn test_runtime_config_custom() {
         let config = RuntimeConfig {
@@ -724,7 +732,7 @@ mod tests {
         assert_eq!(config.max_agents, 5);
         assert_eq!(config.health_interval_secs, 120);
     }
-    
+
     #[test]
     fn test_llm_config_custom() {
         let config = LLMConfig {
