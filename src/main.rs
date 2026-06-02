@@ -53,6 +53,10 @@ struct Args {
     /// Interactive REPL mode (read-eval-print loop)
     #[arg(long, short = 'R', conflicts_with = "exec")]
     repl: bool,
+
+    /// Maximum iterations for the agent loop (default: 10)
+    #[arg(long, env = "RAVENCLAW_MAX_ITERATIONS", default_value = "10")]
+    max_iterations: usize,
 }
 
 #[tokio::main]
@@ -95,23 +99,28 @@ async fn main() -> anyhow::Result<()> {
 
     info!(mode = %args.mode, "Configuration loaded");
 
-    // Handle --exec one-shot mode (overrides mode, uses first available provider)
+    // Handle --exec one-shot mode (uses agent loop for multi-step reasoning)
     if let Some(exec_prompt) = args.exec {
-        info!("Running in --exec one-shot mode");
+        info!("Running in --exec mode with agent loop");
         let system_prompt = &config.llm.system_prompt;
-        if !config.llms.is_empty() {
+        let loop_config = agent::AgentLoopConfig {
+            max_iterations: args.max_iterations,
+            ..agent::AgentLoopConfig::default()
+        };
+
+        let response = if !config.llms.is_empty() {
             let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
             if let Some(client) = multi_llm.get_client(0) {
-                let response = agent::run_exec(client.clone(), &exec_prompt, system_prompt).await?;
-                println!("{}", response);
+                agent::run_agent_loop(client.clone(), &exec_prompt, system_prompt, loop_config)
+                    .await?
             } else {
                 anyhow::bail!("No LLM providers available for --exec mode");
             }
         } else {
             let llm = llm::create_client(&config.llm)?;
-            let response = agent::run_exec(llm, &exec_prompt, system_prompt).await?;
-            println!("{}", response);
-        }
+            agent::run_agent_loop(llm, &exec_prompt, system_prompt, loop_config).await?
+        };
+        println!("{}", response);
         info!("RavenClaw shutdown complete");
         return Ok(());
     }

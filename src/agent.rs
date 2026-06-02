@@ -215,6 +215,7 @@ pub async fn run_repl(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result<
 
 /// Run a one-shot command via --exec mode
 /// Sends the prompt to the LLM and returns the response text.
+#[allow(dead_code)]
 pub async fn run_exec(
     llm: Arc<dyn LLMProviderTrait>,
     prompt: &str,
@@ -257,6 +258,118 @@ pub async fn run_exec(
         "Exec response received"
     );
     Ok(content)
+}
+
+/// Agent loop configuration
+#[derive(Debug, Clone)]
+pub struct AgentLoopConfig {
+    /// Maximum number of perceive→plan→act→observe iterations
+    pub max_iterations: usize,
+    /// System prompt for the agent loop (appended to base system prompt)
+    pub loop_instructions: String,
+}
+
+impl Default for AgentLoopConfig {
+    fn default() -> Self {
+        Self {
+            max_iterations: 10,
+            loop_instructions: concat!(
+                "You are in an agent loop. For each iteration, output:\n",
+                "THOUGHT: <your reasoning about what to do next>\n",
+                "ACTION: <the action you will take>\n",
+                "RESULT: <the result of the action>\n\n",
+                "When the task is complete, output:\n",
+                "FINAL: <the final answer>\n\n",
+                "You must output exactly one THOUGHT/ACTION/RESULT or FINAL per response.",
+            )
+            .to_string(),
+        }
+    }
+}
+
+/// Run the agent loop: perceive → plan → act → observe
+///
+/// Sends the user's task to the LLM and iterates through reasoning steps
+/// until the task is complete or the maximum iteration count is reached.
+pub async fn run_agent_loop(
+    llm: Arc<dyn LLMProviderTrait>,
+    task: &str,
+    system_prompt: &str,
+    config: AgentLoopConfig,
+) -> Result<String> {
+    info!(
+        provider = llm.provider_name(),
+        model = llm.model(),
+        max_iterations = config.max_iterations,
+        "Starting agent loop"
+    );
+
+    // Build the combined system prompt with loop instructions
+    let combined_prompt = format!("{}\n\n{}", system_prompt, config.loop_instructions);
+
+    let mut memory = ConversationMemory::new(&combined_prompt, config.max_iterations * 2 + 2);
+    let _history = memory.add_user_message(task);
+
+    for iteration in 0..config.max_iterations {
+        info!(iteration = iteration, "Agent loop iteration");
+
+        // ── Act: send current context to LLM ──────────────────────
+        let response = llm.chat(memory.history().to_vec()).await.map_err(|e| {
+            crate::error::RavenClawError::CommandExecution(format!(
+                "LLM request failed at iteration {}: {}",
+                iteration, e
+            ))
+        })?;
+
+        let content = response
+            .choices
+            .first()
+            .map(|c| c.message.content.clone())
+            .ok_or_else(|| {
+                crate::error::RavenClawError::CommandExecution(format!(
+                    "LLM returned empty response at iteration {}",
+                    iteration
+                ))
+            })?;
+
+        // ── Observe: store the response ───────────────────────────
+        memory.add_assistant_message(&content);
+
+        // Check if the agent signaled completion
+        if content.contains("FINAL:") {
+            info!(iteration = iteration, "Agent loop completed");
+            // Extract the final answer after "FINAL:"
+            if let Some(final_idx) = content.find("FINAL:") {
+                let final_answer = content[final_idx + 6..].trim();
+                return Ok(final_answer.to_string());
+            }
+            return Ok(content.trim().to_string());
+        }
+
+        info!(
+            iteration = iteration,
+            thought = %content.lines().find(|l| l.starts_with("THOUGHT:")).unwrap_or("<no thought>"),
+            "Agent loop progress"
+        );
+    }
+
+    // Max iterations reached — return what we have
+    warn!(
+        max_iterations = config.max_iterations,
+        "Agent loop reached max iterations"
+    );
+
+    // Get the last assistant message as the best answer
+    let history = memory.history();
+    if history.len() > 1 {
+        if let Some(last) = history.last() {
+            return Ok(last.content.clone());
+        }
+    }
+
+    Err(crate::error::RavenClawError::CommandExecution(
+        "Agent loop reached max iterations without completing the task".to_string(),
+    ))
 }
 
 /// Run a single autonomous agent (single-provider mode)
@@ -879,5 +992,200 @@ mod tests {
             mem.add_user_message(&format!("msg{}", i));
         }
         assert_eq!(mem.history().len(), 101); // system + 100 messages
+    }
+
+    // ── AgentLoop tests ───────────────────────────────────────────────
+
+    #[test]
+    fn test_agent_loop_config_default() {
+        let config = AgentLoopConfig::default();
+        assert_eq!(config.max_iterations, 10);
+        assert!(config.loop_instructions.contains("THOUGHT:"));
+        assert!(config.loop_instructions.contains("ACTION:"));
+        assert!(config.loop_instructions.contains("FINAL:"));
+    }
+
+    #[test]
+    fn test_agent_loop_completes_with_final() {
+        with_mockito(|mut server| async move {
+            // Mock a response that contains FINAL: to signal completion
+            let mock = server
+                .mock("POST", "/v1/chat/completions")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(
+                    r#"{
+                        "id": "chat-123",
+                        "object": "chat.completion",
+                        "created": 1717000000,
+                        "model": "gpt-4o-mini",
+                        "choices": [{
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": "THOUGHT: I need to analyze this.\nACTION: Process the input.\nFINAL: The answer is 42."
+                            },
+                            "finish_reason": "stop"
+                        }],
+                        "usage": {"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30}
+                    }"#,
+                )
+                .create();
+
+            let config = crate::config::LLMConfig {
+                provider: crate::config::LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test-key".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+            };
+
+            let llm = crate::llm::create_client(&config).unwrap();
+            let loop_config = AgentLoopConfig {
+                max_iterations: 5,
+                ..AgentLoopConfig::default()
+            };
+
+            let result =
+                run_agent_loop(llm, "What is the answer?", "You are helpful.", loop_config)
+                    .await
+                    .unwrap();
+
+            assert_eq!(result, "The answer is 42.");
+            mock.assert();
+        });
+    }
+
+    #[test]
+    fn test_agent_loop_reaches_max_iterations() {
+        with_mockito(|mut server| async move {
+            // Mock a response that does NOT contain FINAL: — should hit max iterations
+            let mock = server
+                .mock("POST", "/v1/chat/completions")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(
+                    r#"{
+                        "id": "chat-123",
+                        "object": "chat.completion",
+                        "created": 1717000000,
+                        "model": "gpt-4o-mini",
+                        "choices": [{
+                            "index": 0,
+                            "message": {
+                                "role": "assistant",
+                                "content": "THOUGHT: Still thinking.\nACTION: Continue processing."
+                            },
+                            "finish_reason": "stop"
+                        }],
+                        "usage": {"prompt_tokens": 10, "completion_tokens": 15, "total_tokens": 25}
+                    }"#,
+                )
+                .expect(1) // Only expect 1 call — loop stops after max iterations
+                .create();
+
+            let config = crate::config::LLMConfig {
+                provider: crate::config::LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test-key".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+            };
+
+            let llm = crate::llm::create_client(&config).unwrap();
+            let loop_config = AgentLoopConfig {
+                max_iterations: 1,
+                ..AgentLoopConfig::default()
+            };
+
+            let result =
+                run_agent_loop(llm, "Do something.", "You are helpful.", loop_config).await;
+
+            // Should return the last assistant message content
+            assert!(result.is_ok());
+            let content = result.unwrap();
+            assert!(content.contains("Still thinking"));
+            mock.assert();
+        });
+    }
+
+    #[test]
+    fn test_agent_loop_llm_error() {
+        with_mockito(|mut server| async move {
+            let mock = server
+                .mock("POST", "/v1/chat/completions")
+                .with_status(500)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error":"Internal error"}"#)
+                .create();
+
+            let config = crate::config::LLMConfig {
+                provider: crate::config::LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test-key".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+            };
+
+            let llm = crate::llm::create_client(&config).unwrap();
+            let loop_config = AgentLoopConfig {
+                max_iterations: 3,
+                ..AgentLoopConfig::default()
+            };
+
+            let result = run_agent_loop(llm, "Test task.", "You are helpful.", loop_config).await;
+
+            assert!(result.is_err());
+            assert!(format!("{}", result.unwrap_err()).contains("LLM request failed"));
+            mock.assert();
+        });
+    }
+
+    #[test]
+    fn test_agent_loop_empty_response() {
+        with_mockito(|mut server| async move {
+            let mock = server
+                .mock("POST", "/v1/chat/completions")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(
+                    r#"{"id":"x","object":"chat.completion","created":0,"model":"x","choices":[]}"#,
+                )
+                .create();
+
+            let config = crate::config::LLMConfig {
+                provider: crate::config::LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test-key".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+            };
+
+            let llm = crate::llm::create_client(&config).unwrap();
+            let loop_config = AgentLoopConfig {
+                max_iterations: 3,
+                ..AgentLoopConfig::default()
+            };
+
+            let result = run_agent_loop(llm, "Test task.", "You are helpful.", loop_config).await;
+
+            assert!(result.is_err());
+            assert!(format!("{}", result.unwrap_err()).contains("empty response"));
+            mock.assert();
+        });
+    }
+
+    #[test]
+    fn test_agent_loop_custom_config() {
+        let config = AgentLoopConfig {
+            max_iterations: 3,
+            loop_instructions: "Custom instructions.".to_string(),
+        };
+        assert_eq!(config.max_iterations, 3);
+        assert_eq!(config.loop_instructions, "Custom instructions.");
     }
 }

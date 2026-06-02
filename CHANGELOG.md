@@ -5,6 +5,15 @@ All notable changes to RavenClaw will be documented in this file.
 ## [Unreleased]
 
 ### Added
+- Agent loop (perceive→plan→act→observe) — `AgentLoopConfig` + `run_agent_loop()` with max-iteration guard and `FINAL:` marker detection
+- `--max-iterations` CLI flag and `RAVENCLAW_MAX_ITERATIONS` env var for agent loop configuration
+- 6 new agent loop tests: config defaults, FINAL completion, max iterations reached, LLM error, empty response, custom config
+
+### Fixed
+- CI workflows: Trivy action updated to `v0.36.0`, Kubescape action migrated to `kubescape/github-action@main`, CodeQL upload-sarif updated to `@v4`, `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` added to all workflows
+- Removed unused `rustls = "0.23"` and `zeroize = "1.8"` dependencies
+
+### Added
 - Streaming responses — `LLMProviderTrait::chat_stream()` with SSE parsing for LiteLLM, default non-streaming fallback for other providers
 - System prompt / persona configuration — `LLMConfig.system_prompt` field with CLI `--system-prompt` and `RAVENCLAW_SYSTEM_PROMPT` env var override
 - Conversation memory — `ConversationMemory` struct with configurable max history, automatic trimming of oldest messages

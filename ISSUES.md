@@ -32,10 +32,10 @@ request and exits. A persistent server mode is planned for v0.7.
 **Root cause:** The Trivy action version `0.29.0` does not exist or was retracted.
 The workflow file pins an invalid version.
 
-**Fix:** Update `.github/workflows/container.yml` to use a valid Trivy action version
-(e.g., `aquasecurity/trivy-action@0.28.0` or the latest stable).
+**Fix:** Updated `.github/workflows/container.yml`, `.github/workflows/build.yml`, and
+`.github/workflows/security-scan.yml` to use `aquasecurity/trivy-action@v0.36.0`.
 
-**Status:** ❌ Unresolved — needs workflow file update.
+**Status:** ✅ Resolved — Trivy action updated to `v0.36.0` in all 3 workflows.
 
 ### Security Scan: `kubescape/action` repository not found
 
@@ -45,8 +45,10 @@ The workflow file pins an invalid version.
 **Root cause:** The Kubescape action repository may have been renamed, moved, or
 removed. The workflow references `kubescape/action` which no longer resolves.
 
-**Fix:** Update `.github/workflows/security-scan.yml` to use the correct Kubescape
-action path or replace with an alternative K8s manifest validation tool.
+**Fix:** Updated `.github/workflows/security-scan.yml` to use `kubescape/github-action@main`
+with updated parameters (`outputFile`, `severityThreshold`, `frameworks`).
+
+**Status:** ✅ Resolved — Kubescape action migrated to `kubescape/github-action@main`.
 
 **Status:** ❌ Unresolved — needs workflow file update.
 

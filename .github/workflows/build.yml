@@ -13,6 +13,7 @@ env:
   REGISTRY_GHCR: ghcr.io
   REGISTRY_DOCKERHUB: index.docker.io
   IMAGE_NAME: ${{ github.repository }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ── Lint & Test ──────────────────────────────────────────────
@@ -206,7 +207,7 @@ jobs:
       # ── Vulnerability scan ────────────────────────────────────
       - name: Run Trivy vulnerability scanner
         if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
           format: sarif
@@ -217,7 +218,7 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security
         if: always() && hashFiles('trivy-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
           category: container-scan

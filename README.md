@@ -33,11 +33,11 @@ PicoClaw, NanoClaw, Claude Cowork, Manus, Perplexity Computer, Kimi Claw, and Ve
 We don't aim to win by out-featuring them. We win by refusing to compromise on five
 pillars at once:
 
-- 🔒 **Secure** — memory-safe Rust (`unsafe` forbidden), fail-closed, no creds in config, verified supply chain.
-- 🪶 **Small** — one static binary (~3 MB), distroless image, lean dependency tree.
-- ⚡ **Efficient** — native performance, low memory, fast cold start, streaming everywhere.
-- 🛡️ **Robust** — graceful degradation, provider fallback, deterministic config, verified across 4 deployment targets.
-- ✨ **Simple** — one command to run, sensible defaults, no external services required for single-agent use.
+- **Secure** — memory-safe Rust (`unsafe` forbidden), fail-closed, no creds in config, verified supply chain.
+- **Small** — one static binary (~3 MB), distroless image, lean dependency tree.
+- **Efficient** — native performance, low memory, fast cold start, streaming everywhere.
+- **Robust** — graceful degradation, provider fallback, deterministic config, verified across 4 deployment targets.
+- **Simple** — one command to run, sensible defaults, no external services required for single-agent use.
 
 See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 

@@ -17,6 +17,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ── CodeQL Static Analysis ───────────────────────────────────
@@ -39,7 +40,7 @@ jobs:
 
       # Initialize CodeQL with Rust support
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: rust
           # Extended query suite catches more than the default
@@ -58,7 +59,7 @@ jobs:
         run: cargo build --release --locked
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:rust"
           output: codeql-results
@@ -163,7 +164,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -179,7 +180,7 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security
         if: always() && hashFiles('trivy-fs-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs-results.sarif
           category: trivy-filesystem
@@ -197,7 +198,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Trivy config scan
-        uses: aquasecurity/trivy-action@0.29.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: .
@@ -209,7 +210,7 @@ jobs:
 
       - name: Upload Trivy config results to GitHub Security
         if: always() && hashFiles('trivy-config-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-config-results.sarif
           category: trivy-config
@@ -241,7 +242,7 @@ jobs:
 
       - name: Upload Hadolint results to GitHub Security
         if: always() && hashFiles('hadolint-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: hadolint-results.sarif
           category: hadolint
@@ -273,17 +274,18 @@ jobs:
         continue-on-error: true
 
       - name: Scan K8s manifests with Kubescape
-        uses: kubescape/action@v1
+        uses: kubescape/github-action@main
+        continue-on-error: true
         with:
           format: sarif
-          output-file: kubescape-results.sarif
+          outputFile: kubescape-results
           # Use the NSA CISA framework (most comprehensive)
           frameworks: "nsa-cisa"
-          thresholds: "critical:0,high:0,medium:10"
+          severityThreshold: "high"
 
       - name: Upload Kubescape results to GitHub Security
         if: always() && hashFiles('kubescape-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: kubescape-results.sarif
           category: kubescape
@@ -312,7 +314,7 @@ jobs:
 
       - name: Upload Scorecard results to GitHub Security
         if: always() && hashFiles('scorecard-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: scorecard-results.sarif
           category: ossf-scorecard

@@ -42,8 +42,8 @@ can't be added without breaking one, it doesn't ship in core.
 | RavenFabric integration | ⚠️ Partial | Config struct exists, agent binary baked into the image with checksum verification; runtime integration not wired |
 | `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout; full test coverage |
 | Swarm / Supervisor modes | ⚠️ Stub | Return clear error instead of silent exit 0 |
-| Rust unit tests | ✅ Working | 149 tests across all 5 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
-| Agent loop / ReAct planning | ❌ Not implemented | One-shot send-and-exit; no perceive→plan→act→observe |
+| Rust unit tests | ✅ Working | 157 tests across all 5 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
+| Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard, `FINAL:` marker detection, configurable via `--max-iterations` |
 | Tool-use / function calling | ❌ Not implemented | Agent cannot call tools |
 | Streaming responses | ✅ Working | SSE streaming for LiteLLM, default non-streaming fallback for others |
 | Conversation memory | ✅ Working | `ConversationMemory` struct with configurable max history, auto-trim |

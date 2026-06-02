@@ -41,10 +41,6 @@ anyhow = "1.0"
 # CLI
 clap = { version = "4.5", features = ["derive", "env"] }
 
-# Security
-rustls = "0.23"
-zeroize = "1.8"
-
 # Streaming
 futures = "0.3"
 
