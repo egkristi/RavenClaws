@@ -5,12 +5,13 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum RavenClawError {
     #[error("LLM error: {0}")]
-    LLM(#[from] crate::llm::LLMError),
+    Llm(#[from] crate::llm::LLMError),
 
     #[error("Configuration error: {0}")]
     Config(#[from] crate::config::ConfigError),
 
     #[error("RavenFabric error: {0}")]
+    #[allow(dead_code)]
     RavenFabric(String),
 
     #[error("Network error: {0}")]
@@ -23,6 +24,7 @@ pub enum RavenClawError {
     CommandExecution(String),
 
     #[error("Security violation: {0}")]
+    #[allow(dead_code)]
     SecurityViolation(String),
 }
 
@@ -34,7 +36,7 @@ mod tests {
 
     #[test]
     fn test_llm_error_variant() {
-        let err = RavenClawError::LLM(crate::llm::LLMError::RequestFailed("timeout".to_string()));
+        let err = RavenClawError::Llm(crate::llm::LLMError::RequestFailed("timeout".to_string()));
         assert_eq!(format!("{}", err), "LLM error: Request failed: timeout");
     }
 
@@ -75,8 +77,8 @@ mod tests {
 
     #[test]
     fn test_result_type_alias() {
-        let ok: Result<i32> = Ok(42);
-        assert_eq!(ok.unwrap(), 42);
+        let ok: i32 = 42;
+        assert_eq!(ok, 42);
 
         let err: Result<i32> = Err(RavenClawError::CommandExecution("fail".to_string()));
         assert!(err.is_err());
@@ -118,13 +120,11 @@ mod tests {
     fn test_error_is_send() {
         fn check_send<T: Send>() {}
         check_send::<RavenClawError>();
-        assert!(true);
     }
 
     #[test]
     fn test_error_is_sync() {
         fn check_sync<T: Sync>() {}
         check_sync::<RavenClawError>();
-        assert!(true);
     }
 }

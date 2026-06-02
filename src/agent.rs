@@ -237,6 +237,5 @@ mod tests {
             let _ = run_exec;
         }
         // Compile-time check: all function signatures are valid
-        assert!(true);
     }
 }

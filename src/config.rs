@@ -13,23 +13,19 @@ pub enum ConfigError {
     #[error("Invalid configuration: {0}")]
     ValidationError(String),
     #[error("Missing required environment variable: {0}")]
+    #[allow(dead_code)]
     MissingEnvVar(String),
 }
 
 /// LLM Provider type — determines which backend to use
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum LLMProvider {
+    #[default]
     LiteLLM,
     OpenRouter,
     Ollama,
     OpenAI,
-}
-
-impl Default for LLMProvider {
-    fn default() -> Self {
-        LLMProvider::LiteLLM
-    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -52,6 +48,7 @@ pub struct Config {
 
     /// Runtime settings
     #[serde(default)]
+    #[allow(dead_code)]
     pub runtime: RuntimeConfig,
 }
 
@@ -86,14 +83,17 @@ pub struct RavenFabricConfig {
 
     /// Agent ID for identification
     #[serde(default)]
+    #[allow(dead_code)]
     pub agent_id: Option<String>,
 
     /// Enable remote command execution
     #[serde(default = "default_true")]
+    #[allow(dead_code)]
     pub remote_exec: bool,
 
     /// Allowed remote hosts (whitelist)
     #[serde(default)]
+    #[allow(dead_code)]
     pub allowed_hosts: Vec<String>,
 }
 
@@ -116,10 +116,12 @@ pub struct SecurityConfig {
 
     /// Maximum token lifetime in seconds
     #[serde(default = "default_token_lifetime")]
+    #[allow(dead_code)]
     pub token_lifetime_secs: u64,
 
     /// Enable audit logging
     #[serde(default = "default_true")]
+    #[allow(dead_code)]
     pub audit_log: bool,
 }
 
@@ -137,14 +139,17 @@ impl Default for SecurityConfig {
 pub struct RuntimeConfig {
     /// Working directory
     #[serde(default = "default_workdir")]
+    #[allow(dead_code)]
     pub workdir: String,
 
     /// Maximum concurrent agents
     #[serde(default = "default_max_agents")]
+    #[allow(dead_code)]
     pub max_agents: usize,
 
     /// Health check interval in seconds
     #[serde(default = "default_health_interval")]
+    #[allow(dead_code)]
     pub health_interval_secs: u64,
 }
 
@@ -296,18 +301,16 @@ impl Config {
             ));
         }
 
-        if self.security.require_tls && !llm.endpoint.is_empty() {
-            if !llm.endpoint.starts_with("https://") {
-                // Allow localhost for development
-                if !llm.endpoint.contains("localhost")
-                    && !llm.endpoint.contains("127.0.0.1")
-                    && !llm.endpoint.contains("0.0.0.0")
-                {
-                    return Err(ConfigError::ValidationError(
-                        "TLS required but endpoint is not HTTPS".to_string(),
-                    ));
-                }
-            }
+        if self.security.require_tls
+            && !llm.endpoint.is_empty()
+            && !llm.endpoint.starts_with("https://")
+            && !llm.endpoint.contains("localhost")
+            && !llm.endpoint.contains("127.0.0.1")
+            && !llm.endpoint.contains("0.0.0.0")
+        {
+            return Err(ConfigError::ValidationError(
+                "TLS required but endpoint is not HTTPS".to_string(),
+            ));
         }
 
         Ok(())

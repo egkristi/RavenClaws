@@ -197,7 +197,7 @@ mod tests {
     #[test]
     fn test_cli_default_args() {
         // Verify the CLI struct can be constructed with defaults
-        let args = Args::parse_from(&["ravenclaw"]);
+        let args = Args::parse_from(["ravenclaw"]);
         assert_eq!(args.mode, "single");
         assert!(!args.verbose);
         assert!(args.config.is_none());
@@ -209,7 +209,7 @@ mod tests {
 
     #[test]
     fn test_cli_custom_args() {
-        let args = Args::parse_from(&[
+        let args = Args::parse_from([
             "ravenclaw",
             "--config",
             "/tmp/config.toml",
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_cli_short_args() {
-        let args = Args::parse_from(&[
+        let args = Args::parse_from([
             "ravenclaw",
             "-c",
             "/tmp/config.toml",
@@ -254,7 +254,7 @@ mod tests {
 
     #[test]
     fn test_cli_invalid_mode() {
-        let args = Args::parse_from(&["ravenclaw", "--mode", "invalid"]);
+        let args = Args::parse_from(["ravenclaw", "--mode", "invalid"]);
         assert_eq!(args.mode, "invalid");
         // The mode validation happens at runtime, not in clap
     }

@@ -24,6 +24,7 @@ pub enum LLMError {
     AuthFailed,
 
     #[error("Provider not supported: {0}")]
+    #[allow(dead_code)]
     ProviderNotSupported(String),
 }
 
@@ -47,25 +48,35 @@ pub struct ChatRequest {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ChatResponse {
+    #[allow(dead_code)]
     pub id: String,
+    #[allow(dead_code)]
     pub object: String,
+    #[allow(dead_code)]
     pub created: u64,
+    #[allow(dead_code)]
     pub model: String,
     pub choices: Vec<Choice>,
+    #[allow(dead_code)]
     pub usage: Option<Usage>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Choice {
+    #[allow(dead_code)]
     pub index: u32,
     pub message: ChatMessage,
+    #[allow(dead_code)]
     pub finish_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Usage {
+    #[allow(dead_code)]
     pub prompt_tokens: u32,
+    #[allow(dead_code)]
     pub completion_tokens: u32,
+    #[allow(dead_code)]
     pub total_tokens: u32,
 }
 
@@ -470,6 +481,7 @@ impl MultiModelManager {
     }
 
     /// Round-robin selection for load balancing
+    #[allow(dead_code)]
     pub fn next_client(&self, last_index: usize) -> &Arc<dyn LLMProviderTrait> {
         let next = (last_index + 1) % self.clients.len();
         &self.clients[next]
