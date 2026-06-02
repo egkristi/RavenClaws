@@ -13,10 +13,16 @@ categories = ["command-line-utilities", "development-tools"]
 # Async runtime
 tokio = { version = "1.42", features = ["full"] }
 
-# HTTP client (LiteLLM integration)
+# HTTP client (multi-provider LLM integration)
 reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+
+# Async trait for provider abstraction
+async-trait = "0.1"
+
+# UUID for request tracking
+uuid = { version = "1.6", features = ["v4"] }
 
 # RavenFabric integration (placeholder - actual crate TBD)
 # ravenfabric = "0.1"

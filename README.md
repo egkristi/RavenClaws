@@ -1,14 +1,15 @@
 # RavenClaw 🐦‍⬛
 
-**Lightweight, secure Rust agent framework with LiteLLM + RavenFabric**
+**Lightweight, secure Rust agent framework with multi-provider LLM support**
 
-Built for efficiency, security, and easy deployment.
+Built for efficiency, security, and easy deployment. Supports LiteLLM, OpenRouter, Ollama, and OpenAI.
 
 ## Features
 
 - ⚡ **Fast** — Native Rust, optimized for performance
 - 🔒 **Secure by default** — No credentials in config, TLS required, minimal permissions
-- 🚀 **LiteLLM integration** — Unified API for 100+ LLM providers
+- 🔄 **Multi-provider support** — LiteLLM, OpenRouter, Ollama, OpenAI with unified API
+- 🎯 **Multi-model routing** — Run agents across multiple providers simultaneously
 - 🕸️ **RavenFabric ready** — Swarm coordination and remote command execution
 - 📦 **Easy deployment** — Binary, Docker, Kubernetes (Helm ready)
 - 🎯 **Minimal footprint** — Distroless container, <20MB binary
@@ -64,18 +65,86 @@ kubectl -n ravenclaw logs -l app.kubernetes.io/name=ravenclaw
 
 | Variable | Description | Default |
 |---|---|---|
-| `LITELLM_API_KEY` | LiteLLM API key | (required) |
-| `RAVENCLAW__LLM__ENDPOINT` | LiteLLM endpoint | (required) |
+| `RAVENCLAW__LLM__PROVIDER` | Provider: litellm, openrouter, ollama, openai | `litellm` |
+| `RAVENCLAW__LLM__ENDPOINT` | LLM endpoint URL | (provider-dependent) |
 | `RAVENCLAW__LLM__MODEL` | Default model | `gpt-4o-mini` |
+| `LITELLM_API_KEY` | API key for LiteLLM/OpenRouter/OpenAI | (required for cloud) |
+| `RAVENCLAW__LLMS` | JSON array for multi-model config | - |
 | `RAVENCLAW__RAVENFABRIC__ENDPOINT` | RavenFabric endpoint | - |
 | `RAVENCLAW__SECURITY__REQUIRE_TLS` | Enforce TLS | `true` |
 | `RAVENCLAW__RUNTIME__MAX_AGENTS` | Max concurrent agents | `10` |
 | `RUST_LOG` | Log level | `info` |
 
-### Config File (TOML)
+### Single Provider Mode (TOML)
+
+**LiteLLM:**
+```toml
+[llm]
+provider = "litellm"
+endpoint = "http://litellm:4000"
+model = "gpt-4o-mini"
+api_key = "your-key"  # or use LITELLM_API_KEY env var
+timeout_secs = 30
+```
+
+**Ollama (local, no API key):**
+```toml
+[llm]
+provider = "ollama"
+endpoint = "http://localhost:11434"
+model = "llama3.1"
+timeout_secs = 60
+```
+
+**OpenRouter:**
+```toml
+[llm]
+provider = "openrouter"
+model = "anthropic/claude-3.5-sonnet"
+api_key = "your-openrouter-key"  # or use LITELLM_API_KEY env var
+```
+
+**OpenAI:**
+```toml
+[llm]
+provider = "openai"
+model = "gpt-4o"
+api_key = "your-openai-key"  # or use LITELLM_API_KEY env var
+```
+
+### Multi-Model Mode (Multiple Providers)
+
+Configure multiple LLMs for load balancing, fallback, or model-specific routing:
+
+```toml
+# Single provider config (fallback)
+[llm]
+provider = "litellm"
+endpoint = "http://litellm:4000"
+model = "gpt-4o-mini"
+
+# Multi-model array
+[[llms]]
+provider = "ollama"
+endpoint = "http://ollama:11434"
+model = "llama3.1"
+
+[[llms]]
+provider = "openrouter"
+model = "anthropic/claude-3.5-sonnet"
+api_key = "sk-or-xxx"
+
+[[llms]]
+provider = "openai"
+model = "gpt-4o"
+api_key = "sk-xxx"
+```
+
+### Full Config Example
 
 ```toml
 [llm]
+provider = "litellm"
 endpoint = "http://litellm:4000"
 model = "gpt-4o-mini"
 timeout_secs = 30

@@ -1,8 +1,9 @@
 //! Configuration management for RavenClaw
 //!
 //! Secure by default: no credentials in config files, use environment variables.
+//! Supports multiple LLM providers: LiteLLM, OpenRouter, Ollama, OpenAI.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use thiserror::Error;
 
@@ -16,10 +17,31 @@ pub enum ConfigError {
     MissingEnvVar(String),
 }
 
+/// LLM Provider type — determines which backend to use
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum LLMProvider {
+    LiteLLM,
+    OpenRouter,
+    Ollama,
+    OpenAI,
+}
+
+impl Default for LLMProvider {
+    fn default() -> Self {
+        LLMProvider::LiteLLM
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct Config {
-    /// LiteLLM configuration
+    /// LiteLLM configuration (single provider mode)
+    #[serde(default)]
     pub llm: LLMConfig,
+    
+    /// Multiple LLM configurations (multi-model mode)
+    #[serde(default)]
+    pub llms: Vec<LLMConfig>,
     
     /// RavenFabric configuration
     #[serde(default)]
@@ -36,14 +58,19 @@ pub struct Config {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct LLMConfig {
-    /// LiteLLM endpoint (e.g., http://litellm:4000)
+    /// Provider type: litellm, openrouter, ollama, openai
+    #[serde(default)]
+    pub provider: LLMProvider,
+    
+    /// Endpoint URL (e.g., http://litellm:4000, http://localhost:11434, https://api.openai.com)
+    #[serde(default)]
     pub endpoint: String,
     
     /// Default model to use
     #[serde(default = "default_model")]
     pub model: String,
     
-    /// API key (prefer env var LITELLM_API_KEY)
+    /// API key (prefer env var)
     #[serde(default)]
     pub api_key: Option<String>,
     
@@ -129,6 +156,18 @@ fn default_health_interval() -> u64 {
     60
 }
 
+impl Default for LLMConfig {
+    fn default() -> Self {
+        Self {
+            provider: LLMProvider::LiteLLM,
+            endpoint: String::new(),
+            model: default_model(),
+            api_key: None,
+            timeout_secs: default_timeout(),
+        }
+    }
+}
+
 impl Config {
     /// Load configuration from file and environment
     pub fn load(config_path: Option<&str>) -> Result<Self, ConfigError> {
@@ -156,8 +195,31 @@ impl Config {
             .map_err(|e| ConfigError::LoadError(e.to_string()))?;
         
         // Override sensitive values from environment
+        // Single provider mode
         if let Ok(key) = std::env::var("LITELLM_API_KEY") {
             cfg.llm.api_key = Some(key);
+        }
+        if let Ok(provider) = std::env::var("RAVENCLAW__LLM__PROVIDER") {
+            cfg.llm.provider = match provider.to_lowercase().as_str() {
+                "openrouter" => LLMProvider::OpenRouter,
+                "ollama" => LLMProvider::Ollama,
+                "openai" => LLMProvider::OpenAI,
+                _ => LLMProvider::LiteLLM,
+            };
+        }
+        if let Ok(endpoint) = std::env::var("RAVENCLAW__LLM__ENDPOINT") {
+            cfg.llm.endpoint = endpoint;
+        }
+        if let Ok(model) = std::env::var("RAVENCLAW__LLM__MODEL") {
+            cfg.llm.model = model;
+        }
+        
+        // Multi-provider mode
+        if let Ok(keys) = std::env::var("RAVENCLAW__LLMS") {
+            // Parse JSON array of LLM configs from env
+            if let Ok(llms) = serde_json::from_str::<Vec<LLMConfig>>(&keys) {
+                cfg.llms = llms;
+            }
         }
         
         if let Ok(endpoint) = std::env::var("RAVENFABRIC_ENDPOINT") {
@@ -172,18 +234,43 @@ impl Config {
     
     /// Validate configuration
     fn validate(&self) -> Result<(), ConfigError> {
-        if self.llm.endpoint.is_empty() {
+        // Validate single provider config
+        if !self.llm.endpoint.is_empty() {
+            self.validate_llm_config(&self.llm)?;
+        }
+        
+        // Validate multi-provider configs
+        for (i, llm) in self.llms.iter().enumerate() {
+            self.validate_llm_config(llm)
+                .map_err(|e| ConfigError::ValidationError(format!("LLM[{}]: {}", i, e)))?;
+        }
+        
+        // At least one provider must be configured
+        if self.llm.endpoint.is_empty() && self.llms.is_empty() {
             return Err(ConfigError::ValidationError(
-                "LLM endpoint is required".to_string()
+                "At least one LLM provider must be configured (llm or llms)".to_string()
             ));
         }
         
-        if self.security.require_tls && !self.llm.endpoint.starts_with("https://") {
-            // Allow localhost for development
-            if !self.llm.endpoint.contains("localhost") && !self.llm.endpoint.contains("127.0.0.1") {
-                return Err(ConfigError::ValidationError(
-                    "TLS required but endpoint is not HTTPS".to_string()
-                ));
+        Ok(())
+    }
+    
+    fn validate_llm_config(&self, llm: &LLMConfig) -> Result<(), ConfigError> {
+        if llm.endpoint.is_empty() && llm.provider != LLMProvider::OpenAI && llm.provider != LLMProvider::OpenRouter {
+            // OpenAI and OpenRouter have fixed endpoints
+            return Err(ConfigError::ValidationError(
+                "LLM endpoint is required for this provider".to_string()
+            ));
+        }
+        
+        if self.security.require_tls && !llm.endpoint.is_empty() {
+            if !llm.endpoint.starts_with("https://") {
+                // Allow localhost for development
+                if !llm.endpoint.contains("localhost") && !llm.endpoint.contains("127.0.0.1") && !llm.endpoint.contains("0.0.0.0") {
+                    return Err(ConfigError::ValidationError(
+                        "TLS required but endpoint is not HTTPS".to_string()
+                    ));
+                }
             }
         }
         
