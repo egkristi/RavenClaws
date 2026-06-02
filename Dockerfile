@@ -28,15 +28,33 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     curl \
     ca-certificates \
+    gcc-aarch64-linux-gnu \
+    gcc-x86-64-linux-gnu \
     && rm -rf /var/lib/apt/lists/*
+
+# Configure cargo for cross-compilation
+RUN case "$TARGETPLATFORM" in \
+        "linux/amd64")  \
+            mkdir -p /root/.cargo && \
+            echo '[target.x86_64-unknown-linux-gnu]\nlinker = "x86_64-linux-gnu-gcc"' > /root/.cargo/config.toml ;; \
+        "linux/arm64")  \
+            mkdir -p /root/.cargo && \
+            echo '[target.aarch64-unknown-linux-gnu]\nlinker = "aarch64-linux-gnu-gcc"' > /root/.cargo/config.toml ;; \
+    esac
 
 # Download RavenFabric agent binary (optional runtime component)
 ARG RAVENFABRIC_VERSION=v0.25.1
 RUN RF_ARCH=$(cat /tmp/rf_arch.txt) && \
+    echo "Downloading RavenFabric ${RAVENFABRIC_VERSION} for ${RF_ARCH}..." && \
     curl -fsSL \
       "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/ravenfabric-linux-${RF_ARCH}-agent" \
       -o /app/ravenfabric-agent && \
-    chmod +x /app/ravenfabric-agent
+    curl -fsSL \
+      "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/ravenfabric-linux-${RF_ARCH}-agent.sha256" \
+      -o /app/ravenfabric-agent.sha256 && \
+    sha256sum -c /app/ravenfabric-agent.sha256 && \
+    chmod +x /app/ravenfabric-agent && \
+    rm /app/ravenfabric-agent.sha256
 
 # Copy manifests
 COPY Cargo.toml Cargo.lock* ./

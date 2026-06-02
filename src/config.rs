@@ -525,4 +525,218 @@ mod tests {
         let err = ConfigError::MissingEnvVar("API_KEY".to_string());
         assert_eq!(format!("{}", err), "Missing required environment variable: API_KEY");
     }
+    
+    #[test]
+    fn test_validate_openrouter_no_endpoint_needed() {
+        let config = Config {
+            llm: LLMConfig {
+                provider: LLMProvider::OpenRouter,
+                endpoint: String::new(),
+                model: "anthropic/claude-sonnet-4-20250514".to_string(),
+                api_key: Some("or-key".to_string()),
+                timeout_secs: 30,
+            },
+            llms: vec![],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: false,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+        
+        // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
+        // so validate() skips llm check and fails because no providers
+        let result = config.validate();
+        assert!(result.is_err());
+    }
+    
+    #[test]
+    fn test_validate_ollama_needs_endpoint() {
+        let config = Config {
+            llm: LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: String::new(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 30,
+            },
+            llms: vec![],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: false,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+        
+        let result = config.validate();
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("At least one LLM provider"));
+    }
+    
+    #[test]
+    fn test_validate_tls_localhost_ip_allowed() {
+        let config = Config {
+            llm: LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://127.0.0.1:4000".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("key".to_string()),
+                timeout_secs: 30,
+            },
+            llms: vec![],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: true,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+        
+        let result = config.validate();
+        assert!(result.is_ok());
+    }
+    
+    #[test]
+    fn test_validate_tls_wildcard_allowed() {
+        let config = Config {
+            llm: LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://0.0.0.0:4000".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("key".to_string()),
+                timeout_secs: 30,
+            },
+            llms: vec![],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: true,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+        
+        let result = config.validate();
+        assert!(result.is_ok());
+    }
+    
+    #[test]
+    fn test_validate_multi_provider_with_tls() {
+        let config = Config {
+            llm: LLMConfig::default(),
+            llms: vec![
+                LLMConfig {
+                    provider: LLMProvider::Ollama,
+                    endpoint: "http://localhost:11434".to_string(),
+                    model: "llama3.1".to_string(),
+                    api_key: None,
+                    timeout_secs: 60,
+                },
+                LLMConfig {
+                    provider: LLMProvider::LiteLLM,
+                    endpoint: "https://litellm.example.com:4000".to_string(),
+                    model: "gpt-4o-mini".to_string(),
+                    api_key: Some("key".to_string()),
+                    timeout_secs: 30,
+                },
+            ],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: true,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+        
+        let result = config.validate();
+        assert!(result.is_ok());
+    }
+    
+    #[test]
+    fn test_validate_multi_provider_tls_failure() {
+        let config = Config {
+            llm: LLMConfig::default(),
+            llms: vec![
+                LLMConfig {
+                    provider: LLMProvider::LiteLLM,
+                    endpoint: "http://example.com:4000".to_string(),
+                    model: "gpt-4o-mini".to_string(),
+                    api_key: Some("key".to_string()),
+                    timeout_secs: 30,
+                },
+            ],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: true,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+        
+        let result = config.validate();
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("TLS required"));
+    }
+    
+    #[test]
+    fn test_ravenfabric_config_custom() {
+        let config = RavenFabricConfig {
+            endpoint: Some("https://fabric.example.com:8443".to_string()),
+            agent_id: Some("agent-01".to_string()),
+            remote_exec: false,
+            allowed_hosts: vec!["10.0.0.0/8".to_string()],
+        };
+        assert_eq!(config.endpoint.unwrap(), "https://fabric.example.com:8443");
+        assert_eq!(config.agent_id.unwrap(), "agent-01");
+        assert!(!config.remote_exec);
+        assert_eq!(config.allowed_hosts.len(), 1);
+    }
+    
+    #[test]
+    fn test_security_config_custom() {
+        let config = SecurityConfig {
+            require_tls: false,
+            token_lifetime_secs: 7200,
+            audit_log: false,
+        };
+        assert!(!config.require_tls);
+        assert_eq!(config.token_lifetime_secs, 7200);
+        assert!(!config.audit_log);
+    }
+    
+    #[test]
+    fn test_runtime_config_custom() {
+        let config = RuntimeConfig {
+            workdir: "/data".to_string(),
+            max_agents: 5,
+            health_interval_secs: 120,
+        };
+        assert_eq!(config.workdir, "/data");
+        assert_eq!(config.max_agents, 5);
+        assert_eq!(config.health_interval_secs, 120);
+    }
+    
+    #[test]
+    fn test_llm_config_custom() {
+        let config = LLMConfig {
+            provider: LLMProvider::OpenAI,
+            endpoint: String::new(),
+            model: "gpt-4o".to_string(),
+            api_key: Some("sk-test".to_string()),
+            timeout_secs: 120,
+        };
+        assert_eq!(config.provider, LLMProvider::OpenAI);
+        assert_eq!(config.model, "gpt-4o");
+        assert_eq!(config.timeout_secs, 120);
+        assert_eq!(config.api_key.unwrap(), "sk-test");
+    }
 }

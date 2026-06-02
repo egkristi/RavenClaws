@@ -70,4 +70,50 @@ mod tests {
         let err: Result<i32> = Err(RavenClawError::CommandExecution("fail".to_string()));
         assert!(err.is_err());
     }
+    
+    #[tokio::test]
+    async fn test_network_error_variant() {
+        // Network error from reqwest — we can construct it via the From impl
+        // by creating a reqwest error. Since reqwest::Error is opaque, we
+        // test the variant via the Display trait.
+        let err = RavenClawError::Network(
+            reqwest::Client::builder()
+                .build()
+                .unwrap()
+                .get("http://invalid.example.com")
+                .send()
+                .await
+                .unwrap_err()
+        );
+        assert!(format!("{}", err).contains("Network error"));
+    }
+    
+    #[test]
+    fn test_io_error_variant() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "file not found");
+        let err = RavenClawError::IO(io_err);
+        assert!(format!("{}", err).contains("IO error"));
+        assert!(format!("{}", err).contains("file not found"));
+    }
+    
+    #[test]
+    fn test_error_is_debug() {
+        let err = RavenClawError::CommandExecution("test".to_string());
+        let debug = format!("{:?}", err);
+        assert!(debug.contains("CommandExecution"));
+    }
+    
+    #[test]
+    fn test_error_is_send() {
+        fn check_send<T: Send>() {}
+        check_send::<RavenClawError>();
+        assert!(true);
+    }
+    
+    #[test]
+    fn test_error_is_sync() {
+        fn check_sync<T: Sync>() {}
+        check_sync::<RavenClawError>();
+        assert!(true);
+    }
 }

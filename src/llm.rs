@@ -192,8 +192,14 @@ impl LLMProviderTrait for OpenRouterClient {
             stream: None,
         };
         
-        let mut req = self.client
-            .post("https://openrouter.ai/api/v1/chat/completions")
+        let endpoint = if self.config.endpoint.is_empty() {
+            "https://openrouter.ai/api/v1/chat/completions".to_string()
+        } else {
+            format!("{}/v1/chat/completions", self.config.endpoint.trim_end_matches('/'))
+        };
+        
+        let req = self.client
+            .post(&endpoint)
             .header("Authorization", format!("Bearer {}", self.config.api_key.as_ref().unwrap_or(&"".to_string())))
             .header("HTTP-Referer", "https://github.com/egkristi/RavenClaw")
             .header("X-Title", "RavenClaw")
@@ -359,8 +365,14 @@ impl LLMProviderTrait for OpenAIClient {
             stream: None,
         };
         
+        let endpoint = if self.config.endpoint.is_empty() {
+            "https://api.openai.com/v1/chat/completions".to_string()
+        } else {
+            format!("{}/v1/chat/completions", self.config.endpoint.trim_end_matches('/'))
+        };
+        
         let response = self.client
-            .post("https://api.openai.com/v1/chat/completions")
+            .post(&endpoint)
             .header("Authorization", format!("Bearer {}", self.config.api_key.as_ref().unwrap_or(&"".to_string())))
             .json(&request)
             .send()
@@ -437,9 +449,440 @@ impl MultiModelManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mockito::Server;
+    
+    // ── Helper ──────────────────────────────────────────────────────────
+    
+    fn make_chat_messages() -> Vec<ChatMessage> {
+        vec![
+            ChatMessage {
+                role: "system".to_string(),
+                content: "You are helpful.".to_string(),
+            },
+            ChatMessage {
+                role: "user".to_string(),
+                content: "Hello!".to_string(),
+            },
+        ]
+    }
+    
+    fn sample_chat_response_json(model: &str) -> String {
+        format!(r#"{{
+            "id": "chat-123",
+            "object": "chat.completion",
+            "created": 1717000000,
+            "model": "{}",
+            "choices": [
+                {{
+                    "index": 0,
+                    "message": {{
+                        "role": "assistant",
+                        "content": "Hi there!"
+                    }},
+                    "finish_reason": "stop"
+                }}
+            ],
+            "usage": {{
+                "prompt_tokens": 10,
+                "completion_tokens": 5,
+                "total_tokens": 15
+            }}
+        }}"#, model)
+    }
+    
+    fn sample_ollama_response_json(model: &str) -> String {
+        format!(r#"{{
+            "model": "{}",
+            "message": {{
+                "role": "assistant",
+                "content": "Hi there!"
+            }},
+            "done": true
+        }}"#, model)
+    }
+    
+    /// Helper: run an async test with a mockito server.
+    /// mockito::Server::new() spawns a background thread with its own tokio
+    /// runtime, so we must create it *before* entering the tokio test runtime.
+    fn with_mockito<F, Fut>(f: F)
+    where
+        F: FnOnce(mockito::ServerGuard) -> Fut,
+        Fut: std::future::Future<Output = ()>,
+    {
+        let server = Server::new();
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(f(server));
+    }
+    
+    // ── LiteLLM mockito tests ──────────────────────────────────────────
     
     #[test]
-    fn test_litellm_client_creation() {
+    fn test_litellm_chat_success() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(sample_chat_response_json("gpt-4o-mini"))
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = LiteLLMClient::new(&config).unwrap();
+            let response = client.chat(make_chat_messages()).await.unwrap();
+            
+            assert_eq!(response.model, "gpt-4o-mini");
+            assert_eq!(response.choices[0].message.content, "Hi there!");
+            assert_eq!(response.usage.unwrap().total_tokens, 15);
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_litellm_chat_auth_failure() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(401)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error": "Unauthorized"}"#)
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("bad-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = LiteLLMClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::AuthFailed));
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_litellm_chat_rate_limit() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(429)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error": "Rate limit exceeded"}"#)
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = LiteLLMClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::RateLimited));
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_litellm_chat_server_error() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(500)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error": "Internal server error"}"#)
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = LiteLLMClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::RequestFailed(_)));
+            assert!(format!("{}", err).contains("500"));
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_litellm_chat_invalid_json() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body("not-json")
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = LiteLLMClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::InvalidResponse(_)));
+            mock.assert();
+        });
+    }
+    
+    // ── OpenRouter mockito tests ───────────────────────────────────────
+    
+    #[test]
+    fn test_openrouter_chat_success() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(sample_chat_response_json("anthropic/claude-sonnet-4-20250514"))
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::OpenRouter,
+                endpoint: server.url(),
+                model: "anthropic/claude-sonnet-4-20250514".to_string(),
+                api_key: Some("or-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = OpenRouterClient::new(&config).unwrap();
+            let response = client.chat(make_chat_messages()).await.unwrap();
+            
+            assert_eq!(response.model, "anthropic/claude-sonnet-4-20250514");
+            assert_eq!(response.choices[0].message.content, "Hi there!");
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_openrouter_chat_auth_failure() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(401)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error": "Unauthorized"}"#)
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::OpenRouter,
+                endpoint: server.url(),
+                model: "anthropic/claude-sonnet-4-20250514".to_string(),
+                api_key: Some("bad-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = OpenRouterClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::AuthFailed));
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_openrouter_chat_rate_limit() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(429)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error": "Rate limited"}"#)
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::OpenRouter,
+                endpoint: server.url(),
+                model: "anthropic/claude-sonnet-4-20250514".to_string(),
+                api_key: Some("or-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = OpenRouterClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::RateLimited));
+            mock.assert();
+        });
+    }
+    
+    // ── OpenAI mockito tests ───────────────────────────────────────────
+    
+    #[test]
+    fn test_openai_chat_success() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(sample_chat_response_json("gpt-4o"))
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::OpenAI,
+                endpoint: server.url(),
+                model: "gpt-4o".to_string(),
+                api_key: Some("sk-test".to_string()),
+                timeout_secs: 60,
+            };
+            
+            let client = OpenAIClient::new(&config).unwrap();
+            let response = client.chat(make_chat_messages()).await.unwrap();
+            
+            assert_eq!(response.model, "gpt-4o");
+            assert_eq!(response.choices[0].message.content, "Hi there!");
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_openai_chat_auth_failure() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(401)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error": "Unauthorized"}"#)
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::OpenAI,
+                endpoint: server.url(),
+                model: "gpt-4o".to_string(),
+                api_key: Some("bad-key".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = OpenAIClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::AuthFailed));
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_openai_chat_rate_limit() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/v1/chat/completions")
+                .with_status(429)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error": "Rate limited"}"#)
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::OpenAI,
+                endpoint: server.url(),
+                model: "gpt-4o".to_string(),
+                api_key: Some("sk-test".to_string()),
+                timeout_secs: 30,
+            };
+            
+            let client = OpenAIClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::RateLimited));
+            mock.assert();
+        });
+    }
+    
+    // ── Ollama mockito tests ───────────────────────────────────────────
+    
+    #[test]
+    fn test_ollama_chat_success() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/api/chat")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(sample_ollama_response_json("llama3.1"))
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: server.url(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 30,
+            };
+            
+            let client = OllamaClient::new(&config).unwrap();
+            let response = client.chat(make_chat_messages()).await.unwrap();
+            
+            assert_eq!(response.model, "llama3.1");
+            assert_eq!(response.choices[0].message.content, "Hi there!");
+            assert_eq!(response.choices[0].finish_reason, Some("stop".to_string()));
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_ollama_chat_server_error() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/api/chat")
+                .with_status(500)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error": "Model not loaded"}"#)
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: server.url(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 30,
+            };
+            
+            let client = OllamaClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::RequestFailed(_)));
+            mock.assert();
+        });
+    }
+    
+    #[test]
+    fn test_ollama_chat_invalid_json() {
+        with_mockito(|mut server| async move {
+            let mock = server.mock("POST", "/api/chat")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body("not-json")
+                .create();
+            
+            let config = LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: server.url(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 30,
+            };
+            
+            let client = OllamaClient::new(&config).unwrap();
+            let err = client.chat(make_chat_messages()).await.unwrap_err();
+            
+            assert!(matches!(err, LLMError::InvalidResponse(_)));
+            mock.assert();
+        });
+    }
+    
+    // ── Factory function tests ─────────────────────────────────────────
+    
+    #[test]
+    fn test_create_client_factory_litellm() {
         let config = LLMConfig {
             provider: LLMProvider::LiteLLM,
             endpoint: "http://localhost:4000".to_string(),
@@ -448,7 +891,7 @@ mod tests {
             timeout_secs: 30,
         };
         
-        let client = LiteLLMClient::new(&config).unwrap();
+        let client = create_client(&config).unwrap();
         assert_eq!(client.provider_name(), "litellm");
         assert_eq!(client.model(), "gpt-4o-mini");
     }
@@ -496,21 +939,6 @@ mod tests {
         let client = OpenRouterClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "openrouter");
         assert_eq!(client.model(), "anthropic/claude-sonnet-4-20250514");
-    }
-    
-    #[test]
-    fn test_create_client_factory() {
-        let config = LLMConfig {
-            provider: LLMProvider::LiteLLM,
-            endpoint: "http://localhost:4000".to_string(),
-            model: "gpt-4o-mini".to_string(),
-            api_key: Some("test".to_string()),
-            timeout_secs: 30,
-        };
-        
-        let client = create_client(&config).unwrap();
-        assert_eq!(client.provider_name(), "litellm");
-        assert_eq!(client.model(), "gpt-4o-mini");
     }
     
     #[test]

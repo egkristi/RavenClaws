@@ -38,11 +38,11 @@ can't be added without breaking one, it doesn't ship in core.
 | CI/CD pipeline | ✅ Implemented | fmt + clippy `-D warnings` + test, 5-target builds, multi-arch images, **Cosign + SBOM + provenance + Trivy**, crates.io publish, releases — ⚠️ **red until `Cargo.lock` is committed** |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review — all SARIF results uploaded to GitHub Security tab |
 | Verification suite | ✅ Working | 94 system/integration checks · 8 modules · 4 targets (`scripts/verify.sh`: local, Docker, Linux, K8s, security, performance, LLM-quality) — shell-orchestrated, requires live services |
-| Rust unit tests | ⚠️ Minimal | 3 smoke-level tests (constructors); `mockito` declared but unused — expand to cover request/response/error paths |
+| Rust unit tests | ✅ Working | 71 tests across all 5 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
 | Multi-model routing | ⚠️ Partial | `next_client()` round-robin exists but is never called; no intelligent routing |
-| RavenFabric integration | ⚠️ Partial | Config struct exists, agent binary baked into the image; runtime integration not wired |
-| `--exec` one-shot mode | ❌ Dead code | CLI arg parsed but never read |
-| Swarm / Supervisor modes | ❌ Stub | Warn "not yet implemented", exit 0 |
+| RavenFabric integration | ⚠️ Partial | Config struct exists, agent binary baked into the image with checksum verification; runtime integration not wired |
+| `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout |
+| Swarm / Supervisor modes | ⚠️ Stub | Return clear error instead of silent exit 0 |
 | Agent loop / ReAct planning | ❌ Not implemented | One-shot send-and-exit; no perceive→plan→act→observe |
 | Tool-use / function calling | ❌ Not implemented | Agent cannot call tools |
 | Streaming responses | ❌ Not implemented | `stream: None` hardcoded |
@@ -53,9 +53,9 @@ can't be added without breaking one, it doesn't ship in core.
 
 These break real usage today and are the first thing to fix (see [Technical Debt](#technical-debt)):
 
-1. **`Cargo.lock` is git-ignored, but `--locked` is used in CI, Docker, `build.sh`, and `cargo publish`** → every fresh checkout fails to build. *(blocker)*
-2. **Dockerfile pins the builder to `$BUILDPLATFORM` then cross-compiles to `$TARGET` with no cross-linker** → `linux/arm64` image build fails at link time. *(blocker)*
-3. **Dockerfile `curl | chmod +x` of the RavenFabric agent has no checksum/signature check** — supply-chain gap in a "secure by default" project. *(security)*
+1. ~~**`Cargo.lock` is git-ignored, but `--locked` is used in CI, Docker, `build.sh`, and `cargo publish`** → every fresh checkout fails to build. *(blocker)*~~ ✅ Fixed
+2. ~~**Dockerfile pins the builder to `$BUILDPLATFORM` then cross-compiles to `$TARGET` with no cross-linker** → `linux/arm64` image build fails at link time. *(blocker)*~~ ✅ Fixed — cross-linkers installed
+3. ~~**Dockerfile `curl | chmod +x` of the RavenFabric agent has no checksum/signature check** — supply-chain gap in a "secure by default" project. *(security)*~~ ✅ Fixed — SHA256 checksum verification added
 4. **The binary exits after one request, but the k8s Deployment expects a long-running process** → CrashLoopBackOff until server mode (v0.7) exists.
 
 ---
@@ -199,15 +199,15 @@ Versions are capability milestones, not dates. Each must keep all five pillars g
 
 Cheapest, highest-leverage work. Nothing new ships until the basics are solid.
 
-- [ ] **Commit `Cargo.lock`** (remove from `.gitignore`) so `--locked` works in CI/Docker/publish.
-- [ ] **Fix multi-arch Docker build** — install cross-linkers (`gcc-aarch64-linux-gnu`) + set the cargo target linker, **or** drop `--platform=$BUILDPLATFORM` and build natively per-arch under QEMU.
-- [ ] **Verify the RavenFabric agent download** against a published checksum / Cosign signature.
-- [ ] **Single source of version truth** — wire clap `--version` to `env!("CARGO_PKG_VERSION")`.
-- [ ] **Replace `.expect()` on HTTP client construction** with error propagation (no abort path under `panic = "abort"`).
-- [ ] **Decide `--exec`**: implement one-shot mode (preferred, see v0.3) or remove the flag.
-- [ ] **Make swarm/supervisor fail loudly** — return a clear error instead of `exit 0` until implemented.
-- [ ] **Expand tests** — use `mockito` to exercise request/response/error paths for every provider; cover config parsing and the multi-model manager.
-- [ ] **README status-honesty.** ✅ done in this pass
+- [x] **Commit `Cargo.lock`** (remove from `.gitignore`) so `--locked` works in CI/Docker/publish.
+- [x] **Fix multi-arch Docker build** — install cross-linkers (`gcc-aarch64-linux-gnu`) + set the cargo target linker.
+- [x] **Verify the RavenFabric agent download** against a published checksum / Cosign signature.
+- [x] **Single source of version truth** — wire clap `--version` to `env!("CARGO_PKG_VERSION")`.
+- [x] **Replace `.expect()` on HTTP client construction** with error propagation (no abort path under `panic = "abort"`).
+- [x] **Decide `--exec`**: implement one-shot mode (preferred, see v0.3) or remove the flag.
+- [x] **Make swarm/supervisor fail loudly** — return a clear error instead of `exit 0` until implemented.
+- [x] **Expand tests** — use `mockito` to exercise request/response/error paths for every provider; cover config parsing and the multi-model manager.
+- [x] **README status-honesty.** ✅ done in this pass
 
 **Exit criteria:** `cargo fmt && cargo clippy -D warnings && cargo test` green; `docker buildx` produces working `amd64`+`arm64` images; fresh clone builds with `--locked`.
 
