@@ -137,6 +137,13 @@
   - [ ] Compliance reporting — SOC2, HIPAA, GDPR-ready reporting
   - [ ] Air-gap deployment — fully offline operation
   - [ ] Multi-tenant isolation — separate workspaces, secrets, and quotas per tenant
+- [ ] **Add multi-level audit logging**
+  - [ ] Define audit log levels — `off`, `basic` (who, what, when), `detailed` (full request/response), `debug` (wire-level tracing)
+  - [ ] Structured log formats — JSON (default), CEF (ArcSight), LEEF (QRadar), Syslog (RFC 5424)
+  - [ ] Log shipping — configurable sinks: stdout, file rotation, syslog, TCP/UDP endpoint
+  - [ ] Sensitive data redaction — automatic masking of API keys, tokens, PII in audit logs
+  - [ ] Log integrity — HMAC-chained log entries to detect tampering
+  - [ ] Compliance presets — one-shot configuration for SOC2, HIPAA, GDPR, PCI-DSS audit requirements
 - [ ] **Add observability**
   - [ ] Prometheus metrics — request count, latency, error rates, token usage
   - [ ] OpenTelemetry tracing — distributed tracing across agent calls
