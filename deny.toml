@@ -1,0 +1,80 @@
+# cargo-deny configuration for RavenClaw
+# See: https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+# Skip duplicate detection for these targets (we only care about the host)
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "aarch64-unknown-linux-gnu" },
+    { triple = "x86_64-apple-darwin" },
+    { triple = "aarch64-apple-darwin" },
+    { triple = "x86_64-unknown-linux-musl" },
+]
+
+[advisories]
+# Block the build on any advisory (CVE, yanked, unmaintained)
+vulnerability = "deny"
+unmaintained = "deny"
+unsound = "deny"
+yanked = "deny"
+notice = "deny"
+# Path to the advisory database (local clone)
+db-path = "~/.cargo/advisory-db"
+# Fetch the advisory database before checking
+db-urls = ["https://github.com/rustsec/advisory-db"]
+
+[licenses]
+# AGPLv3-or-later is our license. Allowed dependencies must be compatible.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+    "Zlib",
+    "0BSD",
+    "CC0-1.0",
+    "MPL-2.0",
+    "OpenSSL",
+    "BSL-1.0",
+    "NCSA",
+    "Python-2.0",
+    "WTFPL",
+    "Unlicense",
+]
+# Deny any license not explicitly allowed
+unlicensed = "deny"
+# Allow ambiguous licenses (ones we've manually reviewed)
+allow-osi-fsf-free = "neither"
+# Confidence threshold for license detection
+confidence-threshold = 0.8
+# Copyleft licenses we explicitly allow (after review)
+copyleft = "deny"
+# Exceptions for specific crates that use allowed copyleft licenses
+exceptions = [
+    # Allow each exception with a reason
+    { allow = ["AGPL-3.0"], name = "ravenclaw", version = "*" },
+]
+
+[bans]
+# Prevent multiple versions of the same crate
+multiple-versions = "deny"
+# Highlight duplicate versions but don't fail
+skip-tree = []
+# Specific crates to deny entirely
+deny = []
+# Skip these crates when checking for duplicates
+skip = [
+    # tokio-util is pulled in by multiple deps at different versions
+    { name = "tokio-util", version = "0.7" },
+]
+
+[sources]
+# Only allow crates from crates.io (no git/path dependencies in release)
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rustsec/advisory-db"]
+allow-git = []

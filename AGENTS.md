@@ -44,8 +44,9 @@ src/
 | Streaming responses | ❌ Not implemented — `stream: None` hardcoded |
 | Conversation memory | ❌ Not implemented — in-memory only, lost on exit |
 | RavenFabric integration | Partial — config struct exists, binary included in container, runtime wiring pending |
-| GitHub Actions CI/CD | ❌ Not implemented |
-| Pre-built binaries / releases | ❌ Not implemented |
+| GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
+| Security scanning | ✅ Implemented — CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review |
+| Pre-built binaries / releases | 📋 Wired, untagged — CI produces them on tag; none released yet |
 
 ---
 
@@ -295,10 +296,11 @@ Before tagging v0.1.0:
 
 - [ ] Fix `--exec` dead code (wire up or remove)
 - [ ] Fix swarm/supervisor stubs (return clear error instead of silent success)
-- [ ] Add GitHub Actions CI/CD workflow
-- [ ] Add release workflow (build binaries + push Docker images on tag)
+- [ ] Commit `Cargo.lock` (remove from `.gitignore`) so `--locked` builds work
+- [ ] Fix multi-arch Docker build (install cross-linkers for linux/arm64)
 - [ ] Expand `cargo test` beyond 2 unit tests
 - [ ] Run full verification suite: `./scripts/verify.sh --all`
+- [ ] Verify all CI workflows pass (build + security scan)
 - [ ] Update version in `Cargo.toml` if needed
 - [ ] Tag and push: `git tag v0.1.0 && git push --tags`
 

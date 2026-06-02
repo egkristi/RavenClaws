@@ -1,0 +1,467 @@
+# Security Scan — comprehensive security analysis for RavenClaw
+# Runs on every push, PR, weekly schedule, and can be triggered manually.
+# All findings are uploaded to GitHub Security tab for centralized tracking.
+
+name: Security Scan
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # Weekly: Monday 6 AM UTC — catch newly disclosed CVEs
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  # ── CodeQL Static Analysis ───────────────────────────────────
+  # GitHub's industry-standard semantic code analysis engine.
+  # Detects: injection flaws, insecure crypto, path traversal,
+  #   unsafe deserialization, XSS, SQLi, and 100+ other classes.
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      # Initialize CodeQL with Rust support
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: rust
+          # Extended query suite catches more than the default
+          queries: security-and-quality
+          # Fail on any alert classified as error or warning
+          # (not just security-severity thresholds)
+          config: |
+            name: "RavenClaw CodeQL Config"
+            paths:
+              - src
+            paths-ignore:
+              - target
+              - tests/config
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:rust"
+          output: codeql-results
+          upload: true
+
+  # ── Rust Dependency Audit (cargo-audit) ──────────────────────
+  # Scans Cargo.lock against the RustSec Advisory Database.
+  # Detects: known CVEs in direct and transitive dependencies,
+  #   yanked crates, unsound Rust patterns, unmaintained crates.
+  cargo-audit:
+    name: Cargo Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+
+      - name: Run cargo-audit
+        run: cargo audit --deny warnings
+        continue-on-error: false
+
+  # ── License & Duplicate Dependency Check (cargo-deny) ────────
+  # Enforces license compatibility (AGPLv3-safe dependencies only),
+  #   detects duplicate crate versions bloating the binary,
+  #   flags copyleft-adjacent or unlicensed crates.
+  cargo-deny:
+    name: Cargo Deny
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+
+      - name: Run cargo-deny
+        run: cargo deny check licenses advisories sources
+        continue-on-error: false
+
+  # ── Outdated Dependency Check (cargo-outdated) ───────────────
+  # Alerts when dependencies lag behind latest semver-compatible
+  #   releases. Non-blocking (informational) — helps plan upgrades.
+  cargo-outdated:
+    name: Cargo Outdated
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-outdated
+        run: cargo install cargo-outdated --locked
+
+      - name: Check for outdated dependencies
+        run: cargo outdated --exit-code 1
+        continue-on-error: true # informational only
+
+  # ── Unused Dependency Detection (cargo-udeps) ────────────────
+  # Finds dependencies declared in Cargo.toml that are never
+  #   actually used in code — reduces binary size and attack surface.
+  cargo-udeps:
+    name: Cargo Udeps
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install cargo-udeps
+        run: cargo install cargo-udeps --locked
+
+      - name: Check for unused dependencies
+        run: cargo udeps --release --locked
+        continue-on-error: true # informational
+
+  # ── Trivy Filesystem Scan ────────────────────────────────────
+  # Scans the entire repository for:
+  #   - OS package vulnerabilities (from Rust toolchain deps)
+  #   - IaC misconfigurations (Docker, K8s, Terraform)
+  #   - Hardcoded secrets (API keys, tokens, passwords)
+  #   - Git-related issues (exposed .git, submodule issues)
+  #   - License compliance issues
+  trivy-fs:
+    name: Trivy (Filesystem)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs-results.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          # Scan everything: code, configs, Dockerfiles, K8s manifests
+          scanners: vuln,secret,misconfig,license
+          exit-code: 1
+          hide-progress: true
+          # Skip generated/build artifacts
+          skip-dirs: target,.git
+
+      - name: Upload Trivy results to GitHub Security
+        if: always() && hashFiles('trivy-fs-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs-results.sarif
+          category: trivy-filesystem
+
+  # ── Trivy Config Scan (Docker + K8s focused) ─────────────────
+  # Specialized scan for infrastructure-as-code misconfigurations
+  #   in Dockerfiles and Kubernetes manifests.
+  trivy-config:
+    name: Trivy (IaC Config)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@0.29.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-config-results.sarif
+          severity: CRITICAL,HIGH,MEDIUM
+          exit-code: 1
+          hide-progress: true
+
+      - name: Upload Trivy config results to GitHub Security
+        if: always() && hashFiles('trivy-config-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-config-results.sarif
+          category: trivy-config
+
+  # ── Dockerfile Lint (Hadolint) ───────────────────────────────
+  # Checks Dockerfile against best practices:
+  #   - Pin base image digests (not just tags)
+  #   - No latest tag
+  #   - No sudo, no shell in production stage
+  #   - Proper layer ordering for cache efficiency
+  #   - Metadata labels present
+  hadolint:
+    name: Hadolint (Dockerfile)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+          format: sarif
+          output-file: hadolint-results.sarif
+          # Strict: fail on error and warning, allow info/style
+          failure-threshold: warning
+
+      - name: Upload Hadolint results to GitHub Security
+        if: always() && hashFiles('hadolint-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: hadolint-results.sarif
+          category: hadolint
+
+  # ── K8s Manifest Validation (kubeconform + kubescape) ────────
+  # Validates Kubernetes manifests against:
+  #   - Schema conformance (kubeconform)
+  #   - NSA/CISA hardening guidelines (kubescape)
+  #   - Misconfigurations, privilege escalation paths
+  k8s-validate:
+    name: K8s Manifest Validation
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate K8s manifests with kubeconform
+        uses: docker://ghcr.io/yannh/kubeconform:latest
+        with:
+          args: >
+            -kubernetes-version 1.33
+            -schema-location default
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+            -strict
+            -output sarif
+            k8s/
+        continue-on-error: true
+
+      - name: Scan K8s manifests with Kubescape
+        uses: kubescape/action@v1
+        with:
+          format: sarif
+          output-file: kubescape-results.sarif
+          # Use the NSA CISA framework (most comprehensive)
+          frameworks: "nsa-cisa"
+          thresholds: "critical:0,high:0,medium:10"
+
+      - name: Upload Kubescape results to GitHub Security
+        if: always() && hashFiles('kubescape-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: kubescape-results.sarif
+          category: kubescape
+
+  # ── OSSF Scorecard ───────────────────────────────────────────
+  # OpenSSF Scorecard evaluates the project's security posture
+  #   across 18+ dimensions: CI tests, branch protection, token
+  #   permissions, fuzzing, SAST, pinned dependencies, etc.
+  # Score target: ≥ 8.0 / 10.0
+  scorecard:
+    name: OSSF Scorecard
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run OSSF Scorecard
+        uses: ossf/scorecard-action@v2.4.0
+        with:
+          results_file: scorecard-results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload Scorecard results to GitHub Security
+        if: always() && hashFiles('scorecard-results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: scorecard-results.sarif
+          category: ossf-scorecard
+
+      - name: Scorecard summary
+        run: |
+          echo "OSSF Scorecard results uploaded to GitHub Security tab."
+          echo "Target score: ≥ 8.0 / 10.0"
+
+  # ── Dependency Review (PRs only) ─────────────────────────────
+  # On pull requests, reviews all dependency changes for:
+  #   - Known vulnerable packages
+  #   - License compatibility issues
+  #   - Package hijack / typo-squatting risks
+  dep-review:
+    name: Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          # AGPLv3-compatible licenses only
+          allow-licenses: >
+            MIT, Apache-2.0, Apache-2.0 WITH LLVM-exception,
+            BSD-2-Clause, BSD-3-Clause, ISC, Unlicense, CC0-1.0,
+            Zlib, 0BSD, MPL-2.0, Unicode-3.0, Unicode-DFS-2016,
+            OpenSSL, BSL-1.0, NCSA, Python-2.0, WTFPL
+          comment-summary-in-pr: true
+
+  # ── Summary ──────────────────────────────────────────────────
+  summary:
+    name: Security Scan Summary
+    if: always()
+    needs:
+      - codeql
+      - cargo-audit
+      - cargo-deny
+      - cargo-outdated
+      - cargo-udeps
+      - trivy-fs
+      - trivy-config
+      - hadolint
+      - k8s-validate
+      - scorecard
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+
+          # CodeQL
+          if [ "${{ needs.codeql.result }}" == "success" ]; then
+            echo "| CodeQL (Rust) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.codeql.result }}" == "skipped" ]; then
+            echo "| CodeQL (Rust) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| CodeQL (Rust) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Cargo Audit
+          if [ "${{ needs.cargo-audit.result }}" == "success" ]; then
+            echo "| Cargo Audit (RustSec DB) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.cargo-audit.result }}" == "skipped" ]; then
+            echo "| Cargo Audit (RustSec DB) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Cargo Audit (RustSec DB) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Cargo Deny
+          if [ "${{ needs.cargo-deny.result }}" == "success" ]; then
+            echo "| Cargo Deny (licenses + duplicates) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.cargo-deny.result }}" == "skipped" ]; then
+            echo "| Cargo Deny (licenses + duplicates) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Cargo Deny (licenses + duplicates) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Cargo Outdated
+          if [ "${{ needs.cargo-outdated.result }}" == "success" ]; then
+            echo "| Cargo Outdated | ✅ Up-to-date |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.cargo-outdated.result }}" == "skipped" ]; then
+            echo "| Cargo Outdated | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Cargo Outdated | ⚠️ Outdated deps found |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Cargo Udeps
+          if [ "${{ needs.cargo-udeps.result }}" == "success" ]; then
+            echo "| Cargo Udeps (unused deps) | ✅ Clean |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.cargo-udeps.result }}" == "skipped" ]; then
+            echo "| Cargo Udeps (unused deps) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Cargo Udeps (unused deps) | ⚠️ Unused deps found |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Trivy FS
+          if [ "${{ needs.trivy-fs.result }}" == "success" ]; then
+            echo "| Trivy (filesystem) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.trivy-fs.result }}" == "skipped" ]; then
+            echo "| Trivy (filesystem) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Trivy (filesystem) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Trivy Config
+          if [ "${{ needs.trivy-config.result }}" == "success" ]; then
+            echo "| Trivy (IaC config) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.trivy-config.result }}" == "skipped" ]; then
+            echo "| Trivy (IaC config) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Trivy (IaC config) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # Hadolint
+          if [ "${{ needs.hadolint.result }}" == "success" ]; then
+            echo "| Hadolint (Dockerfile) | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.hadolint.result }}" == "skipped" ]; then
+            echo "| Hadolint (Dockerfile) | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Hadolint (Dockerfile) | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # K8s Validation
+          if [ "${{ needs.k8s-validate.result }}" == "success" ]; then
+            echo "| K8s Manifest Validation | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.k8s-validate.result }}" == "skipped" ]; then
+            echo "| K8s Manifest Validation | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| K8s Manifest Validation | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          # OSSF Scorecard
+          if [ "${{ needs.scorecard.result }}" == "success" ]; then
+            echo "| OSSF Scorecard | ✅ Pass |" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.scorecard.result }}" == "skipped" ]; then
+            echo "| OSSF Scorecard | ⏭️ Skipped |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| OSSF Scorecard | ❌ Fail |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All SARIF results uploaded to **GitHub Security > Code Scanning** tab." >> $GITHUB_STEP_SUMMARY

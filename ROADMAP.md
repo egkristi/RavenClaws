@@ -1,231 +1,308 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
-**Vision:** RavenClaw shall become the supreme, most trusted, and most capable agentic AI worker, automation agent, and AI assistant.
+**Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
+the supreme, most trusted, and most capable autonomous agent. Simply the best.
 
-**Core Principles:**
-- **Small** — Not bloated. A lean, focused codebase that does one thing exceptionally well.
-- **Sleek** — Elegant architecture. Clean APIs. Minimal cognitive overhead.
-- **Secure** — Security by design, not as an afterthought. Fail-closed. Memory-safe.
-- **Easy to use** — One command to run. Sensible defaults. Zero-config for common cases.
-- **Robust** — Battle-tested. Deterministic. Predictable under load.
+**Core Principles** — every decision is measured against these five. If a feature
+can't be added without breaking one, it doesn't ship in core.
+
+| Pillar | What it means in practice |
+|---|---|
+| 🔒 **Secure** | Memory-safe Rust (`unsafe` forbidden). Fail-closed. No creds in config, TLS enforced, every tool call policy-gated and audited. Signed releases, SBOM, verified supply chain. |
+| 🪶 **Small** | One static binary, distroless image, lean dependency tree. Target < 15 MB stripped, < 30 MB image. |
+| ⚡ **Efficient** | Native performance, low idle memory (< 20 MB RSS), fast cold start (< 50 ms), streaming everywhere. |
+| 🛡️ **Robust** | No `panic`/`unwrap` on hot paths. Retries with backoff, provider fallback, deterministic config, high coverage. |
+| ✨ **Simple** | One command to run. Sensible defaults. Zero-config for common cases. No external services required for single-agent use. |
+
+### Non-goals
+
+- Not a heavyweight orchestration platform — RavenClaw stays a small worker; large-scale mesh coordination is delegated to **RavenFabric**.
+- Not a UI/IDE — RavenClaw is a headless binary + library; frontends consume it.
+- No telemetry phone-home, ever. Observability is opt-in and self-hosted.
 
 ---
 
 ## Current State
 
+**Version:** 0.1.0 (Pre-Alpha) — active development, APIs unstable.
+**Stats:** 5 source modules, ~1,070 LOC, 4 LLM providers, multi-arch CI with signed images + SBOM.
+
 | Component | Status | Details |
 |---|---|---|
-| Single agent (single-provider) | ✅ Working | Sends prompt, logs response |
+| Single agent (single-provider) | ✅ Working | Sends one prompt, logs response, exits |
 | Single agent (multi-model) | ✅ Working | Iterates all providers, logs each response |
-| LLM providers (4) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama |
-| CLI & env-var overrides | ✅ Working | `--provider`, `--endpoint`, `--model` |
+| LLM providers (4) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama (unified trait) |
+| CLI & env-var overrides | ✅ Working | `--provider`, `--endpoint`, `--model`, layered TOML→env→flags |
 | Config validation | ✅ Working | TLS enforcement, endpoint checks |
-| Container security | ✅ Working | Non-root, read-only FS, dropped caps |
-| Verification suite | ✅ Working | 94 tests, 8 modules, 4 targets |
-| Multi-model routing | Partial | Round-robin `next_client()` only, no intelligent routing |
-| `--exec` mode | ❌ Dead code | CLI arg parsed but never used |
-| Swarm mode | ❌ Stub | Warns "not yet implemented", exits 0 |
-| Supervisor mode | ❌ Stub | Warns "not yet implemented", exits 0 |
+| Container & K8s security | ✅ Working | Distroless, non-root, read-only FS, dropped caps, seccomp, RBAC |
+| CI/CD pipeline | ✅ Implemented | fmt + clippy `-D warnings` + test, 5-target builds, multi-arch images, **Cosign + SBOM + provenance + Trivy**, crates.io publish, releases — ⚠️ **red until `Cargo.lock` is committed** |
+| Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review — all SARIF results uploaded to GitHub Security tab |
+| Tests | ⚠️ Minimal | Constructor/smoke-level unit tests only; `mockito` declared but unused. *(No 90+ suite exists — that was aspirational.)* |
+| Multi-model routing | ⚠️ Partial | `next_client()` round-robin exists but is never called; no intelligent routing |
+| RavenFabric integration | ⚠️ Partial | Config struct exists, agent binary baked into the image; runtime integration not wired |
+| `--exec` one-shot mode | ❌ Dead code | CLI arg parsed but never read |
+| Swarm / Supervisor modes | ❌ Stub | Warn "not yet implemented", exit 0 |
+| Agent loop / ReAct planning | ❌ Not implemented | One-shot send-and-exit; no perceive→plan→act→observe |
 | Tool-use / function calling | ❌ Not implemented | Agent cannot call tools |
-| Agent loop / ReAct planning | ❌ Not implemented | One-shot send-and-exit |
 | Streaming responses | ❌ Not implemented | `stream: None` hardcoded |
-| Conversation memory | ❌ Not implemented | In-memory only, lost on exit |
-| RavenFabric integration | Partial | Config struct exists, binary included in container, integration not yet wired |
-| GitHub Actions CI/CD | ❌ Not implemented | No workflow files exist |
-| Pre-built binaries | ❌ Not implemented | No releases published |
+| Conversation memory | ❌ Not implemented | In-memory messages only, lost on exit |
+| Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
+
+### 🔧 Known build & correctness blockers
+
+These break real usage today and are the first thing to fix (see [Technical Debt](#technical-debt)):
+
+1. **`Cargo.lock` is git-ignored, but `--locked` is used in CI, Docker, `build.sh`, and `cargo publish`** → every fresh checkout fails to build. *(blocker)*
+2. **Dockerfile pins the builder to `$BUILDPLATFORM` then cross-compiles to `$TARGET` with no cross-linker** → `linux/arm64` image build fails at link time. *(blocker)*
+3. **Dockerfile `curl | chmod +x` of the RavenFabric agent has no checksum/signature check** — supply-chain gap in a "secure by default" project. *(security)*
+4. **The binary exits after one request, but the k8s Deployment expects a long-running process** → CrashLoopBackOff until server mode (v0.7) exists.
 
 ---
 
-## Priority: Critical — v0.1.0 Release Blockers
+## Architecture
 
-*Fix critical issues. Ship a working developer preview. Establish trust.*
+### Today
 
-- [ ] **Fix `--exec` dead code** — CLI arg exists but is never read in `main.rs`. Wire it up or remove the flag.
-- [ ] **Fix swarm/supervisor stubs** — `--mode swarm` and `--mode supervisor` print "not yet implemented" and exit 0. Return a clear error instead.
-- [ ] **Set up CI/CD pipeline**
-  - [ ] GitHub Actions workflow — build binaries for all targets on every push
-  - [ ] Release workflow — auto-build and attach binaries to GitHub Releases on tag push
-  - [ ] Container registry push — auto-build and push multi-arch Docker images to GHCR on release
-- [ ] **Ship pre-built binaries** — Make `curl -LO` installable binaries for all 5 target triples
-- [ ] **Expand `cargo test`** — Currently only 2 unit tests. Add tests for config parsing, LLM client creation, error handling, and multi-model manager.
-- [ ] **Tag and release v0.1.0** — Create and push version tag
+```text
+        ┌──────────┐
+        │  main.rs │  CLI (clap) · JSON logging · mode dispatch
+        └────┬─────┘
+   ┌─────────┼──────────┐
+┌──┴───┐ ┌───┴────┐ ┌───┴─────┐
+│agent │ │ config │ │  error  │
+└──┬───┘ └────────┘ └─────────┘
+   │
+┌──┴───────────────────────────┐
+│ llm  (LLMProviderTrait)       │
+│  LiteLLM · OpenAI · OpenRouter│
+│  · Ollama · MultiModelManager │
+└───────────────────────────────┘
+```
 
----
+### Target (v1.0)
 
-## Priority: High — Core Agent Loop & Modes
-
-*Solidify the core. Ship what works. Establish trust.*
-
-- [ ] **Implement tool-use (function calling)**
-  - [ ] Tool definition schema (name, description, parameters)
-  - [ ] Tool registry — register and discover available tools
-  - [ ] Function calling support in LLM provider trait
-  - [ ] Tool execution engine — call tools and return results to LLM
-  - [ ] Built-in tools: file read/write, shell command, web fetch, code analysis
-- [ ] **Implement agent loop with planning**
-  - [ ] ReAct-style reasoning: Think → Act → Observe → Repeat
-  - [ ] Max iteration guard — prevent infinite loops
-  - [ ] Plan persistence — save/restore in-progress plans
-- [ ] **Add conversation memory**
-  - [ ] Persistent context across turns (not just in-memory messages)
-  - [ ] Configurable memory window (last N turns or token budget)
-  - [ ] Session save/restore on restart
-- [ ] **Add streaming responses**
-  - [ ] Token-by-token output for interactive use
-  - [ ] Support in LLM provider trait and all 4 clients
-  - [ ] CLI streaming output (print as tokens arrive)
-- [ ] **Implement swarm mode**
-  - [ ] Multiple agents collaborating on tasks with RavenFabric coordination
-  - [ ] Round-robin load balancing across providers
-  - [ ] Model-specific routing (cheap models for simple tasks, expensive for complex)
-  - [ ] Fallback chain on provider errors
-- [ ] **Implement supervisor mode**
-  - [ ] Orchestrator agent that delegates to sub-agents
-  - [ ] Task decomposition and assignment
-  - [ ] Result aggregation and quality checking
-  - [ ] Recursive sub-agent spawning
-- [ ] **Wire RavenFabric integration** — Config struct exists, binary included in container images, but runtime integration not yet implemented.
-- [ ] **Harden security**
-  - [ ] Prompt injection defense — input sanitization, instruction boundary enforcement
-  - [ ] Tool sandboxing — each tool call validated against allowlist
-  - [ ] Output validation — structured output parsing with schema enforcement
-  - [ ] Rate limiting — per-agent, per-provider rate control
-  - [ ] Secrets redaction — automatic detection and masking of secrets in logs/outputs
-- [ ] **Expand verification**
-  - [ ] Property-based testing — fuzz config parsing, LLM response handling
-  - [ ] Integration test suite — end-to-end tests with mock LLM server
-  - [ ] Benchmark suite — track latency, throughput, memory usage over time
+```text
+                    ┌──────────┐
+                    │   CLI    │  single · serve · swarm · supervisor
+                    └────┬─────┘
+                  ┌──────┴───────┐
+                  │  Agent Core  │  perceive → plan → act → observe (+ memory)
+                  └──┬────┬───┬──┘
+          ┌──────────┘    │   └──────────┐
+     ┌────┴────┐    ┌─────┴────┐   ┌──────┴───────┐
+     │  Tools  │    │ Providers│   │ Orchestration │
+     │ policy+ │    │ routing+ │   │ swarm/superv. │
+     │ sandbox+│    │ fallback+│   │ + RavenFabric │
+     │ audit   │    │ budgets  │   │  (E2E remote) │
+     └────┬────┘    └──────────┘   └───────────────┘
+          │
+   ┌──────┴───────┐
+   │ Observability│  metrics · tracing · health endpoint
+   └──────────────┘
+```
 
 ---
 
-## Priority: Medium — Advanced Agentic Capabilities
+## Competitive Positioning
 
-*Make RavenClaw the most capable agent framework available.*
+RavenClaw aims to be the **preferred alternative** to the current field — including
+Nemoclaw, Hermes Agent, TrustClaw, ZeroClaw, PicoClaw, NanoClaw, Claude Cowork,
+Manus, Perplexity Computer, Kimi Claw, and Vellum.
 
-- [ ] **Build advanced tool system**
-  - [ ] Built-in tool library: file system ops, shell execution (sandboxed), web fetching, code analysis, database querying (SQLite, PostgreSQL), API client (REST, GraphQL)
-  - [ ] MCP (Model Context Protocol) support — compatible with the MCP ecosystem
-  - [ ] Custom tool SDK — define tools in Rust or via WASM plugins
-  - [ ] Tool composition — chain tools together into reusable workflows
-- [ ] **Implement memory & state management**
-  - [ ] Episodic memory — recall past conversations and task outcomes
-  - [ ] Semantic memory — vector-based knowledge retrieval (local embeddings)
-  - [ ] Procedural memory — learn and reuse successful task patterns
-  - [ ] Working memory — short-term context window management
-  - [ ] State persistence — save and restore agent state across restarts
-- [ ] **Implement multi-agent orchestration**
-  - [ ] Agent specialization — define agent roles with specific tools and models
-  - [ ] Hierarchical delegation — supervisor → specialist → worker tree
-  - [ ] Agent communication — structured message passing between agents
-  - [ ] Conflict resolution — handle contradictory outputs from multiple agents
-- [ ] **Add proactive & scheduled operation**
-  - [ ] Cron/heartbeat scheduling — run agents on a timer
-  - [ ] Event-driven triggers — webhook-based activation
-  - [ ] File system watchers — react to file changes
-  - [ ] Idle-time processing — background tasks during inactivity
+We don't win by out-featuring them. We win by refusing to compromise on all five
+pillars at once. By category:
+
+- **vs. cloud / hosted assistants** (Claude Cowork, Manus, Perplexity Computer, Kimi Claw): RavenClaw is **self-hostable, offline-capable, and source-available** under AGPLv3. Your data and tool calls never leave infrastructure you control — no phone-home.
+- **vs. minimal agent runtimes** (ZeroClaw, PicoClaw, NanoClaw, TrustClaw): RavenClaw matches their footprint while adding a real **security model** (deny-by-default tool policy, audit log, sandboxing) and **multi-provider** routing with fallback.
+- **vs. SDK / platform plays** (Vellum, Hermes Agent, Nemoclaw): RavenClaw is a **single dependency-light binary**, not a service you rent or a framework you marry. Embed it, ship it, forget it.
+
+The bar: anything the field can do, RavenClaw should do **smaller, safer, and
+simpler** — or deliberately not at all.
+
+> **Where RavenClaw must lead, measurably (v1.0):** memory-safe core with zero
+> known CVEs, sub-15 MB binary, sub-50 ms cold start, fully self-hostable and
+> air-gappable, signed + SBOM-attested supply chain. These are claims we will
+> benchmark and publish — not marketing.
 
 ---
 
-## Priority: Medium — Enterprise & Observability
+## Phased Plan
 
-*Make RavenClaw the default choice for production AI workloads.*
+Versions are capability milestones, not dates. Each must keep all five pillars green.
 
-- [ ] **Add enterprise security features**
-  - [ ] RBAC (Role-Based Access Control) — multi-tenant agent isolation
-  - [ ] SSO/SAML integration — enterprise authentication
-  - [ ] Audit trail — immutable, cryptographically signed audit logs
-  - [ ] Compliance reporting — SOC2, HIPAA, GDPR-ready reporting
-  - [ ] Air-gap deployment — fully offline operation
-  - [ ] Multi-tenant isolation — separate workspaces, secrets, and quotas per tenant
-- [ ] **Add multi-level audit logging**
-  - [ ] Define audit log levels — `off`, `basic` (who, what, when), `detailed` (full request/response), `debug` (wire-level tracing)
-  - [ ] Structured log formats — JSON (default), CEF (ArcSight), LEEF (QRadar), Syslog (RFC 5424)
-  - [ ] Log shipping — configurable sinks: stdout, file rotation, syslog, TCP/UDP endpoint
-  - [ ] Sensitive data redaction — automatic masking of API keys, tokens, PII in audit logs
-  - [ ] Log integrity — HMAC-chained log entries to detect tampering
-  - [ ] Compliance presets — one-shot configuration for SOC2, HIPAA, GDPR, PCI-DSS audit requirements
-- [ ] **Add observability**
-  - [ ] Prometheus metrics — request count, latency, error rates, token usage
-  - [ ] OpenTelemetry tracing — distributed tracing across agent calls
-  - [ ] Structured logging — JSON logs with correlation IDs
-  - [ ] Health check API — `/health`, `/ready`, `/metrics` endpoints
-  - [ ] Agent dashboard — web UI for monitoring agent activity
+### v0.2 — Foundations: make the build honest and green 🔧
+
+Cheapest, highest-leverage work. Nothing new ships until the basics are solid.
+
+- [ ] **Commit `Cargo.lock`** (remove from `.gitignore`) so `--locked` works in CI/Docker/publish.
+- [ ] **Fix multi-arch Docker build** — install cross-linkers (`gcc-aarch64-linux-gnu`) + set the cargo target linker, **or** drop `--platform=$BUILDPLATFORM` and build natively per-arch under QEMU.
+- [ ] **Verify the RavenFabric agent download** against a published checksum / Cosign signature.
+- [ ] **Single source of version truth** — wire clap `--version` to `env!("CARGO_PKG_VERSION")`.
+- [ ] **Replace `.expect()` on HTTP client construction** with error propagation (no abort path under `panic = "abort"`).
+- [ ] **Decide `--exec`**: implement one-shot mode (preferred, see v0.3) or remove the flag.
+- [ ] **Make swarm/supervisor fail loudly** — return a clear error instead of `exit 0` until implemented.
+- [ ] **Expand tests** — use `mockito` to exercise request/response/error paths for every provider; cover config parsing and the multi-model manager.
+- [ ] **README status-honesty.** ✅ done in this pass
+
+**Exit criteria:** `cargo fmt && cargo clippy -D warnings && cargo test` green; `docker buildx` produces working `amd64`+`arm64` images; fresh clone builds with `--locked`.
+
+### v0.3 — A real agent 🧠
+
+Turn the client into an actual worker. *This is the milestone that makes RavenClaw an agent.*
+
+- [ ] **Agent loop**: perceive → plan → act → observe, with max-iteration guard and cancellation.
+- [ ] **`--exec "<task>"`** one-shot mode + an **interactive REPL** (stdin).
+- [ ] **Conversation memory** — context across turns; configurable window (last N turns or token budget); session save/restore.
+- [ ] **Streaming responses** end to end (`stream = true`) across the trait and all clients.
+- [ ] **System-prompt / persona** configuration.
+- [ ] **Robust errors** — typed retries, timeouts, graceful provider failure.
+
+**Exit criteria:** `ravenclaw --exec "summarize this repo"` performs a real multi-step task and returns a result.
+
+### v0.4 — Tools and safety 🧰🔒
+
+Agency with guardrails — the security differentiator.
+
+- [ ] **Tool / function-calling abstraction** (provider-agnostic schema + registry).
+- [ ] **Built-in tools**: shell exec, file read/write, web fetch, code analysis — each behind a capability flag.
+- [ ] **Deny-by-default policy** (command / path / host allow-lists), à la RavenFabric's RPCPolicy.
+- [ ] **Sandboxed execution** (workdir jail, resource limits, timeouts).
+- [ ] **Wire `audit_log`** — structured, HMAC-chained, tamper-evident trail of every tool call.
+- [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs.
+- [ ] **Honor `token_lifetime_secs`** for any issued credentials.
+- [ ] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation.
+
+**Exit criteria:** an agent runs tools, but only those allowed by policy, with a complete audit log.
+
+### v0.5 — Providers and routing 🔀
+
+- [ ] **Collapse duplicated OpenAI-compatible clients** (LiteLLM/OpenAI/OpenRouter) into one parameterized client; keep Ollama as the documented variant. (`handle_response` is currently copy-pasted 4×.)
+- [ ] **Routing strategies**: round-robin (load balance), cost-aware (cheap model for easy tasks), **fallback chains** on error/rate-limit.
+- [ ] **Resilience**: retries with exponential backoff + jitter; per-provider circuit breaker.
+- [ ] **Token accounting & per-run budgets/limits.**
+- [ ] **Native Anthropic provider**; embeddings endpoint; tool-calling parity across providers.
+
+**Exit criteria:** a single run transparently fails over between providers and respects a token budget.
+
+### v0.6 — Swarm, supervisor, and RavenFabric 🕸️
+
+- [ ] **Supervisor mode** — task decomposition, sub-agent spawning, result aggregation, quality checks.
+- [ ] **Swarm mode** — coordinated agents with a shared blackboard/state; per-subtask model selection.
+- [ ] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability).
+- [ ] **Agent communication** — structured message passing; conflict resolution across agents.
+
+**Exit criteria:** a supervisor decomposes a task across ≥3 sub-agents over RavenFabric and aggregates results.
+
+### v0.7 — Observability and ops 📈
+
+- [ ] **Long-running server mode** with a real HTTP `/health` `/ready` `/metrics` endpoint (fixes the k8s CrashLoop).
+- [ ] **Prometheus metrics** (requests, tokens, tool calls, errors, latencies).
+- [ ] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs).
+- [ ] **Graceful shutdown**, signal handling, `health_interval_secs` honored.
+- [ ] **Helm chart**; systemd unit; optional self-update with rollback.
+
+**Exit criteria:** RavenClaw runs as a stable long-lived workload with green probes and exported metrics.
+
+### v0.8 — Enterprise and compliance 🏢 *(commercial-licensed)*
+
+Maps to the commercial tier in [LICENSING.md](LICENSING.md).
+
+- [ ] **RBAC + multi-tenant isolation** (separate workspaces, secrets, quotas).
+- [ ] **SSO / SAML.**
+- [ ] **SecurityPolicy** — immutable rules, blast-radius limits.
+- [ ] **Multi-level audit logging** — levels (`off`/`basic`/`detailed`/`debug`), formats (JSON/CEF/LEEF/Syslog), shipping sinks, integrity chaining.
+- [ ] **Compliance presets & reporting** (SOC2, ISO 27001, HIPAA, GDPR, PCI-DSS).
+- [ ] **Air-gap / offline licensing**; runtime feature-flag gating.
+
+### v0.9 — Hardening, ecosystem, advanced reasoning 💎
+
+- [ ] **Threat model + external security review.**
+- [ ] **Fuzzing** (`cargo fuzz`) + property tests for config/policy parsers.
+- [ ] **Plugin & skill system** (Rust or WASM); MCP (Model Context Protocol) support.
+- [ ] **SDKs** (Python/TS) and a documentation site.
+- [ ] **Advanced reasoning** — tree-of-thought, self-reflection, uncertainty estimation / ask-for-help.
+- [ ] **Memory tiers** — episodic, semantic (local embeddings), procedural.
+- [ ] **Proactive operation** — scheduling, event/webhook triggers, file watchers.
+
+### v1.0 — Simply the best 🏆
+
+- [ ] **API stability** guarantees + semver discipline.
+- [ ] **All performance targets met** and benchmarked against the field (published).
+- [ ] **Complete docs**, examples, migration guides.
+- [ ] **Reproducible builds.**
 
 ---
 
-## Priority: Low — Ecosystem & Operations
+## Testing Strategy
 
-*Nice-to-have improvements with no fixed timeline.*
-
-- [ ] **Improve deployment options**
-  - [ ] Helm chart — production-grade Kubernetes deployment
-  - [ ] Terraform module — infrastructure-as-code deployment
-  - [ ] Systemd service — native Linux service management
-  - [ ] Auto-update — self-updating binary with rollback
-- [ ] **Build ecosystem**
-  - [ ] Plugin system — dynamic loading of community extensions
-  - [ ] Agent marketplace — share and discover agent configurations
-  - [ ] Skill system — reusable capability packages
-  - [ ] Community templates — pre-built agents for common tasks
-  - [ ] CI/CD integration — GitHub Actions, GitLab CI plugins
-- [ ] **Add advanced reasoning**
-  - [ ] Tree-of-Thought — explore multiple reasoning paths in parallel
-  - [ ] Self-reflection — agent critiques and improves its own outputs
-  - [ ] Multi-step planning — decompose complex goals into executable plans
-  - [ ] Uncertainty estimation — know when to ask for human help
-  - [ ] Tool discovery — agent autonomously discovers and learns new tools
-- [ ] **Add learning & adaptation**
-  - [ ] Preference learning — adapt to user preferences over time
-  - [ ] Task automation — learn repetitive patterns and automate them
-  - [ ] Feedback integration — improve from explicit and implicit feedback
-  - [ ] Transfer learning — apply knowledge across different domains
-- [ ] **Add human-AI collaboration**
-  - [ ] Interactive mode — real-time human-in-the-loop collaboration
-  - [ ] Approval workflows — configurable approval gates for sensitive actions
-  - [ ] Explanation generation — clear, concise explanations of agent decisions
-  - [ ] Multi-modal interaction — process images, audio, and documents
+- **Unit:** every module; provider request/response/error paths via `mockito`.
+- **Integration:** end-to-end agent runs against a stubbed provider and a local Ollama.
+- **Policy/security:** table-driven allow/deny tests; fuzzing on policy + config parsing.
+- **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
+- **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
 ---
 
-## Competitive Differentiation
+## Performance Targets (v1.0)
 
-| Capability | RavenClaw (Target) | OpenClaw | OpenManus | Vellum | Others |
-|---|---|---|---|---|---|
-| **Language** | Rust (memory-safe, fast) | TypeScript/Node | Python | TypeScript | Python/TS |
-| **Binary size** | <5MB | ~100MB+ | N/A (Python) | N/A (Bun/TS) | Varies |
-| **Startup time** | <15ms | ~500ms+ | ~2s+ | ~1s+ | Varies |
-| **Security posture** | Fail-closed, memory-safe | 15+ CVEs in 2026 | DIY security | Sandboxed | Varies |
-| **Multi-provider** | Unified trait, 4 providers | Plugin-based | OpenAI-centric | Multi-provider | Varies |
-| **Swarm mode** | Native (Rust) | Via plugins | Via Python | Via gateway | Varies |
-| **Deployment** | Binary, Docker, K8s | npm, Docker | pip, Docker | Bun, Docker | Varies |
-| **License** | AGPLv3 + Commercial | Proprietary? | MIT | MIT | Varies |
-| **Verification** | 94 tests, 8 modules, 4 targets | Limited | Community tests | Internal tests | Varies |
-| **Agent loop / ReAct** | ❌ Planned | ✅ | ✅ | ✅ | Varies |
-| **Tool-use / function calling** | ❌ Planned | ✅ | ✅ | ✅ | Varies |
-| **Streaming responses** | ❌ Planned | ✅ | ✅ | ✅ | Varies |
-| **Conversation memory** | ❌ Planned | ✅ | ❌ | ✅ | Varies |
+| Metric | Target |
+|---|---|
+| Stripped binary size | < 15 MB |
+| Container image size | < 30 MB |
+| Cold start (single mode) | < 50 ms |
+| Idle memory (server mode) | < 20 MB RSS |
+| Provider failover decision | < 5 ms |
+| Tool-call audit write | non-blocking, < 1 ms enqueue |
 
-### Key Battlegrounds
+---
 
-1. **Security** — OpenClaw had 15+ CVEs in 2026 alone (sandbox escapes, prompt injection, path traversal, auth bypass). RavenClaw's Rust foundation and fail-closed design are our strongest differentiator. **We must never ship a security vulnerability.**
+## Security Hardening (by version)
 
-2. **Performance** — Rust gives us 10-100x faster startup, lower memory, and smaller binaries than Node.js or Python competitors. This matters for edge deployment, serverless, and high-density hosting.
+| Version | Hardening added |
+|---|---|
+| 0.1 | Memory-safe Rust, TLS check, no creds in config, distroless, signed images, SBOM, Trivy. |
+| 0.2 | Verified supply chain for downloaded binaries; no panic/abort on client init. |
+| 0.4 | Deny-by-default tool policy, sandboxed execution, audit log, secret zeroization, prompt-injection defense. |
+| 0.6 | E2E-encrypted remote exec via RavenFabric. |
+| 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
+| 0.9 | External security review, fuzzing, published threat model. |
 
-3. **Simplicity** — One binary. Zero dependencies at runtime. No Python runtime, no Node runtime, no virtualenv. `./ravenclaw --mode single` and it works.
+---
 
-4. **Verification** — Our 94-test suite across 8 modules and 4 deployment targets is already more comprehensive than any competitor. We will maintain this as a point of pride.
+## Design Decisions
 
-5. **Open Source + Commercial** — AGPLv3 protects against cloud provider exploitation while the commercial license funds development. MIT alternatives (OpenManus, Vellum) risk the MongoDB/Elasticsearch fate.
+- **Rust, `unsafe` forbidden** — memory safety and small static binaries are foundational to "secure + small."
+- **OpenAI-compatible core** — most providers speak it; one client shape covers LiteLLM/OpenAI/OpenRouter, with Ollama as the documented exception.
+- **AGPLv3 + Commercial dual license** — keeps the core open, closes the SaaS loophole, funds development. See [LICENSING.md](LICENSING.md).
+- **Delegate heavy orchestration to RavenFabric** — RavenClaw stays a small worker; the mesh/remote-exec substrate is a separate, specialized system.
+- **No phone-home** — observability is opt-in and self-hosted; trust is a feature.
+
+---
+
+## Technical Debt
+
+Concrete items carried from the current codebase (targeted for v0.2 unless noted):
+
+1. **`Cargo.lock` git-ignored vs. `--locked` everywhere** — breaks fresh-clone/CI/Docker/publish. *(blocker)*
+2. **Docker arm64 cross-compile** lacks a cross-linker under `--platform=$BUILDPLATFORM`. *(blocker)*
+3. **Unverified `curl | chmod +x`** of the RavenFabric agent in the Dockerfile. *(security)*
+4. **k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.
+5. **Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4). *(v0.5)*
+6. **Dead/unwired code:** `--exec`, `next_client`, `rustls` + `zeroize` deps, and all `security`/`ravenfabric` config fields.
+7. **Shallow tests** — constructors only; `mockito` unused.
+8. **`.expect()` on HTTP client build** under `panic = "abort"` — aborts on a config hiccup.
+9. **Version literal duplicated** in `main.rs` instead of `CARGO_PKG_VERSION`.
+10. **README historically over-claimed** vs. implemented state — kept honest going forward via status markers.
 
 ---
 
 ## How You Can Help
 
-- **Contributors:** Pick an unassigned item and open a PR.
-- **Security researchers:** Audit our code. Report vulnerabilities via [security policy](SECURITY.md).
-- **Users:** File issues for missing features or rough edges.
-- **Enterprise customers:** Contact us about commercial licensing and priority features.
+- **Contributors:** pick an unchecked item and open a PR (CLA required — see [LICENSING.md](LICENSING.md#contributor-license-agreement-cla)).
+- **Security researchers:** audit the code and report responsibly. *(A `SECURITY.md` policy is planned for v0.2.)*
+- **Users:** file issues for missing features or rough edges.
+- **Enterprise:** ask about commercial licensing and priority features.
 
 ---
 
-*RavenClaw — Small. Sleek. Secure. Supreme.* 🐦‍⬛
+*Secure. Small. Efficient. Robust. Simple. — Simply the best.* 🐦‍⬛

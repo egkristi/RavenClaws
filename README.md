@@ -337,8 +337,9 @@ docker buildx build --platform linux/amd64,linux/arm64 -t ravenclaw:latest .
 | Streaming responses | ❌ Not implemented | `stream: None` hardcoded |
 | Conversation memory | ❌ Not implemented | In-memory only, lost on exit |
 | RavenFabric integration | Partial | Config struct exists, binary included in container, integration not yet wired |
-| GitHub Actions CI/CD | ❌ Not implemented | No workflow files exist |
-| Pre-built binaries | ❌ Not implemented | No releases published |
+| GitHub Actions CI/CD | ✅ Implemented | fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
+| Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review |
+| Pre-built binaries | 📋 Wired, untagged | CI produces them on tag; none released yet |
 
 ## Roadmap
 
@@ -347,7 +348,8 @@ See [ROADMAP.md](ROADMAP.md) for the full prioritized feature plan.
 **Priority: Critical (v0.1.0 release blockers):**
 - Fix `--exec` dead code — CLI arg parsed but never used
 - Fix swarm/supervisor stubs — return clear errors instead of silent success
-- Set up CI/CD pipeline (GitHub Actions, release workflow, container registry)
+- Commit `Cargo.lock` so `--locked` builds work in CI
+- Fix multi-arch Docker build (cross-linker config)
 - Ship pre-built binaries for all 5 target triples
 - Expand `cargo test` beyond 2 unit tests
 - Tag and release v0.1.0
