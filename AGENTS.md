@@ -290,19 +290,250 @@ The `--exec` CLI flag is parsed in `main.rs` but never used. To fix:
 
 ---
 
-## Release Checklist
+## Release Process
 
-Before tagging v0.1.0:
+When all TODOs and features for a version milestone are completed, GitHub Actions for the final commit are green, all tests pass, test coverage is good, and everything else is ready — follow this release process.
 
-- [ ] Fix `--exec` dead code (wire up or remove)
-- [ ] Fix swarm/supervisor stubs (return clear error instead of silent success)
-- [ ] Commit `Cargo.lock` (remove from `.gitignore`) so `--locked` builds work
-- [ ] Fix multi-arch Docker build (install cross-linkers for linux/arm64)
-- [ ] Expand `cargo test` beyond 2 unit tests
-- [ ] Run full verification suite: `./scripts/verify.sh --all`
-- [ ] Verify all CI workflows pass (build + security scan)
-- [ ] Update version in `Cargo.toml` if needed
-- [ ] Tag and push: `git tag v0.1.0 && git push --tags`
+### Phase 1: Pre-Release Checks
+
+Before bumping the version, verify everything is clean:
+
+```bash
+# 1. Full Rust test suite — all 149+ tests must pass
+cargo test --locked 2>&1
+
+# 2. Clippy must be clean (no warnings, no errors)
+cargo clippy --locked --all-targets -- -D warnings 2>&1
+
+# 3. Formatting must be clean
+cargo fmt --check 2>&1
+
+# 4. Full verification suite (build + all test modules)
+./scripts/verify.sh --build 2>&1
+
+# 5. Check test coverage is adequate (no untested critical paths)
+#    - Every config field has a test
+#    - Every LLM provider has a test
+#    - Every error variant has a test
+#    - Every CLI argument has a test
+#    - Every deployment target has verification tests
+```
+
+If any of these fail, **do not proceed** — fix the issue first.
+
+### Phase 2: Version Bump
+
+Update the version in `Cargo.toml`:
+
+```bash
+# For a patch release (bug fixes only):
+sed -i '' 's/^version = "0\.1\.0"/version = "0.1.1"/' Cargo.toml
+
+# For a minor release (new features, backward-compatible):
+sed -i '' 's/^version = "0\.1\.0"/version = "0.2.0"/' Cargo.toml
+
+# For a major release (breaking changes):
+sed -i '' 's/^version = "0\.1\.0"/version = "1.0.0"/' Cargo.toml
+```
+
+Update the version reference in `AGENTS.md` itself (Project Overview section) and any other docs that reference the version.
+
+### Phase 3: Update Changelog
+
+Move all `[Unreleased]` entries into a new `[vX.Y.Z]` section:
+
+```markdown
+## [v0.1.0] - 2026-06-02
+
+### Added
+- (all added features from Unreleased)
+
+### Fixed
+- (all fixes from Unreleased)
+
+### Changed
+- (all changes from Unreleased)
+```
+
+Then clear the `[Unreleased]` section headers (keep the structure, remove old entries).
+
+### Phase 4: Commit & Tag
+
+```bash
+# Commit the version bump and changelog update
+git add -A
+git commit -m "Release v0.1.0"
+
+# Tag the release (signed tag preferred)
+git tag -s v0.1.0 -m "RavenClaw v0.1.0"
+
+# Push everything (triggers CI/CD pipelines)
+git push --follow-tags
+```
+
+Pushing the tag triggers the following GitHub Actions workflows:
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| `build.yml` | Tag push `v*` | `check` (fmt+clippy+test) → `build-binaries` (5 targets) → `containers` (multi-arch, multi-registry, sign, SBOM, Trivy) → `publish-cratesio` → `release` (GitHub Release with assets) |
+| `container.yml` | Tag push `v*` | Builds + pushes multi-arch containers, signs with Cosign, generates attestation, Trivy scan, SBOM |
+| `security-scan.yml` | Tag push `v*` | CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, OSSF Scorecard |
+
+### Phase 5: Monitor CI/CD
+
+After pushing the tag, **monitor all GitHub Actions workflows to completion**:
+
+1. Go to https://github.com/egkristi/RavenClaw/actions
+2. Verify the `check` job passes (fmt + clippy + test)
+3. Verify all 5 `build-binaries` matrix jobs succeed:
+   - `x86_64-unknown-linux-gnu`
+   - `aarch64-unknown-linux-gnu`
+   - `x86_64-unknown-linux-musl`
+   - `x86_64-apple-darwin`
+   - `aarch64-apple-darwin`
+4. Verify `containers` job builds and pushes multi-arch images to both GHCR and Docker Hub
+5. Verify Cosign signing completes
+6. Verify artifact attestation is generated
+7. Verify Trivy vulnerability scan passes (exit code 0)
+8. Verify SBOM is generated and uploaded
+9. Verify `publish-cratesio` publishes to crates.io
+10. Verify `release` job creates the GitHub Release with all binary assets attached
+
+If **any job fails**, investigate and fix before proceeding. Do not create a new tag until the issue is resolved.
+
+### Phase 6: Post-Release Binary & Container Verification
+
+After all CI/CD pipelines pass, run a full battery of tests against the **newly released** binaries and container images:
+
+```bash
+# ── 6a. Pull and verify the released container image ──────────
+docker pull ghcr.io/egkristi/ravenclaw:v0.1.0
+docker run --rm ghcr.io/egkristi/ravenclaw:v0.1.0 --version
+
+# ── 6b. Run full verification suite against the release ───────
+# (This tests local binary, Docker container, K8s manifests, etc.)
+./scripts/verify.sh --build
+
+# ── 6c. Verify binary integrity ───────────────────────────────
+# Download a released binary and check its SHA256
+# (Replace URL with actual release asset URL)
+curl -sL https://github.com/egkristi/RavenClaw/releases/download/v0.1.0/ravenclaw-x86_64-apple-darwin.tar.gz \
+  -o /tmp/ravenclaw-release.tar.gz
+tar xzf /tmp/ravenclaw-release.tar.gz -C /tmp/
+./scripts/verify.sh --security
+
+# ── 6d. Verify container security properties ──────────────────
+docker image inspect ghcr.io/egkristi/ravenclaw:v0.1.0 --format '{{.Config.User}}'
+# Must output "65532" (nonroot user)
+
+# ── 6e. Verify multi-arch support ─────────────────────────────
+docker buildx imagetools inspect ghcr.io/egkristi/ravenclaw:v0.1.0
+# Must show both linux/amd64 and linux/arm64 manifests
+
+# ── 6f. Verify container signature ────────────────────────────
+cosign verify ghcr.io/egkristi/ravenclaw:v0.1.0 \
+  --certificate-identity-regexp "https://github.com/egkristi/RavenClaw" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
+
+# ── 6g. Verify SBOM exists ────────────────────────────────────
+# Download SBOM from GitHub Release assets or regenerate:
+syft ghcr.io/egkristi/ravenclaw:v0.1.0 -o spdx-json=sbom-verify.spdx.json
+```
+
+### Phase 7: Final Validation
+
+```bash
+# ── 7a. Verify crates.io package ──────────────────────────────
+cargo search ravenclaw
+# Should show the new version
+
+# ── 7b. Verify GitHub Release ─────────────────────────────────
+# Check https://github.com/egkristi/RavenClaw/releases
+# Must have:
+#   - Release notes (auto-generated from changelog)
+#   - 5 binary archives (.tar.gz/.zip) with SHA256 checksums
+#   - SBOM artifact
+#   - Container image signatures
+
+# ── 7c. Verify the binary works end-to-end ────────────────────
+/tmp/ravenclaw --version
+/tmp/ravenclaw --help
+echo "Hello" | /tmp/ravenclaw --exec "Say hello back" 2>&1 || true
+```
+
+### Release Abort Criteria
+
+If any of the following occur during the release process, **abort immediately** and do not create/push a tag:
+
+1. Any Rust test fails (`cargo test --locked`)
+2. Clippy or fmt check fails
+3. Any verification suite module fails (`./scripts/verify.sh --all`)
+4. Any CI job in the build workflow fails
+5. Trivy scan finds CRITICAL or HIGH vulnerabilities (exit code 1)
+6. Cosign signing fails
+7. Container image does not run as nonroot user (UID 65532)
+8. Multi-arch manifest is missing either linux/amd64 or linux/arm64
+9. Binary SHA256 checksums do not match after download
+10. GitHub Release is missing required assets
+
+**If aborting:** Delete the tag locally and remotely, fix the issue, then restart from Phase 1:
+
+```bash
+git tag -d v0.1.0
+git push --delete origin v0.1.0
+```
+
+### Release Checklist Template
+
+Copy this into a new issue or comment when starting a release:
+
+```markdown
+## Release vX.Y.Z Checklist
+
+### Phase 1: Pre-Release
+- [ ] `cargo test --locked` — all tests pass
+- [ ] `cargo clippy --locked --all-targets -- -D warnings` — clean
+- [ ] `cargo fmt --check` — clean
+- [ ] `./scripts/verify.sh --build` — full suite passes
+- [ ] Test coverage is adequate
+
+### Phase 2: Version Bump
+- [ ] Version updated in `Cargo.toml`
+- [ ] Version references updated in docs
+
+### Phase 3: Changelog
+- [ ] `[Unreleased]` entries moved to `[vX.Y.Z]` section
+- [ ] Release date added
+
+### Phase 4: Commit & Tag
+- [ ] Commit pushed: `git push`
+- [ ] Tag pushed: `git push --follow-tags`
+
+### Phase 5: CI/CD Monitoring
+- [ ] `check` job passes
+- [ ] All 5 `build-binaries` jobs succeed
+- [ ] `containers` job succeeds (multi-arch, multi-registry)
+- [ ] Cosign signing completes
+- [ ] Artifact attestation generated
+- [ ] Trivy scan passes (no CRITICAL/HIGH)
+- [ ] SBOM generated and uploaded
+- [ ] `publish-cratesio` succeeds
+- [ ] GitHub Release created with all assets
+
+### Phase 6: Post-Release Verification
+- [ ] Container image pulls and runs
+- [ ] `./scripts/verify.sh --build` passes against release
+- [ ] Binary SHA256 checksums verified
+- [ ] Container runs as nonroot (UID 65532)
+- [ ] Multi-arch manifest verified (amd64 + arm64)
+- [ ] Cosign signature verified
+- [ ] SBOM verified
+
+### Phase 7: Final Validation
+- [ ] crates.io package published
+- [ ] GitHub Release has all assets
+- [ ] Binary works end-to-end
+```
 
 ---
 
