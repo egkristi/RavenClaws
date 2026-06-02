@@ -949,4 +949,169 @@ mod tests {
         let result = config.validate();
         assert!(result.is_ok());
     }
+
+    #[test]
+    #[serial(env_test)]
+    fn test_config_load_with_nonexistent_file() {
+        // Loading with a non-existent file path should still succeed
+        // (the File source is created with required(false))
+        std::env::set_var("LITELLM_API_KEY", "test-key");
+        std::env::set_var("RAVENCLAW__LLM__ENDPOINT", "http://localhost:4000");
+
+        let result = Config::load(Some("/tmp/nonexistent/ravenclaw.toml"));
+        assert!(result.is_ok());
+
+        std::env::remove_var("LITELLM_API_KEY");
+        std::env::remove_var("RAVENCLAW__LLM__ENDPOINT");
+    }
+
+    #[test]
+    fn test_config_error_missing_env_var_display() {
+        let err = ConfigError::MissingEnvVar("DATABASE_URL".to_string());
+        assert_eq!(
+            format!("{}", err),
+            "Missing required environment variable: DATABASE_URL"
+        );
+    }
+
+    #[test]
+    fn test_llm_config_deserialize() {
+        let json = r#"{
+            "provider": "openai",
+            "endpoint": "https://api.openai.com",
+            "model": "gpt-4o",
+            "api_key": "sk-test",
+            "timeout_secs": 120
+        }"#;
+        let config: LLMConfig = serde_json::from_str(json).unwrap();
+
+        assert_eq!(config.provider, LLMProvider::OpenAI);
+        assert_eq!(config.endpoint, "https://api.openai.com");
+        assert_eq!(config.model, "gpt-4o");
+        assert_eq!(config.timeout_secs, 120);
+    }
+
+    #[test]
+    fn test_security_config_serde_defaults() {
+        // When deserializing from an empty JSON object, serde should use defaults
+        let json = r#"{}"#;
+        let config: SecurityConfig = serde_json::from_str(json).unwrap();
+        assert!(config.require_tls);
+        assert_eq!(config.token_lifetime_secs, 3600);
+        assert!(config.audit_log);
+    }
+
+    #[test]
+    fn test_runtime_config_serde_defaults() {
+        let json = r#"{}"#;
+        let config: RuntimeConfig = serde_json::from_str(json).unwrap();
+        assert_eq!(config.workdir, "/workspace");
+        assert_eq!(config.max_agents, 10);
+        assert_eq!(config.health_interval_secs, 60);
+    }
+
+    #[test]
+    fn test_ravenfabric_config_serde_defaults() {
+        let json = r#"{}"#;
+        let config: RavenFabricConfig = serde_json::from_str(json).unwrap();
+        assert!(config.endpoint.is_none());
+        assert!(config.agent_id.is_none());
+        assert!(config.remote_exec);
+        assert!(config.allowed_hosts.is_empty());
+    }
+
+    #[test]
+    fn test_validate_ollama_with_endpoint_succeeds() {
+        let config = Config {
+            llm: LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+            },
+            llms: vec![],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: false,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_openrouter_with_endpoint_succeeds() {
+        let config = Config {
+            llm: LLMConfig {
+                provider: LLMProvider::OpenRouter,
+                endpoint: "https://openrouter.ai/api".to_string(),
+                model: "anthropic/claude-sonnet-4-20250514".to_string(),
+                api_key: Some("or-key".to_string()),
+                timeout_secs: 30,
+            },
+            llms: vec![],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: false,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_litellm_with_empty_endpoint_fails() {
+        let config = Config {
+            llm: LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: String::new(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("key".to_string()),
+                timeout_secs: 30,
+            },
+            llms: vec![],
+            ravenfabric: RavenFabricConfig::default(),
+            security: SecurityConfig {
+                require_tls: false,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: RuntimeConfig::default(),
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("At least one LLM provider"));
+    }
+
+    #[test]
+    fn test_llm_provider_serde_serialize() {
+        let provider = LLMProvider::OpenAI;
+        let json = serde_json::to_string(&provider).unwrap();
+        assert_eq!(json, r#""openai""#);
+
+        let provider = LLMProvider::Ollama;
+        let json = serde_json::to_string(&provider).unwrap();
+        assert_eq!(json, r#""ollama""#);
+
+        let provider = LLMProvider::OpenRouter;
+        let json = serde_json::to_string(&provider).unwrap();
+        assert_eq!(json, r#""openrouter""#);
+
+        let provider = LLMProvider::LiteLLM;
+        let json = serde_json::to_string(&provider).unwrap();
+        assert_eq!(json, r#""litellm""#);
+    }
 }

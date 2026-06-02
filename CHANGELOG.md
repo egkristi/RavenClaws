@@ -6,7 +6,7 @@ All notable changes to RavenClaw will be documented in this file.
 
 ### Added
 - `--exec` mode now fully wired — one-shot command execution with response printed to stdout
-- Comprehensive Rust unit tests: 111 tests across all modules (was 3)
+- Comprehensive Rust unit tests: 149 tests across all modules (was 3)
 - `serial_test` crate for serializing env-dependent tests to prevent env var leakage
 - `Config::load()` now safely handles `RAVENCLAW__LLMS` env var by saving/restoring it around serde deserialization
 - Manual `Default` implementations for `RavenFabricConfig`, `SecurityConfig`, and `RuntimeConfig` matching serde defaults

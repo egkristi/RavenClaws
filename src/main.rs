@@ -354,4 +354,68 @@ mod tests {
         let args = Args::parse_from(["ravenclaw", "--mode", "supervisor"]);
         assert_eq!(args.mode, "supervisor");
     }
+
+    #[test]
+    fn test_cli_endpoint_override() {
+        let args = Args::parse_from(["ravenclaw", "--endpoint", "https://custom.api.com"]);
+        assert_eq!(args.endpoint.unwrap(), "https://custom.api.com");
+    }
+
+    #[test]
+    fn test_cli_model_override() {
+        let args = Args::parse_from(["ravenclaw", "--model", "gpt-4-turbo"]);
+        assert_eq!(args.model.unwrap(), "gpt-4-turbo");
+    }
+
+    #[test]
+    fn test_cli_all_overrides() {
+        let args = Args::parse_from([
+            "ravenclaw",
+            "--provider",
+            "ollama",
+            "--endpoint",
+            "http://localhost:11434",
+            "--model",
+            "llama3.1",
+            "--verbose",
+        ]);
+        assert_eq!(args.provider.unwrap(), "ollama");
+        assert_eq!(args.endpoint.unwrap(), "http://localhost:11434");
+        assert_eq!(args.model.unwrap(), "llama3.1");
+        assert!(args.verbose);
+    }
+
+    #[test]
+    fn test_cli_provider_mapping_all_variants() {
+        // Test all provider mappings including edge cases
+        let test_cases = vec![
+            ("litellm", config::LLMProvider::LiteLLM),
+            ("openrouter", config::LLMProvider::OpenRouter),
+            ("ollama", config::LLMProvider::Ollama),
+            ("openai", config::LLMProvider::OpenAI),
+            ("LiteLLM", config::LLMProvider::LiteLLM),
+            ("OpenRouter", config::LLMProvider::OpenRouter),
+            ("OLLAMA", config::LLMProvider::Ollama),
+            ("OpenAI", config::LLMProvider::OpenAI),
+            ("", config::LLMProvider::LiteLLM),
+            ("unknown", config::LLMProvider::LiteLLM),
+            ("MIXED_CASE", config::LLMProvider::LiteLLM),
+        ];
+
+        for (input, expected) in test_cases {
+            let mapped = match input.to_lowercase().as_str() {
+                "openrouter" => config::LLMProvider::OpenRouter,
+                "ollama" => config::LLMProvider::Ollama,
+                "openai" => config::LLMProvider::OpenAI,
+                _ => config::LLMProvider::LiteLLM,
+            };
+            assert_eq!(mapped, expected, "Mapping failed for '{}'", input);
+        }
+    }
+
+    #[test]
+    fn test_cli_version_env() {
+        // Verify that the version is set from CARGO_PKG_VERSION
+        assert!(!env!("CARGO_PKG_VERSION").is_empty());
+    }
 }

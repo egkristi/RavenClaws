@@ -472,4 +472,132 @@ mod tests {
             mock.assert();
         });
     }
+
+    #[test]
+    fn test_run_single_multi_with_mockito_partial_failure() {
+        // Test that run_single_multi handles one provider failing gracefully
+        with_mockito(|mut server| async move {
+            let mock = server
+                .mock("POST", "/v1/chat/completions")
+                .with_status(401)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"error":"Unauthorized"}"#)
+                .create();
+
+            let configs = vec![crate::config::LLMConfig {
+                provider: crate::config::LLMProvider::LiteLLM,
+                endpoint: server.url(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("bad-key".to_string()),
+                timeout_secs: 30,
+            }];
+
+            let multi_llm = crate::llm::MultiModelManager::new(configs).unwrap();
+            let cfg = crate::config::Config {
+                llm: crate::config::LLMConfig::default(),
+                llms: vec![],
+                ravenfabric: crate::config::RavenFabricConfig::default(),
+                security: crate::config::SecurityConfig {
+                    require_tls: false,
+                    token_lifetime_secs: 3600,
+                    audit_log: false,
+                },
+                runtime: crate::config::RuntimeConfig::default(),
+            };
+            let result = run_single_multi(multi_llm, cfg).await;
+
+            // run_single_multi catches errors internally and logs them, returns Ok(())
+            assert!(result.is_ok());
+            mock.assert();
+        });
+    }
+
+    #[test]
+    fn test_run_swarm_multi_returns_error() {
+        // Test that run_swarm_multi returns the expected error
+        let configs = vec![crate::config::LLMConfig {
+            provider: crate::config::LLMProvider::LiteLLM,
+            endpoint: "http://localhost:4000".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            api_key: Some("test".to_string()),
+            timeout_secs: 30,
+        }];
+
+        let multi_llm = crate::llm::MultiModelManager::new(configs).unwrap();
+        let cfg = crate::config::Config {
+            llm: crate::config::LLMConfig::default(),
+            llms: vec![],
+            ravenfabric: crate::config::RavenFabricConfig::default(),
+            security: crate::config::SecurityConfig {
+                require_tls: false,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: crate::config::RuntimeConfig::default(),
+        };
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(run_swarm_multi(multi_llm, cfg));
+        assert!(result.is_err());
+        assert!(format!("{}", result.unwrap_err()).contains("Swarm mode"));
+    }
+
+    #[test]
+    fn test_run_supervisor_multi_returns_error() {
+        // Test that run_supervisor_multi returns the expected error
+        let configs = vec![crate::config::LLMConfig {
+            provider: crate::config::LLMProvider::LiteLLM,
+            endpoint: "http://localhost:4000".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            api_key: Some("test".to_string()),
+            timeout_secs: 30,
+        }];
+
+        let multi_llm = crate::llm::MultiModelManager::new(configs).unwrap();
+        let cfg = crate::config::Config {
+            llm: crate::config::LLMConfig::default(),
+            llms: vec![],
+            ravenfabric: crate::config::RavenFabricConfig::default(),
+            security: crate::config::SecurityConfig {
+                require_tls: false,
+                token_lifetime_secs: 3600,
+                audit_log: false,
+            },
+            runtime: crate::config::RuntimeConfig::default(),
+        };
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(run_supervisor_multi(multi_llm, cfg));
+        assert!(result.is_err());
+        assert!(format!("{}", result.unwrap_err()).contains("Supervisor mode"));
+    }
+
+    #[test]
+    fn test_run_exec_with_mockito_different_providers() {
+        // Test run_exec with OpenRouter provider
+        with_mockito(|mut server| async move {
+            let mock = server
+                .mock("POST", "/v1/chat/completions")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(sample_chat_response_json(
+                    "anthropic/claude-sonnet-4-20250514",
+                ))
+                .create();
+
+            let config = crate::config::LLMConfig {
+                provider: crate::config::LLMProvider::OpenRouter,
+                endpoint: server.url(),
+                model: "anthropic/claude-sonnet-4-20250514".to_string(),
+                api_key: Some("or-key".to_string()),
+                timeout_secs: 30,
+            };
+
+            let llm = crate::llm::create_client(&config).unwrap();
+            let response = run_exec(llm, "Hello!").await.unwrap();
+
+            assert_eq!(response, "Hello from agent!");
+            mock.assert();
+        });
+    }
 }

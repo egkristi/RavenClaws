@@ -1357,4 +1357,183 @@ mod tests {
         fn check_sync<T: Sync>() {}
         check_sync::<LLMError>();
     }
+
+    #[test]
+    fn test_litellm_client_new_with_invalid_timeout() {
+        // Very large timeout should still succeed (reqwest accepts large values)
+        let config = LLMConfig {
+            provider: LLMProvider::LiteLLM,
+            endpoint: "http://localhost:4000".to_string(),
+            model: "gpt-4o-mini".to_string(),
+            api_key: Some("test".to_string()),
+            timeout_secs: u64::MAX,
+        };
+
+        let result = LiteLLMClient::new(&config);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_openai_client_with_custom_endpoint() {
+        let config = LLMConfig {
+            provider: LLMProvider::OpenAI,
+            endpoint: "https://custom.openai.example.com".to_string(),
+            model: "gpt-4o".to_string(),
+            api_key: Some("sk-test".to_string()),
+            timeout_secs: 30,
+        };
+
+        let client = OpenAIClient::new(&config).unwrap();
+        assert_eq!(client.provider_name(), "openai");
+        assert_eq!(client.model(), "gpt-4o");
+    }
+
+    #[test]
+    fn test_openrouter_client_with_custom_endpoint() {
+        let config = LLMConfig {
+            provider: LLMProvider::OpenRouter,
+            endpoint: "https://custom.openrouter.example.com".to_string(),
+            model: "anthropic/claude-sonnet-4-20250514".to_string(),
+            api_key: Some("or-key".to_string()),
+            timeout_secs: 30,
+        };
+
+        let client = OpenRouterClient::new(&config).unwrap();
+        assert_eq!(client.provider_name(), "openrouter");
+        assert_eq!(client.model(), "anthropic/claude-sonnet-4-20250514");
+    }
+
+    #[test]
+    fn test_ollama_client_with_auth() {
+        // Ollama with API key should still create successfully
+        let config = LLMConfig {
+            provider: LLMProvider::Ollama,
+            endpoint: "http://localhost:11434".to_string(),
+            model: "llama3.1".to_string(),
+            api_key: Some("some-key".to_string()),
+            timeout_secs: 30,
+        };
+
+        let client = OllamaClient::new(&config).unwrap();
+        assert_eq!(client.provider_name(), "ollama");
+        assert_eq!(client.model(), "llama3.1");
+    }
+
+    #[test]
+    fn test_chat_request_no_temperature() {
+        let request = ChatRequest {
+            model: "gpt-4o-mini".to_string(),
+            messages: vec![ChatMessage {
+                role: "user".to_string(),
+                content: "Hello!".to_string(),
+            }],
+            temperature: None,
+            max_tokens: None,
+            stream: None,
+        };
+
+        let json = serde_json::to_string(&request).unwrap();
+        assert!(json.contains("gpt-4o-mini"));
+        assert!(json.contains("Hello!"));
+        // Optional fields should be skipped
+        assert!(!json.contains("temperature"));
+        assert!(!json.contains("max_tokens"));
+        assert!(!json.contains("stream"));
+    }
+
+    #[test]
+    fn test_chat_response_deserialization_no_usage() {
+        let json = r#"{
+            "id": "chat-456",
+            "object": "chat.completion",
+            "created": 1717000001,
+            "model": "gpt-4o",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "Sure!"
+                    },
+                    "finish_reason": "stop"
+                }
+            ]
+        }"#;
+
+        let response: ChatResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(response.id, "chat-456");
+        assert_eq!(response.model, "gpt-4o");
+        assert_eq!(response.choices.len(), 1);
+        assert!(response.usage.is_none());
+    }
+
+    #[test]
+    fn test_chat_response_deserialization_multiple_choices() {
+        let json = r#"{
+            "id": "chat-789",
+            "object": "chat.completion",
+            "created": 1717000002,
+            "model": "gpt-4o",
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": "assistant",
+                        "content": "First choice"
+                    },
+                    "finish_reason": "stop"
+                },
+                {
+                    "index": 1,
+                    "message": {
+                        "role": "assistant",
+                        "content": "Second choice"
+                    },
+                    "finish_reason": "stop"
+                }
+            ]
+        }"#;
+
+        let response: ChatResponse = serde_json::from_str(json).unwrap();
+        assert_eq!(response.choices.len(), 2);
+        assert_eq!(response.choices[0].message.content, "First choice");
+        assert_eq!(response.choices[1].message.content, "Second choice");
+    }
+
+    #[test]
+    fn test_llm_error_into_boxed() {
+        let err = LLMError::AuthFailed;
+        let boxed: Box<dyn std::error::Error> = Box::new(err);
+        assert!(format!("{}", boxed).contains("Authentication failed"));
+    }
+
+    #[test]
+    fn test_llm_error_into_string() {
+        let err = LLMError::RateLimited;
+        let msg: String = err.to_string();
+        assert_eq!(msg, "Rate limit exceeded");
+    }
+
+    #[test]
+    fn test_create_client_with_empty_api_key() {
+        // Some providers (Ollama) don't require an API key
+        let config = LLMConfig {
+            provider: LLMProvider::Ollama,
+            endpoint: "http://localhost:11434".to_string(),
+            model: "llama3.1".to_string(),
+            api_key: None,
+            timeout_secs: 30,
+        };
+
+        let client = create_client(&config).unwrap();
+        assert_eq!(client.provider_name(), "ollama");
+    }
+
+    #[test]
+    fn test_multi_model_manager_get_client_out_of_bounds() {
+        let manager = MultiModelManager::new(vec![]).unwrap();
+        assert!(manager.get_client(0).is_none());
+        assert!(manager.get_client(100).is_none());
+        assert!(manager.get_client(usize::MAX).is_none());
+    }
 }
