@@ -30,6 +30,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     gcc-aarch64-linux-gnu \
     gcc-x86-64-linux-gnu \
+    cmake \
+    libc6-dev-arm64-cross \
+    linux-libc-dev-arm64-cross \
     && rm -rf /var/lib/apt/lists/*
 
 # Configure cargo for cross-compilation
@@ -50,11 +53,12 @@ RUN RF_ARCH=$(cat /tmp/rf_arch.txt) && \
       "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/ravenfabric-linux-${RF_ARCH}-agent" \
       -o /app/ravenfabric-agent && \
     curl -fsSL \
-      "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/ravenfabric-linux-${RF_ARCH}-agent.sha256" \
-      -o /app/ravenfabric-agent.sha256 && \
+      "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/SHA256SUMS" \
+      -o /app/SHA256SUMS && \
+    grep "ravenfabric-linux-${RF_ARCH}-agent" /app/SHA256SUMS > /app/ravenfabric-agent.sha256 && \
     sha256sum -c /app/ravenfabric-agent.sha256 && \
     chmod +x /app/ravenfabric-agent && \
-    rm /app/ravenfabric-agent.sha256
+    rm /app/SHA256SUMS /app/ravenfabric-agent.sha256
 
 # Copy manifests
 COPY Cargo.toml Cargo.lock* ./

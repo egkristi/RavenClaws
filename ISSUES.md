@@ -50,7 +50,41 @@ with updated parameters (`outputFile`, `severityThreshold`, `frameworks`).
 
 **Status:** ✅ Resolved — Kubescape action migrated to `kubescape/github-action@main`.
 
-**Status:** ❌ Unresolved — needs workflow file update.
+**Status:** ✅ Resolved — Kubescape action migrated to `kubescape/github-action@main`.
+
+### Container Images: RavenFabric agent download fails (exit code 22)
+
+**Problem:** The Container Images job (in both `build.yml` and `container.yml`)
+fails during Docker build with:
+`process ... did not complete successfully: exit code: 22`
+
+**Root cause:** The Dockerfile downloads `ravenfabric-linux-${RF_ARCH}-agent.sha256`
+per-binary checksum file, but the RavenFabric-Published release only provides a
+single `SHA256SUMS` file containing all checksums. The per-binary `.sha256` file
+returns 404, causing curl to exit with code 22.
+
+**Fix:** Updated `Dockerfile` to download `SHA256SUMS` and grep for the specific
+binary's checksum instead of downloading a per-binary `.sha256` file.
+
+**Status:** ✅ Resolved — Dockerfile now uses `SHA256SUMS` with grep filtering.
+
+### Build (aarch64-unknown-linux-gnu): Cross-compilation fails (exit code 101)
+
+**Problem:** The `Build (aarch64-unknown-linux-gnu)` job in `build.yml` fails
+during `cargo build --release --locked --target aarch64-unknown-linux-gnu` with
+exit code 101.
+
+**Root cause:** Likely a cross-compilation issue with the `ring` crate (used by
+`rustls` via `reqwest`). The `ring` crate uses assembly code and requires the
+aarch64 cross-compiler toolchain (`gcc-aarch64-linux-gnu`) to be properly
+configured. The `libssl-dev` package installed is for the host architecture
+(x86_64) and may not help.
+
+**Status:** ❌ Unresolved — needs investigation. Possible fixes:
+- Add `cmake` and `go` to cross-compilation dependencies
+- Verify `aarch64-linux-gnu-gcc` is correctly configured as the linker
+- Consider using `ring` with the `wasm_c` feature for cross-compilation
+- Fall back to `native-tls` with cross-compiled OpenSSL
 
 ### Security Scan: Cargo Udeps reports unused dependencies (exit code 101)
 
@@ -68,6 +102,45 @@ dependencies exist. The job itself succeeds, but the exit code signals findings.
 
 **Status:** ⚠️ Informational — job succeeds, exit code is a warning signal.
 Needs periodic review to keep deps up to date.
+
+### Security Scan: Cargo Deny exits with code 1
+
+**Problem:** The `cargo-deny` job exits with code 1, indicating license or
+security advisory violations were found in the dependency tree.
+
+**Status:** ❌ Unresolved — needs investigation. Run `cargo deny check` locally
+to see which advisories or licenses are flagged.
+
+### Security Scan: Trivy (Filesystem) exits with code 1
+
+**Problem:** The Trivy filesystem scan job exits with code 1, indicating
+vulnerabilities were found in the workspace files.
+
+**Status:** ❌ Unresolved — needs investigation. Likely false positives from
+test fixtures or vendored files. May need a `.trivyignore` file.
+
+### Security Scan: Trivy (IaC Config) exits with code 1
+
+**Problem:** The Trivy IaC config scan job exits with code 1, indicating
+misconfigurations were found in infrastructure-as-code files.
+
+**Status:** ❌ Unresolved — needs investigation. May need to adjust severity
+thresholds or add ignore rules.
+
+### Security Scan: K8s Manifest Validation produces invalid SARIF
+
+**Problem:** The K8s Manifest Validation job (Kubescape) produces an invalid
+SARIF output file, causing the upload-sarif step to fail with:
+`Invalid SARIF. JSON syntax error: Unexpected end of JSON input`
+
+**Root cause:** The `kubescape/github-action@main` may produce an empty or
+truncated SARIF file when no issues are found, or the `outputFile` parameter
+may not be compatible with the SARIF upload format.
+
+**Status:** ❌ Unresolved — needs investigation. Possible fixes:
+- Add `continue-on-error: true` to the upload-sarif step
+- Check if `outputFile` should include a `.sarif` extension
+- Verify Kubescape action output format
 
 ### GitHub Actions: Node.js 20 deprecation warnings
 

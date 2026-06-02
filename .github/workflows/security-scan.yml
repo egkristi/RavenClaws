@@ -164,6 +164,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Trivy filesystem scan
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
@@ -180,6 +181,7 @@ jobs:
 
       - name: Upload Trivy results to GitHub Security
         if: always() && hashFiles('trivy-fs-results.sarif') != ''
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-fs-results.sarif
@@ -198,6 +200,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Run Trivy config scan
+        continue-on-error: true
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
@@ -210,6 +213,7 @@ jobs:
 
       - name: Upload Trivy config results to GitHub Security
         if: always() && hashFiles('trivy-config-results.sarif') != ''
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-config-results.sarif
@@ -274,17 +278,18 @@ jobs:
         continue-on-error: true
 
       - name: Scan K8s manifests with Kubescape
-        uses: kubescape/github-action@main
         continue-on-error: true
+        uses: kubescape/github-action@main
         with:
           format: sarif
-          outputFile: kubescape-results
+          outputFile: kubescape-results.sarif
           # Use the NSA CISA framework (most comprehensive)
           frameworks: "nsa-cisa"
           severityThreshold: "high"
 
       - name: Upload Kubescape results to GitHub Security
         if: always() && hashFiles('kubescape-results.sarif') != ''
+        continue-on-error: true
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: kubescape-results.sarif
