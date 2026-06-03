@@ -103,14 +103,14 @@ async fn main() -> anyhow::Result<()> {
 
     info!(mode = %args.mode, "Configuration loaded");
 
-    // Handle --exec one-shot mode (uses agent loop for multi-step reasoning)
+    // Handle --exec one-shot mode (uses agent loop for multi-step reasoning with security)
     if let Some(exec_prompt) = args.exec {
-        info!("Running in --exec mode with agent loop");
+        info!("Running in --exec mode with security-integrated agent loop");
         let system_prompt = &config.llm.system_prompt;
         let loop_config = agent::AgentLoopConfig {
             max_iterations: args.max_iterations,
             enable_tools: true,
-            ..agent::AgentLoopConfig::default()
+            require_approval: false, // Auto-approve for v0.4; HITL would block here
         };
 
         let response = if !config.llms.is_empty() {

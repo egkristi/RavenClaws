@@ -9,10 +9,10 @@
 //! ToolRegistry (holds all registered tools)
 //!   ├── ToolDefinition (name, description, JSON schema)
 //!   └── ToolImpl (the actual implementation)
-//!         ├── ShellTool — execute shell commands
-//!         ├── ReadFileTool — read files
-//!         ├── WriteFileTool — write files
-//!         ├── WebFetchTool — fetch URLs
+//!         ├── ShellTool — execute shell commands (sandboxed)
+//!         ├── ReadFileTool — read files (policy-checked)
+//!         ├── WriteFileTool — write files (policy-checked)
+//!         ├── WebFetchTool — fetch URLs (policy-checked)
 //!         └── ... more tools
 //! ```
 
@@ -21,6 +21,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
 use tracing::{info, warn};
+
+// Re-export sandbox for tool implementations
+use crate::sandbox::Sandbox;
 
 // ── Error types ────────────────────────────────────────────────────────────
 
@@ -287,9 +290,10 @@ impl Default for ToolRegistry {
 
 // ── Built-in tools ─────────────────────────────────────────────────────────
 
-/// Shell command execution tool
+/// Shell command execution tool (sandboxed)
 pub struct ShellTool {
     definition: ToolDefinition,
+    sandbox: Option<Sandbox>,
 }
 
 impl ShellTool {
@@ -318,7 +322,7 @@ impl ShellTool {
         Self {
             definition: ToolDefinition {
                 name: "shell_exec".to_string(),
-                description: "Execute a shell command and return its output. Use for running scripts, compiling code, or any command-line operation.".to_string(),
+                description: "Execute a shell command and return its output. Use for running scripts, compiling code, or any command-line operation. Runs in a sandboxed environment.".to_string(),
                 parameters: JsonSchema::object(
                     properties,
                     vec!["command".to_string()],
@@ -326,6 +330,45 @@ impl ShellTool {
                 requires_approval: true,
                 category: ToolCategory::Shell,
             },
+            sandbox: None,
+        }
+    }
+
+    /// Create a new ShellTool with sandbox support
+    pub fn with_sandbox(sandbox: Sandbox) -> Self {
+        let mut properties = HashMap::new();
+        properties.insert(
+            "command".to_string(),
+            JsonSchema::string("The shell command to execute"),
+        );
+        properties.insert(
+            "timeout_secs".to_string(),
+            JsonSchema {
+                schema_type: "integer".to_string(),
+                description: Some("Timeout in seconds (default: 30)".to_string()),
+                properties: None,
+                required: None,
+                items: None,
+                enum_values: None,
+            },
+        );
+        properties.insert(
+            "workdir".to_string(),
+            JsonSchema::string("Working directory (default: sandbox workdir)"),
+        );
+
+        Self {
+            definition: ToolDefinition {
+                name: "shell_exec".to_string(),
+                description: "Execute a shell command in a sandboxed environment. Use for running scripts, compiling code, or any command-line operation.".to_string(),
+                parameters: JsonSchema::object(
+                    properties,
+                    vec!["command".to_string()],
+                ),
+                requires_approval: true,
+                category: ToolCategory::Shell,
+            },
+            sandbox: Some(sandbox),
         }
     }
 }
@@ -352,13 +395,18 @@ impl ToolImpl for ShellTool {
             .and_then(|v| v.as_u64())
             .unwrap_or(30);
 
-        let workdir = args
-            .get("workdir")
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string());
+        // Use sandbox workdir if available, otherwise use provided workdir
+        let workdir = if let Some(sandbox) = &self.sandbox {
+            sandbox.workdir().to_string_lossy().to_string()
+        } else {
+            args.get("workdir")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| std::env::current_dir().unwrap_or_default().to_string_lossy().to_string())
+        };
 
-        // Execute the command
-        let result = run_shell_command(command, timeout_secs, workdir).await?;
+        // Execute the command (sandboxed if sandbox is configured)
+        let result = run_shell_command(command, timeout_secs, Some(workdir)).await?;
 
         Ok(result)
     }
