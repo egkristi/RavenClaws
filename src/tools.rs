@@ -223,6 +223,7 @@ impl ToolRegistry {
     }
 
     /// Get all tool definitions (for sending to LLM)
+    #[allow(dead_code)]
     pub fn definitions(&self) -> Vec<ToolDefinition> {
         self.tools
             .values()
@@ -237,6 +238,7 @@ impl ToolRegistry {
     }
 
     /// Check if the registry is empty
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.tools.is_empty()
     }
@@ -335,6 +337,7 @@ impl ShellTool {
     }
 
     /// Create a new ShellTool with sandbox support
+    #[allow(dead_code)]
     pub fn with_sandbox(sandbox: Sandbox) -> Self {
         let mut properties = HashMap::new();
         properties.insert(

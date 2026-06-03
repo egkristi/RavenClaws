@@ -86,6 +86,7 @@ pub struct AgentLoopConfig {
     /// Whether to enable tool calling
     pub enable_tools: bool,
     /// Require human approval for tool calls
+    #[allow(dead_code)]
     pub require_approval: bool,
 }
 
@@ -398,6 +399,7 @@ fn parse_tool_call(content: &str) -> Option<(String, serde_json::Value)> {
 
 /// Legacy function for backward compatibility (without security)
 #[deprecated(note = "Use run_agent_loop with security integration instead")]
+#[allow(dead_code)]
 async fn execute_tool_call(content: &str, registry: &ToolRegistry) -> Option<ToolResult> {
     let (tool_name, args) = parse_tool_call(content)?;
 
