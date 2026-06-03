@@ -2,6 +2,47 @@
 
 All notable changes to RavenClaw will be documented in this file.
 
+## [0.4.0] — 2026-06-03
+
+**v0.4: Tools and Safety** — Agency with guardrails.
+
+### ✨ Added
+
+**Structured Function Calling (OpenAI Tools format)**
+- Native structured tool calls for OpenAI, LiteLLM, OpenRouter providers
+- `ToolCallResponse` and `FunctionCall` structs for parsing structured responses
+- `tool_calls` field on `Choice` (OpenAI response format)
+- `ToolDefinition::to_openai_tool()` conversion method
+- `ToolRegistry::to_openai_tools()` for batch conversion to OpenAI format
+- Agent loop checks structured tool calls first, legacy `TOOL_CALL:/ARGS:` as fallback
+
+**Security Infrastructure (fully wired)**
+- `PolicyEngine` validates ALL tool calls before execution (deny-by-default)
+- `Sandbox` provides workdir jail for `shell_exec`
+- `AuditLog` emits tamper-evident (HMAC-SHA256 chained) events for all tool calls
+- Auto-approval for v0.4 (HITL gates planned for v0.5)
+
+**Multi-Provider LLM Support**
+- LiteLLM, OpenAI, OpenRouter, Ollama providers with unified trait
+- `ChatRequest` extended with `tools` and `tool_choice` fields
+- All provider clients updated for OpenAI Tools API compatibility
+
+### 🔧 Fixed
+
+- All CI pipelines green (fmt, clippy, test, security scans)
+- `cargo fmt` compliance
+- All `dead_code` and `unused_variables` warnings resolved
+
+### 📦 Technical
+
+- Version bumped to 0.4.0
+- 274 unit tests across 8 source modules
+- 94 verification tests across 4 deployment targets
+- Binary size: ~3 MB stripped
+- Cold start: ~7 ms
+
+---
+
 ## [Unreleased]
 
 ### Added
