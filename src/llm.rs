@@ -191,6 +191,8 @@ impl LiteLLMClient {
             temperature: Some(0.7),
             max_tokens: Some(2048),
             stream: None,
+            tools: None,
+            tool_choice: None,
         }
     }
 
@@ -230,6 +232,8 @@ impl LLMProviderTrait for LiteLLMClient {
             temperature: Some(0.7),
             max_tokens: Some(2048),
             stream: Some(true),
+            tools: None,
+            tool_choice: None,
         };
 
         let mut req = self
@@ -356,6 +360,8 @@ impl LLMProviderTrait for OpenRouterClient {
             temperature: Some(0.7),
             max_tokens: Some(2048),
             stream: None,
+            tools: None,
+            tool_choice: None,
         };
 
         let endpoint = if self.config.endpoint.is_empty() {
@@ -478,6 +484,7 @@ impl LLMProviderTrait for OllamaClient {
                     } else {
                         None
                     },
+                    tool_calls: None,
                 }],
                 usage: None, // Ollama doesn't always provide usage
             })
@@ -530,6 +537,8 @@ impl LLMProviderTrait for OpenAIClient {
             temperature: Some(0.7),
             max_tokens: Some(2048),
             stream: None,
+            tools: None,
+            tool_choice: None,
         };
 
         let endpoint = if self.config.endpoint.is_empty() {
@@ -1377,6 +1386,8 @@ mod tests {
             temperature: Some(0.7),
             max_tokens: Some(2048),
             stream: None,
+            tools: None,
+            tool_choice: None,
         };
 
         let json = serde_json::to_string(&request).unwrap();
@@ -1583,6 +1594,8 @@ mod tests {
             temperature: None,
             max_tokens: None,
             stream: None,
+            tools: None,
+            tool_choice: None,
         };
 
         let json = serde_json::to_string(&request).unwrap();
