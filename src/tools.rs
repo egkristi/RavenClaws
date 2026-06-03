@@ -130,6 +130,7 @@ pub struct ToolDefinition {
 impl ToolDefinition {
     /// Convert to OpenAI Tools format for structured function calling
     /// See: https://platform.openai.com/docs/guides/function-calling
+    #[allow(dead_code)]
     pub fn to_openai_tool(&self) -> serde_json::Value {
         serde_json::json!({
             "type": "function",
@@ -247,6 +248,7 @@ impl ToolRegistry {
     }
 
     /// Get all tool definitions in OpenAI Tools format for structured function calling
+    #[allow(dead_code)]
     pub fn to_openai_tools(&self) -> Vec<serde_json::Value> {
         self.tools
             .values()

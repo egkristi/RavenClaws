@@ -82,6 +82,7 @@ pub struct ChatResponse {
 pub struct ToolCallResponse {
     #[allow(dead_code)]
     pub id: String,
+    #[allow(dead_code)]
     #[serde(rename = "type")]
     pub call_type: String,
     pub function: FunctionCall,

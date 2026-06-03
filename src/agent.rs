@@ -416,12 +416,11 @@ async fn execute_parsed_tool_call(
 /// 3. Logs the policy decision to AuditLog
 /// 4. Executes the tool (sandbox is applied at the tool implementation level for shell_exec)
 /// 5. Logs the result to AuditLog
-#[allow(unused_variables)]
 async fn execute_tool_call_with_security(
     content: &str,
     registry: &ToolRegistry,
     policy_engine: &PolicyEngine,
-    sandbox: &Sandbox,
+    _sandbox: &Sandbox,
     audit_log: &AuditLog,
 ) -> Option<ToolResult> {
     // Parse tool call from content (legacy format)
