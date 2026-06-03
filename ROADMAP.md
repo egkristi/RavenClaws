@@ -49,9 +49,9 @@ can't be added without breaking one, it doesn't ship in core.
 | Rust unit tests | ✅ Working | 274 tests across all 8 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard, `FINAL:` marker detection, configurable via `--max-iterations` |
 | Tool-use / function calling | ✅ Working | Tool abstraction + registry + 4 built-in tools (shell, read/write file, web fetch) + agent loop wiring (`TOOL_CALL:` / `ARGS:` / `OBSERVATION:` pattern) |
-| Deny-by-default policy | ⚠️ Infrastructure complete | `PolicyEngine` with shell, path, and network allow-lists — **NOT wired to agent loop** |
-| Sandboxed execution | ⚠️ Infrastructure complete | Workdir jail, resource limits, timeouts, path resolution — **NOT wired to agent loop** |
-| Audit log | ⚠️ Infrastructure complete | HMAC-SHA256 chained, tamper-evident, structured JSON output — **NOT wired to agent loop** |
+| Deny-by-default policy | ✅ **Wired to agent loop** | `PolicyEngine` validates ALL tool calls before execution (commit 51e42b0) |
+| Sandboxed execution | ✅ **Wired to agent loop** | `Sandbox` provides workdir jail for `shell_exec` (commit 51e42b0) |
+| Audit log | ✅ **Wired to agent loop** | HMAC-SHA256 chained, tamper-evident, emits events for all tool calls (commit 51e42b0) |
 | Streaming responses | ✅ Working | SSE streaming for LiteLLM, default non-streaming fallback for others |
 | Conversation memory | ✅ Working | `ConversationMemory` struct with configurable max history, auto-trim |
 | Interactive REPL | ✅ Working | `--repl` flag with stdin loop, streaming output, `/exit` `/reset` commands |
@@ -271,7 +271,7 @@ Agency with guardrails — the security differentiator.
 - [x] **Deny-by-default policy** (command / path / host allow-lists), à la RavenFabric's RPCPolicy.
 - [x] **Sandboxed execution** (workdir jail, resource limits, timeouts).
 - [x] **Audit log** — structured, HMAC-chained, tamper-evident trail of every tool call.
-- [ ] **Wire security to agent loop** — `PolicyEngine` validates all tool calls; `Sandbox` executes `shell_exec`; `AuditLog` emits events. **(BLOCKER)**
+- [x] **Wire security to agent loop** — `PolicyEngine` validates all tool calls; `Sandbox` executes `shell_exec`; `AuditLog` emits events. **COMMIT: 51e42b0**
 - [ ] **Structured function calling** — OpenAI Tools format for OpenAI/LiteLLM/OpenRouter; native JSON instead of pattern-matching. **(BLOCKER)**
 - [ ] **MCP — client *and* server** — consume any Model Context Protocol tool/server, and expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). **(HIGHEST LEVERAGE)**
 - [ ] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask).
