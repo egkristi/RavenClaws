@@ -7,7 +7,7 @@ use crate::audit::{AuditEventType, AuditLog};
 use crate::config::Config;
 use crate::error::Result;
 use crate::llm::{ChatMessage, LLMProviderTrait, MultiModelManager};
-use crate::policy::{Decision, PolicyEngine, SecurityPolicy};
+use crate::policy::{Decision, PolicyEngine};
 use crate::sandbox::Sandbox;
 use crate::tools::{ToolCall, ToolRegistry, ToolResult};
 use futures::StreamExt;
@@ -163,7 +163,7 @@ pub async fn run_agent_loop(
                     &format!("LLM request failed: {}", e),
                     None,
                 );
-                return Err(crate::error::RavenClawError::LLM(e));
+                return Err(crate::error::RavenClawError::Llm(e));
             }
         };
 
@@ -274,8 +274,9 @@ pub async fn run_agent_loop(
 /// 1. Parses the tool call from the LLM response
 /// 2. Checks the tool call against PolicyEngine
 /// 3. Logs the policy decision to AuditLog
-/// 4. Executes the tool in the Sandbox (for shell commands)
+/// 4. Executes the tool (sandbox is applied at the tool implementation level for shell_exec)
 /// 5. Logs the result to AuditLog
+#[allow(unused_variables)]
 async fn execute_tool_call_with_security(
     content: &str,
     registry: &ToolRegistry,
@@ -326,6 +327,7 @@ async fn execute_tool_call_with_security(
     }
 
     // Execute tool (sandbox is applied at the tool implementation level for shell_exec)
+    let tool_name_clone = tool_name.clone();
     let call = ToolCall {
         name: tool_name.clone(),
         arguments: args,
@@ -337,8 +339,8 @@ async fn execute_tool_call_with_security(
             // Audit: tool result
             let _ = audit_log.append(
                 AuditEventType::ToolResult,
-                &tool_name,
-                &format!("Tool executed: {} (success: {})", tool_name, result.success),
+                &tool_name_clone,
+                &format!("Tool executed: {} (success: {})", tool_name_clone, result.success),
                 Some(serde_json::json!({
                     "success": result.success,
                     "exit_code": result.exit_code,
@@ -351,12 +353,12 @@ async fn execute_tool_call_with_security(
             // Audit: error
             let _ = audit_log.append(
                 AuditEventType::Error,
-                &tool_name,
+                &tool_name_clone,
                 &format!("Tool execution failed: {}", e),
                 None,
             );
             ToolResult {
-                tool_name,
+                tool_name: tool_name_clone,
                 success: false,
                 output: String::new(),
                 error: Some(e.to_string()),
@@ -447,11 +449,9 @@ pub async fn run_exec_stream(
             while let Some(chunk) = stream.next().await {
                 match chunk {
                     Ok(chunk) => {
-                        if let Some(content) =
-                            chunk.choices.first().and_then(|c| c.delta.content.as_ref())
-                        {
-                            print!("{}", content);
-                            full_response.push_str(content);
+                        if !chunk.content.is_empty() {
+                            print!("{}", chunk.content);
+                            full_response.push_str(&chunk.content);
                         }
                     }
                     Err(e) => {
@@ -464,7 +464,7 @@ pub async fn run_exec_stream(
         }
         Err(e) => {
             warn!(error = %e, "Failed to start stream");
-            return Err(crate::error::RavenClawError::LLM(e));
+            return Err(crate::error::RavenClawError::Llm(e));
         }
     }
 
