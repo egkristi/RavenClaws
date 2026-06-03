@@ -402,7 +402,12 @@ impl ToolImpl for ShellTool {
             args.get("workdir")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
-                .unwrap_or_else(|| std::env::current_dir().unwrap_or_default().to_string_lossy().to_string())
+                .unwrap_or_else(|| {
+                    std::env::current_dir()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .to_string()
+                })
         };
 
         // Execute the command (sandboxed if sandbox is configured)
