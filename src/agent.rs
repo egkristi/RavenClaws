@@ -340,7 +340,10 @@ async fn execute_tool_call_with_security(
             let _ = audit_log.append(
                 AuditEventType::ToolResult,
                 &tool_name_clone,
-                &format!("Tool executed: {} (success: {})", tool_name_clone, result.success),
+                &format!(
+                    "Tool executed: {} (success: {})",
+                    tool_name_clone, result.success
+                ),
                 Some(serde_json::json!({
                     "success": result.success,
                     "exit_code": result.exit_code,
