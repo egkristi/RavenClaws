@@ -1,5 +1,9 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
+**Date:** 2026-06-03  
+**Version:** v0.4 (unreleased)  
+**Commit:** `68d2454` — "Add multi-provider LLM support (LiteLLM, OpenRouter, Ollama, OpenAI)"
+
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
 
@@ -24,8 +28,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.1.0 (Pre-Alpha) — active development, APIs unstable.
-**Stats:** 8 source modules, ~2,500 LOC, 4 LLM providers, multi-arch CI with signed images + SBOM.
+**Version:** 0.4 (unreleased) — active development, APIs unstable.  
+**Stats:** 8 source modules, ~8,200 LOC, 4 LLM providers, 274 unit tests + 94 verification tests, multi-arch CI with signed images + SBOM.
 
 | Component | Status | Details |
 |---|---|---|
@@ -38,54 +42,71 @@ can't be added without breaking one, it doesn't ship in core.
 | CI/CD pipeline | ✅ Implemented | fmt + clippy `-D warnings` + test, 5-target builds, multi-arch images, **Cosign + SBOM + provenance + Trivy**, crates.io publish, releases — cross-compilation deps installed for all targets |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review — all SARIF results uploaded to GitHub Security tab |
 | Verification suite | ✅ Working | 94 system/integration checks · 8 modules · 4 targets (`scripts/verify.sh`: local, Docker, Linux, K8s, security, performance, LLM-quality) — shell-orchestrated, requires live services |
-| Multi-model routing | ⚠️ Partial | `next_client()` round-robin exists but is never called; no intelligent routing |
+| Multi-model routing | ⚠️ Partial | `next_client()` round-robin exists and is wired; no cost-aware or fallback-chain routing yet |
 | RavenFabric integration | ⚠️ Partial | Config struct exists, agent binary baked into the image with checksum verification; runtime integration not wired |
 | `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout; full test coverage |
 | Swarm / Supervisor modes | ⚠️ Stub | Return clear error instead of silent exit 0 |
-| Rust unit tests | ✅ Working | 157 tests across all 5 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
+| Rust unit tests | ✅ Working | 274 tests across all 8 modules; `mockito`-based HTTP tests for all 4 providers covering success, auth failure, rate limit, server error, and invalid JSON paths |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard, `FINAL:` marker detection, configurable via `--max-iterations` |
 | Tool-use / function calling | ✅ Working | Tool abstraction + registry + 4 built-in tools (shell, read/write file, web fetch) + agent loop wiring (`TOOL_CALL:` / `ARGS:` / `OBSERVATION:` pattern) |
-| Deny-by-default policy | ✅ Working | `PolicyEngine` with shell, path, and network allow-lists |
-| Sandboxed execution | ✅ Working | Workdir jail, resource limits, timeouts, path resolution |
-| Audit log | ✅ Working | HMAC-SHA256 chained, tamper-evident, structured JSON output |
+| Deny-by-default policy | ⚠️ Infrastructure complete | `PolicyEngine` with shell, path, and network allow-lists — **NOT wired to agent loop** |
+| Sandboxed execution | ⚠️ Infrastructure complete | Workdir jail, resource limits, timeouts, path resolution — **NOT wired to agent loop** |
+| Audit log | ⚠️ Infrastructure complete | HMAC-SHA256 chained, tamper-evident, structured JSON output — **NOT wired to agent loop** |
 | Streaming responses | ✅ Working | SSE streaming for LiteLLM, default non-streaming fallback for others |
 | Conversation memory | ✅ Working | `ConversationMemory` struct with configurable max history, auto-trim |
 | Interactive REPL | ✅ Working | `--repl` flag with stdin loop, streaming output, `/exit` `/reset` commands |
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt` field, CLI `--system-prompt`, env var override |
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
+| Structured function calling | ❌ Missing | Tool calls use pattern-matching on LLM output, not structured JSON |
+| MCP client/server | ❌ Missing | No Model Context Protocol integration |
 
-### 🔧 Known build & correctness blockers
+### 🔧 Critical Blockers (v0.4 Release)
 
-These break real usage today and are the first thing to fix (see [Technical Debt](#technical-debt)):
+These must be resolved before v0.4 can ship:
 
-1. ~~**`Cargo.lock` is git-ignored, but `--locked` is used in CI, Docker, `build.sh`, and `cargo publish`** → every fresh checkout fails to build. *(blocker)*~~ ✅ Fixed
-2. ~~**Dockerfile pins the builder to `$BUILDPLATFORM` then cross-compiles to `$TARGET` with no cross-linker** → `linux/arm64` image build fails at link time. *(blocker)*~~ ✅ Fixed — cross-linkers installed
-3. ~~**Dockerfile `curl | chmod +x` of the RavenFabric agent has no checksum/signature check** — supply-chain gap in a "secure by default" project. *(security)*~~ ✅ Fixed — SHA256 checksum verification added
-4. ~~**CI cross-compilation builds fail** — `x86_64-unknown-linux-musl` and `aarch64-unknown-linux-gnu` targets missing toolchain deps on runners. *(blocker)*~~ ✅ Fixed — `musl-tools` and `gcc-aarch64-linux-gnu` installed in CI
-5. **The binary exits after one request, but the k8s Deployment expects a long-running process** → CrashLoopBackOff until server mode (v0.7) exists.
+1. **Security features not wired to agent loop** — `PolicyEngine`, `Sandbox`, and `AuditLog` are fully implemented but never invoked during execution. This is a **critical risk** — security features that aren't called provide false confidence. *(blocker)*
+2. **No structured function calling** — Tool calls rely on fragile pattern-matching (`TOOL_CALL:` / `ARGS:`) instead of structured JSON. OpenAI, Anthropic, and other providers support native function calling. *(blocker)*
+3. **k8s Deployment enters CrashLoopBackOff** — The binary exits after one request, but Kubernetes expects a long-running process. Server mode is planned for v0.7. *(documented limitation)*
+4. **No MCP integration** — Model Context Protocol is an industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). Missing MCP means reinventing tools instead of plugging into the ecosystem. *(highest-leverage gap)*
+
+### ✅ Resolved (v0.1 → v0.4)
+
+1. ~~**`Cargo.lock` is git-ignored, but `--locked` is used in CI**~~ ✅ Fixed — lockfile committed
+2. ~~**Dockerfile cross-compile fails (no cross-linker)**~~ ✅ Fixed — `gcc-aarch64-linux-gnu` + linker config
+3. ~~**RavenFabric agent download unverified**~~ ✅ Fixed — SHA256SUMS verification
+4. ~~**CI cross-compilation missing toolchain deps**~~ ✅ Fixed — `musl-tools`, `libc6-dev-arm64-cross`
+5. ~~**`--exec` dead code**~~ ✅ Fixed — fully implemented with streaming
+6. ~~**Client code duplicated 4×**~~ ✅ Partial — `handle_openai_response()` helper extracted; 3 clients still separate
+7. ~~**No conversation memory**~~ ✅ Fixed — `ConversationMemory` with auto-trim
+8. ~~**No REPL mode**~~ ✅ Fixed — `--repl` with `/exit`, `/reset`
+9. ~~**No agent loop**~~ ✅ Fixed — `run_agent_loop()` with max-iteration guard
+10. ~~**No tool system**~~ ✅ Fixed — 4 built-in tools + registry + agent loop wiring
+11. ~~**No security infrastructure**~~ ✅ Fixed — `PolicyEngine`, `Sandbox`, `AuditLog` implemented
 
 ---
 
 ## Architecture
 
-### Today
+### Current (v0.4)
 
 ```text
         ┌──────────┐
         │  main.rs │  CLI (clap) · JSON logging · mode dispatch
         └────┬─────┘
-   ┌─────────┼──────────────────────┐
-┌──┴───┐ ┌───┴────┐ ┌───┴─────┐ ┌───┴───┐
-│agent │ │ config │ │  error  │ │ tools │
-│ loop │ │        │ │         │ │policy │
-│ mem  │ │        │ │         │ │audit  │
-└──┬───┘ └────────┘ └─────────┘ │sandbox│
-   │                             └───────┘
+   ┌─────────┼──────────────────────────────────────┐
+┌──┴───┐ ┌───┴────┐ ┌───┴─────┐ ┌───┴───┐ ┌────────┐
+│agent │ │ config │ │  error  │ │ tools │ │policy  │
+│ loop │ │        │ │         │ │       │ │audit   │
+│ mem  │ │        │ │         │ │       │ │sandbox │
+└──┬───┘ └────────┘ └─────────┘ └───────┘ └────────┘
+   │
 ┌──┴───────────────────────────┐
 │ llm  (LLMProviderTrait)       │
 │  LiteLLM · OpenAI · OpenRouter│
 │  · Ollama · MultiModelManager │
 └───────────────────────────────┘
+
+⚠️ Dotted lines = NOT wired: policy, audit, sandbox are infrastructure-only
 ```
 
 ### Target (v1.0)
@@ -100,14 +121,16 @@ These break real usage today and are the first thing to fix (see [Technical Debt
           ┌──────────┘    │   └──────────┐
      ┌────┴────┐    ┌─────┴────┐   ┌──────┴───────┐
      │  Tools  │    │ Providers│   │ Orchestration │
-     │ policy  │    │ routing+ │   │ swarm/superv. │
-     │ sandbox │    │ fallback+│   │ + RavenFabric │
-     │ audit ✅│    │ budgets  │   │  (E2E remote) │
+     │ policy✅│    │ routing+ │   │ swarm/superv. │
+     │ sandbox✅│   │ fallback+│   │ + RavenFabric │
+     │ audit  ✅│   │ budgets  │   │  (E2E remote) │
      └─────────┘    └──────────┘   └───────────────┘
           │
    ┌──────┴───────┐
    │ Observability│  metrics · tracing · health endpoint
    └──────────────┘
+
+✅ = Infrastructure exists, needs wiring to agent loop (v0.4)
 ```
 
 ---
@@ -115,15 +138,14 @@ These break real usage today and are the first thing to fix (see [Technical Debt
 ## Competitive Positioning
 
 RavenClaw aims to be the **preferred alternative** to the current field — including
-Nemoclaw, Hermes Agent, TrustClaw, ZeroClaw, PicoClaw, NanoClaw, Claude Cowork,
-Manus, Perplexity Computer, Kimi Claw, and Vellum.
+Cognition (Claude), Manus, Perplexity Comet, Kimi, Open Interpreter, and Vellum.
 
 We don't win by out-featuring them. We win by refusing to compromise on all five
 pillars at once. By category:
 
-- **vs. cloud / hosted assistants** (Claude Cowork, Manus, Perplexity Computer, Kimi Claw): RavenClaw is **self-hostable, offline-capable, and source-available** under AGPLv3. Your data and tool calls never leave infrastructure you control — no phone-home.
-- **vs. minimal agent runtimes** (ZeroClaw, PicoClaw, NanoClaw, TrustClaw): RavenClaw matches their footprint while adding a real **security model** (deny-by-default tool policy, audit log, sandboxing) and **multi-provider** routing with fallback.
-- **vs. SDK / platform plays** (Vellum, Hermes Agent, Nemoclaw): RavenClaw is a **single dependency-light binary**, not a service you rent or a framework you marry. Embed it, ship it, forget it.
+- **vs. cloud / hosted assistants** (Claude Cowork, Manus, Perplexity Computer, Kimi): RavenClaw is **self-hostable, offline-capable, and source-available** under AGPLv3. Your data and tool calls never leave infrastructure you control — no phone-home.
+- **vs. minimal agent runtimes** (Open Interpreter, ZeroClaw, PicoClaw): RavenClaw matches their footprint while adding a real **security model** (deny-by-default tool policy, audit log, sandboxing) and **multi-provider** routing with fallback.
+- **vs. SDK / platform plays** (Vellum, Hermes Agent): RavenClaw is a **single dependency-light binary**, not a service you rent or a framework you marry. Embed it, ship it, forget it.
 
 The bar: anything the field can do, RavenClaw should do **smaller, safer, and
 simpler** — or deliberately not at all.
@@ -133,69 +155,79 @@ simpler** — or deliberately not at all.
 > air-gappable, signed + SBOM-attested supply chain. These are claims we will
 > benchmark and publish — not marketing.
 
+### RavenClaw vs. Field (v0.4)
+
+| Capability | RavenClaw v0.4 | Cognition (Claude) | Manus | Open Interpreter |
+|---|:---:|:---:|:---:|:---:|
+| Agent loop | ✅ | ✅ | ✅ | ✅ |
+| Tool calling | ✅ (primitive) | ✅ (structured) | ✅ | ✅ |
+| **MCP client/server** | ❌ | ✅ | ✅ | ✅ |
+| Sandboxed execution | ⚠️ (not wired) | ✅ | ✅ | ⚠️ Optional |
+| **Security model** | ⚠️ (not wired) | ⚠️ | ⚠️ | ❌ |
+| **Local-first / air-gapped** | ✅ (Ollama) | ❌ | ❌ | ✅ |
+| **~3 MB binary** | ✅ | ❌ (cloud) | ❌ (cloud) | ❌ (Python) |
+| **RavenFabric mesh** | ❌ (roadmap) | ❌ | ❌ | ❌ |
+| **No telemetry** | ✅ | ❌ | ❌ | ✅ |
+| Multi-modal input | ❌ | ✅ | ✅ | ⚠️ |
+| Web search | ⚠️ (fetch only) | ✅ | ✅ | ✅ |
+| Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
+| Async background runs | ❌ | ✅ | ✅ | ❌ |
+| Scheduling / triggers | ❌ | ✅ | ✅ | ❌ |
+| Sub-agents / swarm | ❌ (stub) | ✅ | ✅ | ❌ |
+| OAuth connectors | ❌ | ✅ | ✅ | ⚠️ Plugins |
+
+**RavenClaw's Wedge:**
+1. **Trust as a feature** — deny-by-default security, no telemetry, verifiable end-to-end
+2. **Edge-deployable** — ~3 MB binary, runs on Raspberry Pi, air-gapped capable
+3. **RavenFabric mesh** — E2E-encrypted remote execution across fleet (unique)
+
 ---
 
 ## Features Required to Become the Preferred Alternative
 
 Being *preferred* is a two-step bar: first reach **parity** on the capabilities the
 field now treats as table stakes, then **win decisively** on the five pillars where
-the cloud incumbents structurally can't follow. This is the gap analysis, grounded in
-what the competition actually ships today.
+the cloud incumbents structurally can't follow.
 
 ### Part 1 — Table stakes (reach parity)
 
-Baseline expectations for any "agentic assistant and worker" in 2026. Items marked
-**NEW** are gaps not yet in the phase plan below; they are folded into the noted phase.
-
-| Capability | Why it's table stakes (who has it) | In RavenClaw | Target |
+| Capability | Why it's table stakes | In RavenClaw | Target |
 |---|---|:--:|:--:|
 | Agent loop (plan → act → observe) | Without it there is no "agent" | ✅ | v0.3 |
-| Tool / function calling | The substrate for every action | 📋 | v0.4 |
-| **MCP — client *and* server** **NEW** | The lingua franca for tools — adopted by Anthropic, OpenAI, Google, Microsoft, Salesforce; Vellum's agent node already does MCP discovery. Consume MCP tools *and* expose RavenClaw as an MCP server. | ❌ | **v0.4** |
-| Sandboxed code execution | Now a native primitive (OpenAI Agents SDK); also our security wedge | 📋 | v0.4 |
-| Persistent memory (short + long-term, vector recall) | Without it every session starts from zero | 📋 | v0.3 → v0.9 |
-| Web search + headless browser tool **NEW** | Manus and Perplexity Comet center on browse / summarize / fill-forms / compare | ❌ | **v0.4** |
-| File operations (read / write / edit) | Codex-style filesystem tools; core to "worker" | 📋 | v0.4 |
-| Sub-agents / swarm orchestration | Kimi K2.6 runs **300 sub-agents / 4,000 steps**; the sub-agent pattern beats monolithic on long-horizon work | 📋 | v0.6 |
-| Async / long-horizon background runs **NEW** | Manus's killer feature (cloud background); Kimi's 12-hour runs; persistent 24/7 agents | ⚠️ | **v0.7** |
-| Scheduling / triggers (cron, webhook, file-watch) **NEW** | Proactive, set-and-forget operation | ❌ | **v0.7** |
-| Streaming + intermediate results | First-class in Vellum; needed for interactive UX | 📋 | v0.3 |
-| Multi-modal input (images, PDFs, docs) **NEW** | Manus and Kimi are multimodal; a "worker" must read documents | ❌ | **v0.5** |
-| Connectors / integrations (OAuth: Drive, M365, Slack, GitHub, Notion) **NEW** | Claude-style connectors. Manus's weakness is *no* integrations — our opening | ❌ | **v0.6** |
-| Skills / plugins (portable capability bundles) | Claude Agent Skills: instructions + scripts + resources, progressive disclosure | 📋 | pull earlier → v0.5 |
-| Retries / provider fallback / fail-early | Vellum: retry, fall back to another provider, fail early | 📋 | v0.5 |
-| Evals + observability + run inspection **NEW** | Vellum/Microsoft: evals, middleware logging, session inspection | ⚠️ | **v0.7** + eval harness |
-| Human-in-the-loop approvals / guardrails **NEW** | Enterprises require guardrails + audit + HITL fallback | ❌ | **v0.4** |
-| Output artifacts (docs, sheets, slides, sites) **NEW** | Manus builds sites/apps/decks; Claude skills emit pptx/xlsx/docx/pdf | ❌ | v0.8 (via skills) |
+| Tool / function calling | The substrate for every action | ✅ (primitive) | v0.4 |
+| **MCP — client *and* server** | Industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce) | ❌ | **v0.4** |
+| Sandboxed execution | Native primitive in competitors | ⚠️ (not wired) | v0.4 |
+| Persistent memory (vector recall) | Without it every session starts from zero | ⚠️ (in-memory only) | v0.3 → v0.9 |
+| Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ⚠️ (fetch only) | **v0.4** |
+| File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
+| Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ❌ (stub) | v0.6 |
+| Async / long-horizon background runs | Manus's killer feature (cloud background) | ❌ | **v0.7** |
+| Scheduling / triggers (cron, webhook) | Proactive, set-and-forget operation | ❌ | **v0.7** |
+| Streaming + intermediate results | First-class in Vellum; needed for interactive UX | ✅ | v0.3 |
+| Multi-modal input (images, PDFs) | Manus/Kimi are multimodal; "worker" must read docs | ❌ | v0.5 |
+| Connectors / integrations (OAuth) | Claude-style connectors; Manus's weakness | ❌ | v0.6 |
+| Retries / provider fallback | Vellum: retry, fall back, fail early | ⚠️ (partial) | v0.5 |
+| Human-in-the-loop approvals | Enterprises require guardrails + audit + HITL | ❌ | **v0.4** |
 
 ### Part 2 — Where RavenClaw wins (the "preferred" wedge)
 
-Parity gets RavenClaw onto the shortlist. These pillar-based advantages get it
-*chosen* — and the cloud incumbents (Manus, Perplexity, Kimi, Cowork-class) cannot
-match all of them at once without abandoning their model.
-
 | Differentiator | Why it beats the field | Pillars | Phase |
 |---|---|:--:|:--:|
-| **Local-first / self-hosted / air-gapped** | Manus is cloud-only with no free tier; Comet's "Local" mode is a browser, not a worker. RavenClaw runs fully offline incl. Ollama — data never leaves your control. | Secure · Simple | ✅ core, deepen v0.4 |
-| **Security model: deny-by-default policy + sandbox + tamper-evident audit** | The field bolts security on; enterprises must add guardrails/audit/HITL themselves. We ship it in core. | Secure | v0.4 |
-| **Memory-safe ~3 MB single binary, edge/embeddable** | No cloud agent runs on a Raspberry Pi or embeds inside another product. | Small · Efficient | ✅ |
-| **Provider-agnostic + cost-aware routing + budgets** | Not locked to one model vendor; route cheap → capable and cap spend. | Efficient · Robust | v0.5 |
-| **RavenFabric mesh: E2E-encrypted remote exec across a fleet** | Unique — competitors are single-host or single-cloud. Turns RavenClaw into a *distributed* workforce. | Robust | v0.6 |
-| **No telemetry · deterministic · reproducible · signed + SBOM** | Trust as a feature, verifiable end to end. | Secure | ✅ → v1.0 |
+| **Local-first / self-hosted / air-gapped** | Manus is cloud-only; Comet's "Local" is a browser, not a worker. RavenClaw runs fully offline with Ollama. | Secure · Simple | ✅ core |
+| **Security model: deny-by-default + sandbox + audit** | Field bolts security on; we ship it in core. | Secure | ⚠️ v0.4 (wire it) |
+| **~3 MB single binary, edge/embeddable** | No cloud agent runs on a Raspberry Pi. | Small · Efficient | ✅ |
+| **Provider-agnostic + cost-aware routing** | Not locked to one model vendor. | Efficient · Robust | v0.5 |
+| **RavenFabric mesh: E2E-encrypted remote exec** | Unique — competitors are single-host or single-cloud. | Robust | v0.6 |
+| **No telemetry · signed + SBOM** | Trust as a feature, verifiable end-to-end. | Secure | ✅ |
 | **Open core + commercial** | No lock-in, vs. proprietary cloud. | Simple | ✅ |
 
 ### Part 3 — The five that move the needle most
 
-If focus is limited, these close the biggest "preferred" gap fastest:
-
-1. **MCP client + server (v0.4)** — instant access to the entire tool ecosystem instead of reinventing it. Single highest-leverage feature.
-2. **Agent loop + tools + sandbox (v0.3–v0.4)** — turns RavenClaw from a chat client into an actual worker.
-3. **Local-first privacy + the security model (v0.4)** — the wedge no cloud agent can copy.
-4. **Async / background + scheduling (v0.7)** — matches Manus's "assign-and-walk-away" and enables 24/7 agents.
+1. **MCP client + server (v0.4)** — instant access to entire tool ecosystem. Single highest-leverage feature.
+2. **Wire security model (v0.4)** — PolicyEngine + Sandbox + AuditLog invoked on every tool call. Core value proposition.
+3. **Local-first privacy + security** — the wedge no cloud agent can copy.
+4. **Async / background + scheduling (v0.7)** — matches Manus's "assign-and-walk-away".
 5. **RavenFabric distributed execution (v0.6)** — the capability *no competitor has*.
-
-> Table stakes get RavenClaw onto the shortlist. The pillars — local, secure, tiny,
-> open, distributed — are why it gets picked. Build parity fast; never compromise the wedge.
 
 ---
 
@@ -205,8 +237,6 @@ Versions are capability milestones, not dates. Each must keep all five pillars g
 
 ### v0.2 — Foundations: make the build honest and green 🔧
 
-Cheapest, highest-leverage work. Nothing new ships until the basics are solid.
-
 - [x] **Commit `Cargo.lock`** (remove from `.gitignore`) so `--locked` works in CI/Docker/publish.
 - [x] **Fix multi-arch Docker build** — install cross-linkers (`gcc-aarch64-linux-gnu`) + set the cargo target linker.
 - [x] **Verify the RavenFabric agent download** against a published checksum / Cosign signature.
@@ -215,13 +245,11 @@ Cheapest, highest-leverage work. Nothing new ships until the basics are solid.
 - [x] **Decide `--exec`**: implement one-shot mode (preferred, see v0.3) or remove the flag.
 - [x] **Make swarm/supervisor fail loudly** — return a clear error instead of `exit 0` until implemented.
 - [x] **Expand tests** — use `mockito` to exercise request/response/error paths for every provider; cover config parsing and the multi-model manager.
-- [x] **README status-honesty.** ✅ done in this pass
+- [x] **README status-honesty.**
 
 **Exit criteria:** `cargo fmt && cargo clippy -D warnings && cargo test` green; `docker buildx` produces working `amd64`+`arm64` images; fresh clone builds with `--locked`.
 
 ### v0.3 — A real agent 🧠
-
-Turn the client into an actual worker. *This is the milestone that makes RavenClaw an agent.*
 
 - [x] **Agent loop**: perceive → plan → act → observe, with max-iteration guard and cancellation.
 - [x] **`--exec "<task>"`** one-shot mode — sends prompt to LLM, prints response to stdout.
@@ -233,7 +261,7 @@ Turn the client into an actual worker. *This is the milestone that makes RavenCl
 
 **Exit criteria:** `ravenclaw --exec "summarize this repo"` performs a real multi-step task and returns a result.
 
-### v0.4 — Tools and safety 🧰🔒
+### v0.4 — Tools and safety 🧰🔒 **(CURRENT)**
 
 Agency with guardrails — the security differentiator.
 
@@ -243,14 +271,16 @@ Agency with guardrails — the security differentiator.
 - [x] **Deny-by-default policy** (command / path / host allow-lists), à la RavenFabric's RPCPolicy.
 - [x] **Sandboxed execution** (workdir jail, resource limits, timeouts).
 - [x] **Audit log** — structured, HMAC-chained, tamper-evident trail of every tool call.
-- [ ] **MCP — client *and* server** *(NEW — highest-leverage)* — consume any Model Context Protocol tool/server, and expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce).
-- [ ] **Web search + headless browser tool** *(NEW)* — search, navigate, extract, and fill forms (beyond simple web fetch).
+- [ ] **Wire security to agent loop** — `PolicyEngine` validates all tool calls; `Sandbox` executes `shell_exec`; `AuditLog` emits events. **(BLOCKER)**
+- [ ] **Structured function calling** — OpenAI Tools format for OpenAI/LiteLLM/OpenRouter; native JSON instead of pattern-matching. **(BLOCKER)**
+- [ ] **MCP — client *and* server** — consume any Model Context Protocol tool/server, and expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). **(HIGHEST LEVERAGE)**
+- [ ] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask).
+- [ ] **Web search + headless browser tool** — search, navigate, extract, and fill forms (beyond simple web fetch).
 - [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs.
 - [ ] **Honor `token_lifetime_secs`** for any issued credentials.
 - [ ] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation.
-- [ ] **Human-in-the-loop approvals** *(NEW)* — configurable approval gates for sensitive tool calls (allow / deny / ask).
 
-**Exit criteria:** an agent runs tools, but only those allowed by policy, with a complete audit log.
+**Exit criteria:** an agent runs tools, but only those allowed by policy, with a complete audit log. Security features actively invoked, not just present.
 
 ### v0.5 — Providers and routing 🔀
 
@@ -259,8 +289,8 @@ Agency with guardrails — the security differentiator.
 - [ ] **Resilience**: retries with exponential backoff + jitter; per-provider circuit breaker.
 - [ ] **Token accounting & per-run budgets/limits.**
 - [ ] **Native Anthropic provider**; embeddings endpoint; tool-calling parity across providers.
-- [ ] **Multi-modal input** *(NEW)* — images, PDFs, and documents as agent input.
-- [ ] **Skill / plugin system** *(NEW — pulled from v0.9)* — portable capability bundles (instructions + scripts + resources), à la Claude Agent Skills, with progressive disclosure.
+- [ ] **Multi-modal input** — images, PDFs, and documents as agent input.
+- [ ] **Skill / plugin system** — portable capability bundles (instructions + scripts + resources), à la Claude Agent Skills, with progressive disclosure.
 
 **Exit criteria:** a single run transparently fails over between providers and respects a token budget.
 
@@ -270,7 +300,7 @@ Agency with guardrails — the security differentiator.
 - [ ] **Swarm mode** — coordinated agents with a shared blackboard/state; per-subtask model selection.
 - [ ] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability).
 - [ ] **Agent communication** — structured message passing; conflict resolution across agents.
-- [ ] **Connectors / integrations** *(NEW)* — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion (acts as the user, not a shared service account).
+- [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion (acts as the user, not a shared service account).
 
 **Exit criteria:** a supervisor decomposes a task across ≥3 sub-agents over RavenFabric and aggregates results.
 
@@ -281,9 +311,9 @@ Agency with guardrails — the security differentiator.
 - [ ] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs).
 - [ ] **Graceful shutdown**, signal handling, `health_interval_secs` honored.
 - [ ] **Helm chart**; systemd unit; optional self-update with rollback.
-- [ ] **Async / long-horizon background runs** *(NEW)* — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX).
-- [ ] **Scheduling & triggers** *(NEW — moved from v0.9)* — cron, webhook, and file-watch activation for proactive 24/7 agents.
-- [ ] **Eval harness + run inspection** *(NEW)* — golden-task evals, assertions on intermediate steps, and replayable run traces.
+- [ ] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX).
+- [ ] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents.
+- [ ] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces.
 
 **Exit criteria:** RavenClaw runs as a stable long-lived workload with green probes and exported metrics.
 
@@ -297,7 +327,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - [ ] **Multi-level audit logging** — levels (`off`/`basic`/`detailed`/`debug`), formats (JSON/CEF/LEEF/Syslog), shipping sinks, integrity chaining.
 - [ ] **Compliance presets & reporting** (SOC2, ISO 27001, HIPAA, GDPR, PCI-DSS).
 - [ ] **Air-gap / offline licensing**; runtime feature-flag gating.
-- [ ] **Output artifacts & reporting** *(NEW)* — generate documents, spreadsheets, slides, and sites via the skill system (v0.5); underpins compliance and executive reporting.
+- [ ] **Output artifacts & reporting** — generate documents, spreadsheets, slides, and sites via the skill system (v0.5); underpins compliance and executive reporting.
 
 ### v0.9 — Hardening, ecosystem, advanced reasoning 💎
 
@@ -325,18 +355,20 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
+**Current coverage:** 274 unit tests across 8 modules + 94 verification tests across 4 deployment targets.
+
 ---
 
 ## Performance Targets (v1.0)
 
-| Metric | Target |
-|---|---|
-| Stripped binary size | < 15 MB |
-| Container image size | < 30 MB |
-| Cold start (single mode) | < 50 ms |
-| Idle memory (server mode) | < 20 MB RSS |
-| Provider failover decision | < 5 ms |
-| Tool-call audit write | non-blocking, < 1 ms enqueue |
+| Metric | Target | Current |
+|---|---|---|
+| Stripped binary size | < 15 MB | ~3 MB ✅ |
+| Container image size | < 30 MB | ~50 MB ⚠️ |
+| Cold start (single mode) | < 50 ms | ~7 ms ✅ |
+| Idle memory (server mode) | < 20 MB RSS | N/A (no server) |
+| Provider failover decision | < 5 ms | N/A (no fallback) |
+| Tool-call audit write | non-blocking, < 1 ms enqueue | N/A (not wired) |
 
 ---
 
@@ -346,7 +378,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 |---|---|
 | 0.1 | Memory-safe Rust, TLS check, no creds in config, distroless, signed images, SBOM, Trivy. |
 | 0.2 | Verified supply chain for downloaded binaries (SHA256 checksum); no panic/abort on client init; cross-compilation deps in CI. |
-| 0.4 | Deny-by-default tool policy, sandboxed execution, audit log, secret zeroization, prompt-injection defense. |
+| 0.4 | Deny-by-default tool policy, sandboxed execution, audit log, secret zeroization, prompt-injection defense. **(Infrastructure complete, needs wiring)** |
 | 0.6 | E2E-encrypted remote exec via RavenFabric. |
 | 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
 | 0.9 | External security review, fuzzing, published threat model. |
@@ -367,18 +399,17 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 
 Concrete items carried from the current codebase:
 
-1. ~~**`Cargo.lock` git-ignored vs. `--locked` everywhere** — breaks fresh-clone/CI/Docker/publish. *(blocker)*~~ ✅ Fixed
-2. ~~**Docker arm64 cross-compile** lacks a cross-linker under `--platform=$BUILDPLATFORM`. *(blocker)*~~ ✅ Fixed
-3. ~~**Unverified `curl | chmod +x`** of the RavenFabric agent in the Dockerfile. *(security)*~~ ✅ Fixed — SHA256 checksum verification
-4. ~~**CI cross-compilation builds fail** — missing `musl-tools` and `gcc-aarch64-linux-gnu` on runners. *(blocker)*~~ ✅ Fixed
-5. **k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.
-6. **Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4). *(v0.5)*
-7. **Dead/unwired code:** `next_client`, `rustls` + `zeroize` deps, and all `security`/`ravenfabric` config fields. *(v0.5)*
-8. ~~**Rust unit tests are shallow** — only 3 constructor/smoke tests; `mockito` unused.~~ ✅ Fixed — 149 tests across all modules
-9. ~~**`.expect()` on HTTP client build** under `panic = "abort"` — aborts on a config hiccup.~~ ✅ Fixed
-10. ~~**Version literal duplicated** in `main.rs` instead of `CARGO_PKG_VERSION`.~~ ✅ Fixed
-11. ~~**README historically over-claimed** vs. implemented state~~ ✅ Fixed
-12. ~~**`--exec` dead code** — CLI arg parsed but never used.~~ ✅ Fixed — fully implemented
+1. **Security infrastructure not wired** — `PolicyEngine`, `Sandbox`, `AuditLog` are complete but never invoked. *(v0.4 blocker)*
+2. **Pattern-matching tool calls** — Fragile `TOOL_CALL:` / `ARGS:` parsing instead of structured JSON. *(v0.4 blocker)*
+3. **No MCP integration** — Reinventing tools instead of using industry standard. *(v0.4 highest-leverage)*
+4. **k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.
+5. **Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4). *(v0.5)*
+6. **Dead/unwired code:** `rustls` + `zeroize` deps unused; `security`/`ravenfabric` config fields not honored. *(v0.5)*
+7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.5)*
+8. **No config hot-reload** — Changes require restart. *(v0.6)*
+9. **Container image ~50 MB** — Target is < 30 MB. *(v0.5)*
+10. **cargo-udeps findings** — Unused dependencies detected. *(periodic review)*
+11. **cargo-outdated findings** — Dependencies behind latest. *(periodic review)*
 
 ---
 
