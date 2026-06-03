@@ -24,14 +24,14 @@
 use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
 use sha2::Sha256;
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 use thiserror::Error;
-use tracing::{info, warn};
+use tracing::info;
 
 // ── Error types ────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 #[derive(Error, Debug)]
 pub enum AuditError {
     #[error("IO error: {0}")]
@@ -53,6 +53,7 @@ pub enum AuditError {
 // ── Event types ────────────────────────────────────────────────────────────
 
 /// Types of audit events
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum AuditEventType {
@@ -83,6 +84,7 @@ pub enum AuditEventType {
 }
 
 /// A single audit log entry
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AuditEntry {
     /// Sequential index (0-based)
@@ -106,6 +108,7 @@ pub struct AuditEntry {
 }
 
 /// The audit log — an append-only, tamper-evident log
+#[allow(dead_code)]
 pub struct AuditLog {
     /// The secret key for HMAC
     key: Vec<u8>,
@@ -119,6 +122,7 @@ pub struct AuditLog {
     file_path: Option<PathBuf>,
 }
 
+#[allow(dead_code)]
 impl AuditLog {
     /// Create a new audit log with a random key
     pub fn new(session_id: String) -> Self {
@@ -170,7 +174,15 @@ impl AuditLog {
         let timestamp = chrono::Utc::now().to_rfc3339();
 
         // Compute the HMAC
-        let hmac = self.compute_hmac(index, &timestamp, &event_type, component, description, &metadata, entries.last())?;
+        let hmac = self.compute_hmac(
+            index,
+            &timestamp,
+            &event_type,
+            component,
+            description,
+            &metadata,
+            entries.last(),
+        )?;
 
         let entry = AuditEntry {
             index,
@@ -226,10 +238,7 @@ impl AuditLog {
         self.append(
             AuditEventType::ToolResult,
             tool_name,
-            &format!(
-                "Tool result: {} (success: {})",
-                tool_name, result.success
-            ),
+            &format!("Tool result: {} (success: {})", tool_name, result.success),
             Some(serde_json::json!({
                 "success": result.success,
                 "exit_code": result.exit_code,
@@ -356,6 +365,7 @@ impl AuditLog {
 
     // ── Private helpers ────────────────────────────────────────────────
 
+    #[allow(clippy::too_many_arguments)]
     fn compute_hmac(
         &self,
         index: u64,
@@ -366,13 +376,20 @@ impl AuditLog {
         metadata: &Option<serde_json::Value>,
         prev_entry: Option<&AuditEntry>,
     ) -> Result<String, AuditError> {
-        let prev_hmac = prev_entry
-            .map(|e| e.hmac.as_str())
-            .unwrap_or("");
+        let prev_hmac = prev_entry.map(|e| e.hmac.as_str()).unwrap_or("");
 
-        self.compute_hmac_for_verification(index, timestamp, event_type, component, description, metadata, prev_hmac)
+        self.compute_hmac_for_verification(
+            index,
+            timestamp,
+            event_type,
+            component,
+            description,
+            metadata,
+            prev_hmac,
+        )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn compute_hmac_for_verification(
         &self,
         index: u64,
@@ -383,8 +400,12 @@ impl AuditLog {
         metadata: &Option<serde_json::Value>,
         prev_hmac: &str,
     ) -> Result<String, AuditError> {
-        let mut mac = Hmac::<Sha256>::new_from_slice(&self.key)
-            .map_err(|e| AuditError::Serialization(serde_json::Error::io(std::io::Error::new(std::io::ErrorKind::InvalidInput, e.to_string()))))?;
+        let mut mac = Hmac::<Sha256>::new_from_slice(&self.key).map_err(|e| {
+            AuditError::Serialization(serde_json::Error::io(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                e.to_string(),
+            )))
+        })?;
 
         mac.update(prev_hmac.as_bytes());
         mac.update(&index.to_le_bytes());
@@ -428,12 +449,7 @@ mod tests {
     fn test_audit_log_append() {
         let log = create_test_log();
         let entry = log
-            .append(
-                AuditEventType::AgentStart,
-                "agent",
-                "Agent started",
-                None,
-            )
+            .append(AuditEventType::AgentStart, "agent", "Agent started", None)
             .unwrap();
 
         assert_eq!(entry.index, 0);
@@ -447,13 +463,8 @@ mod tests {
     fn test_audit_log_multiple_entries() {
         let log = create_test_log();
 
-        log.append(
-            AuditEventType::AgentStart,
-            "agent",
-            "Agent started",
-            None,
-        )
-        .unwrap();
+        log.append(AuditEventType::AgentStart, "agent", "Agent started", None)
+            .unwrap();
 
         log.append(
             AuditEventType::ToolCall,
@@ -470,13 +481,8 @@ mod tests {
     fn test_audit_log_verify_valid() {
         let log = create_test_log();
 
-        log.append(
-            AuditEventType::AgentStart,
-            "agent",
-            "Agent started",
-            None,
-        )
-        .unwrap();
+        log.append(AuditEventType::AgentStart, "agent", "Agent started", None)
+            .unwrap();
 
         log.append(
             AuditEventType::ToolCall,
@@ -501,13 +507,8 @@ mod tests {
     fn test_audit_log_verify_tampered() {
         let log = create_test_log();
 
-        log.append(
-            AuditEventType::AgentStart,
-            "agent",
-            "Agent started",
-            None,
-        )
-        .unwrap();
+        log.append(AuditEventType::AgentStart, "agent", "Agent started", None)
+            .unwrap();
 
         log.append(
             AuditEventType::ToolCall,
@@ -557,7 +558,9 @@ mod tests {
     #[test]
     fn test_audit_log_approval_granted() {
         let log = create_test_log();
-        let entry = log.approval("shell_exec", true, Some("User approved")).unwrap();
+        let entry = log
+            .approval("shell_exec", true, Some("User approved"))
+            .unwrap();
 
         assert_eq!(entry.event_type, AuditEventType::ApprovalGranted);
     }
@@ -565,7 +568,9 @@ mod tests {
     #[test]
     fn test_audit_log_approval_denied() {
         let log = create_test_log();
-        let entry = log.approval("shell_exec", false, Some("User denied")).unwrap();
+        let entry = log
+            .approval("shell_exec", false, Some("User denied"))
+            .unwrap();
 
         assert_eq!(entry.event_type, AuditEventType::ApprovalDenied);
     }
@@ -574,13 +579,8 @@ mod tests {
     fn test_audit_log_to_json() {
         let log = create_test_log();
 
-        log.append(
-            AuditEventType::AgentStart,
-            "agent",
-            "Agent started",
-            None,
-        )
-        .unwrap();
+        log.append(AuditEventType::AgentStart, "agent", "Agent started", None)
+            .unwrap();
 
         let json = log.to_json().unwrap();
         assert!(json.contains("Agent started"));
@@ -591,13 +591,8 @@ mod tests {
     fn test_audit_log_to_json_lines() {
         let log = create_test_log();
 
-        log.append(
-            AuditEventType::AgentStart,
-            "agent",
-            "Agent started",
-            None,
-        )
-        .unwrap();
+        log.append(AuditEventType::AgentStart, "agent", "Agent started", None)
+            .unwrap();
 
         log.append(
             AuditEventType::ToolCall,
@@ -616,12 +611,7 @@ mod tests {
     fn test_audit_log_session_id() {
         let log = AuditLog::new("my-session-123".to_string());
         let entry = log
-            .append(
-                AuditEventType::AgentStart,
-                "agent",
-                "Agent started",
-                None,
-            )
+            .append(AuditEventType::AgentStart, "agent", "Agent started", None)
             .unwrap();
 
         assert_eq!(entry.session_id.unwrap(), "my-session-123");
@@ -633,21 +623,11 @@ mod tests {
         let log2 = AuditLog::with_key("test".to_string(), vec![2u8; 32]);
 
         let e1 = log1
-            .append(
-                AuditEventType::AgentStart,
-                "agent",
-                "Agent started",
-                None,
-            )
+            .append(AuditEventType::AgentStart, "agent", "Agent started", None)
             .unwrap();
 
         let e2 = log2
-            .append(
-                AuditEventType::AgentStart,
-                "agent",
-                "Agent started",
-                None,
-            )
+            .append(AuditEventType::AgentStart, "agent", "Agent started", None)
             .unwrap();
 
         assert_ne!(e1.hmac, e2.hmac);
@@ -721,12 +701,7 @@ mod tests {
         log.set_trace_logging(false);
 
         let entry = log
-            .append(
-                AuditEventType::AgentStart,
-                "agent",
-                "Agent started",
-                None,
-            )
+            .append(AuditEventType::AgentStart, "agent", "Agent started", None)
             .unwrap();
 
         assert_eq!(entry.index, 0);

@@ -11,6 +11,7 @@ All notable changes to RavenClaw will be documented in this file.
 
 ### Fixed
 - CI workflows: Trivy action updated to `v0.36.0`, Kubescape action migrated to `kubescape/github-action@main`, CodeQL upload-sarif updated to `@v4`, `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` added to all workflows
+- CI: Fixed `cargo fmt --check` and `cargo clippy` failures — added `#[allow(dead_code)]` to v0.4 infrastructure types (audit, policy, sandbox, tools), `#[allow(clippy::too_many_arguments)]` to HMAC functions, renamed `MCP` → `Mcp`, ran `cargo fmt`
 - Removed unused `rustls = "0.23"` and `zeroize = "1.8"` dependencies
 
 ### Added

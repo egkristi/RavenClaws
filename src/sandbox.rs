@@ -18,10 +18,11 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use thiserror::Error;
-use tracing::{info, warn};
+use tracing::info;
 
 // ── Error types ────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 #[derive(Error, Debug)]
 pub enum SandboxError {
     #[error("Path '{0}' is outside the sandbox")]
@@ -43,6 +44,7 @@ pub enum SandboxError {
 // ── Sandbox configuration ──────────────────────────────────────────────────
 
 /// Sandbox configuration
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SandboxConfig {
     /// Base working directory for the sandbox
@@ -117,12 +119,14 @@ fn default_true() -> bool {
 // ── Sandbox ────────────────────────────────────────────────────────────────
 
 /// A sandboxed execution environment
+#[allow(dead_code)]
 pub struct Sandbox {
     config: SandboxConfig,
     workdir: PathBuf,
     initialized: bool,
 }
 
+#[allow(dead_code)]
 impl Sandbox {
     /// Create a new sandbox with the given configuration
     pub fn new(config: SandboxConfig) -> Self {
@@ -272,7 +276,11 @@ impl Sandbox {
     }
 
     /// Create a temporary file within the sandbox
-    pub async fn create_temp_file(&self, prefix: &str, suffix: &str) -> Result<PathBuf, SandboxError> {
+    pub async fn create_temp_file(
+        &self,
+        prefix: &str,
+        suffix: &str,
+    ) -> Result<PathBuf, SandboxError> {
         if !self.initialized {
             return Err(SandboxError::NotInitialized(
                 "Sandbox must be initialized before creating temp files".to_string(),
@@ -308,7 +316,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_init() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_sandbox_init_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaw_sandbox_init_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             ..SandboxConfig::default()
@@ -326,7 +335,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_resolve_relative_path() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_sandbox_rel_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaw_sandbox_rel_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -344,7 +354,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_resolve_absolute_path_in_sandbox() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_sandbox_abs_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaw_sandbox_abs_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -354,7 +365,9 @@ mod tests {
         sandbox.init().await.unwrap();
 
         let test_path = dir.join("subdir").join("file.txt");
-        let resolved = sandbox.resolve_path(test_path.to_string_lossy().as_ref()).unwrap();
+        let resolved = sandbox
+            .resolve_path(test_path.to_string_lossy().as_ref())
+            .unwrap();
         assert!(resolved.starts_with(&dir));
 
         sandbox.cleanup().await.unwrap();
@@ -362,7 +375,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_resolve_path_outside() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_sandbox_outside_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaw_sandbox_outside_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -388,12 +402,16 @@ mod tests {
         let sandbox = Sandbox::new(config);
 
         let result = sandbox.resolve_path("test.txt");
-        assert!(matches!(result.unwrap_err(), SandboxError::NotInitialized(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            SandboxError::NotInitialized(_)
+        ));
     }
 
     #[tokio::test]
     async fn test_sandbox_check_read_path_not_found() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_sandbox_read_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaw_sandbox_read_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -444,7 +462,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_create_temp_file() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_sandbox_temp_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaw_sandbox_temp_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -468,7 +487,10 @@ mod tests {
         let sandbox = Sandbox::new(config);
 
         let result = sandbox.create_temp_file("test", ".txt").await;
-        assert!(matches!(result.unwrap_err(), SandboxError::NotInitialized(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            SandboxError::NotInitialized(_)
+        ));
     }
 
     #[test]
@@ -507,7 +529,10 @@ mod tests {
 
     #[test]
     fn test_sandbox_drop_cleanup() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_sandbox_drop_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "ravenclaw_sandbox_drop_test_{}",
+            std::process::id()
+        ));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -531,7 +556,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_check_write_path() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_sandbox_write_{}", std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaw_sandbox_write_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,

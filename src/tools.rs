@@ -35,9 +35,11 @@ pub enum ToolError {
     #[error("Invalid arguments for tool '{0}': {1}")]
     InvalidArguments(String, String),
 
+    #[allow(dead_code)]
     #[error("Policy denied: {0}")]
     PolicyDenied(String),
 
+    #[allow(dead_code)]
     #[error("Sandbox violation: {0}")]
     SandboxViolation(String),
 
@@ -92,6 +94,7 @@ impl JsonSchema {
     }
 
     /// Create an array schema
+    #[allow(dead_code)]
     pub fn array(items: JsonSchema, description: &str) -> Self {
         Self {
             schema_type: "array".to_string(),
@@ -131,7 +134,7 @@ pub enum ToolCategory {
     Network,
     CodeAnalysis,
     WebSearch,
-    MCP,
+    Mcp,
 }
 
 /// A tool call request from the LLM
@@ -211,6 +214,7 @@ impl ToolRegistry {
     }
 
     /// Check if a tool exists
+    #[allow(dead_code)]
     pub fn has(&self, name: &str) -> bool {
         self.tools.contains_key(name)
     }
@@ -224,6 +228,7 @@ impl ToolRegistry {
     }
 
     /// Get the number of registered tools
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.tools.len()
     }
@@ -422,7 +427,11 @@ impl ToolImpl for ReadFileTool {
         })?;
 
         let truncated = if content.len() > max_bytes {
-            format!("{}...\n[truncated at {} bytes]", &content[..max_bytes], max_bytes)
+            format!(
+                "{}...\n[truncated at {} bytes]",
+                &content[..max_bytes],
+                max_bytes
+            )
         } else {
             content
         };
@@ -458,7 +467,9 @@ impl WriteFileTool {
             "append".to_string(),
             JsonSchema {
                 schema_type: "boolean".to_string(),
-                description: Some("If true, append instead of overwrite (default: false)".to_string()),
+                description: Some(
+                    "If true, append instead of overwrite (default: false)".to_string(),
+                ),
                 properties: None,
                 required: None,
                 items: None,
@@ -568,10 +579,7 @@ pub struct WebFetchTool {
 impl WebFetchTool {
     pub fn new() -> Self {
         let mut properties = HashMap::new();
-        properties.insert(
-            "url".to_string(),
-            JsonSchema::string("The URL to fetch"),
-        );
+        properties.insert("url".to_string(), JsonSchema::string("The URL to fetch"));
         properties.insert(
             "max_bytes".to_string(),
             JsonSchema {
@@ -627,10 +635,7 @@ impl ToolImpl for WebFetchTool {
             })?;
 
         let response = client.get(url).send().await.map_err(|e| {
-            ToolError::ExecutionFailed(
-                "web_fetch".to_string(),
-                format!("Request failed: {}", e),
-            )
+            ToolError::ExecutionFailed("web_fetch".to_string(), format!("Request failed: {}", e))
         })?;
 
         let status = response.status();
@@ -693,7 +698,11 @@ async fn run_shell_command(
     } else {
         "sh"
     };
-    let flag = if cfg!(target_os = "windows") { "/C" } else { "-c" };
+    let flag = if cfg!(target_os = "windows") {
+        "/C"
+    } else {
+        "-c"
+    };
 
     let mut cmd = Command::new(shell);
     cmd.arg(flag).arg(command);
@@ -702,18 +711,20 @@ async fn run_shell_command(
         cmd.current_dir(dir);
     }
 
-    let output = tokio::time::timeout(
-        std::time::Duration::from_secs(timeout_secs),
-        cmd.output(),
-    )
-    .await
-    .map_err(|_| ToolError::ExecutionFailed(
-        "shell_exec".to_string(),
-        format!("Command timed out after {} seconds", timeout_secs),
-    ))?
-    .map_err(|e| {
-        ToolError::ExecutionFailed("shell_exec".to_string(), format!("Failed to execute: {}", e))
-    })?;
+    let output = tokio::time::timeout(std::time::Duration::from_secs(timeout_secs), cmd.output())
+        .await
+        .map_err(|_| {
+            ToolError::ExecutionFailed(
+                "shell_exec".to_string(),
+                format!("Command timed out after {} seconds", timeout_secs),
+            )
+        })?
+        .map_err(|e| {
+            ToolError::ExecutionFailed(
+                "shell_exec".to_string(),
+                format!("Failed to execute: {}", e),
+            )
+        })?;
 
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
@@ -908,10 +919,7 @@ mod tests {
     #[test]
     fn test_tool_error_execution_failed() {
         let err = ToolError::ExecutionFailed("test".to_string(), "oops".to_string());
-        assert_eq!(
-            format!("{}", err),
-            "Tool 'test' execution failed: oops"
-        );
+        assert_eq!(format!("{}", err), "Tool 'test' execution failed: oops");
     }
 
     #[test]
@@ -932,10 +940,7 @@ mod tests {
     #[test]
     fn test_tool_error_sandbox_violation() {
         let err = ToolError::SandboxViolation("escape attempt".to_string());
-        assert_eq!(
-            format!("{}", err),
-            "Sandbox violation: escape attempt"
-        );
+        assert_eq!(format!("{}", err), "Sandbox violation: escape attempt");
     }
 
     #[test]
@@ -996,7 +1001,10 @@ mod tests {
         let args = serde_json::json!({"path": "/tmp/nonexistent_file_ravenclaw_test"});
         let result = tool.execute(args).await;
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), ToolError::ExecutionFailed(_, _)));
+        assert!(matches!(
+            result.unwrap_err(),
+            ToolError::ExecutionFailed(_, _)
+        ));
     }
 
     #[tokio::test]

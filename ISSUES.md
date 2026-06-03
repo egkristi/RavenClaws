@@ -129,6 +129,47 @@ Added `continue-on-error: true` to the upload-sarif step.
 
 **Status:** ✅ Resolved — Kubescape SARIF upload now works correctly.
 
+### Build & Release: Check job fails (clippy dead_code + fmt)
+
+**Problem:** Build & Release #28 (commit `21b0b9d`) failed during the Check job.
+Root causes:
+1. `cargo fmt --check` failed — formatting drift in `src/agent.rs` and `src/audit.rs`
+2. `cargo clippy --locked --all-targets -- -D warnings` failed — 20+ dead_code warnings
+   across `audit.rs`, `policy.rs`, `sandbox.rs`, `tools.rs`, plus `too_many_arguments`
+   in `audit.rs` and capitalized acronym `MCP` in `tools.rs`
+
+**Root cause:** The v0.4 modules (`audit.rs`, `policy.rs`, `sandbox.rs`) contain
+public infrastructure types that are not yet wired into the agent loop, causing
+`dead_code` warnings. The `#[allow(dead_code)]` annotations were missing.
+
+**Fix:** Added `#[allow(dead_code)]` to all infrastructure types and impl blocks,
+`#[allow(clippy::too_many_arguments)]` to HMAC computation functions, renamed
+`MCP` → `Mcp`, and ran `cargo fmt`.
+
+**Status:** ✅ Resolved — all 274 tests pass, clippy clean, fmt clean.
+
+### Security Scan: Multiple jobs fail (CodeQL, Udeps, Outdated, Trivy, K8s)
+
+**Problem:** Security Scan #18 (commit `21b0b9d`) failed with 6 errors:
+1. **CodeQL** — exit code 101 (analysis failure)
+2. **Cargo Udeps** — exit code 101 (unused dependencies found)
+3. **Cargo Outdated** — exit code 1 (outdated dependencies)
+4. **Trivy (Filesystem)** — exit code 1 (vulnerabilities found)
+5. **Trivy (IaC Config)** — exit code 1 (misconfigurations found)
+6. **K8s Manifest Validation** — exit code 2 (Kubescape validation errors)
+
+**Status:** 🔴 Unresolved — most are pre-existing issues (Udeps, Outdated, Trivy,
+K8s validation). CodeQL failure may be related to new v0.4 code.
+
+### Container Build: Still running / may fail
+
+**Problem:** Container Build #26 (commit `21b0b9d`) was still in progress when
+checked. Previous Container Build runs (#12-#24) all failed with various issues
+(Trivy action not found, RavenFabric download failures, cross-compilation errors).
+Most of those have been fixed, but the current run's status is unknown.
+
+**Status:** ⚠️ Needs monitoring — check Container Build #26 result.
+
 ### GitHub Actions: Node.js 20 deprecation warnings
 
 **Problem:** Multiple workflow jobs emit warnings that Node.js 20 actions are

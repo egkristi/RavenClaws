@@ -437,10 +437,7 @@ async fn execute_tool_call(content: &str, registry: &ToolRegistry) -> Option<Too
 
     // Find the ARGS line
     let args_line = lines.find(|l| l.trim().starts_with("ARGS:"))?;
-    let args_str = args_line
-        .trim()
-        .strip_prefix("ARGS:")
-        .map(|s| s.trim())?;
+    let args_str = args_line.trim().strip_prefix("ARGS:").map(|s| s.trim())?;
 
     let args: serde_json::Value = serde_json::from_str(args_str).ok()?;
 

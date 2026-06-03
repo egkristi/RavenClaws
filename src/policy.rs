@@ -23,10 +23,9 @@
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use thiserror::Error;
-use tracing::{info, warn};
-
 // ── Error types ────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 #[derive(Error, Debug)]
 pub enum PolicyError {
     #[error("Policy denied: {0}")]
@@ -39,6 +38,7 @@ pub enum PolicyError {
 // ── Policy types ───────────────────────────────────────────────────────────
 
 /// Policy decision
+#[allow(dead_code)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Decision {
     /// Allow the operation
@@ -47,6 +47,7 @@ pub enum Decision {
     Deny(String),
 }
 
+#[allow(dead_code)]
 impl Decision {
     pub fn is_allowed(&self) -> bool {
         matches!(self, Decision::Allow)
@@ -54,6 +55,7 @@ impl Decision {
 }
 
 /// Shell command policy
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShellPolicy {
     /// If true, all shell commands are denied (default: false)
@@ -118,6 +120,7 @@ impl Default for ShellPolicy {
 }
 
 /// Filesystem path policy
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PathPolicy {
     /// List of allowed read path prefixes
@@ -166,6 +169,7 @@ impl Default for PathPolicy {
 }
 
 /// Network policy
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkPolicy {
     /// If true, all network access is denied
@@ -208,6 +212,7 @@ impl Default for NetworkPolicy {
 }
 
 /// Complete security policy
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SecurityPolicy {
     /// Shell command policy
@@ -242,10 +247,12 @@ impl Default for SecurityPolicy {
 // ── Policy engine ──────────────────────────────────────────────────────────
 
 /// The policy engine — checks tool calls against the security policy
+#[allow(dead_code)]
 pub struct PolicyEngine {
     policy: SecurityPolicy,
 }
 
+#[allow(dead_code)]
 impl PolicyEngine {
     /// Create a new policy engine with the given policy
     pub fn new(policy: SecurityPolicy) -> Self {
@@ -305,7 +312,9 @@ impl PolicyEngine {
         if self.policy.require_approval_all {
             return true;
         }
-        self.policy.require_approval_for.contains(&tool_name.to_string())
+        self.policy
+            .require_approval_for
+            .contains(&tool_name.to_string())
     }
 
     /// Get the policy configuration
@@ -322,10 +331,7 @@ impl PolicyEngine {
             return Decision::Deny("All shell commands are denied by policy".to_string());
         }
 
-        let command = args
-            .get("command")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let command = args.get("command").and_then(|v| v.as_str()).unwrap_or("");
 
         if command.is_empty() {
             return Decision::Deny("Empty command".to_string());
@@ -488,10 +494,7 @@ impl PolicyEngine {
         });
 
         if !is_allowed {
-            return Decision::Deny(format!(
-                "Host '{}' is not in the allowed hosts list",
-                host
-            ));
+            return Decision::Deny(format!("Host '{}' is not in the allowed hosts list", host));
         }
 
         Decision::Allow
@@ -853,7 +856,9 @@ mod tests {
     fn test_security_policy_default() {
         let policy = SecurityPolicy::default();
         assert!(!policy.require_approval_all);
-        assert!(policy.require_approval_for.contains(&"shell_exec".to_string()));
+        assert!(policy
+            .require_approval_for
+            .contains(&"shell_exec".to_string()));
     }
 
     #[test]
