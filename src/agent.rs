@@ -427,7 +427,7 @@ async fn execute_tool_call_with_security(
     let (tool_name, args) = parse_tool_call(content)?;
 
     // Delegate to the common execution logic
-    execute_parsed_tool_call(tool_name, args, registry, policy_engine, sandbox, audit_log).await
+    execute_parsed_tool_call(tool_name, args, registry, policy_engine, _sandbox, audit_log).await
 }
 
 /// Parse a tool call from LLM response content
