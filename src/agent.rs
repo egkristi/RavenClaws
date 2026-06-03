@@ -447,7 +447,8 @@ pub async fn run_exec_stream(
             while let Some(chunk) = stream.next().await {
                 match chunk {
                     Ok(chunk) => {
-                        if let Some(content) = chunk.choices.first().and_then(|c| c.delta.content.as_ref())
+                        if let Some(content) =
+                            chunk.choices.first().and_then(|c| c.delta.content.as_ref())
                         {
                             print!("{}", content);
                             full_response.push_str(content);
