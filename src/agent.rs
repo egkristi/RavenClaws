@@ -318,7 +318,7 @@ async fn execute_parsed_tool_call(
     args: serde_json::Value,
     registry: &ToolRegistry,
     policy_engine: &PolicyEngine,
-    sandbox: &Sandbox,
+    _sandbox: &Sandbox,
     audit_log: &AuditLog,
 ) -> Option<ToolResult> {
     info!(tool = %tool_name, "Executing parsed tool call");
