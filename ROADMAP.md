@@ -1,8 +1,9 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
-**Date:** 2026-06-03  
-**Version:** v0.4 (unreleased)  
-**Commit:** `68d2454` — "Add multi-provider LLM support (LiteLLM, OpenRouter, Ollama, OpenAI)"
+**Date:** 2026-06-04  
+**Version:** v0.5 (in development)  
+**Previous Release:** v0.4.0 (2026-06-03) — Tools and Safety ✅  
+**Current Commit:** `99501b3` — chore: update Cargo.lock version to 0.4.0
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -60,14 +61,26 @@ can't be added without breaking one, it doesn't ship in core.
 | Structured function calling | ❌ Missing | Tool calls use pattern-matching on LLM output, not structured JSON |
 | MCP client/server | ❌ Missing | No Model Context Protocol integration |
 
-### 🔧 Critical Blockers (v0.4 Release)
+### ✅ v0.4.0 Released (2026-06-03)
 
-These must be resolved before v0.4 can ship:
+All v0.4 blockers resolved and shipped:
+- ✅ Security features wired to agent loop (commit `51e42b0`)
+- ✅ Structured function calling (OpenAI Tools format)
+- ✅ 274 unit tests + 94 verification tests
+- ✅ CI/CD pipeline green (fmt, clippy, test, security scans)
 
-1. **Security features not wired to agent loop** — `PolicyEngine`, `Sandbox`, and `AuditLog` are fully implemented but never invoked during execution. This is a **critical risk** — security features that aren't called provide false confidence. *(blocker)*
-2. **No structured function calling** — Tool calls rely on fragile pattern-matching (`TOOL_CALL:` / `ARGS:`) instead of structured JSON. OpenAI, Anthropic, and other providers support native function calling. *(blocker)*
-3. **k8s Deployment enters CrashLoopBackOff** — The binary exits after one request, but Kubernetes expects a long-running process. Server mode is planned for v0.7. *(documented limitation)*
-4. **No MCP integration** — Model Context Protocol is an industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). Missing MCP means reinventing tools instead of plugging into the ecosystem. *(highest-leverage gap)*
+**Known limitations (documented, not blockers):**
+- k8s Deployment enters CrashLoopBackOff — server mode planned for v0.7
+- No MCP integration — highest-leverage gap for v0.5+
+
+### 🔧 Critical Blockers (v0.5 Release)
+
+These must be resolved before v0.5 can ship:
+
+1. **Code duplication across OpenAI-compatible clients** — `handle_response()` logic copied 4× (LiteLLM, OpenAI, OpenRouter). *(blocker)*
+2. **No provider fallback/retry logic** — Single point of failure if provider goes down. *(blocker)*
+3. **No token budget tracking** — Cannot enforce cost limits per run. *(blocker)*
+4. **No MCP integration** — Industry standard for tool interoperability. *(highest-leverage)*
 
 ### ✅ Resolved (v0.1 → v0.4)
 
@@ -282,17 +295,55 @@ Agency with guardrails — the security differentiator.
 
 **Exit criteria:** an agent runs tools, but only those allowed by policy, with a complete audit log. Security features actively invoked, not just present.
 
-### v0.5 — Providers and routing 🔀
+### v0.5 — Providers and routing 🔀 **(IN DEVELOPMENT)**
 
-- [ ] **Collapse duplicated OpenAI-compatible clients** (LiteLLM/OpenAI/OpenRouter) into one parameterized client; keep Ollama as the documented variant. (`handle_response` is currently copy-pasted 4×.)
-- [ ] **Routing strategies**: round-robin (load balance), cost-aware (cheap model for easy tasks), **fallback chains** on error/rate-limit.
-- [ ] **Resilience**: retries with exponential backoff + jitter; per-provider circuit breaker.
-- [ ] **Token accounting & per-run budgets/limits.**
-- [ ] **Native Anthropic provider**; embeddings endpoint; tool-calling parity across providers.
-- [ ] **Multi-modal input** — images, PDFs, and documents as agent input.
-- [ ] **Skill / plugin system** — portable capability bundles (instructions + scripts + resources), à la Claude Agent Skills, with progressive disclosure.
+**Primary objective:** Eliminate code duplication and add production-grade resilience.
 
-**Exit criteria:** a single run transparently fails over between providers and respects a token budget.
+- [ ] **Unified OpenAI-Compatible Client**
+  - Merge LiteLLM, OpenAI, OpenRouter into `OpenAICompatibleClient` with provider enum
+  - Provider-specific defaults: endpoint, headers (OpenRouter needs `HTTP-Referer`, `X-Title`)
+  - Keep Ollama separate (different API format)
+  - **Impact:** ~400 LOC reduction, single maintenance path
+
+- [ ] **Retry & Fallback Chain**
+  - Exponential backoff with jitter (base 100ms, max 10s, 3 retries)
+  - Fallback chain: primary → secondary → tertiary (configurable order)
+  - Circuit breaker: open after 5 consecutive failures, half-open after 30s
+  - **Exit criteria:** `ravenclaw --exec "task"` with fallback to Ollama when cloud providers fail
+
+- [ ] **Token Budget & Cost Tracking**
+  - `--token-budget <N>` CLI flag and `RAVENCLAW_TOKEN_BUDGET` env var
+  - Track tokens per request using `usage` field in responses
+  - Cost estimation table (per-provider, per-model pricing)
+  - Auto-downgrade: switch to cheaper model when 80% of budget consumed
+  - **Exit criteria:** Agent stops before exceeding budget, logs cost estimate
+
+- [ ] **MCP Client Integration** (highest leverage)
+  - MCP client: connect to external MCP servers (filesystem, database, API tools)
+  - Tool discovery and registration from MCP servers
+  - Protocol: JSON-RPC over stdio or SSE
+  - **Exit criteria:** Can use MCP-provided tools alongside built-in tools
+
+- [ ] **Native Anthropic Provider**
+  - Direct Anthropic API client (not via OpenRouter)
+  - Support for tool use (Anthropic's native function calling)
+  - Image input support (multi-modal)
+
+- [ ] **Multi-modal Input**
+  - Image attachments in `ChatMessage` (base64 or URL)
+  - PDF/text document ingestion
+  - Provider-specific encoding (OpenAI vision, Anthropic images)
+
+- [ ] **Skill / Plugin System** (foundations)
+  - Portable capability bundles: `skill.yaml` + scripts + resources
+  - Progressive disclosure: skills advertise capabilities, agent selects
+  - Sandboxed skill execution (reuse `Sandbox`)
+
+**Exit criteria:**
+1. Single run transparently fails over between providers
+2. Respects token budget
+3. Can consume MCP-provided tools
+4. Code coverage ≥80% on routing/fallback logic
 
 ### v0.6 — Swarm, supervisor, and RavenFabric 🕸️
 

@@ -43,12 +43,42 @@ All notable changes to RavenClaw will be documented in this file.
 
 ---
 
-## [Unreleased]
+## [Unreleased] — v0.5 Planning
 
-### Added
-- Agent loop (perceive→plan→act→observe) — `AgentLoopConfig` + `run_agent_loop()` with max-iteration guard and `FINAL:` marker detection
-- `--max-iterations` CLI flag and `RAVENCLAW_MAX_ITERATIONS` env var for agent loop configuration
-- 6 new agent loop tests: config defaults, FINAL completion, max iterations reached, LLM error, empty response, custom config
+### v0.5 Target: Providers and Routing 🔀
+
+**Goal:** Collapse duplicated client code, add resilient provider handling, and enable cost-aware routing.
+
+### Planned
+
+**Unified OpenAI-Compatible Client**
+- Merge LiteLLM, OpenAI, OpenRouter clients into single `OpenAICompatibleClient` with provider-specific config
+- Eliminate 4× duplicated `handle_openai_response()` calls
+- Provider-specific headers and endpoint defaults only
+
+**Resilience & Fallback**
+- Retry with exponential backoff + jitter on transient errors
+- Provider fallback chain on auth/rate-limit/server errors
+- Circuit breaker pattern for failing providers
+
+**Token & Cost Tracking**
+- Per-run token budget enforcement
+- Cost estimation per provider (using known pricing)
+- Automatic model downgrade when approaching budget limits
+
+**MCP Integration (Highest Leverage)**
+- MCP client: consume external MCP servers for tools
+- MCP server: expose RavenClaw tools to external agents
+- Bridge to existing tool ecosystem (file systems, databases, APIs)
+
+### Blockers Identified
+- No Rust toolchain in OpenClaw container (cannot compile/test locally)
+- GitHub token expired (cannot check CI status or push changes)
+- Atlassian service previously DOWN (cannot sync Jira)
+
+---
+
+### Added (v0.5 groundwork)
 
 ### Fixed
 - CI workflows: Trivy action updated to `v0.36.0`, Kubescape action migrated to `kubescape/github-action@main`, CodeQL upload-sarif updated to `@v4`, `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` added to all workflows
