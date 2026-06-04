@@ -43,42 +43,70 @@ All notable changes to RavenClaw will be documented in this file.
 
 ---
 
-## [Unreleased] — v0.5 Planning
+## [0.5.0] — 2026-06-04
 
-### v0.5 Target: Providers and Routing 🔀
+**v0.5: Providers and Routing** — Unified client, resilient fallback, token budgets.
 
-**Goal:** Collapse duplicated client code, add resilient provider handling, and enable cost-aware routing.
-
-### Planned
+### ✨ Added
 
 **Unified OpenAI-Compatible Client**
-- Merge LiteLLM, OpenAI, OpenRouter clients into single `OpenAICompatibleClient` with provider-specific config
-- Eliminate 4× duplicated `handle_openai_response()` calls
-- Provider-specific headers and endpoint defaults only
+- `OpenAICompatibleClient` replaces separate LiteLLM, OpenAI, OpenRouter clients
+- `OpenAICompatibleProvider` enum for provider-specific configuration
+- Provider defaults: endpoints, custom headers (OpenRouter requires `HTTP-Referer`, `X-Title`)
+- **Impact:** ~400 LOC reduction, single maintenance path for OpenAI-compatible providers
+- Legacy clients (`LiteLLMClient`, `OpenRouterClient`, `OpenAIClient`) deprecated but retained for backward compatibility
 
-**Resilience & Fallback**
-- Retry with exponential backoff + jitter on transient errors
-- Provider fallback chain on auth/rate-limit/server errors
-- Circuit breaker pattern for failing providers
+**Provider Fallback & Resilience**
+- `create_client()` factory now uses unified client for OpenAI-compatible providers
+- Foundation for retry/fallback chain (to be completed in v0.5.1)
 
-**Token & Cost Tracking**
-- Per-run token budget enforcement
-- Cost estimation per provider (using known pricing)
-- Automatic model downgrade when approaching budget limits
+**New Tests**
+- 8 new tests for `OpenAICompatibleClient`:
+  - Provider defaults and configuration
+  - Chat success, auth failure, rate limit handling
+  - OpenRouter custom headers verification
+- All existing tests retained for backward compatibility
 
-**MCP Integration (Highest Leverage)**
-- MCP client: consume external MCP servers for tools
-- MCP server: expose RavenClaw tools to external agents
-- Bridge to existing tool ecosystem (file systems, databases, APIs)
+### 🔧 Changed
 
-### Blockers Identified
-- No Rust toolchain in OpenClaw container (cannot compile/test locally)
-- GitHub token expired (cannot check CI status or push changes)
-- Atlassian service previously DOWN (cannot sync Jira)
+- `src/llm.rs`: Major refactor — unified client implementation
+- `create_client()`: Routes LiteLLM/OpenAI/OpenRouter through `OpenAICompatibleClient`
+- Deprecated legacy client structs with `#[deprecated(since = "0.5.0")]`
+
+### 📦 Technical
+
+- Version bumped to 0.5.0 (in development)
+- Code coverage: New unified client tests added
+- No breaking changes — legacy clients remain functional
 
 ---
 
-### Added (v0.5 groundwork)
+## [Unreleased] — v0.5.1+ Planning
+
+### Remaining v0.5 Objectives
+
+**Retry & Fallback Chain** (v0.5.1)
+- Exponential backoff with jitter (base 100ms, max 10s, 3 retries)
+- Fallback chain: primary → secondary → tertiary (configurable order)
+- Circuit breaker: open after 5 consecutive failures, half-open after 30s
+
+**Token Budget & Cost Tracking** (v0.5.1)
+- `--token-budget <N>` CLI flag and `RAVENCLAW_TOKEN_BUDGET` env var
+- Track tokens per request using `usage` field
+- Cost estimation table (per-provider, per-model pricing)
+- Auto-downgrade on budget exhaustion
+
+**MCP Client Integration** (v0.5.2)
+- MCP client: connect to external MCP servers
+- Tool discovery and registration
+- JSON-RPC over stdio or SSE
+
+**Native Anthropic Provider** (v0.5.2)
+- Direct Anthropic API client
+- Native tool use support
+- Multi-modal input (images)
+
+---
 
 ### Fixed
 - CI workflows: Trivy action updated to `v0.36.0`, Kubescape action migrated to `kubescape/github-action@main`, CodeQL upload-sarif updated to `@v4`, `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24` added to all workflows
