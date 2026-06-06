@@ -7,11 +7,13 @@ use crate::audit::{AuditEventType, AuditLog};
 use crate::config::Config;
 use crate::error::Result;
 use crate::llm::{ChatMessage, Choice, LLMProviderTrait, MultiModelManager};
+use crate::mcp::McpClient;
 use crate::policy::{Decision, PolicyEngine};
 use crate::sandbox::Sandbox;
 use crate::tools::{ToolCall, ToolRegistry, ToolResult};
 use futures::StreamExt;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 /// In-memory conversation memory — stores message history for the session.
@@ -145,6 +147,227 @@ pub async fn run_agent_loop(
             "model": llm.model(),
             "max_iterations": config.max_iterations,
             "enable_tools": config.enable_tools,
+        })),
+    );
+
+    let mut memory = ConversationMemory::new(system_prompt, 0);
+    memory.add_user_message(initial_prompt);
+
+    for iteration in 0..config.max_iterations {
+        let messages = memory.history().to_vec();
+
+        let response = match llm.chat(messages).await {
+            Ok(r) => r,
+            Err(e) => {
+                warn!(error = %e, "LLM request failed");
+                let _ = audit_log.append(
+                    AuditEventType::Error,
+                    "llm",
+                    &format!("LLM request failed: {}", e),
+                    None,
+                );
+                return Err(crate::error::RavenClawError::Llm(e));
+            }
+        };
+
+        let first_choice = response.choices.first();
+        let content = first_choice
+            .map(|c| c.message.content.clone())
+            .unwrap_or_default();
+
+        // Check for structured tool calls first (OpenAI Tools format)
+        if config.enable_tools {
+            if let Some((tool_name, args)) = first_choice.and_then(parse_structured_tool_call) {
+                info!(tool = %tool_name, "Structured tool call detected");
+
+                // Execute tool with security
+                if let Some(tool_result) = execute_parsed_tool_call(
+                    tool_name,
+                    args,
+                    &registry,
+                    &policy_engine,
+                    &sandbox,
+                    &audit_log,
+                )
+                .await
+                {
+                    let observation = if tool_result.success {
+                        format!("OBSERVATION: {}", tool_result.output)
+                    } else {
+                        format!(
+                            "OBSERVATION: Tool failed with error: {}",
+                            tool_result.error.as_deref().unwrap_or("unknown error")
+                        )
+                    };
+
+                    memory.add_user_message(&observation);
+
+                    info!(
+                        iteration = iteration,
+                        tool = %tool_result.tool_name,
+                        success = tool_result.success,
+                        "Structured tool executed"
+                    );
+                    continue;
+                }
+            }
+        }
+
+        // Check for completion signal
+        if content.contains("FINAL:") {
+            let final_response = content
+                .split("FINAL:")
+                .nth(1)
+                .unwrap_or("")
+                .trim()
+                .to_string();
+
+            memory.add_assistant_message(&content);
+
+            // Audit: agent finish
+            let _ = audit_log.append(
+                AuditEventType::AgentFinish,
+                "agent",
+                "Agent loop completed successfully",
+                Some(serde_json::json!({
+                    "iterations": iteration + 1,
+                    "final_response_length": final_response.len(),
+                })),
+            );
+
+            return Ok(final_response);
+        }
+
+        // Execute tool calls if enabled (legacy pattern-matching fallback)
+        if config.enable_tools {
+            if let Some(tool_result) = execute_tool_call_with_security(
+                &content,
+                &registry,
+                &policy_engine,
+                &sandbox,
+                &audit_log,
+            )
+            .await
+            {
+                let observation = if tool_result.success {
+                    format!("OBSERVATION: {}", tool_result.output)
+                } else {
+                    format!(
+                        "OBSERVATION: Tool failed with error: {}",
+                        tool_result.error.as_deref().unwrap_or("unknown error")
+                    )
+                };
+
+                memory.add_assistant_message(&content);
+                memory.add_user_message(&observation);
+
+                info!(
+                    iteration = iteration,
+                    tool = %tool_result.tool_name,
+                    success = tool_result.success,
+                    "Tool executed"
+                );
+                continue;
+            }
+        }
+
+        // No tool call found and no FINAL: — treat as regular response
+        memory.add_assistant_message(&content);
+
+        info!(
+            iteration = iteration,
+            thought = %content.lines().find(|l| l.starts_with("THOUGHT:")).unwrap_or("<no thought>"),
+            "Agent loop progress"
+        );
+    }
+
+    // Max iterations reached
+    warn!(
+        max_iterations = config.max_iterations,
+        "Agent loop reached max iterations"
+    );
+
+    let _ = audit_log.append(
+        AuditEventType::Error,
+        "agent",
+        "Agent loop reached max iterations without completing",
+        Some(serde_json::json!({
+            "max_iterations": config.max_iterations,
+        })),
+    );
+
+    let history = memory.history();
+    if history.len() > 1 {
+        if let Some(last) = history.last() {
+            return Ok(last.content.clone());
+        }
+    }
+
+    Err(crate::error::RavenClawError::CommandExecution(
+        "Agent loop reached max iterations without completing the task".to_string(),
+    ))
+}
+
+/// Run the agent loop with MCP tool integration (v0.5.2)
+///
+/// This version extends run_agent_loop with MCP tool support:
+/// 1. Registers MCP tools into the ToolRegistry
+/// 2. MCP tools are executed alongside built-in tools
+pub async fn run_agent_loop_with_mcp(
+    llm: Arc<dyn LLMProviderTrait>,
+    initial_prompt: &str,
+    system_prompt: &str,
+    config: AgentLoopConfig,
+    mcp_client: Option<Arc<RwLock<McpClient>>>,
+) -> Result<String> {
+    // Initialize security components
+    let policy_engine = PolicyEngine::default_secure();
+    let mut sandbox = Sandbox::default();
+    sandbox.init().await.map_err(|e| {
+        crate::error::RavenClawError::CommandExecution(format!("Sandbox init failed: {}", e))
+    })?;
+    let audit_log = AuditLog::new(format!("agent-{}", std::process::id()));
+
+    // Initialize tool registry with default tools
+    let mut registry = ToolRegistry::with_default_tools();
+
+    // Register MCP tools if client is provided
+    if let Some(client) = &mcp_client {
+        match crate::mcp::register_mcp_tools(&mut registry, client.clone()).await {
+            Ok(count) => {
+                info!(count, "MCP tools registered");
+            }
+            Err(e) => {
+                warn!(error = %e, "Failed to register MCP tools");
+            }
+        }
+    }
+
+    info!(
+        provider = llm.provider_name(),
+        model = llm.model(),
+        max_iterations = config.max_iterations,
+        enable_tools = config.enable_tools,
+        tool_count = registry.len(),
+        "Agent loop starting with MCP integration"
+    );
+
+    // Audit: agent start
+    let _ = audit_log.append(
+        AuditEventType::AgentStart,
+        "agent",
+        &format!(
+            "Agent loop started with {} (model: {})",
+            llm.provider_name(),
+            llm.model()
+        ),
+        Some(serde_json::json!({
+            "provider": llm.provider_name(),
+            "model": llm.model(),
+            "max_iterations": config.max_iterations,
+            "enable_tools": config.enable_tools,
+            "mcp_enabled": mcp_client.is_some(),
+            "tool_count": registry.len(),
         })),
     );
 

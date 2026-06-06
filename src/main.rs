@@ -8,6 +8,7 @@ mod audit;
 mod config;
 mod error;
 mod llm;
+mod mcp;
 mod policy;
 mod sandbox;
 mod tools;
@@ -77,6 +78,18 @@ struct Args {
     /// Enable provider fallback chain (v0.5) — comma-separated providers
     #[arg(long, env = "RAVENCLAW_FALLBACK_CHAIN")]
     fallback_chain: Option<String>,
+
+    /// MCP server command (v0.5.2) — stdio transport (e.g., "npx -y @modelcontextprotocol/server-filesystem")
+    #[arg(long, env = "RAVENCLAW_MCP_COMMAND")]
+    mcp_command: Option<String>,
+
+    /// MCP server arguments (v0.5.2) — space-separated args for the MCP command
+    #[arg(long, env = "RAVENCLAW_MCP_ARGS")]
+    mcp_args: Option<String>,
+
+    /// MCP server environment variables (v0.5.2) — KEY=VALUE pairs separated by commas
+    #[arg(long, env = "RAVENCLAW_MCP_ENV")]
+    mcp_env: Option<String>,
 }
 
 #[tokio::main]
@@ -127,6 +140,47 @@ async fn main() -> anyhow::Result<()> {
 
     info!(mode = %args.mode, "Configuration loaded");
 
+    // Initialize MCP client if --mcp-command is provided (v0.5.2)
+    let mcp_client = if let Some(mcp_command) = &args.mcp_command {
+        info!(command = %mcp_command, "Initializing MCP client");
+
+        // Parse MCP args
+        let mcp_args: Vec<String> = args.mcp_args
+            .as_ref()
+            .map(|s| s.split_whitespace().map(|s| s.to_string()).collect())
+            .unwrap_or_default();
+
+        // Parse MCP env vars
+        let mut mcp_env = std::collections::HashMap::new();
+        if let Some(env_str) = &args.mcp_env {
+            for pair in env_str.split(',') {
+                if let Some((key, value)) = pair.split_once('=') {
+                    mcp_env.insert(key.trim().to_string(), value.trim().to_string());
+                }
+            }
+        }
+
+        let transport_config = mcp::McpTransportConfig::Stdio {
+            command: mcp_command.clone(),
+            args: mcp_args,
+            env: mcp_env,
+        };
+
+        let mut client = mcp::McpClient::new(transport_config);
+        match client.connect().await {
+            Ok(()) => {
+                info!(server = ?client.server_info(), "MCP client connected");
+                Some(std::sync::Arc::new(tokio::sync::RwLock::new(client)))
+            }
+            Err(e) => {
+                warn!(error = %e, "Failed to connect to MCP server, continuing without MCP tools");
+                None
+            }
+        }
+    } else {
+        None
+    };
+
     // Handle --exec one-shot mode (uses agent loop for multi-step reasoning with security)
     if let Some(exec_prompt) = args.exec {
         info!("Running in --exec mode with security-integrated agent loop");
@@ -140,14 +194,15 @@ async fn main() -> anyhow::Result<()> {
         let response = if !config.llms.is_empty() {
             let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
             if let Some(client) = multi_llm.get_client(0) {
-                agent::run_agent_loop(client.clone(), &exec_prompt, system_prompt, loop_config)
+                agent::run_agent_loop_with_mcp(client.clone(), &exec_prompt, system_prompt, loop_config, mcp_client)
                     .await?
             } else {
                 anyhow::bail!("No LLM providers available for --exec mode");
             }
         } else {
             let llm = llm::create_client(&config.llm)?;
-            agent::run_agent_loop(llm, &exec_prompt, system_prompt, loop_config).await?
+            agent::run_agent_loop_with_mcp(llm, &exec_prompt, system_prompt, loop_config, mcp_client)
+                .await?
         };
         println!("{}", response);
         info!("RavenClaw shutdown complete");

@@ -1,9 +1,9 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
-**Date:** 2026-06-04  
-**Version:** v0.5 (in development)  
-**Previous Release:** v0.4.0 (2026-06-03) — Tools and Safety ✅  
-**Current Commit:** `99501b3` — chore: update Cargo.lock version to 0.4.0
+**Date:** 2026-06-06  
+**Version:** v0.5.2 (in development)  
+**Previous Release:** v0.5.1 (2026-06-04) — Resilience & Token Budgets ✅  
+**Current Commit:** `MCP client integration` — feat: MCP client with stdio transport
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -71,7 +71,7 @@ All v0.4 blockers resolved and shipped:
 
 **Known limitations (documented, not blockers):**
 - k8s Deployment enters CrashLoopBackOff — server mode planned for v0.7
-- No MCP integration — highest-leverage gap for v0.5+
+- SSE transport for MCP not yet implemented (stdio only in v0.5.2)
 
 ### 🔧 Critical Blockers (v0.5 Release)
 
@@ -80,9 +80,9 @@ These must be resolved before v0.5 can ship:
 1. **Code duplication across OpenAI-compatible clients** — `handle_response()` logic copied 4× (LiteLLM, OpenAI, OpenRouter). *(blocker)*
 2. **No provider fallback/retry logic** — Single point of failure if provider goes down. *(blocker)*
 3. **No token budget tracking** — Cannot enforce cost limits per run. *(blocker)*
-4. **No MCP integration** — Industry standard for tool interoperability. *(highest-leverage)*
+4. ~~**No MCP integration** — Industry standard for tool interoperability.~~ ✅ **Resolved v0.5.2**
 
-### ✅ Resolved (v0.1 → v0.4)
+### ✅ Resolved (v0.1 → v0.5.2)
 
 1. ~~**`Cargo.lock` is git-ignored, but `--locked` is used in CI**~~ ✅ Fixed — lockfile committed
 2. ~~**Dockerfile cross-compile fails (no cross-linker)**~~ ✅ Fixed — `gcc-aarch64-linux-gnu` + linker config
@@ -95,6 +95,8 @@ These must be resolved before v0.5 can ship:
 9. ~~**No agent loop**~~ ✅ Fixed — `run_agent_loop()` with max-iteration guard
 10. ~~**No tool system**~~ ✅ Fixed — 4 built-in tools + registry + agent loop wiring
 11. ~~**No security infrastructure**~~ ✅ Fixed — `PolicyEngine`, `Sandbox`, `AuditLog` implemented
+12. ~~**No retry/fallback logic**~~ ✅ Fixed v0.5.1 — exponential backoff, circuit breaker, token budgets, fallback chains
+13. ~~**No MCP integration**~~ ✅ Fixed v0.5.2 — full MCP client with stdio transport, tool discovery, execution
 
 ---
 

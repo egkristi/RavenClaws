@@ -2,7 +2,100 @@
 
 All notable changes to RavenClaw will be documented in this file.
 
-## [0.4.0] — 2026-06-03
+## [0.5.2] — 2026-06-06
+
+**v0.5.2: MCP Client Integration** — External tool discovery via Model Context Protocol.
+
+### ✨ Added
+
+**MCP Client (Model Context Protocol)**
+- New `mcp.rs` module with full MCP 2024-11-05 protocol support
+- JSON-RPC 2.0 over stdio transport
+- Automatic tool discovery from MCP servers (`tools/list`)
+- MCP tool execution (`tools/call`) with result parsing
+- `McpClient` with connect/discover/call lifecycle
+- `McpToolWrapper` adapts MCP tools to RavenClaw's `ToolImpl` trait
+- MCP tools registered into `ToolRegistry` alongside built-in tools
+
+**CLI Arguments for MCP**
+- `--mcp-command <cmd>` — MCP server command (e.g., `npx -y @modelcontextprotocol/server-filesystem`)
+- `--mcp-args <args>` — Space-separated arguments for the MCP command
+- `--mcp-env <KEY name="VALUE,...">` — Comma-separated environment variables for MCP server
+
+**Agent Loop Integration**
+- `run_agent_loop_with_mcp()` — Extended agent loop with MCP tool support
+- MCP tools automatically discovered and registered at startup
+- MCP tools executed with same security (PolicyEngine, AuditLog) as built-in tools
+- Graceful degradation: continues without MCP if server fails to connect
+
+**New Types**
+- `JsonRpcRequest` / `JsonRpcResponse` — JSON-RPC 2.0 protocol types
+- `InitializeParams` / `InitializeResult` — MCP handshake
+- `McpTool` / `McpToolCall` / `McpToolResult` — MCP tool schemas
+- `McpContent` — Text/Image/Resource content types
+- `McpTransport` — Stdio transport with async read/write
+- `McpTransportConfig` — Stdio or SSE (SSE stubbed for future)
+
+### 🔧 Fixed
+
+- Version bumped to 0.5.2 in `Cargo.toml`
+- `mcp` module added to `main.rs`
+- All MCP types properly serialized with `serde`
+
+### 📦 Technical
+
+- ~550 lines of new MCP client code
+- 3 unit tests for JSON-RPC and MCP types
+- MCP tools categorized as `ToolCategory::Mcp`
+- No external dependencies added (uses existing `tokio`, `serde`, `serde_json`)
+
+### 🔮 Future Work
+
+- SSE transport implementation (currently stubbed)
+- MCP resource access (`resources/list`, `resources/read`)
+- MCP prompts (`prompts/list`, `prompts/get`)
+- Tool list change notifications (`notifications/tools/list_changed`)
+- Roots capability for workspace-aware MCP servers
+
+---
+
+## [0.5.1] — 2026-06-04
+
+**v0.5.1: Resilience & Token Budgets** — Retry logic, circuit breaker, fallback chains.
+
+### ✨ Added
+
+**Retry with Exponential Backoff**
+- Configurable retries (default: 3), base delay (100ms), max delay (10s)
+- Jitter factor (0.5) to prevent thundering herd
+- Auth failures not retried (immediate fail)
+- CLI: `--retry-max`, `--retry-base-delay`, `--retry-max-delay`
+
+**Circuit Breaker Pattern**
+- Opens after 5 consecutive failures
+- Half-open state after 30s timeout
+- Automatic reset on success
+- Prevents cascading failures to unhealthy providers
+
+**Token Budget Tracking**
+- `--token-budget <N>` CLI flag and `RAVENCLAW_TOKEN_BUDGET` env var
+- Tracks token usage from `response.usage` field
+- Blocks requests when budget exceeded
+- Estimated cost calculation (per 1K tokens)
+
+**Provider Fallback Chain**
+- `ProviderFallbackChain` tries providers in order until success
+- Integrates with token budget tracking
+- Logs warnings on provider failures
+- CLI: `--fallback-chain <providers>` (comma-separated)
+
+**New Tests (12 added)**
+- Retry delay calculation (exponential backoff verification)
+- Circuit breaker state transitions (closed → open → half-open)
+- Token budget tracking and cost estimation
+- Provider fallback chain creation
+
+[128 more lines in file. Use offset=81 to continue.]
 
 **v0.4: Tools and Safety** — Agency with guardrails.
 
