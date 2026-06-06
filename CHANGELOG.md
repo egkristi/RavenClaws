@@ -2,6 +2,52 @@
 
 All notable changes to RavenClaw will be documented in this file.
 
+## [0.5.3] — 2026-06-06
+
+**v0.5.3: Native Anthropic Provider** — Direct Claude API with tool use support.
+
+### ✨ Added
+
+**Native Anthropic Client**
+- New `AnthropicClient` in `llm.rs` — direct API integration (no proxy)
+- Full support for Claude 3/4 models (Sonnet, Opus, Haiku)
+- Native tool use (`tools/call` format) — parsed into RavenClaw's `ToolCallResponse`
+- Image input support (stubbed for future multi-modal expansion)
+- Proper token usage tracking (`input_tokens`, `output_tokens`)
+- Anthropic-specific headers: `x-api-key`, `anthropic-version: 2023-06-01`
+
+**Provider Configuration**
+- `LLMProvider::Anthropic` enum variant added to `config.rs`
+- Validation: Anthropic doesn't require custom endpoint (uses `api.anthropic.com`)
+- Env var support: `RAVENCLAW__LLM__PROVIDER=anthropic`
+
+**Usage:**
+```bash
+# Via config
+RAVENCLAW__LLM__PROVIDER=anthropic \
+RAVENCLAW__LLM__MODEL=claude-sonnet-4-20250514 \
+ANTHROPIC_API_KEY=sk-ant-... \
+ravenclaw "Summarize this file"
+
+# Via JSON multi-provider
+RAVENCLAW__LLMS='[{"provider":"anthropic","model":"claude-sonnet-4-20250514"}]'
+```
+
+### 🔧 Changed
+
+- Version bumped to 0.5.3 in `Cargo.toml`
+- `create_client()` factory updated to handle `LLMProvider::Anthropic`
+- Validation logic updated: Anthropic grouped with OpenAI/OpenRouter (no endpoint required)
+
+### 📦 Technical
+
+- ~200 LOC new Anthropic client code
+- Anthropic response format converted to RavenClaw's unified `ChatResponse`
+- Tool calls parsed from `ToolUse` content blocks → `ToolCallResponse`
+- No external dependencies added (uses existing `reqwest`, `serde`, `serde_json`)
+
+---
+
 ## [0.5.2] — 2026-06-06
 
 **v0.5.2: MCP Client Integration** — External tool discovery via Model Context Protocol.

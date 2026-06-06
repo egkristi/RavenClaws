@@ -1,9 +1,9 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
 **Date:** 2026-06-06  
-**Version:** v0.5.2 (in development)  
-**Previous Release:** v0.5.1 (2026-06-04) — Resilience & Token Budgets ✅  
-**Current Commit:** `MCP client integration` — feat: MCP client with stdio transport
+**Version:** v0.5.3 (in development)  
+**Previous Release:** v0.5.2 (2026-06-06) — MCP Client Integration ✅  
+**Current Commit:** `Native Anthropic provider` — feat: AnthropicClient with tool use
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -72,24 +72,26 @@ All v0.4 blockers resolved and shipped:
 **Known limitations (documented, not blockers):**
 - k8s Deployment enters CrashLoopBackOff — server mode planned for v0.7
 - SSE transport for MCP not yet implemented (stdio only in v0.5.2)
+- Multi-modal input (images) — Anthropic client has stub, not wired to CLI
 
 ### 🔧 Critical Blockers (v0.5 Release)
 
 These must be resolved before v0.5 can ship:
 
-1. **Code duplication across OpenAI-compatible clients** — `handle_response()` logic copied 4× (LiteLLM, OpenAI, OpenRouter). *(blocker)*
-2. **No provider fallback/retry logic** — Single point of failure if provider goes down. *(blocker)*
-3. **No token budget tracking** — Cannot enforce cost limits per run. *(blocker)*
-4. ~~**No MCP integration** — Industry standard for tool interoperability.~~ ✅ **Resolved v0.5.2**
+1. ~~**Code duplication across OpenAI-compatible clients**~~ ✅ Fixed v0.5.0 — unified `OpenAICompatibleClient`
+2. ~~**No provider fallback/retry logic**~~ ✅ Fixed v0.5.1 — exponential backoff, circuit breaker
+3. ~~**No token budget tracking**~~ ✅ Fixed v0.5.1 — `TokenBudget` struct with cost estimation
+4. ~~**No MCP integration**~~ ✅ Fixed v0.5.2 — full MCP client with stdio transport
+5. ~~**No native Anthropic provider**~~ ✅ Fixed v0.5.3 — direct Claude API with tool use
 
-### ✅ Resolved (v0.1 → v0.5.2)
+### ✅ Resolved (v0.1 → v0.5.3)
 
 1. ~~**`Cargo.lock` is git-ignored, but `--locked` is used in CI**~~ ✅ Fixed — lockfile committed
 2. ~~**Dockerfile cross-compile fails (no cross-linker)**~~ ✅ Fixed — `gcc-aarch64-linux-gnu` + linker config
 3. ~~**RavenFabric agent download unverified**~~ ✅ Fixed — SHA256SUMS verification
 4. ~~**CI cross-compilation missing toolchain deps**~~ ✅ Fixed — `musl-tools`, `libc6-dev-arm64-cross`
 5. ~~**`--exec` dead code**~~ ✅ Fixed — fully implemented with streaming
-6. ~~**Client code duplicated 4×**~~ ✅ Partial — `handle_openai_response()` helper extracted; 3 clients still separate
+6. ~~**Client code duplicated 4×**~~ ✅ Fixed v0.5.0 — unified `OpenAICompatibleClient`
 7. ~~**No conversation memory**~~ ✅ Fixed — `ConversationMemory` with auto-trim
 8. ~~**No REPL mode**~~ ✅ Fixed — `--repl` with `/exit`, `/reset`
 9. ~~**No agent loop**~~ ✅ Fixed — `run_agent_loop()` with max-iteration guard
@@ -97,6 +99,7 @@ These must be resolved before v0.5 can ship:
 11. ~~**No security infrastructure**~~ ✅ Fixed — `PolicyEngine`, `Sandbox`, `AuditLog` implemented
 12. ~~**No retry/fallback logic**~~ ✅ Fixed v0.5.1 — exponential backoff, circuit breaker, token budgets, fallback chains
 13. ~~**No MCP integration**~~ ✅ Fixed v0.5.2 — full MCP client with stdio transport, tool discovery, execution
+14. ~~**No native Anthropic provider**~~ ✅ Fixed v0.5.3 — direct Claude API with tool use support
 
 ---
 

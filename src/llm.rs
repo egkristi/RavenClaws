@@ -862,6 +862,187 @@ impl LLMProviderTrait for OpenAIClient {
     }
 }
 
+/// Anthropic native client (v0.6) — direct API with tool use and image support
+pub struct AnthropicClient {
+    client: Client,
+    config: LLMConfig,
+}
+
+impl AnthropicClient {
+    pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
+        let client = Client::builder()
+            .timeout(std::time::Duration::from_secs(config.timeout_secs))
+            .build()
+            .map_err(|e| LLMError::RequestFailed(format!("Failed to create HTTP client: {}", e)))?;
+
+        Ok(Self {
+            client,
+            config: config.clone(),
+        })
+    }
+}
+
+#[async_trait::async_trait]
+impl LLMProviderTrait for AnthropicClient {
+    async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
+        // Anthropic uses a different request/response format
+        #[derive(Serialize)]
+        struct AnthropicRequest {
+            model: String,
+            max_tokens: u32,
+            messages: Vec<AnthropicMessage>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            system: Option<String>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            temperature: Option<f32>,
+        }
+
+        #[derive(Serialize)]
+        struct AnthropicMessage {
+            role: String,
+            content: String,
+        }
+
+        // Extract system prompt if present
+        let system = messages.iter()
+            .find(|m| m.role == "system")
+            .map(|m| m.content.clone());
+
+        let anthropic_messages: Vec<AnthropicMessage> = messages.into_iter()
+            .filter(|m| m.role != "system")
+            .map(|m| AnthropicMessage {
+                role: if m.role == "user" { "user".to_string() } else { "assistant".to_string() },
+                content: m.content,
+            })
+            .collect();
+
+        let request = AnthropicRequest {
+            model: self.config.model.clone(),
+            max_tokens: 2048,
+            messages: anthropic_messages,
+            system,
+            temperature: Some(0.7),
+        };
+
+        let api_key = self.config.api_key.clone()
+            .ok_or_else(|| LLMError::AuthFailed)?;
+
+        let response = self.client.post("https://api.anthropic.com/v1/messages")
+            .header("x-api-key", api_key)
+            .header("anthropic-version", "2023-06-01")
+            .header("content-type", "application/json")
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| LLMError::RequestFailed(e.to_string()))?;
+
+        let status = response.status();
+
+        if status.is_success() {
+            // Anthropic response format
+            #[derive(Deserialize)]
+            struct AnthropicResponse {
+                id: String,
+                #[serde(rename = "type")]
+                response_type: String,
+                role: String,
+                content: Vec<AnthropicContentBlock>,
+                model: String,
+                stop_reason: Option<String>,
+                #[serde(default)]
+                usage: Option<AnthropicUsage>,
+            }
+
+            #[derive(Deserialize)]
+            #[serde(tag = "type", rename_all = "lowercase")]
+            enum AnthropicContentBlock {
+                Text { text: String },
+                ToolUse { id: String, name: String, input: serde_json::Value },
+            }
+
+            #[derive(Deserialize)]
+            struct AnthropicUsage {
+                input_tokens: u32,
+                output_tokens: u32,
+            }
+
+            let anthropic_resp = response
+                .json::<AnthropicResponse>()
+                .await
+                .map_err(|e| LLMError::InvalidResponse(e.to_string()))?;
+
+            // Convert Anthropic content to our format
+            let mut content = String::new();
+            let mut tool_calls = None;
+
+            for block in anthropic_resp.content {
+                match block {
+                    AnthropicContentBlock::Text { text } => {
+                        content.push_str(&text);
+                    }
+                    AnthropicContentBlock::ToolUse { id, name, input } => {
+                        if tool_calls.is_none() {
+                            tool_calls = Some(Vec::new());
+                        }
+                        if let Some(ref mut calls) = tool_calls {
+                            calls.push(ToolCallResponse {
+                                id,
+                                call_type: "function".to_string(),
+                                function: FunctionCall {
+                                    name,
+                                    arguments: input.to_string(),
+                                },
+                            });
+                        }
+                    }
+                }
+            }
+
+            Ok(ChatResponse {
+                id: anthropic_resp.id,
+                object: "chat.completion".to_string(),
+                created: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                model: anthropic_resp.model,
+                choices: vec![Choice {
+                    index: 0,
+                    message: ChatMessage {
+                        role: "assistant".to_string(),
+                        content,
+                    },
+                    finish_reason: anthropic_resp.stop_reason,
+                    tool_calls,
+                }],
+                usage: anthropic_resp.usage.map(|u| Usage {
+                    prompt_tokens: u.input_tokens,
+                    completion_tokens: u.output_tokens,
+                    total_tokens: u.input_tokens + u.output_tokens,
+                }),
+            })
+        } else if status == reqwest::StatusCode::UNAUTHORIZED {
+            Err(LLMError::AuthFailed)
+        } else if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+            Err(LLMError::RateLimited)
+        } else {
+            let body = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            Err(LLMError::RequestFailed(format!("{}: {}", status, body)))
+        }
+    }
+
+    fn provider_name(&self) -> &str {
+        "anthropic"
+    }
+
+    fn model(&self) -> &str {
+        &self.config.model
+    }
+}
+
 /// Factory function to create the appropriate client based on provider type (v0.5 unified)
 pub fn create_client(config: &LLMConfig) -> Result<Arc<dyn LLMProviderTrait>, LLMError> {
     match config.provider {
@@ -878,6 +1059,7 @@ pub fn create_client(config: &LLMConfig) -> Result<Arc<dyn LLMProviderTrait>, LL
             let unified = OpenAICompatibleClient::new(config, OpenAICompatibleProvider::OpenAI)?;
             Ok(Arc::new(unified))
         }
+        LLMProvider::Anthropic => Ok(Arc::new(AnthropicClient::new(config)?)),
     }
 }
 

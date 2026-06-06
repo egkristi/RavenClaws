@@ -26,6 +26,7 @@ pub enum LLMProvider {
     OpenRouter,
     Ollama,
     OpenAI,
+    Anthropic,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -283,6 +284,7 @@ impl Config {
                 "openrouter" => LLMProvider::OpenRouter,
                 "ollama" => LLMProvider::Ollama,
                 "openai" => LLMProvider::OpenAI,
+                "anthropic" => LLMProvider::Anthropic,
                 _ => LLMProvider::LiteLLM,
             };
         }
@@ -340,8 +342,9 @@ impl Config {
         if llm.endpoint.is_empty()
             && llm.provider != LLMProvider::OpenAI
             && llm.provider != LLMProvider::OpenRouter
+            && llm.provider != LLMProvider::Anthropic
         {
-            // OpenAI and OpenRouter have fixed endpoints
+            // OpenAI, OpenRouter, and Anthropic have fixed endpoints
             return Err(ConfigError::ValidationError(
                 "LLM endpoint is required for this provider".to_string(),
             ));
