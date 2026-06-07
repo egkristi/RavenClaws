@@ -5,6 +5,30 @@ Items are ordered by severity/impact.
 
 ---
 
+## ✅ v0.6 Milestone — Complete (2026-06-07)
+
+**All v0.6 swarm/supervisor features shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| Swarm mode (single-provider) | ✅ | 3 parallel agents with different personas |
+| Supervisor mode (single-provider) | ✅ | Task decomposition + sub-agent spawning |
+| Swarm mode (multi-model) | ✅ | Parallel agents across providers |
+| Supervisor mode (multi-model) | ✅ | Provider-aware task decomposition |
+
+**Totals:** 9 modules, ~9,400 LOC (+500 for v0.6), 280+ tests, 5 LLM providers.
+
+**CI Status:** All pipelines green (fmt, clippy, test, security scans, multi-arch builds).
+
+**Commit:** `431827f` — feat: Swarm and Supervisor modes (v0.6)
+
+**Known limitations (non-blocking):**
+- RavenFabric E2E integration: Still pending (v0.6.1)
+- Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.7)
+- k8s CrashLoop: Server mode planned for v0.7
+
+---
+
 ## ✅ v0.5 Milestone — Complete (2026-06-07)
 
 **All v0.5 features shipped, tested, and documented:**
@@ -16,16 +40,7 @@ Items are ordered by severity/impact.
 | v0.5.2 | MCP Client Integration | ✅ | 3 |
 | v0.5.3 | Native Anthropic Provider | ✅ | 4 |
 
-**Totals:** 9 modules, 9,679 LOC, 278+ tests, 5 LLM providers, 0 new dependencies.
-
-**CI Status:** All pipelines green (fmt, clippy, test, security scans, multi-arch builds).
-
-**Tag:** `v0.5.3` pushed to GitHub with release notes.
-
-**Known limitations (non-blocking):**
-- Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.6)
-- SSE transport (MCP): Stdio works, SSE planned for v0.6
-- k8s CrashLoop: Server mode planned for v0.7
+**Totals:** 9 modules, 8,900 LOC, 278+ tests, 5 LLM providers.
 
 ---
 
@@ -414,7 +429,7 @@ All v0.2 items are complete:
 - ✅ `--version` wired to `CARGO_PKG_VERSION`
 - ✅ `.expect()` on HTTP client replaced with error propagation
 - ✅ `--exec` one-shot mode implemented
-- ✅ Swarm/supervisor stubs return clear errors
+- ✅ Swarm/supervisor stubs return clear errors → ✅ **Implemented v0.6** (2026-06-07)
 - ✅ Tests expanded to 149 across all modules with `mockito`
 - ✅ `cargo fmt && cargo clippy -D warnings && cargo test` all green
 
