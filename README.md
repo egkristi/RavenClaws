@@ -6,20 +6,20 @@
 [![CI](https://github.com/egkristi/RavenClaw/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
 [![Verification](https://img.shields.io/badge/verification-94%20checks-brightgreen)](VERIFICATION.md)
 [![Binary](https://img.shields.io/badge/binary-~3MB-blue)]()
-[![Status](https://img.shields.io/badge/status-pre--alpha-orange)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v0.5.3--ready-brightgreen)](ROADMAP.md)
 
 RavenClaw is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: Pre-Alpha (v0.1.0).** The provider layer, one-shot execution (`--exec`),
-> reproducible multi-arch builds, and the verification + supply-chain pipeline work
-> today (v0.2 foundations complete). The agent loop, tool-use, MCP, and
-> swarm/supervisor modes are on the [roadmap](ROADMAP.md). This README marks
-> ✅ built vs. 📋 planned — honestly. Trust is a feature; we don't inflate it.
+> **Status: v0.5.3 Ready (2026-06-07).** The provider layer (5 providers), one-shot execution (`--exec`),
+> reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
+> retry/fallback chains, token budgets, and native Anthropic integration all work today.
+> Swarm/supervisor modes and async background runs are on the [roadmap](ROADMAP.md) for v0.6–v0.7.
+> This README marks ✅ built vs. 📋 planned — honestly. Trust is a feature; we don't inflate it.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
-| **~3 MB binary** | **Memory-safe Rust** | **4 providers** | **Binary · Docker · K8s** |
+| **~3 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
 | **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **94-check verification suite** |
 
 ---
@@ -66,12 +66,13 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 - **OpenAI** — native GPT-4o, o-series, and more.
 - **OpenRouter** — unified API for many hosted models.
 - **Ollama** — local, private, air-gapped models.
-- **Multi-model mode** — configure several providers at once (basic round-robin today; intelligent routing + fallback on the roadmap).
+- **Anthropic** — direct Claude API (Sonnet, Opus, Haiku) with native tool use.
+- **Multi-model mode** — round-robin + intelligent fallback chains with circuit breaker (v0.5.1+).
 
 ### Verified across every target
 
-- **100+ Rust unit tests** (incl. `mockito`-backed provider request/response/error paths), runnable anywhere via `cargo test`.
-- Plus a **94-check verification suite** (`scripts/verify.sh`) spanning **8 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security and performance checks.
+- **278+ Rust unit tests** (incl. `mockito`-backed provider request/response/error paths for all 5 providers), runnable anywhere via `cargo test`.
+- Plus a **94-check verification suite** (`scripts/verify.sh`) spanning **9 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security and performance checks.
 - *Note:* the 94 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
 
 ---
