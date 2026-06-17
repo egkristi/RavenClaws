@@ -23,11 +23,10 @@ use std::sync::Arc;
 use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
-use tokio::sync::{mpsc, RwLock};
-use tracing::{debug, error, info, warn};
-use uuid::Uuid;
+use tokio::sync::RwLock;
+use tracing::{debug, info};
 
-use crate::tools::{JsonSchema, ToolCall, ToolCategory, ToolDefinition, ToolImpl, ToolResult, ToolResultValue};
+use crate::tools::{JsonSchema, ToolCategory, ToolDefinition, ToolImpl, ToolResult, ToolResultValue};
 
 // ── Error types ────────────────────────────────────────────────────────────
 
@@ -368,21 +367,23 @@ impl McpClient {
             },
         };
 
+        let init_id = self.transport.next_id();
         let response = self.transport.send_request(JsonRpcRequest::new(
             "initialize",
             serde_json::to_value(init_params)?,
-            self.transport.next_id(),
+            init_id,
         )).await?;
 
         let init_result: InitializeResult = response.result
             .and_then(|v| serde_json::from_value(v).ok())
             .ok_or_else(|| McpError::JsonRpc("Invalid initialize response".to_string()))?;
 
+        let server_info = init_result.server_info.clone();
         self.server_info = Some(init_result.server_info);
 
         info!(
-            server = %init_result.server_info.name,
-            version = %init_result.server_info.version,
+            server = %server_info.name,
+            version = %server_info.version,
             "MCP server initialized"
         );
 
@@ -403,10 +404,11 @@ impl McpClient {
 
     /// Discover available tools from the server
     pub async fn discover_tools(&mut self) -> McpResult<()> {
+        let list_id = self.transport.next_id();
         let response = self.transport.send_request(JsonRpcRequest::new(
             "tools/list",
             serde_json::Value::Null,
-            self.transport.next_id(),
+            list_id,
         )).await?;
 
         let tools_result = response.result
@@ -435,10 +437,11 @@ impl McpClient {
             arguments,
         };
 
+        let call_id = self.transport.next_id();
         let response = self.transport.send_request(JsonRpcRequest::new(
             "tools/call",
             serde_json::to_value(params)?,
-            self.transport.next_id(),
+            call_id,
         )).await?;
 
         let result: McpToolResult = response.result
@@ -638,7 +641,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&params).unwrap();
-        assert!(json.contains("protocol_version"));
+        assert!(json.contains("protocolVersion"));
         assert!(json.contains("ravenclaw"));
     }
 }

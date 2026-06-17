@@ -1156,7 +1156,7 @@ dependencies = [
 
 [[package]]
 name = "ravenclaw"
-version = "0.4.0"
+version = "0.5.3"
 dependencies = [
  "anyhow",
  "async-trait",

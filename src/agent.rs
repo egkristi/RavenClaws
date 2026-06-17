@@ -815,7 +815,7 @@ pub async fn run_single(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Resul
 pub async fn run_swarm(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result<()> {
     info!("Starting swarm mode (single-provider) — 3 parallel agents");
 
-    let system_prompt = &config.llm.system_prompt;
+    let _system_prompt = &config.llm.system_prompt;
     let num_agents = 3;
     let mut handles = Vec::new();
 
@@ -1116,7 +1116,7 @@ pub async fn run_single_multi(multi_llm: MultiModelManager, config: Config) -> R
 pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Result<()> {
     info!("Starting swarm mode (multi-model) — {} parallel agents", multi_llm.client_count());
 
-    let system_prompt = &config.llm.system_prompt;
+    let _system_prompt = &config.llm.system_prompt;
     let num_agents = multi_llm.client_count().min(3); // Cap at 3 for cost control
     let mut handles = Vec::new();
 
@@ -1128,7 +1128,7 @@ pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Re
     ];
 
     for i in 0..num_agents {
-        let client = multi_llm.get_client(i).unwrap();
+        let client = multi_llm.get_client(i).unwrap().clone();
         let persona = personas.get(i).unwrap_or(&personas[0]).to_string();
         let task = "Analyze the given task and provide your solution.".to_string();
 
@@ -1142,7 +1142,7 @@ pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Re
                     let content = response.choices.first()
                         .map(|c| c.message.content.clone())
                         .unwrap_or_default();
-                    Ok((i, client.provider_name(), client.model(), content))
+                    Ok((i, client.provider_name().to_string(), client.model().to_string(), content))
                 }
                 Err(e) => Err(format!("Agent {} failed: {}", i, e)),
             }
@@ -1220,12 +1220,12 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
 
         // Use round-robin for supervisor itself
         let supervisor_client = multi_llm.get_client(iteration % multi_llm.client_count())
-            .or_else(|| multi_llm.get_client(0));
+            .or_else(|| multi_llm.get_client(0))
+            .cloned();
 
         let messages = memory.history().to_vec();
-        let response = match supervisor_client.and_then(|c| {
-            // Need to use block_on or spawn since we're in async context
-            Some(tokio::spawn(async move { c.chat(messages).await }))
+        let response = match supervisor_client.map(|c| {
+            tokio::spawn(async move { c.chat(messages).await })
         }) {
             Some(handle) => {
                 match handle.await {
@@ -1290,7 +1290,7 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
 
                 if let Some(client) = client {
                     let subtask_result = run_subtask_agent(
-                        client,
+                        client.clone(),
                         subtask_desc,
                         system_prompt,
                         &policy_engine,
@@ -1419,14 +1419,12 @@ mod tests {
     fn test_swarm_function_exists() {
         // Verify swarm function signature compiles
         let _fn_ptr: fn(Arc<dyn LLMProviderTrait>, Config) -> _ = run_swarm;
-        assert!(true);
     }
 
     #[test]
     fn test_supervisor_function_exists() {
         // Verify supervisor function signature compiles
         let _fn_ptr: fn(Arc<dyn LLMProviderTrait>, Config) -> _ = run_supervisor;
-        assert!(true);
     }
 
     #[test]

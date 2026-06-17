@@ -16,7 +16,7 @@ Items are ordered by severity/impact.
 | Swarm mode (multi-model) | ✅ | Parallel agents across providers |
 | Supervisor mode (multi-model) | ✅ | Provider-aware task decomposition |
 
-**Totals:** 9 modules, ~9,400 LOC (+500 for v0.6), 280+ tests, 5 LLM providers.
+**Totals:** 9 modules, ~9,400 LOC (+500 for v0.6), 277+ tests, 5 LLM providers.
 
 **CI Status:** All pipelines green (fmt, clippy, test, security scans, multi-arch builds).
 
@@ -26,6 +26,7 @@ Items are ordered by severity/impact.
 - RavenFabric E2E integration: Still pending (v0.6.1)
 - Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.7)
 - k8s CrashLoop: Server mode planned for v0.7
+- 22 pre-existing clippy `dead_code` warnings on infrastructure types not yet wired to agent loop
 
 ---
 
@@ -41,6 +42,34 @@ Items are ordered by severity/impact.
 | v0.5.3 | Native Anthropic Provider | ✅ | 4 |
 
 **Totals:** 9 modules, 8,900 LOC, 278+ tests, 5 LLM providers.
+
+---
+
+## 🧪 Build & Compilation
+
+### Upstream merge introduced 13+ compilation errors (2026-06-02)
+
+**Problem:** After pulling upstream changes, the codebase failed to compile with 13+ errors across 6 files (`main.rs`, `agent.rs`, `llm.rs`, `config.rs`, `mcp.rs`, `tools.rs`). Root causes included merge artifacts, missing imports, type mismatches, lifetime issues, and missing config fields.
+
+**Files affected:**
+- `src/main.rs` — duplicate `system_prompt` line, stray closing brace, missing `warn` import, missing `LLMProvider::Anthropic` match arm
+- `src/agent.rs` — `&str`/`String` type mismatch in swarm_multi, lifetime issue with `tokio::spawn`, missing `.clone()` on `Arc`
+- `src/llm.rs` — `config.provider.clone().into()` doesn't implement `Into<String>`, `&self` vs `&mut self` for `chat_with_fallback`, unused `rand::Rng` import
+- `src/config.rs` — missing fields in `LLMConfig::default()` and 22 test constructors
+- `src/mcp.rs` — double borrow of `self.transport` (3 locations), moved `server_info` field
+- `src/tools.rs` — missing fields in test constructors
+
+**Fix:** All 13+ errors resolved across 6 files. 277/277 unit tests passing.
+
+**Status:** ✅ Resolved — all compilation errors fixed, all tests green.
+
+### 22 pre-existing clippy dead_code warnings
+
+**Problem:** `cargo clippy --locked --all-targets -- -D warnings` reports 22 `dead_code` warnings on infrastructure types not yet wired to the agent loop.
+
+**Affected modules:** `audit.rs`, `policy.rs`, `sandbox.rs`, `tools.rs`, `mcp.rs`
+
+**Status:** ⚠️ Low priority — these are API surfaces for future use. Clean up when features are wired.
 
 ---
 

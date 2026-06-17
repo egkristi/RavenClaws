@@ -14,7 +14,7 @@ mod sandbox;
 mod tools;
 
 use clap::Parser;
-use tracing::info;
+use tracing::{info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]
@@ -135,8 +135,6 @@ async fn main() -> anyhow::Result<()> {
     }
     config.llm.retry_max = args.retry_max;
     config.llm.retry_base_delay_ms = args.retry_base_delay_ms;
-        config.llm.system_prompt = system_prompt;
-    }
 
     info!(mode = %args.mode, "Configuration loaded");
 
@@ -274,6 +272,7 @@ async fn main() -> anyhow::Result<()> {
             config::LLMProvider::OpenRouter => "OpenRouter",
             config::LLMProvider::Ollama => "Ollama",
             config::LLMProvider::OpenAI => "OpenAI",
+            config::LLMProvider::Anthropic => "Anthropic",
         };
 
         info!(provider = provider_name, endpoint = %config.llm.endpoint, model = %config.llm.model, "LLM client initialized");

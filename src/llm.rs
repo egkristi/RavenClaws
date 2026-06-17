@@ -4,7 +4,6 @@
 //! v0.5: Unified OpenAI-compatible client, retry/fallback, token budgets.
 
 use futures::Stream;
-use rand::Rng;
 use reqwest::{Client, Response};
 use serde::{Deserialize, Serialize};
 use std::pin::Pin;
@@ -12,7 +11,6 @@ use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
 use tokio::time::sleep;
-use uuid::Uuid;
 
 /// A streaming chunk of an LLM response
 #[derive(Debug, Clone)]
@@ -1112,14 +1110,14 @@ impl ProviderFallbackChain {
     }
 
     /// Execute with fallback — tries each provider in order until success
-    pub async fn chat_with_fallback(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
+    pub async fn chat_with_fallback(&mut self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
         let mut last_error = None;
 
         for (i, config) in self.configs.iter().enumerate() {
             let client = match create_client(config) {
                 Ok(c) => c,
                 Err(e) => {
-                    tracing::warn!("Failed to create client for provider {}: {}", config.provider.clone().into(), e);
+                    tracing::warn!("Failed to create client for provider {:?}: {}", config.provider, e);
                     last_error = Some(e);
                     continue;
                 }
@@ -1268,7 +1266,11 @@ mod tests {
             api_key: Some("test-key".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM);
         assert!(client.is_ok());
@@ -1285,7 +1287,11 @@ mod tests {
             api_key: Some("test-key".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
         // Endpoint is private, but we can verify provider name
@@ -1309,7 +1315,11 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let response = client.chat(make_chat_messages()).await.unwrap();
@@ -1336,7 +1346,11 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1362,7 +1376,11 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 0,  // Disable retries for error-path tests
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1390,7 +1408,11 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
             let _ = client.chat(make_chat_messages()).await.unwrap();
@@ -1409,7 +1431,11 @@ mod tests {
             api_key: Some("sk-ant-test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = AnthropicClient::new(&config);
         assert!(client.is_ok());
@@ -1424,7 +1450,11 @@ mod tests {
             api_key: Some("sk-ant-test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = AnthropicClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "anthropic");
@@ -1439,7 +1469,11 @@ mod tests {
             api_key: Some("sk-ant-test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = AnthropicClient::new(&config).unwrap();
         assert_eq!(client.model(), "claude-opus-4-20250514");
@@ -1454,7 +1488,11 @@ mod tests {
             api_key: Some("sk-ant-test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = create_client(&config);
         assert!(client.is_ok());
@@ -1594,7 +1632,11 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = LiteLLMClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1621,7 +1663,11 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = LiteLLMClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1648,7 +1694,11 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = LiteLLMClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1676,7 +1726,11 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = LiteLLMClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1707,7 +1761,11 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenRouterClient::new(&config).unwrap();
             let response = client.chat(make_chat_messages()).await.unwrap();
@@ -1735,7 +1793,11 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenRouterClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1762,7 +1824,11 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 0,  // Disable retries for error-path tests
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenRouterClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1789,7 +1855,11 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 0,  // Disable retries for error-path tests
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenRouterClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1817,7 +1887,11 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 0,  // Disable retries for error-path tests
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenRouterClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1846,7 +1920,11 @@ mod tests {
                 api_key: Some("sk-test".to_string()),
                 timeout_secs: 60,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAIClient::new(&config).unwrap();
             let response = client.chat(make_chat_messages()).await.unwrap();
@@ -1874,7 +1952,11 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAIClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1901,7 +1983,11 @@ mod tests {
                 api_key: Some("sk-test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 0,  // Disable retries for error-path tests
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAIClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1928,7 +2014,11 @@ mod tests {
                 api_key: Some("sk-test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 0,  // Disable retries for error-path tests
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAIClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1956,7 +2046,11 @@ mod tests {
                 api_key: Some("sk-test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 0,  // Disable retries for error-path tests
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OpenAIClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -1985,7 +2079,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OllamaClient::new(&config).unwrap();
             let response = client.chat(make_chat_messages()).await.unwrap();
@@ -2014,7 +2112,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OllamaClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -2041,7 +2143,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OllamaClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -2068,7 +2174,11 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = OllamaClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -2089,7 +2199,11 @@ mod tests {
             api_key: Some("test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = create_client(&config).unwrap();
         assert_eq!(client.provider_name(), "litellm");
@@ -2105,7 +2219,11 @@ mod tests {
             api_key: None,
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = OllamaClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "ollama");
@@ -2121,7 +2239,11 @@ mod tests {
             api_key: Some("sk-test".to_string()),
             timeout_secs: 60,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = OpenAIClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "openai");
@@ -2137,7 +2259,11 @@ mod tests {
             api_key: Some("sk-test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = OpenRouterClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "openrouter");
@@ -2160,7 +2286,11 @@ mod tests {
             api_key: Some("test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let manager = MultiModelManager::new(vec![config]).unwrap();
         assert_eq!(manager.client_count(), 1);
@@ -2178,7 +2308,11 @@ mod tests {
                 api_key: Some("test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            },
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+},
             LLMConfig {
                 provider: LLMProvider::Ollama,
                 endpoint: "http://localhost:11434".to_string(),
@@ -2186,7 +2320,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 60,
                 system_prompt: crate::config::default_system_prompt(),
-            },
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+},
         ];
 
         let manager = MultiModelManager::new(configs).unwrap();
@@ -2205,7 +2343,11 @@ mod tests {
                 api_key: Some("test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            },
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+},
             LLMConfig {
                 provider: LLMProvider::Ollama,
                 endpoint: "http://localhost:11434".to_string(),
@@ -2213,7 +2355,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 60,
                 system_prompt: crate::config::default_system_prompt(),
-            },
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+},
         ];
 
         let manager = MultiModelManager::new(configs).unwrap();
@@ -2302,7 +2448,11 @@ mod tests {
             api_key: None,
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        }];
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+}];
 
         let result = MultiModelManager::new(configs);
         // The client creation itself won't fail (HTTP client doesn't validate endpoint),
@@ -2329,7 +2479,11 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
             let client = create_client(&config).unwrap();
             assert_eq!(client.provider_name(), expected_name);
@@ -2384,7 +2538,11 @@ mod tests {
             api_key: Some("test".to_string()),
             timeout_secs: u64::MAX,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let result = LiteLLMClient::new(&config);
         assert!(result.is_ok());
@@ -2399,7 +2557,11 @@ mod tests {
             api_key: Some("sk-test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = OpenAIClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "openai");
@@ -2415,7 +2577,11 @@ mod tests {
             api_key: Some("or-key".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = OpenRouterClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "openrouter");
@@ -2432,7 +2598,11 @@ mod tests {
             api_key: Some("some-key".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = OllamaClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "ollama");
@@ -2546,7 +2716,11 @@ mod tests {
             api_key: None,
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let client = create_client(&config).unwrap();
         assert_eq!(client.provider_name(), "ollama");
@@ -2575,7 +2749,11 @@ mod tests {
             api_key: Some("test".to_string()),
             timeout_secs: 30,
             system_prompt: crate::config::default_system_prompt(),
-        };
+            token_budget: None,
+            retry_max: 3,
+            retry_base_delay_ms: 100,
+            retry_max_delay_ms: 10000,
+};
 
         let manager = MultiModelManager::new(vec![config]).unwrap();
         // With one client, next_client wraps to index 0

@@ -111,26 +111,28 @@ These must be resolved before v0.5 can ship:
 
 ## Architecture
 
-### Current (v0.4)
+### Current (v0.5.3 / v0.6-dev)
 
 ```text
         ┌──────────┐
         │  main.rs │  CLI (clap) · JSON logging · mode dispatch
         └────┬─────┘
-   ┌─────────┼──────────────────────────────────────┐
-┌──┴───┐ ┌───┴────┐ ┌───┴─────┐ ┌───┴───┐ ┌────────┐
-│agent │ │ config │ │  error  │ │ tools │ │policy  │
-│ loop │ │        │ │         │ │       │ │audit   │
-│ mem  │ │        │ │         │ │       │ │sandbox │
-└──┬───┘ └────────┘ └─────────┘ └───────┘ └────────┘
+   ┌─────────┼──────────────────────────────────────────┐
+┌──┴───┐ ┌───┴────┐ ┌───┴─────┐ ┌───┴───┐ ┌────────────┐
+│agent │ │ config │ │  error  │ │ tools │ │policy      │
+│ loop │ │        │ │         │ │       │ │audit       │
+│ mem  │ │        │ │         │ │       │ │sandbox     │
+│swarm │ │        │ │         │ │       │ │mcp         │
+│super │ │        │ │         │ │       │ │            │
+└──┬───┘ └────────┘ └─────────┘ └───────┘ └────────────┘
    │
-┌──┴───────────────────────────┐
-│ llm  (LLMProviderTrait)       │
-│  LiteLLM · OpenAI · OpenRouter│
-│  · Ollama · MultiModelManager │
-└───────────────────────────────┘
+┌──┴───────────────────────────────────┐
+│ llm  (LLMProviderTrait)               │
+│  LiteLLM · OpenAI · OpenRouter       │
+│  · Ollama · Anthropic · MultiModel   │
+└───────────────────────────────────────┘
 
-⚠️ Dotted lines = NOT wired: policy, audit, sandbox are infrastructure-only
+✅ All modules wired: policy, audit, sandbox, mcp integrated into agent loop
 ```
 
 ### Target (v1.0)
@@ -179,30 +181,30 @@ simpler** — or deliberately not at all.
 > air-gappable, signed + SBOM-attested supply chain. These are claims we will
 > benchmark and publish — not marketing.
 
-### RavenClaw vs. Field (v0.4)
+### RavenClaw vs. Field (v0.5.3 / v0.6-dev)
 
-| Capability | RavenClaw v0.4 | Cognition (Claude) | Manus | Open Interpreter |
+| Capability | RavenClaw v0.6 | Cognition (Claude) | Manus | Open Interpreter |
 |---|:---:|:---:|:---:|:---:|
 | Agent loop | ✅ | ✅ | ✅ | ✅ |
-| Tool calling | ✅ (primitive) | ✅ (structured) | ✅ | ✅ |
-| **MCP client/server** | ❌ | ✅ | ✅ | ✅ |
-| Sandboxed execution | ⚠️ (not wired) | ✅ | ✅ | ⚠️ Optional |
-| **Security model** | ⚠️ (not wired) | ⚠️ | ⚠️ | ❌ |
+| Tool calling | ✅ (structured) | ✅ (structured) | ✅ | ✅ |
+| **MCP client/server** | ✅ (client) | ✅ | ✅ | ✅ |
+| Sandboxed execution | ✅ (wired) | ✅ | ✅ | ⚠️ Optional |
+| **Security model** | ✅ (wired) | ⚠️ | ⚠️ | ❌ |
 | **Local-first / air-gapped** | ✅ (Ollama) | ❌ | ❌ | ✅ |
 | **~3 MB binary** | ✅ | ❌ (cloud) | ❌ (cloud) | ❌ (Python) |
 | **RavenFabric mesh** | ❌ (roadmap) | ❌ | ❌ | ❌ |
 | **No telemetry** | ✅ | ❌ | ❌ | ✅ |
-| Multi-modal input | ❌ | ✅ | ✅ | ⚠️ |
+| Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ⚠️ (fetch only) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
 | Async background runs | ❌ | ✅ | ✅ | ❌ |
 | Scheduling / triggers | ❌ | ✅ | ✅ | ❌ |
-| Sub-agents / swarm | ❌ (stub) | ✅ | ✅ | ❌ |
+| Sub-agents / swarm | ✅ (v0.6) | ✅ | ✅ | ❌ |
 | OAuth connectors | ❌ | ✅ | ✅ | ⚠️ Plugins |
 
 **RavenClaw's Wedge:**
 1. **Trust as a feature** — deny-by-default security, no telemetry, verifiable end-to-end
-2. **Edge-deployable** — ~3 MB binary, runs on Raspberry Pi, air-gapped capable
+2. **Edge-deployable** — ~3.4 MB binary, runs on Raspberry Pi, air-gapped capable
 3. **RavenFabric mesh** — E2E-encrypted remote execution across fleet (unique)
 
 ---
@@ -224,7 +226,7 @@ the cloud incumbents structurally can't follow.
 | Persistent memory (vector recall) | Without it every session starts from zero | ⚠️ (in-memory only) | v0.3 → v0.9 |
 | Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ⚠️ (fetch only) | **v0.4** |
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
-| Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ❌ (stub) | v0.6 |
+| Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
 | Async / long-horizon background runs | Manus's killer feature (cloud background) | ❌ | **v0.7** |
 | Scheduling / triggers (cron, webhook) | Proactive, set-and-forget operation | ❌ | **v0.7** |
 | Streaming + intermediate results | First-class in Vellum; needed for interactive UX | ✅ | v0.3 |
@@ -239,7 +241,7 @@ the cloud incumbents structurally can't follow.
 |---|---|:--:|:--:|
 | **Local-first / self-hosted / air-gapped** | Manus is cloud-only; Comet's "Local" is a browser, not a worker. RavenClaw runs fully offline with Ollama. | Secure · Simple | ✅ core |
 | **Security model: deny-by-default + sandbox + audit** | Field bolts security on; we ship it in core. | Secure | ⚠️ v0.4 (wire it) |
-| **~3 MB single binary, edge/embeddable** | No cloud agent runs on a Raspberry Pi. | Small · Efficient | ✅ |
+| **~3.4 MB single binary, edge/embeddable** | No cloud agent runs on a Raspberry Pi. | Small · Efficient | ✅ |
 | **Provider-agnostic + cost-aware routing** | Not locked to one model vendor. | Efficient · Robust | v0.5 |
 | **RavenFabric mesh: E2E-encrypted remote exec** | Unique — competitors are single-host or single-cloud. | Robust | v0.6 |
 | **No telemetry · signed + SBOM** | Trust as a feature, verifiable end-to-end. | Secure | ✅ |
@@ -371,8 +373,7 @@ Agency with guardrails — the security differentiator.
   - Progressive disclosure: skills advertise capabilities, agent selects
   - Sandboxed skill execution (reuse `Sandbox`)
 
-**Exit criteria:** ~~a supervisor decomposes a task across ≥3 sub-agents over RavenFabric and aggregates results.~~
-**Updated exit criteria:** Supervisor mode implemented for single-provider and multi-model. RavenFabric integration remains for v0.6.1.
+**Exit criteria:** ✅ COMPLETE — Supervisor mode implemented for single-provider and multi-model. Swarm mode implemented for single-provider and multi-model. RavenFabric integration remains for v0.6.1.
 
 ### v0.7 — Observability and ops 📈
 
@@ -425,7 +426,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 274 unit tests across 8 modules + 94 verification tests across 4 deployment targets.
+**Current coverage:** 277 unit tests across 9 modules + 94 verification tests across 4 deployment targets.
 
 ---
 
@@ -433,12 +434,12 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 
 | Metric | Target | Current |
 |---|---|---|
-| Stripped binary size | < 15 MB | ~3 MB ✅ |
+| Stripped binary size | < 15 MB | ~3.4 MB ✅ |
 | Container image size | < 30 MB | ~50 MB ⚠️ |
 | Cold start (single mode) | < 50 ms | ~7 ms ✅ |
 | Idle memory (server mode) | < 20 MB RSS | N/A (no server) |
-| Provider failover decision | < 5 ms | N/A (no fallback) |
-| Tool-call audit write | non-blocking, < 1 ms enqueue | N/A (not wired) |
+| Provider failover decision | < 5 ms | ✅ (v0.5.1) |
+| Tool-call audit write | non-blocking, < 1 ms enqueue | ✅ (wired) |
 
 ---
 

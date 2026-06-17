@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v0.6.0-dev
 
+### Fixed — 2026-06-02
+
+#### Build Fixes After Upstream Merge
+- Fixed merge artifact in `src/main.rs` — duplicate `system_prompt` line and stray closing brace
+- Added missing `warn` import in `src/main.rs`
+- Added `LLMProvider::Anthropic` match arm in `main.rs` provider_name mapping
+- Fixed `&str`/`String` type mismatch in `agent.rs` swarm_multi (`provider_name()` returns `&str`, tuple expects `String`)
+- Fixed lifetime issue: `multi_llm` borrowed in `tokio::spawn` but doesn't live long enough — cloned `Arc` before spawning
+- Added missing `.clone()` on `Arc<dyn LLMProviderTrait>` when passing to `run_subtask_agent`
+- Fixed `config.provider.clone().into()` → `{:?}` formatting in `llm.rs`
+- Changed `&self` to `&mut self` for `chat_with_fallback` to allow `token_budget` mutation
+- Fixed double borrow of `self.transport` in `mcp.rs` (3 locations — stored `next_id` in local vars)
+- Fixed moved `server_info` field used after move in `mcp.rs` (cloned before move)
+- Added missing fields to `LLMConfig::default()` and 47+ test constructors (`token_budget`, `retry_max`, `retry_base_delay_ms`, `retry_max_delay_ms`)
+- Fixed MCP test assertion — `protocol_version` → `protocolVersion` (camelCase serde)
+- Disabled retries (`retry_max: 0`) in 7 error-path mockito tests to prevent retry count mismatch
+- Removed unused `rand::Rng` import in `llm.rs`
+
+### Changed
+- Updated ROADMAP.md to reflect v0.6 implementation status
+- Added 4 new tests for swarm/supervisor function existence
+- Increased LOC from ~8,900 to ~9,400 (+500 for v0.6 features)
+- All 277 unit tests passing across 9 source modules
+- Binary size: ~3.4 MB (arm64 macOS release build)
+
+### Technical Details
+- All modes use `FINAL:` marker detection for completion
+- Supervisor modes support up to 15 iterations for complex task decomposition
+- Subtask agents run with 5-iteration limit each
+- Full security wiring (policy, sandbox, audit) preserved in supervisor mode
+
 ### Added — 2026-06-07
 
 #### Swarm Mode (Single-Provider)
@@ -33,17 +64,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Round-robin supervisor LLM selection
 - Subtask assignment to specific providers based on strengths
 - `run_supervisor_multi()` function in `src/agent.rs`
-
-### Changed
-- Updated ROADMAP.md to reflect v0.6 implementation status
-- Added 4 new tests for swarm/supervisor function existence
-- Increased LOC from ~8,900 to ~9,400 (+500 for v0.6 features)
-
-### Technical Details
-- All modes use `FINAL:` marker detection for completion
-- Supervisor modes support up to 15 iterations for complex task decomposition
-- Subtask agents run with 5-iteration limit each
-- Full security wiring (policy, sandbox, audit) preserved in supervisor mode
 
 ---
 

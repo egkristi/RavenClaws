@@ -23,21 +23,22 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.1.0 (pre-release / developer preview)
+- **Version:** 0.5.3 (v0.6.0-dev)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaw
-- **Build:** `cargo build --release` (~3MB stripped binary, ~7ms startup)
+- **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
 
-### Architecture (8 modules)
+### Architecture (9 modules)
 
 ```
 src/
 ├── main.rs      — CLI entry point (clap), config loading, mode dispatch
-├── agent.rs     — Agent implementations (single, swarm stubs, supervisor stubs, REPL, ConversationMemory, agent loop with tool wiring)
-├── llm.rs       — LLM provider abstraction (trait + 4 clients + multi-model manager + streaming)
+├── agent.rs     — Agent implementations (single, swarm, supervisor, REPL, ConversationMemory, agent loop with tool wiring)
+├── llm.rs       — LLM provider abstraction (trait + 5 clients + multi-model manager + streaming)
 ├── config.rs    — Config structs, TOML/env loading, validation
 ├── error.rs     — Unified error types
 ├── tools.rs     — Tool abstraction (ToolImpl trait, ToolRegistry, ToolCall, ToolResult) + 4 built-in tools (shell, read/write file, web fetch)
+├── mcp.rs       — MCP client (JSON-RPC 2.0 over stdio, tool discovery)
 ├── policy.rs    — Deny-by-default policy engine (shell, path, network allow-lists)
 ├── audit.rs     — Tamper-evident audit log (HMAC-SHA256 chained, structured JSON)
 └── sandbox.rs   — Sandboxed execution (workdir jail, path resolution, resource limits, timeouts)
@@ -48,24 +49,26 @@ src/
 | Feature | Status |
 |---|---|
 | Single agent mode | ✅ Working — sends prompt, logs response |
-| Multi-provider (LiteLLM, OpenAI, OpenRouter, Ollama) | ✅ Working |
+| Multi-provider (LiteLLM, OpenAI, OpenRouter, Ollama, Anthropic) | ✅ Working |
 | Multi-model manager | ✅ Working — iterates all configured providers, round-robin routing |
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (274 tests, 8 modules, 0 failures) | ✅ Working |
+| Verification suite (277 tests, 9 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
 | Interactive REPL | ✅ Working — `--repl` flag with stdin loop, streaming output |
 | System prompt / persona | ✅ Working — `LLMConfig.system_prompt`, CLI `--system-prompt`, env var |
-| Swarm mode | ❌ Stub — returns error "not yet implemented" |
-| Supervisor mode | ❌ Stub — returns error "not yet implemented" |
+| Swarm mode | ✅ Working — 3 parallel agents with different personas (single + multi-model) |
+| Supervisor mode | ✅ Working — task decomposition + sub-agent spawning + result aggregation (single + multi-model) |
 | Tool-use / function calling | ✅ Working — ToolImpl trait + ToolRegistry + 4 built-in tools + agent loop wiring |
 | Agent loop / ReAct planning | ✅ Working — perceive→plan→act→observe with max-iteration guard, tool call detection |
 | Deny-by-default policy | ✅ Working — PolicyEngine with shell/path/network allow-lists |
 | Sandboxed execution | ✅ Working — workdir jail, path resolution, resource limits, timeouts |
 | Tamper-evident audit log | ✅ Working — HMAC-SHA256 chained, structured JSON, verification |
+| MCP client | ✅ Working — JSON-RPC 2.0 over stdio, tool discovery and registration |
+| Retry / fallback chains | ✅ Working — exponential backoff, circuit breaker, token budgets |
 | RavenFabric integration | Partial — config struct exists, binary included in container, runtime wiring pending |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented — CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review |
@@ -103,13 +106,13 @@ All identified bugs, technical debt, and known limitations **must** be documente
 
 ```markdown
 ## Critical
-- **`--exec` mode is dead code** — CLI arg parsed but never used in `main.rs`. [No issue]
+- **k8s Deployment enters CrashLoopBackOff** — binary exits after one request, no server mode yet. [No issue]
 
 ## High
-- **Swarm/Supervisor stubs exit silently** — `--mode swarm` and `--mode supervisor` warn "not yet implemented" and exit 0 instead of returning an error. [No issue]
+- **RavenFabric integration not wired** — config struct exists, binary in container, but runtime wiring pending. [No issue]
 
 ## Medium
-- **Only 2 Rust unit tests** — `cargo test` runs in <1s and tests almost nothing. [No issue]
+- **22 pre-existing clippy dead_code warnings** — infrastructure types not yet wired to agent loop. [No issue]
 ```
 
 **Severity levels:**

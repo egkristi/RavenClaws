@@ -42,7 +42,7 @@ Each module is **self-contained** and can be run independently:
 
 The verification suite runs **94 tests** across **8 modules**, covering **4 deployment targets**. Each test produces a detailed log in `target/verification-results/`.
 
-In addition, **274 Rust unit tests** run via `cargo test` covering all 8 source modules (agent, config, error, llm, tools, policy, audit, sandbox).
+In addition, **277 Rust unit tests** run via `cargo test` covering all 9 source modules (agent, config, error, llm, tools, mcp, policy, audit, sandbox).
 
 ### Usage
 
@@ -61,6 +61,8 @@ cargo test                             # Run 274 Rust unit tests
 ./scripts/verify.sh --performance      # Performance benchmarks only
 ./scripts/verify.sh --llm-quality      # LLM response quality only
 ./scripts/verify.sh --build            # Build binaries first, then run all tests
+
+cargo test                             # Run 277 Rust unit tests
 ```
 
 ### Test Categories
@@ -126,7 +128,7 @@ cargo test                             # Run 274 Rust unit tests
 - **Release build**: Binary is a release build (Mach-O executable)
 - **No hardcoded API keys**: No OpenAI-style keys (`sk-...`) in binary strings
 - **No hardcoded credentials**: No GitHub tokens (`ghp_...`) in binary strings
-- **Binary size**: Under 5MB (currently ~3MB)
+- **Binary size**: Under 5MB (currently ~3.4MB)
 - **No secrets in strings**: No credential patterns in binary strings
 - **No setuid/setgid**: Binary does not require elevated privileges
 - **Cargo.lock present**: Reproducible builds via lockfile
@@ -135,7 +137,7 @@ cargo test                             # Run 274 Rust unit tests
 - **Startup time**: Binary starts in under 100ms (currently ~7ms)
 - **Config loading time**: Config parses in under 50ms (currently ~6ms)
 - **LLM response time**: Average of 3 runs (currently ~900ms)
-- **Binary size**: Reports exact size (currently 3,145KB)
+- **Binary size**: Reports exact size (currently ~3,500KB)
 - **Memory usage**: Approximate footprint via vmmap
 
 #### 8. LLM Response Quality (30+ tests)
