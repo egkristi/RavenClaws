@@ -167,10 +167,10 @@ check_llm_response_quality() {
             log_fail "Model $model_name — response too short"
             return 1
         fi
-    elif grep -q '"Exec response received"' "$log_file" 2>/dev/null; then
-        # Exec mode prints response to stdout (non-JSON lines in the log)
+    elif grep -q '"Agent loop progress"' "$log_file" 2>/dev/null; then
+        # Exec mode uses agent loop — response is printed to stdout (non-JSON lines)
         local exec_response
-        exec_response=$(grep -v '^{' "$log_file" 2>/dev/null | tr -d '[:space:]')
+        exec_response=$(grep -v '^{' "$log_file" 2>/dev/null | grep -v '^$' | tr -d '[:space:]')
         local exec_len=${#exec_response}
         if [[ "$exec_len" -gt 0 ]]; then
             log_ok "Model $model_name — responded (${exec_len} chars via exec)"

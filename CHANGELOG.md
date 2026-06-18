@@ -14,6 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.githooks/setup.sh` — install/check/remove hooks with `git config core.hooksPath`
   - Updated AGENTS.md, README.md with hook documentation and usage instructions
 
+### Fixed — 2026-06-18
+- **Exec mode test** — fixed `check_llm_response_quality` in `scripts/lib/common.sh` to detect agent loop progress instead of non-existent `"Exec response received"` log message; added empty line filtering for cleaner response detection
+
 ### Fixed — 2026-06-02
 
 #### Build Fixes After Upstream Merge
