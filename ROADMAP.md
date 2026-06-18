@@ -3,7 +3,7 @@
 **Date:** 2026-06-18  
 **Version:** v0.6.0-dev — Swarm & Supervisor Modes (in development)  
 **Previous Release:** v0.5.3 (2026-06-07) — Native Anthropic Provider ✅  
-**Current Commit:** `bbcc0ee` — feat: add git hooks system with pre-commit and pre-push verification
+**Current Commit:** `274fbfa` — docs: update ISSUES.md, ROADMAP.md, CHANGELOG.md with latest CI status; fix exec mode test in common.sh
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
