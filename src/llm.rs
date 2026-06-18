@@ -77,6 +77,7 @@ pub enum LLMError {
     ProviderNotSupported(String),
 
     #[error("Token budget exceeded")]
+    #[allow(dead_code)]
     TokenBudgetExceeded,
 
     #[error("All providers failed after retries")]
@@ -183,6 +184,7 @@ impl CircuitBreaker {
 
 /// Token budget tracker (v0.5)
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct TokenBudget {
     /// Maximum tokens allowed
     pub max_tokens: u32,
@@ -192,6 +194,7 @@ pub struct TokenBudget {
     pub cost_per_1k: f64,
 }
 
+#[allow(dead_code)]
 impl TokenBudget {
     pub fn new(max_tokens: u32, cost_per_1k: f64) -> Self {
         Self {
@@ -377,7 +380,10 @@ impl OpenAICompatibleClient {
     }
 
     /// Send request with retry logic (v0.5)
-    async fn send_request_with_retry(&self, request: ChatRequest) -> Result<ChatResponse, LLMError> {
+    async fn send_request_with_retry(
+        &self,
+        request: ChatRequest,
+    ) -> Result<ChatResponse, LLMError> {
         let mut last_error = None;
 
         for attempt in 0..=self.retry_config.max_retries {
@@ -387,7 +393,9 @@ impl OpenAICompatibleClient {
                     LLMError::RequestFailed("Circuit breaker lock poisoned".to_string())
                 })?;
                 if !cb.can_execute() {
-                    return Err(LLMError::CircuitBreakerOpen(self.provider.name().to_string()));
+                    return Err(LLMError::CircuitBreakerOpen(
+                        self.provider.name().to_string(),
+                    ));
                 }
             }
 
@@ -434,7 +442,7 @@ impl OpenAICompatibleClient {
 
     /// Inner send request (no retry)
     async fn send_request_inner(&self, request: ChatRequest) -> Result<ChatResponse, LLMError> {
-        let req = self.apply_headers(self.client.post(&self.endpoint()).json(&request));
+        let req = self.apply_headers(self.client.post(self.endpoint()).json(&request));
 
         let response = req
             .send()
@@ -480,8 +488,9 @@ impl OpenAICompatibleClient {
         req
     }
 
+    #[allow(dead_code)]
     async fn send_request(&self, request: ChatRequest) -> Result<ChatResponse, LLMError> {
-        let req = self.apply_headers(self.client.post(&self.endpoint()).json(&request));
+        let req = self.apply_headers(self.client.post(self.endpoint()).json(&request));
 
         let response = req
             .send()
@@ -510,7 +519,7 @@ impl LLMProviderTrait for OpenAICompatibleClient {
             tool_choice: None,
         };
 
-        let req = self.apply_headers(self.client.post(&self.endpoint()).json(&request));
+        let req = self.apply_headers(self.client.post(self.endpoint()).json(&request));
 
         let response = req
             .send()
@@ -596,13 +605,17 @@ impl LLMProviderTrait for OpenAICompatibleClient {
 }
 
 /// LiteLLM client (OpenAI-compatible API) — DEPRECATED in v0.5, kept for backward compatibility
-#[deprecated(since = "0.5.0", note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::LiteLLM instead")]
+#[deprecated(
+    since = "0.5.0",
+    note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::LiteLLM instead"
+)]
+#[allow(dead_code)]
 pub struct LiteLLMClient {
     client: Client,
     config: LLMConfig,
 }
 
-#[allow(deprecated)]
+#[allow(deprecated, dead_code)]
 impl LiteLLMClient {
     pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
         let client = Client::builder()
@@ -617,7 +630,7 @@ impl LiteLLMClient {
     }
 }
 
-#[allow(deprecated)]
+#[allow(deprecated, dead_code)]
 #[async_trait::async_trait]
 impl LLMProviderTrait for LiteLLMClient {
     async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
@@ -669,13 +682,17 @@ impl LLMProviderTrait for LiteLLMClient {
 }
 
 /// OpenRouter client (OpenAI-compatible with model routing) — DEPRECATED in v0.5
-#[deprecated(since = "0.5.0", note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::OpenRouter instead")]
+#[deprecated(
+    since = "0.5.0",
+    note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::OpenRouter instead"
+)]
+#[allow(dead_code)]
 pub struct OpenRouterClient {
     client: Client,
     config: LLMConfig,
 }
 
-#[allow(deprecated)]
+#[allow(deprecated, dead_code)]
 impl OpenRouterClient {
     pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
         let client = Client::builder()
@@ -690,16 +707,18 @@ impl OpenRouterClient {
     }
 }
 
-#[allow(deprecated)]
+#[allow(deprecated, dead_code)]
 #[async_trait::async_trait]
 impl LLMProviderTrait for OpenRouterClient {
     async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
-        let unified = OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::OpenRouter)?;
+        let unified =
+            OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::OpenRouter)?;
         unified.chat(messages).await
     }
 
     async fn chat_stream(&self, messages: Vec<ChatMessage>) -> Result<StreamResult, LLMError> {
-        let unified = OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::OpenRouter)?;
+        let unified =
+            OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::OpenRouter)?;
         unified.chat_stream(messages).await
     }
 
@@ -817,13 +836,17 @@ impl LLMProviderTrait for OllamaClient {
 }
 
 /// OpenAI native client — DEPRECATED in v0.5
-#[deprecated(since = "0.5.0", note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::OpenAI instead")]
+#[deprecated(
+    since = "0.5.0",
+    note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::OpenAI instead"
+)]
+#[allow(dead_code)]
 pub struct OpenAIClient {
     client: Client,
     config: LLMConfig,
 }
 
-#[allow(deprecated)]
+#[allow(deprecated, dead_code)]
 impl OpenAIClient {
     pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
         let client = Client::builder()
@@ -838,7 +861,7 @@ impl OpenAIClient {
     }
 }
 
-#[allow(deprecated)]
+#[allow(deprecated, dead_code)]
 #[async_trait::async_trait]
 impl LLMProviderTrait for OpenAIClient {
     async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
@@ -902,14 +925,20 @@ impl LLMProviderTrait for AnthropicClient {
         }
 
         // Extract system prompt if present
-        let system = messages.iter()
+        let system = messages
+            .iter()
             .find(|m| m.role == "system")
             .map(|m| m.content.clone());
 
-        let anthropic_messages: Vec<AnthropicMessage> = messages.into_iter()
+        let anthropic_messages: Vec<AnthropicMessage> = messages
+            .into_iter()
             .filter(|m| m.role != "system")
             .map(|m| AnthropicMessage {
-                role: if m.role == "user" { "user".to_string() } else { "assistant".to_string() },
+                role: if m.role == "user" {
+                    "user".to_string()
+                } else {
+                    "assistant".to_string()
+                },
                 content: m.content,
             })
             .collect();
@@ -922,10 +951,15 @@ impl LLMProviderTrait for AnthropicClient {
             temperature: Some(0.7),
         };
 
-        let api_key = self.config.api_key.clone()
+        let api_key = self
+            .config
+            .api_key
+            .clone()
             .ok_or_else(|| LLMError::AuthFailed)?;
 
-        let response = self.client.post("https://api.anthropic.com/v1/messages")
+        let response = self
+            .client
+            .post("https://api.anthropic.com/v1/messages")
             .header("x-api-key", api_key)
             .header("anthropic-version", "2023-06-01")
             .header("content-type", "application/json")
@@ -939,6 +973,7 @@ impl LLMProviderTrait for AnthropicClient {
         if status.is_success() {
             // Anthropic response format
             #[derive(Deserialize)]
+            #[allow(dead_code)]
             struct AnthropicResponse {
                 id: String,
                 #[serde(rename = "type")]
@@ -954,8 +989,14 @@ impl LLMProviderTrait for AnthropicClient {
             #[derive(Deserialize)]
             #[serde(tag = "type", rename_all = "lowercase")]
             enum AnthropicContentBlock {
-                Text { text: String },
-                ToolUse { id: String, name: String, input: serde_json::Value },
+                Text {
+                    text: String,
+                },
+                ToolUse {
+                    id: String,
+                    name: String,
+                    input: serde_json::Value,
+                },
             }
 
             #[derive(Deserialize)]
@@ -1049,7 +1090,8 @@ pub fn create_client(config: &LLMConfig) -> Result<Arc<dyn LLMProviderTrait>, LL
             Ok(Arc::new(unified))
         }
         LLMProvider::OpenRouter => {
-            let unified = OpenAICompatibleClient::new(config, OpenAICompatibleProvider::OpenRouter)?;
+            let unified =
+                OpenAICompatibleClient::new(config, OpenAICompatibleProvider::OpenRouter)?;
             Ok(Arc::new(unified))
         }
         LLMProvider::Ollama => Ok(Arc::new(OllamaClient::new(config)?)),
@@ -1091,11 +1133,13 @@ impl MultiModelManager {
 }
 
 /// Provider fallback chain (v0.5) — tries providers in order until one succeeds
+#[allow(dead_code)]
 pub struct ProviderFallbackChain {
     configs: Vec<LLMConfig>,
     token_budget: Option<TokenBudget>,
 }
 
+#[allow(dead_code)]
 impl ProviderFallbackChain {
     pub fn new(configs: Vec<LLMConfig>) -> Self {
         Self {
@@ -1110,14 +1154,21 @@ impl ProviderFallbackChain {
     }
 
     /// Execute with fallback — tries each provider in order until success
-    pub async fn chat_with_fallback(&mut self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
+    pub async fn chat_with_fallback(
+        &mut self,
+        messages: Vec<ChatMessage>,
+    ) -> Result<ChatResponse, LLMError> {
         let mut last_error = None;
 
         for (i, config) in self.configs.iter().enumerate() {
             let client = match create_client(config) {
                 Ok(c) => c,
                 Err(e) => {
-                    tracing::warn!("Failed to create client for provider {:?}: {}", config.provider, e);
+                    tracing::warn!(
+                        "Failed to create client for provider {:?}: {}",
+                        config.provider,
+                        e
+                    );
                     last_error = Some(e);
                     continue;
                 }
@@ -1154,7 +1205,8 @@ impl ProviderFallbackChain {
 
     /// Get provider names in chain
     pub fn provider_names(&self) -> Vec<String> {
-        self.configs.iter()
+        self.configs
+            .iter()
             .map(|c| format!("{:?}", c.provider))
             .collect()
     }
@@ -1238,9 +1290,18 @@ mod tests {
 
     #[test]
     fn test_openai_compatible_provider_defaults() {
-        assert_eq!(OpenAICompatibleProvider::LiteLLM.default_endpoint(), "http://localhost:4000");
-        assert_eq!(OpenAICompatibleProvider::OpenAI.default_endpoint(), "https://api.openai.com");
-        assert_eq!(OpenAICompatibleProvider::OpenRouter.default_endpoint(), "https://openrouter.ai");
+        assert_eq!(
+            OpenAICompatibleProvider::LiteLLM.default_endpoint(),
+            "http://localhost:4000"
+        );
+        assert_eq!(
+            OpenAICompatibleProvider::OpenAI.default_endpoint(),
+            "https://api.openai.com"
+        );
+        assert_eq!(
+            OpenAICompatibleProvider::OpenRouter.default_endpoint(),
+            "https://openrouter.ai"
+        );
     }
 
     #[test]
@@ -1270,7 +1331,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM);
         assert!(client.is_ok());
@@ -1291,9 +1352,10 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
-        let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
+        let client =
+            OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
         // Endpoint is private, but we can verify provider name
         assert_eq!(client.provider_name(), "openai");
     }
@@ -1315,13 +1377,14 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let response = client.chat(make_chat_messages()).await.unwrap();
 
             assert_eq!(response.model, "gpt-4o-mini");
@@ -1346,13 +1409,14 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::AuthFailed));
@@ -1376,13 +1440,14 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 0,  // Disable retries for error-path tests
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0, // Disable retries for error-path tests
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::RateLimited));
@@ -1408,13 +1473,14 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
             let _ = client.chat(make_chat_messages()).await.unwrap();
             mock.assert();
         });
@@ -1435,7 +1501,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = AnthropicClient::new(&config);
         assert!(client.is_ok());
@@ -1454,7 +1520,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = AnthropicClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "anthropic");
@@ -1473,7 +1539,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = AnthropicClient::new(&config).unwrap();
         assert_eq!(client.model(), "claude-opus-4-20250514");
@@ -1492,7 +1558,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = create_client(&config);
         assert!(client.is_ok());
@@ -1632,13 +1698,14 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = LiteLLMClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::AuthFailed));
@@ -1663,13 +1730,14 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = LiteLLMClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::RateLimited));
@@ -1694,13 +1762,14 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = LiteLLMClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::RequestFailed(_)));
@@ -1726,13 +1795,14 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = LiteLLMClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::InvalidResponse(_)));
@@ -1761,13 +1831,14 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenRouterClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
             let response = client.chat(make_chat_messages()).await.unwrap();
 
             assert_eq!(response.model, "anthropic/claude-sonnet-4-20250514");
@@ -1793,13 +1864,14 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenRouterClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::AuthFailed));
@@ -1824,13 +1896,14 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 0,  // Disable retries for error-path tests
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0, // Disable retries for error-path tests
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenRouterClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::RateLimited));
@@ -1855,13 +1928,14 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 0,  // Disable retries for error-path tests
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0, // Disable retries for error-path tests
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenRouterClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::RequestFailed(_)));
@@ -1887,13 +1961,14 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 0,  // Disable retries for error-path tests
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0, // Disable retries for error-path tests
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenRouterClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::InvalidResponse(_)));
@@ -1920,13 +1995,14 @@ mod tests {
                 api_key: Some("sk-test".to_string()),
                 timeout_secs: 60,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAIClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
             let response = client.chat(make_chat_messages()).await.unwrap();
 
             assert_eq!(response.model, "gpt-4o");
@@ -1952,13 +2028,14 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAIClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::AuthFailed));
@@ -1983,13 +2060,14 @@ mod tests {
                 api_key: Some("sk-test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 0,  // Disable retries for error-path tests
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0, // Disable retries for error-path tests
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAIClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::RateLimited));
@@ -2014,13 +2092,14 @@ mod tests {
                 api_key: Some("sk-test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 0,  // Disable retries for error-path tests
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0, // Disable retries for error-path tests
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAIClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::RequestFailed(_)));
@@ -2046,13 +2125,14 @@ mod tests {
                 api_key: Some("sk-test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 0,  // Disable retries for error-path tests
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 0, // Disable retries for error-path tests
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
-            let client = OpenAIClient::new(&config).unwrap();
+            let client =
+                OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
 
             assert!(matches!(err, LLMError::InvalidResponse(_)));
@@ -2079,11 +2159,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
             let client = OllamaClient::new(&config).unwrap();
             let response = client.chat(make_chat_messages()).await.unwrap();
@@ -2112,11 +2192,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
             let client = OllamaClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -2143,11 +2223,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
             let client = OllamaClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -2174,11 +2254,11 @@ mod tests {
                 api_key: Some("bad-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
             let client = OllamaClient::new(&config).unwrap();
             let err = client.chat(make_chat_messages()).await.unwrap_err();
@@ -2203,7 +2283,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = create_client(&config).unwrap();
         assert_eq!(client.provider_name(), "litellm");
@@ -2223,7 +2303,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = OllamaClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "ollama");
@@ -2243,9 +2323,10 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
-        let client = OpenAIClient::new(&config).unwrap();
+        let client =
+            OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
         assert_eq!(client.provider_name(), "openai");
         assert_eq!(client.model(), "gpt-4o");
     }
@@ -2263,9 +2344,10 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
-        let client = OpenRouterClient::new(&config).unwrap();
+        let client =
+            OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
         assert_eq!(client.provider_name(), "openrouter");
         assert_eq!(client.model(), "anthropic/claude-sonnet-4-20250514");
     }
@@ -2290,7 +2372,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let manager = MultiModelManager::new(vec![config]).unwrap();
         assert_eq!(manager.client_count(), 1);
@@ -2308,11 +2390,11 @@ mod tests {
                 api_key: Some("test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             LLMConfig {
                 provider: LLMProvider::Ollama,
                 endpoint: "http://localhost:11434".to_string(),
@@ -2320,11 +2402,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 60,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
         ];
 
         let manager = MultiModelManager::new(configs).unwrap();
@@ -2343,11 +2425,11 @@ mod tests {
                 api_key: Some("test".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             LLMConfig {
                 provider: LLMProvider::Ollama,
                 endpoint: "http://localhost:11434".to_string(),
@@ -2355,11 +2437,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 60,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
         ];
 
         let manager = MultiModelManager::new(configs).unwrap();
@@ -2452,7 +2534,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-}];
+        }];
 
         let result = MultiModelManager::new(configs);
         // The client creation itself won't fail (HTTP client doesn't validate endpoint),
@@ -2479,11 +2561,11 @@ mod tests {
                 api_key: Some("test-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: crate::config::default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-};
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            };
 
             let client = create_client(&config).unwrap();
             assert_eq!(client.provider_name(), expected_name);
@@ -2542,9 +2624,9 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
-        let result = LiteLLMClient::new(&config);
+        let result = OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::LiteLLM);
         assert!(result.is_ok());
     }
 
@@ -2561,9 +2643,10 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
-        let client = OpenAIClient::new(&config).unwrap();
+        let client =
+            OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenAI).unwrap();
         assert_eq!(client.provider_name(), "openai");
         assert_eq!(client.model(), "gpt-4o");
     }
@@ -2581,9 +2664,10 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
-        let client = OpenRouterClient::new(&config).unwrap();
+        let client =
+            OpenAICompatibleClient::new(&config, OpenAICompatibleProvider::OpenRouter).unwrap();
         assert_eq!(client.provider_name(), "openrouter");
         assert_eq!(client.model(), "anthropic/claude-sonnet-4-20250514");
     }
@@ -2602,7 +2686,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = OllamaClient::new(&config).unwrap();
         assert_eq!(client.provider_name(), "ollama");
@@ -2720,7 +2804,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let client = create_client(&config).unwrap();
         assert_eq!(client.provider_name(), "ollama");
@@ -2753,7 +2837,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
 
         let manager = MultiModelManager::new(vec![config]).unwrap();
         // With one client, next_client wraps to index 0

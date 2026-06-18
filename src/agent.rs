@@ -108,6 +108,7 @@ impl Default for AgentLoopConfig {
 /// 1. Checks all tool calls against PolicyEngine before execution
 /// 2. Executes shell commands in the Sandbox
 /// 3. Logs all tool calls, policy decisions, and results to AuditLog
+#[allow(dead_code)]
 pub async fn run_agent_loop(
     llm: Arc<dyn LLMProviderTrait>,
     initial_prompt: &str,
@@ -820,15 +821,15 @@ pub async fn run_swarm(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result
     let mut handles = Vec::new();
 
     // Spawn parallel agents with different personas
-    let personas = vec![
+    let personas = [
         "You are an analytical agent. Focus on logic, structure, and precision.",
         "You are a creative agent. Focus on innovation, alternatives, and possibilities.",
         "You are a pragmatic agent. Focus on simplicity, efficiency, and practicality.",
     ];
 
-    for i in 0..num_agents {
+    for (i, persona) in personas.iter().enumerate().take(num_agents) {
         let llm_clone = llm.clone();
-        let persona = personas[i].to_string();
+        let persona = persona.to_string();
         let task = "Analyze the given task and provide your solution.".to_string();
 
         let handle = tokio::spawn(async move {
@@ -838,7 +839,9 @@ pub async fn run_swarm(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result
             let messages = memory.history().to_vec();
             match llm_clone.chat(messages).await {
                 Ok(response) => {
-                    let content = response.choices.first()
+                    let content = response
+                        .choices
+                        .first()
                         .map(|c| c.message.content.clone())
                         .unwrap_or_default();
                     Ok((i, content))
@@ -866,7 +869,11 @@ pub async fn run_swarm(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result
     // Print swarm results
     println!("\n🐦‍⬛ Swarm Results ({} agents):", results.len());
     for (idx, result) in &results {
-        println!("\n── Agent {} ({}) ──", idx + 1, personas[*idx].split('.').next().unwrap_or("Unknown"));
+        println!(
+            "\n── Agent {} ({}) ──",
+            idx + 1,
+            personas[*idx].split('.').next().unwrap_or("Unknown")
+        );
         println!("{}", result);
     }
 
@@ -925,13 +932,20 @@ pub async fn run_supervisor(llm: Arc<dyn LLMProviderTrait>, config: Config) -> R
             }
         };
 
-        let content = response.choices.first()
+        let content = response
+            .choices
+            .first()
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
 
         // Check for FINAL: completion
         if content.contains("FINAL:") {
-            let final_response = content.split("FINAL:").nth(1).unwrap_or("").trim().to_string();
+            let final_response = content
+                .split("FINAL:")
+                .nth(1)
+                .unwrap_or("")
+                .trim()
+                .to_string();
             info!("Supervisor completed task: {} chars", final_response.len());
 
             let _ = audit_log.append(
@@ -954,7 +968,8 @@ pub async fn run_supervisor(llm: Arc<dyn LLMProviderTrait>, config: Config) -> R
             let subtask_lines: Vec<&str> = subtask_block.lines().take(3).collect();
 
             let subtask_desc = subtask_lines.first().unwrap_or(&"").trim();
-            let agent_num = subtask_lines.iter()
+            let agent_num = subtask_lines
+                .iter()
                 .find(|l| l.starts_with("AGENT:"))
                 .and_then(|l| l.split(':').nth(1))
                 .unwrap_or("1")
@@ -972,7 +987,8 @@ pub async fn run_supervisor(llm: Arc<dyn LLMProviderTrait>, config: Config) -> R
                     &sandbox,
                     &audit_log,
                     &registry,
-                ).await;
+                )
+                .await;
 
                 match subtask_result {
                     Ok(result) => {
@@ -980,17 +996,16 @@ pub async fn run_supervisor(llm: Arc<dyn LLMProviderTrait>, config: Config) -> R
                         subtask_results.push(format!("Agent {} result: {}", agent_num, result));
 
                         memory.add_assistant_message(&format!(
-                            "Decomposed subtask {}: {}", agent_num, subtask_desc
+                            "Decomposed subtask {}: {}",
+                            agent_num, subtask_desc
                         ));
-                        memory.add_user_message(&format!(
-                            "Subtask {} result: {}", agent_num, result
-                        ));
+                        memory
+                            .add_user_message(&format!("Subtask {} result: {}", agent_num, result));
                     }
                     Err(e) => {
                         warn!("Subtask {} failed: {}", agent_num, e);
-                        memory.add_assistant_message(&format!(
-                            "Subtask {} failed: {}", agent_num, e
-                        ));
+                        memory
+                            .add_assistant_message(&format!("Subtask {} failed: {}", agent_num, e));
                     }
                 }
             }
@@ -1002,7 +1017,10 @@ pub async fn run_supervisor(llm: Arc<dyn LLMProviderTrait>, config: Config) -> R
     // Fallback: return aggregated results
     if !subtask_results.is_empty() {
         let aggregated = subtask_results.join("\n\n");
-        info!("Supervisor aggregated {} subtask results", subtask_results.len());
+        info!(
+            "Supervisor aggregated {} subtask results",
+            subtask_results.len()
+        );
         println!("\n🐦‍⬛ Supervisor Aggregated Result:\n{}", aggregated);
         return Ok(());
     }
@@ -1035,22 +1053,25 @@ async fn run_subtask_agent(
             }
         };
 
-        let content = response.choices.first()
+        let content = response
+            .choices
+            .first()
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
 
         if content.contains("FINAL:") || content.contains("DONE:") {
-            return Ok(content.replace("FINAL:", "").replace("DONE:", "").trim().to_string());
+            return Ok(content
+                .replace("FINAL:", "")
+                .replace("DONE:", "")
+                .trim()
+                .to_string());
         }
 
         // Try tool execution
-        if let Some(tool_result) = execute_tool_call_with_security(
-            &content,
-            registry,
-            policy_engine,
-            sandbox,
-            audit_log,
-        ).await {
+        if let Some(tool_result) =
+            execute_tool_call_with_security(&content, registry, policy_engine, sandbox, audit_log)
+                .await
+        {
             memory.add_assistant_message(&content);
             memory.add_user_message(&format!("Tool result: {}", tool_result.output));
         } else {
@@ -1114,14 +1135,17 @@ pub async fn run_single_multi(multi_llm: MultiModelManager, config: Config) -> R
 /// Swarm mode runs multiple agents in parallel, each using a different LLM provider
 /// for the same task. Results are collected and compared for diversity.
 pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Result<()> {
-    info!("Starting swarm mode (multi-model) — {} parallel agents", multi_llm.client_count());
+    info!(
+        "Starting swarm mode (multi-model) — {} parallel agents",
+        multi_llm.client_count()
+    );
 
     let _system_prompt = &config.llm.system_prompt;
     let num_agents = multi_llm.client_count().min(3); // Cap at 3 for cost control
     let mut handles = Vec::new();
 
     // Different personas for each agent
-    let personas = vec![
+    let personas = [
         "You are an analytical agent. Focus on logic, structure, and precision.",
         "You are a creative agent. Focus on innovation, alternatives, and possibilities.",
         "You are a pragmatic agent. Focus on simplicity, efficiency, and practicality.",
@@ -1139,10 +1163,17 @@ pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Re
             let messages = memory.history().to_vec();
             match client.chat(messages).await {
                 Ok(response) => {
-                    let content = response.choices.first()
+                    let content = response
+                        .choices
+                        .first()
                         .map(|c| c.message.content.clone())
                         .unwrap_or_default();
-                    Ok((i, client.provider_name().to_string(), client.model().to_string(), content))
+                    Ok((
+                        i,
+                        client.provider_name().to_string(),
+                        client.model().to_string(),
+                        content,
+                    ))
                 }
                 Err(e) => Err(format!("Agent {} failed: {}", i, e)),
             }
@@ -1156,7 +1187,13 @@ pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Re
     for handle in handles {
         match handle.await {
             Ok(Ok((idx, provider, model, result))) => {
-                info!("Agent {} ({}:{}) completed: {} chars", idx, provider, model, result.len());
+                info!(
+                    "Agent {} ({}:{}) completed: {} chars",
+                    idx,
+                    provider,
+                    model,
+                    result.len()
+                );
                 results.push((idx, provider, model, result));
             }
             Ok(Err(e)) => warn!("Agent failed: {}", e),
@@ -1165,7 +1202,10 @@ pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Re
     }
 
     // Print swarm results
-    println!("\n🐦‍⬛ Swarm Results ({} agents, multi-model):", results.len());
+    println!(
+        "\n🐦‍⬛ Swarm Results ({} agents, multi-model):",
+        results.len()
+    );
     for (idx, provider, model, result) in &results {
         println!("\n── Agent {} ({}:{}) ──", idx + 1, provider, model);
         println!("{}", result);
@@ -1179,7 +1219,10 @@ pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Re
 /// The supervisor decomposes a task and assigns subtasks to different providers
 /// based on their strengths. Results are aggregated.
 pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) -> Result<()> {
-    info!("Starting supervisor mode (multi-model) with {} providers", multi_llm.client_count());
+    info!(
+        "Starting supervisor mode (multi-model) with {} providers",
+        multi_llm.client_count()
+    );
 
     let system_prompt = &config.llm.system_prompt;
     let policy_engine = PolicyEngine::default_secure();
@@ -1219,16 +1262,15 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
         }
 
         // Use round-robin for supervisor itself
-        let supervisor_client = multi_llm.get_client(iteration % multi_llm.client_count())
+        let supervisor_client = multi_llm
+            .get_client(iteration % multi_llm.client_count())
             .or_else(|| multi_llm.get_client(0))
             .cloned();
 
         let messages = memory.history().to_vec();
-        let response = match supervisor_client.map(|c| {
-            tokio::spawn(async move { c.chat(messages).await })
-        }) {
-            Some(handle) => {
-                match handle.await {
+        let response =
+            match supervisor_client.map(|c| tokio::spawn(async move { c.chat(messages).await })) {
+                Some(handle) => match handle.await {
                     Ok(Ok(r)) => r,
                     Ok(Err(e)) => {
                         warn!(error = %e, "Supervisor LLM request failed");
@@ -1238,21 +1280,27 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
                         warn!(error = %e, "Supervisor task join failed");
                         continue;
                     }
+                },
+                None => {
+                    warn!("No LLM clients available");
+                    break;
                 }
-            }
-            None => {
-                warn!("No LLM clients available");
-                break;
-            }
-        };
+            };
 
-        let content = response.choices.first()
+        let content = response
+            .choices
+            .first()
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
 
         // Check for FINAL: completion
         if content.contains("FINAL:") {
-            let final_response = content.split("FINAL:").nth(1).unwrap_or("").trim().to_string();
+            let final_response = content
+                .split("FINAL:")
+                .nth(1)
+                .unwrap_or("")
+                .trim()
+                .to_string();
             info!("Supervisor completed task: {} chars", final_response.len());
 
             let _ = audit_log.append(
@@ -1276,7 +1324,8 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
             let subtask_lines: Vec<&str> = subtask_block.lines().take(4).collect();
 
             let subtask_desc = subtask_lines.first().unwrap_or(&"").trim();
-            let provider_idx = subtask_lines.iter()
+            let provider_idx = subtask_lines
+                .iter()
                 .find(|l| l.starts_with("PROVIDER:"))
                 .and_then(|l| l.split(':').nth(1))
                 .and_then(|s| s.trim().parse::<usize>().ok())
@@ -1285,7 +1334,8 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
             if !subtask_desc.is_empty() {
                 info!("Subtask for provider {}: {}", provider_idx, subtask_desc);
 
-                let client = multi_llm.get_client(provider_idx)
+                let client = multi_llm
+                    .get_client(provider_idx)
                     .or_else(|| multi_llm.get_client(0));
 
                 if let Some(client) = client {
@@ -1297,7 +1347,8 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
                         &sandbox,
                         &audit_log,
                         &registry,
-                    ).await;
+                    )
+                    .await;
 
                     match subtask_result {
                         Ok(result) => {
@@ -1310,16 +1361,19 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
                             ));
 
                             memory.add_assistant_message(&format!(
-                                "Assigned subtask to provider {}: {}", provider_idx, subtask_desc
+                                "Assigned subtask to provider {}: {}",
+                                provider_idx, subtask_desc
                             ));
                             memory.add_user_message(&format!(
-                                "Provider {} result: {}", provider_idx, result
+                                "Provider {} result: {}",
+                                provider_idx, result
                             ));
                         }
                         Err(e) => {
                             warn!("Subtask {} failed: {}", provider_idx, e);
                             memory.add_assistant_message(&format!(
-                                "Provider {} subtask failed: {}", provider_idx, e
+                                "Provider {} subtask failed: {}",
+                                provider_idx, e
                             ));
                         }
                     }
@@ -1333,8 +1387,14 @@ pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) 
     // Fallback: return aggregated results
     if !subtask_results.is_empty() {
         let aggregated = subtask_results.join("\n\n");
-        info!("Supervisor aggregated {} subtask results", subtask_results.len());
-        println!("\n🐦‍⬛ Supervisor Aggregated Result (multi-model):\n{}", aggregated);
+        info!(
+            "Supervisor aggregated {} subtask results",
+            subtask_results.len()
+        );
+        println!(
+            "\n🐦‍⬛ Supervisor Aggregated Result (multi-model):\n{}",
+            aggregated
+        );
         return Ok(());
     }
 

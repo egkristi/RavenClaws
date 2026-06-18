@@ -1,9 +1,9 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
-**Date:** 2026-06-07  
+**Date:** 2026-06-18  
 **Version:** v0.6.0-dev — Swarm & Supervisor Modes (in development)  
 **Previous Release:** v0.5.3 (2026-06-07) — Native Anthropic Provider ✅  
-**Current Commit:** `master` — v0.6 implementation in progress
+**Current Commit:** `236c1fb` — CI fixes: deprecated structs, clippy warnings, dead_code resolved
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -298,8 +298,9 @@ Agency with guardrails — the security differentiator.
 - [x] **Sandboxed execution** (workdir jail, resource limits, timeouts).
 - [x] **Audit log** — structured, HMAC-chained, tamper-evident trail of every tool call.
 - [x] **Wire security to agent loop** — `PolicyEngine` validates all tool calls; `Sandbox` executes `shell_exec`; `AuditLog` emits events. **COMMIT: 51e42b0**
-- [ ] **Structured function calling** — OpenAI Tools format for OpenAI/LiteLLM/OpenRouter; native JSON instead of pattern-matching. **(BLOCKER)**
-- [ ] **MCP — client *and* server** — consume any Model Context Protocol tool/server, and expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). **(HIGHEST LEVERAGE)**
+- [x] **Structured function calling** — OpenAI Tools format for OpenAI/LiteLLM/OpenRouter; native JSON instead of pattern-matching. ✅ v0.4
+- [x] **MCP — client** — consume any Model Context Protocol tool/server via stdio transport. ✅ v0.5.2
+- [ ] **MCP — server** — expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). **(HIGHEST LEVERAGE)**
 - [ ] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask).
 - [ ] **Web search + headless browser tool** — search, navigate, extract, and fill forms (beyond simple web fetch).
 - [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs.
@@ -353,11 +354,11 @@ Agency with guardrails — the security differentiator.
   - Progressive disclosure: skills advertise capabilities, agent selects
   - Sandboxed skill execution (reuse `Sandbox`)
 
-**Exit criteria:** ✅ COMPLETE
+**Exit criteria:** ✅ COMPLETE (v0.5 core features)
 1. [x] Single run transparently fails over between providers
 2. [x] Respects token budget
 3. [x] Can consume MCP-provided tools
-4. [x] Code coverage ≥80% on routing/fallback logic (274+ tests across 9 modules)
+4. [x] Code coverage ≥80% on routing/fallback logic (277+ tests across 9 modules)
 
 ### v0.6 — Swarm, supervisor, and RavenFabric 🕸️
 
@@ -373,7 +374,7 @@ Agency with guardrails — the security differentiator.
   - Progressive disclosure: skills advertise capabilities, agent selects
   - Sandboxed skill execution (reuse `Sandbox`)
 
-**Exit criteria:** ✅ COMPLETE — Supervisor mode implemented for single-provider and multi-model. Swarm mode implemented for single-provider and multi-model. RavenFabric integration remains for v0.6.1.
+**Exit criteria:** ✅ COMPLETE (v0.6 core features) — Supervisor and Swarm modes implemented for single-provider and multi-model. RavenFabric integration remains for v0.6.1.
 
 ### v0.7 — Observability and ops 📈
 
@@ -426,7 +427,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 277 unit tests across 9 modules + 94 verification tests across 4 deployment targets.
+**Current coverage:** 277 unit tests across 9 modules + 94 verification tests across 4 deployment targets. All tests pass, clippy clean, fmt clean.
 
 ---
 

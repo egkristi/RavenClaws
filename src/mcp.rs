@@ -26,7 +26,9 @@ use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
-use crate::tools::{JsonSchema, ToolCategory, ToolDefinition, ToolImpl, ToolResult, ToolResultValue};
+use crate::tools::{
+    JsonSchema, ToolCategory, ToolDefinition, ToolImpl, ToolResult, ToolResultValue,
+};
 
 // ── Error types ────────────────────────────────────────────────────────────
 
@@ -42,15 +44,18 @@ pub enum McpError {
     Server { code: i32, message: String },
 
     #[error("Tool not found: {0}")]
+    #[allow(dead_code)]
     ToolNotFound(String),
 
     #[error("Invalid tool arguments: {0}")]
+    #[allow(dead_code)]
     InvalidArguments(String),
 
     #[error("Connection failed: {0}")]
     ConnectionFailed(String),
 
     #[error("Timeout: {0}")]
+    #[allow(dead_code)]
     Timeout(String),
 
     #[error("IO error: {0}")]
@@ -218,9 +223,7 @@ pub enum McpTransportConfig {
     },
     /// SSE transport: connect to HTTP endpoint (not yet implemented)
     #[allow(dead_code)]
-    Sse {
-        url: String,
-    },
+    Sse { url: String },
 }
 
 /// MCP Transport — handles low-level communication
@@ -260,13 +263,15 @@ impl McpTransport {
                     McpError::ConnectionFailed(format!("Failed to spawn {}: {}", command, e))
                 })?;
 
-                let stdin = child.stdin.take().ok_or_else(|| {
-                    McpError::ConnectionFailed("No stdin available".to_string())
-                })?;
+                let stdin = child
+                    .stdin
+                    .take()
+                    .ok_or_else(|| McpError::ConnectionFailed("No stdin available".to_string()))?;
 
-                let stdout = child.stdout.take().ok_or_else(|| {
-                    McpError::ConnectionFailed("No stdout available".to_string())
-                })?;
+                let stdout = child
+                    .stdout
+                    .take()
+                    .ok_or_else(|| McpError::ConnectionFailed("No stdout available".to_string()))?;
 
                 self.child = Some(child);
                 self.stdin = Some(stdin);
@@ -277,7 +282,10 @@ impl McpTransport {
             }
             McpTransportConfig::Sse { url } => {
                 // TODO: Implement SSE transport
-                Err(McpError::Transport(format!("SSE transport not yet implemented for {}", url)))
+                Err(McpError::Transport(format!(
+                    "SSE transport not yet implemented for {}",
+                    url
+                )))
             }
         }
     }
@@ -288,24 +296,28 @@ impl McpTransport {
         debug!("MCP → {}", request_json);
 
         // Send request with newline delimiter
-        let stdin = self.stdin.as_mut().ok_or_else(|| {
-            McpError::Transport("Transport not connected".to_string())
-        })?;
+        let stdin = self
+            .stdin
+            .as_mut()
+            .ok_or_else(|| McpError::Transport("Transport not connected".to_string()))?;
 
         stdin.write_all(request_json.as_bytes()).await?;
         stdin.write_all(b"\n").await?;
         stdin.flush().await?;
 
         // Read response
-        let stdout = self.stdout_reader.as_mut().ok_or_else(|| {
-            McpError::Transport("Transport not connected".to_string())
-        })?;
+        let stdout = self
+            .stdout_reader
+            .as_mut()
+            .ok_or_else(|| McpError::Transport("Transport not connected".to_string()))?;
 
         let mut response_line = String::new();
         stdout.read_line(&mut response_line).await?;
 
         if response_line.trim().is_empty() {
-            return Err(McpError::Transport("Empty response from server".to_string()));
+            return Err(McpError::Transport(
+                "Empty response from server".to_string(),
+            ));
         }
 
         debug!("MCP ← {}", response_line.trim());
@@ -358,7 +370,9 @@ impl McpClient {
         let init_params = InitializeParams {
             protocol_version: MCP_PROTOCOL_VERSION.to_string(),
             capabilities: McpClientCapabilities {
-                roots: Some(McpRootsCapability { list_changed: false }),
+                roots: Some(McpRootsCapability {
+                    list_changed: false,
+                }),
                 sampling: None,
             },
             client_info: McpClientInfo {
@@ -368,13 +382,17 @@ impl McpClient {
         };
 
         let init_id = self.transport.next_id();
-        let response = self.transport.send_request(JsonRpcRequest::new(
-            "initialize",
-            serde_json::to_value(init_params)?,
-            init_id,
-        )).await?;
+        let response = self
+            .transport
+            .send_request(JsonRpcRequest::new(
+                "initialize",
+                serde_json::to_value(init_params)?,
+                init_id,
+            ))
+            .await?;
 
-        let init_result: InitializeResult = response.result
+        let init_result: InitializeResult = response
+            .result
             .and_then(|v| serde_json::from_value(v).ok())
             .ok_or_else(|| McpError::JsonRpc("Invalid initialize response".to_string()))?;
 
@@ -405,13 +423,17 @@ impl McpClient {
     /// Discover available tools from the server
     pub async fn discover_tools(&mut self) -> McpResult<()> {
         let list_id = self.transport.next_id();
-        let response = self.transport.send_request(JsonRpcRequest::new(
-            "tools/list",
-            serde_json::Value::Null,
-            list_id,
-        )).await?;
+        let response = self
+            .transport
+            .send_request(JsonRpcRequest::new(
+                "tools/list",
+                serde_json::Value::Null,
+                list_id,
+            ))
+            .await?;
 
-        let tools_result = response.result
+        let tools_result = response
+            .result
             .and_then(|v| v.get("tools").cloned())
             .ok_or_else(|| McpError::JsonRpc("No tools in response".to_string()))?;
 
@@ -431,20 +453,28 @@ impl McpClient {
     }
 
     /// Call a tool on the MCP server
-    pub async fn call_tool(&mut self, name: &str, arguments: Option<serde_json::Value>) -> McpResult<McpToolResult> {
+    pub async fn call_tool(
+        &mut self,
+        name: &str,
+        arguments: Option<serde_json::Value>,
+    ) -> McpResult<McpToolResult> {
         let params = McpToolCall {
             name: name.to_string(),
             arguments,
         };
 
         let call_id = self.transport.next_id();
-        let response = self.transport.send_request(JsonRpcRequest::new(
-            "tools/call",
-            serde_json::to_value(params)?,
-            call_id,
-        )).await?;
+        let response = self
+            .transport
+            .send_request(JsonRpcRequest::new(
+                "tools/call",
+                serde_json::to_value(params)?,
+                call_id,
+            ))
+            .await?;
 
-        let result: McpToolResult = response.result
+        let result: McpToolResult = response
+            .result
             .and_then(|v| serde_json::from_value(v).ok())
             .ok_or_else(|| McpError::JsonRpc("Invalid tool call response".to_string()))?;
 
@@ -482,7 +512,9 @@ impl McpToolWrapper {
         Self {
             definition: ToolDefinition {
                 name: mcp_tool.name.clone(),
-                description: mcp_tool.description.unwrap_or_else(|| "MCP-provided tool".to_string()),
+                description: mcp_tool
+                    .description
+                    .unwrap_or_else(|| "MCP-provided tool".to_string()),
                 parameters,
                 requires_approval: false,
                 category: ToolCategory::Mcp,
@@ -495,31 +527,33 @@ impl McpToolWrapper {
     /// Convert MCP JSON schema to our JsonSchema type
     fn convert_schema(schema: &serde_json::Value) -> JsonSchema {
         if let Some(obj) = schema.as_object() {
-            let schema_type = obj.get("type")
+            let schema_type = obj
+                .get("type")
                 .and_then(|v| v.as_str())
                 .unwrap_or("object")
                 .to_string();
 
-            let description = obj.get("description")
+            let description = obj
+                .get("description")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
 
-            let properties = obj.get("properties")
+            let properties = obj
+                .get("properties")
                 .and_then(|v| v.as_object())
                 .map(|props| {
-                    props.iter()
+                    props
+                        .iter()
                         .map(|(k, v)| (k.clone(), Self::convert_schema(v)))
                         .collect::<HashMap<String, JsonSchema>>()
                 });
 
-            let required = obj.get("required")
-                .and_then(|v| v.as_array())
-                .map(|arr| {
-                    arr.iter()
-                        .filter_map(|v| v.as_str())
-                        .map(|s| s.to_string())
-                        .collect()
-                });
+            let required = obj.get("required").and_then(|v| v.as_array()).map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .map(|s| s.to_string())
+                    .collect()
+            });
 
             JsonSchema {
                 schema_type,
@@ -544,30 +578,38 @@ impl ToolImpl for McpToolWrapper {
     async fn execute(&self, args: serde_json::Value) -> ToolResultValue<ToolResult> {
         let mut client = self.client.write().await;
 
-        let result = client.call_tool(&self.tool_name, Some(args)).await
-            .map_err(|e| crate::tools::ToolError::ExecutionFailed(
-                self.tool_name.clone(),
-                e.to_string(),
-            ))?;
+        let result = client
+            .call_tool(&self.tool_name, Some(args))
+            .await
+            .map_err(|e| {
+                crate::tools::ToolError::ExecutionFailed(self.tool_name.clone(), e.to_string())
+            })?;
 
         // Convert MCP content to string output
-        let output = result.content.iter().filter_map(|c| {
-            match c {
-                McpContent::Text { text } => Some(text.clone()),
+        let output = result
+            .content
+            .iter()
+            .map(|c| match c {
+                McpContent::Text { text } => text.clone(),
                 McpContent::Image { data, mime_type } => {
-                    Some(format!("[Image: {} bytes, {}]", data.len(), mime_type))
+                    format!("[Image: {} bytes, {}]", data.len(), mime_type)
                 }
                 McpContent::Resource { resource } => {
-                    Some(format!("[Resource: {}]", resource))
+                    format!("[Resource: {}]", resource)
                 }
-            }
-        }).collect::<Vec<_>>().join("\n");
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
 
         Ok(ToolResult {
             tool_name: self.tool_name.clone(),
             success: !result.is_error,
             output,
-            error: if result.is_error { Some("Tool returned error".to_string()) } else { None },
+            error: if result.is_error {
+                Some("Tool returned error".to_string())
+            } else {
+                None
+            },
             exit_code: None,
             duration_ms: None,
         })
@@ -631,7 +673,9 @@ mod tests {
         let params = InitializeParams {
             protocol_version: MCP_PROTOCOL_VERSION.to_string(),
             capabilities: McpClientCapabilities {
-                roots: Some(McpRootsCapability { list_changed: false }),
+                roots: Some(McpRootsCapability {
+                    list_changed: false,
+                }),
                 sampling: None,
             },
             client_info: McpClientInfo {

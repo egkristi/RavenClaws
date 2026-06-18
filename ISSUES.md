@@ -18,15 +18,14 @@ Items are ordered by severity/impact.
 
 **Totals:** 9 modules, ~9,400 LOC (+500 for v0.6), 277+ tests, 5 LLM providers.
 
-**CI Status:** All pipelines green (fmt, clippy, test, security scans, multi-arch builds).
+**CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `431827f` — feat: Swarm and Supervisor modes (v0.6)
+**Commit:** `236c1fb` — docs: Update documentation to reflect v0.6.0-dev state
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)
 - Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.7)
 - k8s CrashLoop: Server mode planned for v0.7
-- 22 pre-existing clippy `dead_code` warnings on infrastructure types not yet wired to agent loop
 
 ---
 
@@ -63,13 +62,19 @@ Items are ordered by severity/impact.
 
 **Status:** ✅ Resolved — all compilation errors fixed, all tests green.
 
-### 22 pre-existing clippy dead_code warnings
+### 22 pre-existing clippy dead_code warnings (resolved 2026-06-18)
 
-**Problem:** `cargo clippy --locked --all-targets -- -D warnings` reports 22 `dead_code` warnings on infrastructure types not yet wired to the agent loop.
+**Problem:** `cargo clippy --locked --all-targets -- -D warnings` reported 22 `dead_code` warnings on infrastructure types not yet wired to the agent loop, plus deprecated struct usage in tests (`LiteLLMClient`, `OpenRouterClient`, `OpenAIClient`).
 
-**Affected modules:** `audit.rs`, `policy.rs`, `sandbox.rs`, `tools.rs`, `mcp.rs`
+**Affected modules:** `llm.rs`, `agent.rs`, `mcp.rs`
 
-**Status:** ⚠️ Low priority — these are API surfaces for future use. Clean up when features are wired.
+**Fix:** 
+- Replaced all deprecated struct usage in tests with `OpenAICompatibleClient` + `OpenAICompatibleProvider`
+- Added `#[allow(dead_code)]` to intentionally unused types (`TokenBudget`, `ProviderFallbackChain`, deprecated client structs, `McpError` variants, `AnthropicResponse` fields, `run_agent_loop`)
+- Fixed clippy issues: `needless_range_loop`, `needless_borrows_for_generic_args`, `unnecessary_filter_map`, `useless_vec`
+- Set `retry_max: 0` on error-path tests that now use `OpenAICompatibleClient` (which has retry logic)
+
+**Status:** ✅ Resolved — clippy clean, 277/277 tests pass, fmt clean.
 
 ---
 
@@ -218,16 +223,16 @@ public infrastructure types that are not yet wired into the agent loop, causing
 
 ### Security Scan: Multiple jobs fail (CodeQL, Udeps, Outdated, Trivy, K8s)
 
-**Problem:** Security Scan #18 (commit `21b0b9d`) failed with 6 errors:
-1. **CodeQL** — exit code 101 (analysis failure)
-2. **Cargo Udeps** — exit code 101 (unused dependencies found)
-3. **Cargo Outdated** — exit code 1 (outdated dependencies)
-4. **Trivy (Filesystem)** — exit code 1 (vulnerabilities found)
-5. **Trivy (IaC Config)** — exit code 1 (misconfigurations found)
-6. **K8s Manifest Validation** — exit code 2 (Kubescape validation errors)
+**Problem:** Security Scan #46 (commit `236c1fb`) failed with 7 errors:
+1. **CodeQL** — exit code 101 (analysis failure — likely Rust toolchain compatibility)
+2. **Cargo Udeps** — exit code 101 (unused dependencies found — informational)
+3. **Cargo Outdated** — exit code 1 (outdated dependencies — informational)
+4. **Trivy (Filesystem)** — exit code 1 (vulnerabilities found — `continue-on-error: true`)
+5. **Trivy (IaC Config)** — exit code 1 (misconfigurations found — `continue-on-error: true`)
+6. **K8s Manifest Validation** — exit code 1 (Kubescape SARIF issue — `continue-on-error: true`)
+7. **Build & Release Check** — exit code 1 (deprecated structs + dead_code — **FIXED**)
 
-**Status:** 🔴 Unresolved — most are pre-existing issues (Udeps, Outdated, Trivy,
-K8s validation). CodeQL failure may be related to new v0.4 code.
+**Status:** 🔴 Partially resolved — Build & Release Check is now ✅ green. Security Scan still has pre-existing issues (CodeQL, Udeps, Outdated, Trivy, K8s validation) that are mostly informational or have `continue-on-error: true`. CodeQL failure needs investigation — may be a Rust toolchain compatibility issue on GitHub Actions runners.
 
 ### Container Build: Still running / may fail
 
