@@ -20,12 +20,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `3f6578c` — ci: fix apt-get hanging in cross-compilation dependency install
+**Commit:** `5767ff6` — docs: update ISSUES.md and ROADMAP.md commit refs to 3f6578c; add Build & Release #66, Container Build #66, Security Scan #54 to resolved status
 
-**Latest CI runs (commit `3f6578c`):**
-- **Build & Release #66** — ✅ Success (all 5 build targets, containers, crates.io)
-- **Container Build #66** — ✅ Success (multi-arch containers, Cosign, SBOM)
-- **Security Scan #54** — ✅ Success (pre-existing informational warnings only)
+**Latest CI runs (commit `5767ff6`):**
+- **Build & Release #67** — ✅ Success
+- **Container Build #67** — ✅ Success
+- **Security Scan #55** — ✅ Success
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)
@@ -259,10 +259,10 @@ deprecated. Node.js 20 will be removed from the runner on September 16th, 2026.
 
 **Affected actions:** `actions/checkout@v4`, `github/codeql-action/upload-sarif@v3`
 
-**Fix:** Update affected actions to versions that support Node.js 24, or set
-`FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` environment variable.
+**Fix:** Set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` environment variable in all
+3 workflow files (`build.yml`, `container.yml`, `security-scan.yml`).
 
-**Status:** ⚠️ Warning — not blocking, but needs attention before Sep 2026.
+**Status:** ✅ Resolved — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` set in all workflows.
 
 ### GitHub Actions: CodeQL Action v3 deprecation (Dec 2026)
 
@@ -271,7 +271,7 @@ deprecated. Node.js 20 will be removed from the runner on September 16th, 2026.
 **Fix:** Update all occurrences of `github/codeql-action/*@v3` to `@v4` in
 workflow files.
 
-**Status:** ⚠️ Warning — not blocking, but needs attention before Dec 2026.
+**Status:** ✅ Resolved — all CodeQL actions updated to `@v4` across all workflows.
 
 ### Container Build: RavenFabric SHA256 verification fails (filename mismatch)
 

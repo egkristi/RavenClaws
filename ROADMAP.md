@@ -3,7 +3,8 @@
 **Date:** 2026-06-18  
 **Version:** v0.6.0-dev — Swarm & Supervisor Modes (in development)  
 **Previous Release:** v0.5.3 (2026-06-07) — Native Anthropic Provider ✅  
-**Current Commit:** `3f6578c` — ci: fix apt-get hanging in cross-compilation dependency install
+**Current Commit:** `5767ff6` — docs: update ISSUES.md and ROADMAP.md commit refs to 3f6578c; add Build & Release #66, Container Build #66, Security Scan #54 to resolved status  
+**CI Status:** Build & Release #67 ✅ · Container Build #67 ✅ · Security Scan #55 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -301,12 +302,12 @@ Agency with guardrails — the security differentiator.
 - [x] **Wire security to agent loop** — `PolicyEngine` validates all tool calls; `Sandbox` executes `shell_exec`; `AuditLog` emits events. **COMMIT: 51e42b0**
 - [x] **Structured function calling** — OpenAI Tools format for OpenAI/LiteLLM/OpenRouter; native JSON instead of pattern-matching. ✅ v0.4
 - [x] **MCP — client** — consume any Model Context Protocol tool/server via stdio transport. ✅ v0.5.2
-- [ ] **MCP — server** — expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). **(HIGHEST LEVERAGE)**
-- [ ] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask).
-- [ ] **Web search + headless browser tool** — search, navigate, extract, and fill forms (beyond simple web fetch).
-- [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs.
-- [ ] **Honor `token_lifetime_secs`** for any issued credentials.
-- [ ] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation.
+- [ ] **MCP — server** — expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). **(HIGHEST LEVERAGE)** *(v0.7)*
+- [ ] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask). *(v0.7)*
+- [ ] **Web search + headless browser tool** — search, navigate, extract, and fill forms (beyond simple web fetch). *(v0.7)*
+- [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs. *(v0.7)*
+- [ ] **Honor `token_lifetime_secs`** for any issued credentials. *(v0.7)*
+- [ ] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation. *(v0.7)*
 
 **Exit criteria:** an agent runs tools, but only those allowed by policy, with a complete audit log. Security features actively invoked, not just present.
 
@@ -368,15 +369,18 @@ Agency with guardrails — the security differentiator.
 - [x] **Supervisor mode (multi-model)** — provider-aware task decomposition ✅ Implemented 2026-06-07
 - [x] **Swarm mode (multi-model)** — parallel agents across different providers ✅ Implemented 2026-06-07
 - [x] **Git hooks (pre-commit / pre-push)** — automated verification before every commit and push ✅ Implemented 2026-06-18
-- [ ] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability).
-- [ ] **Agent communication** — structured message passing; conflict resolution across agents.
-- [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion (acts as the user, not a shared service account).
-- [ ] **Skill / Plugin System** (foundations) — **MOVED FROM v0.5**
+- [x] **CI/CD hardening** — `DEBIAN_FRONTEND=noninteractive` + `timeout-minutes` for apt-get in cross-compilation deps ✅ Implemented 2026-06-18
+- [x] **Node.js 24 migration** — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` in all workflows ✅ Implemented 2026-06-18
+- [x] **CodeQL v4 migration** — all `codeql-action/*@v3` → `@v4` ✅ Implemented 2026-06-18
+- [ ] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability). *(v0.6.1)*
+- [ ] **Agent communication** — structured message passing; conflict resolution across agents. *(v0.6.1)*
+- [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion (acts as the user, not a shared service account). *(v0.7)*
+- [ ] **Skill / Plugin System** (foundations) — **MOVED FROM v0.5** *(v0.7)*
   - Portable capability bundles: `skill.yaml` + scripts + resources
   - Progressive disclosure: skills advertise capabilities, agent selects
   - Sandboxed skill execution (reuse `Sandbox`)
 
-**Exit criteria:** ✅ COMPLETE (v0.6 core features) — Supervisor and Swarm modes implemented for single-provider and multi-model. RavenFabric integration remains for v0.6.1.
+**Exit criteria:** ✅ COMPLETE (v0.6 core features) — Supervisor and Swarm modes implemented for single-provider and multi-model. CI/CD hardened with Node.js 24 and CodeQL v4. RavenFabric integration deferred to v0.6.1.
 
 ### v0.7 — Observability and ops 📈
 
@@ -473,15 +477,15 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 
 Concrete items carried from the current codebase:
 
-1. **Security infrastructure not wired** — `PolicyEngine`, `Sandbox`, `AuditLog` are complete but never invoked. *(v0.4 blocker)*
-2. **Pattern-matching tool calls** — Fragile `TOOL_CALL:` / `ARGS:` parsing instead of structured JSON. *(v0.4 blocker)*
-3. **No MCP integration** — Reinventing tools instead of using industry standard. *(v0.4 highest-leverage)*
+1. ~~**Security infrastructure not wired** — `PolicyEngine`, `Sandbox`, `AuditLog` are complete but never invoked.~~ ✅ **Wired to agent loop (commit 51e42b0)**
+2. ~~**Pattern-matching tool calls** — Fragile `TOOL_CALL:` / `ARGS:` parsing instead of structured JSON.~~ ✅ **Structured function calling (v0.4)**
+3. ~~**No MCP integration** — Reinventing tools instead of using industry standard.~~ ✅ **MCP client (v0.5.2)**
 4. **k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.
-5. **Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4). *(v0.5)*
-6. **Dead/unwired code:** `rustls` + `zeroize` deps unused; `security`/`ravenfabric` config fields not honored. *(v0.5)*
-7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.5)*
-8. **No config hot-reload** — Changes require restart. *(v0.6)*
-9. **Container image ~50 MB** — Target is < 30 MB. *(v0.5)*
+5. ~~**Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4).~~ ✅ **Unified `OpenAICompatibleClient` (v0.5.0)**
+6. ~~**Dead/unwired code:** `rustls` + `zeroize` deps unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop**
+7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.7)*
+8. **No config hot-reload** — Changes require restart. *(v0.7)*
+9. **Container image ~50 MB** — Target is < 30 MB. *(v0.7)*
 10. **cargo-udeps findings** — Unused dependencies detected. *(periodic review)*
 11. **cargo-outdated findings** — Dependencies behind latest. *(periodic review)*
 

@@ -13,9 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `.githooks/pre-push` — comprehensive checks: full pre-commit + release build + binary integrity + Docker build + security scan
   - `.githooks/setup.sh` — install/check/remove hooks with `git config core.hooksPath`
   - Updated AGENTS.md, README.md with hook documentation and usage instructions
+- **CI/CD hardening** — cross-compilation dependency install now uses `DEBIAN_FRONTEND=noninteractive`, `-o Dpkg::Options::=--force-confdef`, and `timeout-minutes: 10` to prevent apt-get hangs
+- **Node.js 24 migration** — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` set in all 3 workflow files
+- **CodeQL v4 migration** — all `github/codeql-action/*` updated from `@v3` to `@v4`
 
 ### Fixed — 2026-06-18
 - **Exec mode test** — fixed `check_llm_response_quality` in `scripts/lib/common.sh` to detect agent loop progress instead of non-existent `"Exec response received"` log message; added empty line filtering for cleaner response detection
+- **apt-get hanging in CI** — `x86_64-unknown-linux-musl` build was getting stuck indefinitely on "Install cross-compilation dependencies" step; added `DEBIAN_FRONTEND=noninteractive` and `timeout-minutes: 10` to prevent hangs
 
 ### Fixed — 2026-06-02
 
