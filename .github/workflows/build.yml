@@ -70,20 +70,28 @@ jobs:
           key: ${{ matrix.target }}
       - name: Install cross-compilation dependencies
         if: matrix.target == 'x86_64-unknown-linux-musl' || matrix.target == 'aarch64-unknown-linux-gnu'
+        shell: bash
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends -o Dpkg::Options::=--force-confdef \
             musl-tools \
             gcc-aarch64-linux-gnu \
             libssl-dev \
             pkg-config \
             cmake
+        timeout-minutes: 10
       - name: Install aarch64 cross-compilation extras
         if: matrix.target == 'aarch64-unknown-linux-gnu'
+        shell: bash
+        env:
+          DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo apt-get install -y --no-install-recommends \
+          sudo apt-get install -y --no-install-recommends -o Dpkg::Options::=--force-confdef \
             libc6-dev-arm64-cross \
             linux-libc-dev-arm64-cross
+        timeout-minutes: 10
       - name: Configure cargo for cross-compilation
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
