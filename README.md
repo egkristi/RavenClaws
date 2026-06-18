@@ -6,12 +6,12 @@
 [![CI](https://github.com/egkristi/RavenClaw/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
 [![Verification](https://img.shields.io/badge/verification-94%20checks-brightgreen)](VERIFICATION.md)
 [![Binary](https://img.shields.io/badge/binary-~3.4MB-blue)]()
-[![Status](https://img.shields.io/badge/status-v0.6.0--dev-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v0.6.0-brightgreen)](ROADMAP.md)
 
 RavenClaw is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.6.0-dev (2026-06-07).** The provider layer (5 providers), one-shot execution (`--exec`),
+> **Status: v0.6.0 (2026-06-18).** The provider layer (5 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
 > retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, and **supervisor mode**
 > all work today. Async background runs are on the [roadmap](ROADMAP.md) for v0.7.
@@ -98,7 +98,7 @@ export RAVENCLAW__LLM__ENDPOINT="http://localhost:4000"
 ./target/release/ravenclaw --exec "Summarize the latest release notes"
 ```
 
-> **Note:** Pre-built binaries are wired in CI and publish on tagged releases; none tagged yet. Build from source for now. See [ROADMAP.md](ROADMAP.md).
+> **Note:** Pre-built binaries publish automatically on tagged releases. See the [GitHub Releases](https://github.com/egkristi/RavenClaw/releases) page for downloads.
 
 ### Docker
 
@@ -323,8 +323,8 @@ docker buildx build \
 
 ## Downloads
 
-> **Note:** Pre-built binaries publish automatically on tagged releases (CI is wired
-> for it); none tagged yet. Build from source meanwhile.
+> **Note:** Pre-built binaries publish automatically on tagged releases. See the
+> [GitHub Releases](https://github.com/egkristi/RavenClaw/releases) page for downloads.
 
 | Architecture | Target Triple |
 |---|---|

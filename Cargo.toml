@@ -1,6 +1,6 @@
 [package]
 name = "ravenclaw"
-version = "0.5.3"
+version = "0.6.0"
 edition = "2021"
 authors = ["Erling G M Kristiansen <egkristi@gmail.com>"]
 description = "Lightweight, secure Rust agent framework with multi-provider LLM support"

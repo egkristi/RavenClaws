@@ -5,7 +5,7 @@ Items are ordered by severity/impact.
 
 ---
 
-## ✅ v0.6 Milestone — Complete (2026-06-07)
+## ✅ v0.6 Milestone — Released (2026-06-18)
 
 **All v0.6 swarm/supervisor features shipped:**
 
@@ -20,12 +20,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `163a753` — docs: update ROADMAP.md with v0.6 CI/CD hardening items, update CHANGELOG.md, update ISSUES.md
+**Commit:** `bff16e9` — fix: increase apt-get timeout and add retry logic for aarch64 cross-compilation deps
 
-**Latest CI runs (commit `163a753`):**
-- **Build & Release #68** — ❌ Failed (aarch64-unknown-linux-gnu: apt-get timeout → fixed with retries + extended timeout)
-- **Container Build #68** — ✅ Success
-- **Security Scan #56** — ✅ Success
+**Latest CI runs (commit `bff16e9`):**
+- **Build & Release #69** — ✅ Success (aarch64-unknown-linux-gnu build fixed)
+- **Container Build #69** — ✅ Success
+- **Security Scan #57** — ✅ Success (all scans passed)
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)

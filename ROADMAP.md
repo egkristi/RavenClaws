@@ -1,10 +1,10 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
 **Date:** 2026-06-18  
-**Version:** v0.6.0-dev — Swarm & Supervisor Modes (in development)  
+**Version:** v0.6.0 — Swarm & Supervisor Modes ✅  
 **Previous Release:** v0.5.3 (2026-06-07) — Native Anthropic Provider ✅  
-**Current Commit:** `163a753` — docs: update ROADMAP.md with v0.6 CI/CD hardening items, update CHANGELOG.md, update ISSUES.md  
-**CI Status:** Build & Release #68 ❌ (aarch64-unknown-linux-gnu apt-get timeout → fixed with retries + extended timeout) · Container Build #68 ✅ · Security Scan #56 ✅
+**Current Commit:** `bff16e9` — fix: increase apt-get timeout and add retry logic for aarch64 cross-compilation deps  
+**CI Status:** Build & Release #69 ✅ · Container Build #69 ✅ · Security Scan #57 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -113,7 +113,7 @@ These must be resolved before v0.5 can ship:
 
 ## Architecture
 
-### Current (v0.5.3 / v0.6-dev)
+### Current (v0.6.0)
 
 ```text
         ┌──────────┐
@@ -183,7 +183,7 @@ simpler** — or deliberately not at all.
 > air-gappable, signed + SBOM-attested supply chain. These are claims we will
 > benchmark and publish — not marketing.
 
-### RavenClaw vs. Field (v0.5.3 / v0.6-dev)
+### RavenClaw vs. Field (v0.6.0)
 
 | Capability | RavenClaw v0.6 | Cognition (Claude) | Manus | Open Interpreter |
 |---|:---:|:---:|:---:|:---:|

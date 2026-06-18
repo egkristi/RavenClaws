@@ -5,81 +5,49 @@ All notable changes to RavenClaw are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] — v0.6.0-dev
+## [Unreleased]
 
-### Added — 2026-06-18
+### Planned
+- RavenFabric integration — secure E2E remote command execution + mesh coordination (v0.6.1)
+- Agent communication — structured message passing; conflict resolution across agents (v0.6.1)
+
+## [v0.6.0] — 2026-06-18
+
+### Added
+- **Swarm Mode (Single-Provider)** — parallel execution of 3 agents with different personas (analytical, creative, pragmatic); results collected with agent attribution; tokio task spawning for true parallelism
+- **Supervisor Mode (Single-Provider)** — task decomposition into subtasks via LLM prompting; sub-agent spawning; result aggregation and final synthesis; security integration (PolicyEngine, Sandbox, AuditLog)
+- **Swarm Mode (Multi-Model)** — parallel agents across different LLM providers; provider/model attribution; cost control (capped at 3 agents)
+- **Supervisor Mode (Multi-Model)** — provider-aware task decomposition; round-robin supervisor LLM selection; subtask assignment to specific providers based on strengths
 - **Git hooks system** — pre-commit and pre-push hooks for automated verification
   - `.githooks/pre-commit` — fast checks: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --locked`, binary size check, secrets scan
   - `.githooks/pre-push` — comprehensive checks: full pre-commit + release build + binary integrity + Docker build + security scan
   - `.githooks/setup.sh` — install/check/remove hooks with `git config core.hooksPath`
-  - Updated AGENTS.md, README.md with hook documentation and usage instructions
-- **CI/CD hardening** — cross-compilation dependency install now uses `DEBIAN_FRONTEND=noninteractive`, `-o Dpkg::Options::=--force-confdef`, and `timeout-minutes: 10` to prevent apt-get hangs
-- **Node.js 24 migration** — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` set in all 3 workflow files
+- **CI/CD hardening** — `DEBIAN_FRONTEND=noninteractive`, `-o Dpkg::Options::=--force-confdef`, `timeout-minutes: 20`, and retry logic (3 attempts) for cross-compilation dependency install
+- **Node.js 24 migration** — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` in all 3 workflow files
 - **CodeQL v4 migration** — all `github/codeql-action/*` updated from `@v3` to `@v4`
-- **apt-get retry logic** — cross-compilation dependency install steps now retry up to 3 times on failure, with timeout extended from 10 to 20 minutes
 
-### Fixed — 2026-06-18
-- **Exec mode test** — fixed `check_llm_response_quality` in `scripts/lib/common.sh` to detect agent loop progress instead of non-existent `"Exec response received"` log message; added empty line filtering for cleaner response detection
-- **apt-get hanging in CI** — `x86_64-unknown-linux-musl` build was getting stuck indefinitely on "Install cross-compilation dependencies" step; added `DEBIAN_FRONTEND=noninteractive` and `timeout-minutes: 10` to prevent hangs
-- **aarch64-unknown-linux-gnu build timeout** — Build & Release #68 failed because `apt-get install` timed out after 10 minutes; added retry loop (3 attempts) and extended timeout to 20 minutes
-
-### Fixed — 2026-06-02
-
-#### Build Fixes After Upstream Merge
-- Fixed merge artifact in `src/main.rs` — duplicate `system_prompt` line and stray closing brace
-- Added missing `warn` import in `src/main.rs`
-- Added `LLMProvider::Anthropic` match arm in `main.rs` provider_name mapping
-- Fixed `&str`/`String` type mismatch in `agent.rs` swarm_multi (`provider_name()` returns `&str`, tuple expects `String`)
-- Fixed lifetime issue: `multi_llm` borrowed in `tokio::spawn` but doesn't live long enough — cloned `Arc` before spawning
-- Added missing `.clone()` on `Arc<dyn LLMProviderTrait>` when passing to `run_subtask_agent`
-- Fixed `config.provider.clone().into()` → `{:?}` formatting in `llm.rs`
-- Changed `&self` to `&mut self` for `chat_with_fallback` to allow `token_budget` mutation
-- Fixed double borrow of `self.transport` in `mcp.rs` (3 locations — stored `next_id` in local vars)
-- Fixed moved `server_info` field used after move in `mcp.rs` (cloned before move)
-- Added missing fields to `LLMConfig::default()` and 47+ test constructors (`token_budget`, `retry_max`, `retry_base_delay_ms`, `retry_max_delay_ms`)
-- Fixed MCP test assertion — `protocol_version` → `protocolVersion` (camelCase serde)
-- Disabled retries (`retry_max: 0`) in 7 error-path mockito tests to prevent retry count mismatch
-- Removed unused `rand::Rng` import in `llm.rs`
+### Fixed
+- **Build Fixes After Upstream Merge (2026-06-02)** — 13+ compilation errors across 6 files resolved:
+  - Merge artifacts in `src/main.rs` (duplicate `system_prompt`, stray brace, missing `warn` import, missing `LLMProvider::Anthropic` match arm)
+  - Type/lifetime issues in `src/agent.rs` (`&str`/`String` mismatch, `tokio::spawn` lifetime, missing `.clone()` on `Arc`)
+  - Formatting/borrow issues in `src/llm.rs`, `src/mcp.rs` (double borrow, moved field)
+  - Missing config fields in `src/config.rs` (47+ test constructors updated)
+  - MCP test assertion fix (`protocol_version` → `protocolVersion`)
+  - Retry disabled in 7 error-path mockito tests
+- **Exec mode test** — fixed `check_llm_response_quality` in `scripts/lib/common.sh` to detect agent loop progress instead of non-existent log message
+- **apt-get hanging in CI** — `x86_64-unknown-linux-musl` build was getting stuck indefinitely; added `DEBIAN_FRONTEND=noninteractive` and `timeout-minutes`
+- **aarch64-unknown-linux-gnu build timeout** — Build & Release #68 failed; added retry loop (3 attempts) and extended timeout to 20 minutes
+- **22 pre-existing clippy dead_code warnings** — resolved by replacing deprecated struct usage in tests and adding `#[allow(dead_code)]` to intentionally unused types
 
 ### Changed
-- Updated ROADMAP.md to reflect v0.6 implementation status
-- Added 4 new tests for swarm/supervisor function existence
+- Updated ROADMAP.md, ISSUES.md, README.md, AGENTS.md for v0.6 implementation status
 - Increased LOC from ~8,900 to ~9,400 (+500 for v0.6 features)
-- All 277 unit tests passing across 9 source modules
+- All 277+ unit tests passing across 9 source modules
 - Binary size: ~3.4 MB (arm64 macOS release build)
-
-### Technical Details
 - All modes use `FINAL:` marker detection for completion
 - Supervisor modes support up to 15 iterations for complex task decomposition
 - Subtask agents run with 5-iteration limit each
 - Full security wiring (policy, sandbox, audit) preserved in supervisor mode
-
-### Added — 2026-06-07
-
-#### Swarm Mode (Single-Provider)
-- Parallel execution of 3 agents with different personas (analytical, creative, pragmatic)
-- Results collected and displayed with agent attribution
-- Tokio task spawning for true parallelism
-- `run_swarm()` function in `src/agent.rs`
-
-#### Supervisor Mode (Single-Provider)
-- Task decomposition into subtasks via LLM prompting
-- Sub-agent spawning for each subtask
-- Result aggregation and final synthesis
-- Security integration (PolicyEngine, Sandbox, AuditLog)
-- `run_supervisor()` and `run_subtask_agent()` functions in `src/agent.rs`
-
-#### Swarm Mode (Multi-Model)
-- Parallel agents across different LLM providers
-- Provider/model attribution in results
-- Cost control (capped at 3 agents)
-- `run_swarm_multi()` function in `src/agent.rs`
-
-#### Supervisor Mode (Multi-Model)
-- Provider-aware task decomposition
-- Round-robin supervisor LLM selection
-- Subtask assignment to specific providers based on strengths
-- `run_supervisor_multi()` function in `src/agent.rs`
 
 ---
 
