@@ -43,7 +43,7 @@ jobs:
             output: ravenclaw-x86_64-unknown-linux-gnu
             archive: tar.gz
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             output: ravenclaw-aarch64-unknown-linux-gnu
             archive: tar.gz
           - target: x86_64-unknown-linux-musl
@@ -68,15 +68,14 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
-      - name: Install cross-compilation dependencies
-        if: matrix.target == 'x86_64-unknown-linux-musl' || matrix.target == 'aarch64-unknown-linux-gnu'
+      - name: Install cross-compilation dependencies (musl)
+        if: matrix.target == 'x86_64-unknown-linux-musl'
         shell: bash
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
           sudo apt-get update -qq -o Acquire::Retries=3
-          # Install packages individually with timeout to avoid hanging
-          for pkg in musl-tools gcc-aarch64-linux-gnu libssl-dev pkg-config cmake; do
+          for pkg in musl-tools libssl-dev pkg-config cmake; do
             for i in 1 2 3; do
               timeout 120 sudo apt-get install -y --no-install-recommends \
                 -o Dpkg::Options::=--force-confdef \
@@ -86,13 +85,14 @@ jobs:
             done
           done
         timeout-minutes: 20
-      - name: Install aarch64 cross-compilation extras
+      - name: Install native dependencies (aarch64)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         shell: bash
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          for pkg in libc6-dev-arm64-cross linux-libc-dev-arm64-cross; do
+          sudo apt-get update -qq -o Acquire::Retries=3
+          for pkg in libssl-dev pkg-config cmake; do
             for i in 1 2 3; do
               timeout 120 sudo apt-get install -y --no-install-recommends \
                 -o Dpkg::Options::=--force-confdef \
@@ -101,15 +101,7 @@ jobs:
               echo "apt-get install $pkg attempt $i failed, retrying..." && sleep 5
             done
           done
-        timeout-minutes: 20
-      - name: Configure cargo for cross-compilation
-        if: matrix.target == 'aarch64-unknown-linux-gnu'
-        run: |
-          mkdir -p ~/.cargo
-          cat >> ~/.cargo/config.toml << 'EOF'
-          [target.aarch64-unknown-linux-gnu]
-          linker = "aarch64-linux-gnu-gcc"
-          EOF
+        timeout-minutes: 10
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Package binary
