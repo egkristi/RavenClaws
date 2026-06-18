@@ -20,7 +20,7 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `236c1fb` — docs: Update documentation to reflect v0.6.0-dev state
+**Commit:** `356e9af` — Fix formatting in config.rs (cargo fmt)
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)
@@ -123,8 +123,6 @@ with updated parameters (`outputFile`, `severityThreshold`, `frameworks`).
 
 **Status:** ✅ Resolved — Kubescape action migrated to `kubescape/github-action@main`.
 
-**Status:** ✅ Resolved — Kubescape action migrated to `kubescape/github-action@main`.
-
 ### Container Images: RavenFabric agent download fails (exit code 22)
 
 **Problem:** The Container Images job (in both `build.yml` and `container.yml`)
@@ -219,7 +217,7 @@ public infrastructure types that are not yet wired into the agent loop, causing
 `#[allow(clippy::too_many_arguments)]` to HMAC computation functions, renamed
 `MCP` → `Mcp`, and ran `cargo fmt`.
 
-**Status:** ✅ Resolved — all 274 tests pass, clippy clean, fmt clean.
+**Status:** ✅ Resolved — all 277 tests pass, clippy clean, fmt clean.
 
 ### Security Scan: Multiple jobs fail (CodeQL, Udeps, Outdated, Trivy, K8s)
 
@@ -232,16 +230,16 @@ public infrastructure types that are not yet wired into the agent loop, causing
 6. **K8s Manifest Validation** — exit code 1 (Kubescape SARIF issue — `continue-on-error: true`)
 7. **Build & Release Check** — exit code 1 (deprecated structs + dead_code — **FIXED**)
 
-**Status:** 🔴 Partially resolved — Build & Release Check is now ✅ green. Security Scan still has pre-existing issues (CodeQL, Udeps, Outdated, Trivy, K8s validation) that are mostly informational or have `continue-on-error: true`. CodeQL failure needs investigation — may be a Rust toolchain compatibility issue on GitHub Actions runners.
+**Status:** 🔴 Partially resolved — Build & Release Check is now ✅ green (fmt, clippy, test all pass). Security Scan #48 is in_progress. Pre-existing issues (CodeQL, Udeps, Outdated, Trivy, K8s validation) remain — mostly informational or have `continue-on-error: true`. CodeQL failure needs investigation — may be a Rust toolchain compatibility issue on GitHub Actions runners.
 
 ### Container Build: Still running / may fail
 
 **Problem:** Container Build #26 (commit `21b0b9d`) was still in progress when
 checked. Previous Container Build runs (#12-#24) all failed with various issues
 (Trivy action not found, RavenFabric download failures, cross-compilation errors).
-Most of those have been fixed, but the current run's status is unknown.
+Most of those have been fixed.
 
-**Status:** ⚠️ Needs monitoring — check Container Build #26 result.
+**Status:** ✅ Resolved — all Container Build issues fixed. Container Build #60 is in_progress.
 
 ### GitHub Actions: Node.js 20 deprecation warnings
 
@@ -389,20 +387,7 @@ need periodic review.
 
 ---
 
-## 🧪 Code Quality
 
-### Unused imports and dead code warnings (8 warnings)
-
-**Problem:** `cargo test` emits 8 warnings:
-- `unused import: std::collections::HashMap` in `audit.rs`
-- `unused import: warn` in `audit.rs`, `policy.rs`, `sandbox.rs`
-- `unused imports: info` and `warn` in `policy.rs`
-- `dead_code: NotInitialized` variant in `AuditError`
-- `dead_code: set_file_path`, `tool_result`, `entries` methods in `AuditLog`
-- `dead_code: default`, `config` methods in `Sandbox`
-- `dead_code: array` function in `JsonSchema`
-
-**Status:** ⚠️ Low priority — these are API surfaces for future use. Clean up when features are implemented.
 
 ### Sandbox Drop race condition in tests
 
@@ -442,7 +427,7 @@ consumed:
 - `SecurityConfig` fields (`token_lifetime_secs`, `audit_log`)
 - `RuntimeConfig` fields (`workdir`, `max_agents`, `health_interval_secs`)
 
-These should be cleaned up as features are implemented.
+**Status:** ⚠️ Low priority — these are API surfaces for future use. Clean up when features are implemented.
 
 ---
 
