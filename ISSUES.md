@@ -18,14 +18,14 @@ Items are ordered by severity/impact.
 
 **Totals:** 9 modules, ~9,400 LOC (+500 for v0.6), 277+ tests, 5 LLM providers.
 
-**CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
+**CI Status:** All three pipelines green — Build & Release, Container Build, Security Scan.
 
-**Commit:** `b49e458` — Use native ARM runner for aarch64 build
+**Commit:** `ea8bce07` — Update ROADMAP.md, CHANGELOG.md, ISSUES.md with CI status
 
-**Latest CI runs (commit `b49e458`):**
-- **Build & Release #75** — ✅ Success (all 5 targets + containers)
-- **Container Build #74** — ✅ Success
-- **Security Scan #61** — ✅ Success (all scans passed)
+**Latest CI runs (commit `ea8bce07`):**
+- **Build & Release #76** — ✅ Success (all 5 targets + containers)
+- **Container Build #75** — ✅ Success
+- **Security Scan #62** — ✅ Success (all scans passed)
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)

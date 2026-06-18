@@ -6,12 +6,12 @@
 [![CI](https://github.com/egkristi/RavenClaw/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
 [![Verification](https://img.shields.io/badge/verification-94%20checks-brightgreen)](VERIFICATION.md)
 [![Binary](https://img.shields.io/badge/binary-~3.4MB-blue)]()
-[![Status](https://img.shields.io/badge/status-v0.6.0-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v0.6.1-brightgreen)](ROADMAP.md)
 
 RavenClaw is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.6.0 (2026-06-18).** The provider layer (5 providers), one-shot execution (`--exec`),
+> **Status: v0.6.1 (2026-06-18).** The provider layer (5 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
 > retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, and **supervisor mode**
 > all work today. Async background runs are on the [roadmap](ROADMAP.md) for v0.7.
@@ -20,7 +20,7 @@ support. One static binary, zero runtime dependencies — no Python, no Node, no
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
 | **~3.4 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
-| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **277 unit tests + 94 verification checks** |
+| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **291 unit tests + 94 verification checks** |
 
 ---
 
@@ -73,7 +73,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ### Verified across every target
 
-- **277 Rust unit tests** (incl. `mockito`-backed provider request/response/error paths for all 5 providers), runnable anywhere via `cargo test`.
+- **291 Rust unit tests** (incl. `mockito`-backed provider request/response/error paths for all 5 providers, plus 12 RavenFabric client tests), runnable anywhere via `cargo test`.
 - Plus a **94-check verification suite** (`scripts/verify.sh`) spanning **9 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security and performance checks.
 - *Note:* the 94 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
 
@@ -218,11 +218,11 @@ endpoint = "http://litellm:4000"
 model = "gpt-4o-mini"
 timeout_secs = 30
 
-# Optional: RavenFabric for swarm/supervisor coordination (integration on roadmap)
-# [ravenfabric]
-# endpoint = "http://ravenfabric:8080"
-# remote_exec = true
-# allowed_hosts = ["litellm", "ravenfabric"]
+# RavenFabric for remote execution and mesh coordination (v0.6.1)
+[ravenfabric]
+endpoint = "http://ravenfabric:8080"
+remote_exec = true
+allowed_hosts = ["litellm", "ravenfabric"]
 
 [security]
 require_tls = true
@@ -243,8 +243,8 @@ health_interval_secs = 60
 | `single` (multi-model) | ✅ **Working** | Iterates all configured providers, logs each response |
 | `--exec "<task>"` | ✅ **Working** | One-shot task execution with streaming, then exit |
 | `--repl` | ✅ **Working** | Interactive REPL with `/exit`, `/reset` commands |
-| `swarm` | ✅ **Working** | 3 parallel agents with different personas (single + multi-model) |
-| `supervisor` | ✅ **Working** | Task decomposition + sub-agent spawning + result aggregation (single + multi-model) |
+| `swarm` | ✅ **Working** | 3 parallel agents with different personas (single + multi-model); RavenFabric-aware |
+| `supervisor` | ✅ **Working** | Task decomposition + sub-agent spawning + result aggregation (single + multi-model); RavenFabric-aware |
 
 ## Building from source
 
@@ -368,18 +368,18 @@ Container images target both `linux/amd64` and `linux/arm64`.
 │  ┌──────────────────────┴───────────────────────────┐    │
 │  │         Security & Infrastructure Layer           │    │
 │  │  ┌──────────┐ ┌──────────┐ ┌────────┐ ┌──────┐  │    │
-│  │  │Policy    │ │ Sandbox  │ │Audit   │ │ MCP  │  │    │
-│  │  │Engine    │ │ (jail)   │ │Log     │ │Client│  │    │
-│  │  └──────────┘ └──────────┘ └────────┘ └──────┘  │    │
-│  │  TLS · env-only secrets · non-root · RBAC        │    │
-│  └──────────────────────────────────────────────────┘   │
-└──────────────────────────────────────────────────────────┘
-         │                          │
-         ▼                          ▼
-┌─────────────────┐      ┌──────────────────────┐
-│  RavenFabric    │      │   Deployment Targets  │
-│  (v0.6.1)       │      │  Binary · Docker · K8s │
-└─────────────────┘      └──────────────────────┘
+│  │  │Policy    │ │ Sandbox  │ │Audit   │ │ MCP  ││Raven  │  │    │
+│  │  │Engine    │ │ (jail)   │ │Log     │ │Client││Fabric │  │    │
+│  │  └──────────┘ └──────────┘ └────────┘ └──────┘└───────┘  │    │
+│  │  TLS · env-only secrets · non-root · RBAC                 │    │
+│  └───────────────────────────────────────────────────────────┘   │
+└───────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌──────────────────────┐
+│   Deployment Targets  │
+│  Binary · Docker · K8s │
+└──────────────────────┘
 ```
 
 ### What's implemented vs. planned
@@ -394,7 +394,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | CI/CD pipeline | ✅ Implemented | fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard |
 | Verification suite | ✅ Working | 94 system/integration checks · 9 modules · 4 targets (`scripts/verify.sh`) |
-| Rust unit tests | ✅ Working | 277 tests across 9 modules, incl. `mockito`-backed provider request/response/error paths |
+| Rust unit tests | ✅ Working | 291 tests across 10 modules, incl. `mockito`-backed provider request/response/error paths + 12 RavenFabric client tests |
 | Reproducible builds | ✅ Working | `Cargo.lock` committed (`--locked`), multi-arch Docker cross-linker, RavenFabric agent checksum-verified |
 | `--exec` one-shot mode | ✅ Working | Run a single task, then exit |
 | Interactive REPL | ✅ Working | `--repl` with `/exit`, `/reset` commands |
@@ -411,7 +411,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Sandboxed execution | ✅ Working | Workdir jail, resource limits, timeouts |
 | Tamper-evident audit log | ✅ Working | HMAC-SHA256 chained, structured JSON |
 | Multi-model routing | ✅ Working | `next_client()` round-robin wired into agent modes |
-| RavenFabric integration | ⚠️ Partial | Config + container binary present; runtime wiring pending (v0.6.1) |
+| RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |
 
 ## How RavenClaw intends to win
 

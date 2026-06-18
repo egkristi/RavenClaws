@@ -1,10 +1,10 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
 **Date:** 2026-06-18  
-**Version:** v0.6.0 — Swarm & Supervisor Modes ✅  
-**Previous Release:** v0.5.3 (2026-06-07) — Native Anthropic Provider ✅  
-**Current Commit:** `b49e458` — Use native ARM runner for aarch64 build  
-**CI Status:** Build & Release #75 ✅ · Container Build #74 ✅ · Security Scan #61 ✅
+**Version:** v0.6.1 — RavenFabric Integration ✅  
+**Previous Release:** v0.6.0 (2026-06-18) — Swarm & Supervisor Modes ✅  
+**Current Commit:** `ea8bce07` — RavenFabric client module + wiring  
+**CI Status:** Build & Release #76 ✅ · Container Build #75 ✅ · Security Scan #62 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -49,7 +49,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review — all SARIF results uploaded to GitHub Security tab |
 | Verification suite | ✅ Working | 94 system/integration checks · 9 modules · 4 targets (`scripts/verify.sh`: local, Docker, Linux, K8s, security, performance, LLM-quality) — shell-orchestrated, requires live services |
 | Multi-model routing | ✅ Working | `next_client()` round-robin + fallback chain with circuit breaker |
-| RavenFabric integration | ⚠️ Partial | Config struct exists, agent binary baked into the image with checksum verification; runtime integration not wired |
+| RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |
 | `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout; full test coverage |
 | Rust unit tests | ✅ Working | 280+ tests across all 9 modules; `mockito`-based HTTP tests for all 5 providers |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard, `FINAL:` marker detection, configurable via `--max-iterations` |
@@ -113,20 +113,20 @@ These must be resolved before v0.5 can ship:
 
 ## Architecture
 
-### Current (v0.6.0)
+### Current (v0.6.1)
 
 ```text
         ┌──────────┐
         │  main.rs │  CLI (clap) · JSON logging · mode dispatch
         └────┬─────┘
-   ┌─────────┼──────────────────────────────────────────┐
-┌──┴───┐ ┌───┴────┐ ┌───┴─────┐ ┌───┴───┐ ┌────────────┐
-│agent │ │ config │ │  error  │ │ tools │ │policy      │
-│ loop │ │        │ │         │ │       │ │audit       │
-│ mem  │ │        │ │         │ │       │ │sandbox     │
-│swarm │ │        │ │         │ │       │ │mcp         │
-│super │ │        │ │         │ │       │ │            │
-└──┬───┘ └────────┘ └─────────┘ └───────┘ └────────────┘
+   ┌─────────┼──────────────────────────────────────────────────┐
+┌──┴───┐ ┌───┴────┐ ┌───┴─────┐ ┌───┴───┐ ┌────────────┐ ┌──────┴───────┐
+│agent │ │ config │ │  error  │ │ tools │ │policy      │ │ ravenfabric  │
+│ loop │ │        │ │         │ │       │ │audit       │ │ client       │
+│ mem  │ │        │ │         │ │       │ │sandbox     │ │ health       │
+│swarm │ │        │ │         │ │       │ │mcp         │ │ execute      │
+│super │ │        │ │         │ │       │ │            │ │ broadcast    │
+└──┬───┘ └────────┘ └─────────┘ └───────┘ └────────────┘ └──────────────┘
    │
 ┌──┴───────────────────────────────────┐
 │ llm  (LLMProviderTrait)               │
@@ -134,7 +134,7 @@ These must be resolved before v0.5 can ship:
 │  · Ollama · Anthropic · MultiModel   │
 └───────────────────────────────────────┘
 
-✅ All modules wired: policy, audit, sandbox, mcp integrated into agent loop
+✅ All modules wired: policy, audit, sandbox, mcp, ravenfabric integrated into agent loop
 ```
 
 ### Target (v1.0)
@@ -150,7 +150,7 @@ These must be resolved before v0.5 can ship:
      ┌────┴────┐    ┌─────┴────┐   ┌──────┴───────┐
      │  Tools  │    │ Providers│   │ Orchestration │
      │ policy✅│    │ routing+ │   │ swarm/superv. │
-     │ sandbox✅│   │ fallback+│   │ + RavenFabric │
+     │ sandbox✅│   │ fallback+│   │ RavenFabric ✅│
      │ audit  ✅│   │ budgets  │   │  (E2E remote) │
      └─────────┘    └──────────┘   └───────────────┘
           │
@@ -194,7 +194,7 @@ simpler** — or deliberately not at all.
 | **Security model** | ✅ (wired) | ⚠️ | ⚠️ | ❌ |
 | **Local-first / air-gapped** | ✅ (Ollama) | ❌ | ❌ | ✅ |
 | **~3 MB binary** | ✅ | ❌ (cloud) | ❌ (cloud) | ❌ (Python) |
-| **RavenFabric mesh** | ❌ (roadmap) | ❌ | ❌ | ❌ |
+| **RavenFabric mesh** | ✅ (v0.6.1) | ❌ | ❌ | ❌ |
 | **No telemetry** | ✅ | ❌ | ❌ | ✅ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ⚠️ (fetch only) | ✅ | ✅ | ✅ |
@@ -245,7 +245,7 @@ the cloud incumbents structurally can't follow.
 | **Security model: deny-by-default + sandbox + audit** | Field bolts security on; we ship it in core. | Secure | ⚠️ v0.4 (wire it) |
 | **~3.4 MB single binary, edge/embeddable** | No cloud agent runs on a Raspberry Pi. | Small · Efficient | ✅ |
 | **Provider-agnostic + cost-aware routing** | Not locked to one model vendor. | Efficient · Robust | v0.5 |
-| **RavenFabric mesh: E2E-encrypted remote exec** | Unique — competitors are single-host or single-cloud. | Robust | v0.6 |
+| **RavenFabric mesh: E2E-encrypted remote exec** | Unique — competitors are single-host or single-cloud. | Robust | ✅ v0.6.1 |
 | **No telemetry · signed + SBOM** | Trust as a feature, verifiable end-to-end. | Secure | ✅ |
 | **Open core + commercial** | No lock-in, vs. proprietary cloud. | Simple | ✅ |
 
@@ -255,7 +255,7 @@ the cloud incumbents structurally can't follow.
 2. **Wire security model (v0.4)** — PolicyEngine + Sandbox + AuditLog invoked on every tool call. Core value proposition.
 3. **Local-first privacy + security** — the wedge no cloud agent can copy.
 4. **Async / background + scheduling (v0.7)** — matches Manus's "assign-and-walk-away".
-5. **RavenFabric distributed execution (v0.6)** — the capability *no competitor has*.
+5. **RavenFabric distributed execution (v0.6.1)** — the capability *no competitor has*.
 
 ---
 
@@ -372,15 +372,15 @@ Agency with guardrails — the security differentiator.
 - [x] **CI/CD hardening** — `DEBIAN_FRONTEND=noninteractive` + `timeout-minutes` for apt-get in cross-compilation deps ✅ Implemented 2026-06-18
 - [x] **Node.js 24 migration** — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` in all workflows ✅ Implemented 2026-06-18
 - [x] **CodeQL v4 migration** — all `codeql-action/*@v3` → `@v4` ✅ Implemented 2026-06-18
-- [ ] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability). *(v0.6.1)*
-- [ ] **Agent communication** — structured message passing; conflict resolution across agents. *(v0.6.1)*
+- [x] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability). ✅ v0.6.1
+- [ ] **Agent communication** — structured message passing; conflict resolution across agents. *(v0.6.2)*
 - [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion (acts as the user, not a shared service account). *(v0.7)*
 - [ ] **Skill / Plugin System** (foundations) — **MOVED FROM v0.5** *(v0.7)*
   - Portable capability bundles: `skill.yaml` + scripts + resources
   - Progressive disclosure: skills advertise capabilities, agent selects
   - Sandboxed skill execution (reuse `Sandbox`)
 
-**Exit criteria:** ✅ COMPLETE (v0.6 core features) — Supervisor and Swarm modes implemented for single-provider and multi-model. CI/CD hardened with Node.js 24 and CodeQL v4. RavenFabric integration deferred to v0.6.1.
+**Exit criteria:** ✅ COMPLETE (v0.6 core features) — Supervisor and Swarm modes implemented for single-provider and multi-model. CI/CD hardened with Node.js 24 and CodeQL v4. RavenFabric integration complete with full client module, wiring into all agent modes, and 12 unit tests.
 
 ### v0.7 — Observability and ops 📈
 

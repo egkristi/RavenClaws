@@ -9,6 +9,7 @@ use crate::error::Result;
 use crate::llm::{ChatMessage, Choice, LLMProviderTrait, MultiModelManager};
 use crate::mcp::McpClient;
 use crate::policy::{Decision, PolicyEngine};
+use crate::ravenfabric::RavenFabricClient;
 use crate::sandbox::Sandbox;
 use crate::tools::{ToolCall, ToolRegistry, ToolResult};
 use futures::StreamExt;
@@ -776,11 +777,22 @@ pub async fn run_exec_stream(
 }
 
 /// Run a single autonomous agent (single-provider mode)
-pub async fn run_single(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result<()> {
+pub async fn run_single(
+    llm: Arc<dyn LLMProviderTrait>,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+) -> Result<()> {
     info!(
         "Starting single agent mode with provider: {}",
         llm.provider_name()
     );
+
+    // Log RavenFabric status
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            info!("RavenFabric remote execution available");
+        }
+    }
 
     let system_prompt = &config.llm.system_prompt;
 
@@ -813,8 +825,19 @@ pub async fn run_single(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Resul
 ///
 /// Swarm mode runs multiple agents in parallel, each working on the same task
 /// with different approaches. Results are collected and compared.
-pub async fn run_swarm(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result<()> {
+pub async fn run_swarm(
+    llm: Arc<dyn LLMProviderTrait>,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+) -> Result<()> {
     info!("Starting swarm mode (single-provider) — 3 parallel agents");
+
+    // Log RavenFabric status
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            info!("RavenFabric remote execution available for swarm coordination");
+        }
+    }
 
     let _system_prompt = &config.llm.system_prompt;
     let num_agents = 3;
@@ -884,8 +907,19 @@ pub async fn run_swarm(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result
 ///
 /// The supervisor decomposes a task into subtasks, spawns sub-agents for each,
 /// and aggregates results. Uses the same LLM provider for all agents.
-pub async fn run_supervisor(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result<()> {
+pub async fn run_supervisor(
+    llm: Arc<dyn LLMProviderTrait>,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+) -> Result<()> {
     info!("Starting supervisor mode (single-provider)");
+
+    // Log RavenFabric status
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            info!("RavenFabric remote execution available for supervisor coordination");
+        }
+    }
 
     let system_prompt = &config.llm.system_prompt;
     let policy_engine = PolicyEngine::default_secure();
@@ -1084,11 +1118,22 @@ async fn run_subtask_agent(
 }
 
 /// Run a single autonomous agent (multi-model mode)
-pub async fn run_single_multi(multi_llm: MultiModelManager, config: Config) -> Result<()> {
+pub async fn run_single_multi(
+    multi_llm: MultiModelManager,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+) -> Result<()> {
     info!(
         "Starting single agent mode (multi-model) with {} providers",
         multi_llm.client_count()
     );
+
+    // Log RavenFabric status
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            info!("RavenFabric remote execution available");
+        }
+    }
 
     let system_prompt = &config.llm.system_prompt;
 
@@ -1134,11 +1179,22 @@ pub async fn run_single_multi(multi_llm: MultiModelManager, config: Config) -> R
 ///
 /// Swarm mode runs multiple agents in parallel, each using a different LLM provider
 /// for the same task. Results are collected and compared for diversity.
-pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Result<()> {
+pub async fn run_swarm_multi(
+    multi_llm: MultiModelManager,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+) -> Result<()> {
     info!(
         "Starting swarm mode (multi-model) — {} parallel agents",
         multi_llm.client_count()
     );
+
+    // Log RavenFabric status
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            info!("RavenFabric remote execution available for swarm coordination");
+        }
+    }
 
     let _system_prompt = &config.llm.system_prompt;
     let num_agents = multi_llm.client_count().min(3); // Cap at 3 for cost control
@@ -1218,11 +1274,22 @@ pub async fn run_swarm_multi(multi_llm: MultiModelManager, config: Config) -> Re
 ///
 /// The supervisor decomposes a task and assigns subtasks to different providers
 /// based on their strengths. Results are aggregated.
-pub async fn run_supervisor_multi(multi_llm: MultiModelManager, config: Config) -> Result<()> {
+pub async fn run_supervisor_multi(
+    multi_llm: MultiModelManager,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+) -> Result<()> {
     info!(
         "Starting supervisor mode (multi-model) with {} providers",
         multi_llm.client_count()
     );
+
+    // Log RavenFabric status
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            info!("RavenFabric remote execution available for supervisor coordination");
+        }
+    }
 
     let system_prompt = &config.llm.system_prompt;
     let policy_engine = PolicyEngine::default_secure();
@@ -1478,13 +1545,15 @@ mod tests {
     #[test]
     fn test_swarm_function_exists() {
         // Verify swarm function signature compiles
-        let _fn_ptr: fn(Arc<dyn LLMProviderTrait>, Config) -> _ = run_swarm;
+        let _fn_ptr: fn(Arc<dyn LLMProviderTrait>, Config, Option<RavenFabricClient>) -> _ =
+            run_swarm;
     }
 
     #[test]
     fn test_supervisor_function_exists() {
         // Verify supervisor function signature compiles
-        let _fn_ptr: fn(Arc<dyn LLMProviderTrait>, Config) -> _ = run_supervisor;
+        let _fn_ptr: fn(Arc<dyn LLMProviderTrait>, Config, Option<RavenFabricClient>) -> _ =
+            run_supervisor;
     }
 
     #[test]

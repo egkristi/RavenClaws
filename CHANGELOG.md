@@ -8,8 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- RavenFabric integration — secure E2E remote command execution + mesh coordination (v0.6.1)
-- Agent communication — structured message passing; conflict resolution across agents (v0.6.1)
+- Agent communication — structured message passing; conflict resolution across agents (v0.6.2)
+
+## [v0.6.1] — 2026-06-18
+
+### Added
+- **RavenFabric client module** (`src/ravenfabric.rs`) — full HTTP client for RavenFabric REST API
+  - `RavenFabricClient` struct with `new()`, `health()`, `list_agents()`, `execute()`, `broadcast()` methods
+  - `ExecuteRequest` / `ExecuteResponse` / `RemoteAgent` types with serde serialization
+  - `RavenFabricError` enum with `NotConfigured`, `ConnectionFailed`, `RequestFailed` variants
+  - 12 unit tests covering: no-endpoint, with-endpoint, disabled config, error display, connection refused (3), serialization (2), deserialization (3)
+- **RavenFabric wiring into all agent modes** — client initialized in `main.rs` from config, passed to all 6 agent mode functions (`run_single`, `run_swarm`, `run_supervisor`, `run_single_multi`, `run_swarm_multi`, `run_supervisor_multi`)
+- **RavenFabric status logging** — each agent mode logs whether RavenFabric remote execution is available on startup
+
+### Fixed
+- **aarch64 build hanging in CI** — Cross-compilation step (`apt-get install gcc-aarch64-linux-gnu`) kept hanging indefinitely on x86_64 GitHub Actions runners. Switched to native `ubuntu-24.04-arm` runner for aarch64 builds, eliminating the need for cross-compilation entirely. This is faster and more reliable.
 
 ### Fixed
 - **aarch64 build hanging in CI** — Cross-compilation step (`apt-get install gcc-aarch64-linux-gnu`) kept hanging indefinitely on x86_64 GitHub Actions runners. Switched to native `ubuntu-24.04-arm` runner for aarch64 builds, eliminating the need for cross-compilation entirely. This is faster and more reliable.

@@ -10,6 +10,7 @@ mod error;
 mod llm;
 mod mcp;
 mod policy;
+mod ravenfabric;
 mod sandbox;
 mod tools;
 
@@ -238,6 +239,19 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Initialize RavenFabric client (v0.6.1)
+    let ravenfabric = ravenfabric::RavenFabricClient::new(&config.ravenfabric);
+    if let Some(ref rf) = ravenfabric {
+        info!(
+            endpoint = %rf.endpoint().unwrap_or("unknown"),
+            agent_id = ?rf.agent_id(),
+            remote_exec = rf.is_enabled(),
+            "RavenFabric integration enabled"
+        );
+    } else {
+        info!("RavenFabric not configured — remote execution disabled");
+    }
+
     // Determine if multi-model or single-provider mode
     let has_multi_model = !config.llms.is_empty();
 
@@ -261,15 +275,15 @@ async fn main() -> anyhow::Result<()> {
         match args.mode.as_str() {
             "single" => {
                 info!("Running in single agent mode (multi-model)");
-                agent::run_single_multi(multi_llm, config).await?;
+                agent::run_single_multi(multi_llm, config, ravenfabric).await?;
             }
             "swarm" => {
                 info!("Running in swarm mode (multi-model)");
-                agent::run_swarm_multi(multi_llm, config).await?;
+                agent::run_swarm_multi(multi_llm, config, ravenfabric).await?;
             }
             "supervisor" => {
                 info!("Running in supervisor mode (multi-model)");
-                agent::run_supervisor_multi(multi_llm, config).await?;
+                agent::run_supervisor_multi(multi_llm, config, ravenfabric).await?;
             }
             _ => {
                 anyhow::bail!(
@@ -302,15 +316,15 @@ async fn main() -> anyhow::Result<()> {
         match args.mode.as_str() {
             "single" => {
                 info!("Running in single agent mode");
-                agent::run_single(llm, config).await?;
+                agent::run_single(llm, config, ravenfabric).await?;
             }
             "swarm" => {
                 info!("Running in swarm mode");
-                agent::run_swarm(llm, config).await?;
+                agent::run_swarm(llm, config, ravenfabric).await?;
             }
             "supervisor" => {
                 info!("Running in supervisor mode");
-                agent::run_supervisor(llm, config).await?;
+                agent::run_supervisor(llm, config, ravenfabric).await?;
             }
             _ => {
                 anyhow::bail!(

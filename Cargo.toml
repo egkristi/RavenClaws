@@ -1,6 +1,6 @@
 [package]
 name = "ravenclaw"
-version = "0.6.0"
+version = "0.6.1"
 edition = "2021"
 authors = ["Erling G M Kristiansen <egkristi@gmail.com>"]
 description = "Lightweight, secure Rust agent framework with multi-provider LLM support"
@@ -24,8 +24,8 @@ async-trait = "0.1"
 # UUID for request tracking
 uuid = { version = "1.6", features = ["v4"] }
 
-# RavenFabric integration (placeholder - actual crate TBD)
-# ravenfabric = "0.1"
+# RavenFabric integration — HTTP client built-in (src/ravenfabric.rs), no external crate needed
+# When a RavenFabric Rust SDK crate becomes available, add it here
 
 # Configuration
 config = { version = "0.15", default-features = false, features = ["toml"] }
