@@ -20,12 +20,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `bff16e9` — fix: increase apt-get timeout and add retry logic for aarch64 cross-compilation deps
+**Commit:** `cbc76ec` — Release v0.6.0
 
-**Latest CI runs (commit `bff16e9`):**
-- **Build & Release #69** — ✅ Success (aarch64-unknown-linux-gnu build fixed)
-- **Container Build #69** — ✅ Success
-- **Security Scan #57** — ✅ Success (all scans passed)
+**Latest CI runs (commit `cbc76ec`):**
+- **Build & Release #70** — ✅ Success (all 5 targets + containers)
+- **Container Build #70** — ✅ Success
+- **Security Scan #58** — ✅ Success (all scans passed)
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)
