@@ -20,7 +20,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `274fbfa` — docs: update ISSUES.md, ROADMAP.md, CHANGELOG.md with latest CI status; fix exec mode test in common.sh
+**Commit:** `3f6578c` — ci: fix apt-get hanging in cross-compilation dependency install
+
+**Latest CI runs (commit `3f6578c`):**
+- **Build & Release #66** — ✅ Success (all 5 build targets, containers, crates.io)
+- **Container Build #66** — ✅ Success (multi-arch containers, Cosign, SBOM)
+- **Security Scan #54** — ✅ Success (pre-existing informational warnings only)
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)
@@ -223,7 +228,7 @@ public infrastructure types that are not yet wired into the agent loop, causing
 
 **Problem:** Security Scan runs consistently have multiple jobs that exit with non-zero codes. These are pre-existing known issues — most are informational or have `continue-on-error: true`.
 
-**Current status (Run #52, commit `274fbfa`):**
+**Current status (Run #54, commit `3f6578c`):**
 1. **CodeQL** — ✅ passes (analysis completed successfully)
 2. **Cargo Audit** — ✅ passes
 3. **Cargo Deny** — ✅ passes
