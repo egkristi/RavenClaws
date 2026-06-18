@@ -96,9 +96,15 @@ pub struct LLMConfig {
     pub retry_max_delay_ms: u64,
 }
 
-pub fn default_retry_max() -> u32 { 3 }
-pub fn default_retry_base_delay() -> u64 { 100 }
-pub fn default_retry_max_delay() -> u64 { 10000 }
+pub fn default_retry_max() -> u32 {
+    3
+}
+pub fn default_retry_base_delay() -> u64 {
+    100
+}
+pub fn default_retry_max_delay() -> u64 {
+    10000
+}
 
 pub fn default_system_prompt() -> String {
     "You are RavenClaw, a lightweight autonomous agent. \
@@ -434,7 +440,7 @@ mod tests {
         let config = LLMConfig {
             system_prompt: "You are a helpful coding assistant.".to_string(),
             ..LLMConfig::default()
-};
+        };
         assert_eq!(config.system_prompt, "You are a helpful coding assistant.");
     }
 
@@ -448,11 +454,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -481,11 +487,11 @@ mod tests {
                 api_key: Some("key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -512,11 +518,11 @@ mod tests {
                 api_key: Some("key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -541,11 +547,11 @@ mod tests {
                 api_key: Some("sk-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -575,11 +581,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 60,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-}],
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            }],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
                 require_tls: false,
@@ -643,11 +649,11 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -674,11 +680,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -705,11 +711,11 @@ mod tests {
                 api_key: Some("key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -734,11 +740,11 @@ mod tests {
                 api_key: Some("key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -765,11 +771,11 @@ mod tests {
                     api_key: None,
                     timeout_secs: 60,
                     system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                    token_budget: None,
+                    retry_max: 3,
+                    retry_base_delay_ms: 100,
+                    retry_max_delay_ms: 10000,
+                },
                 LLMConfig {
                     provider: LLMProvider::LiteLLM,
                     endpoint: "https://litellm.example.com:4000".to_string(),
@@ -777,11 +783,11 @@ mod tests {
                     api_key: Some("key".to_string()),
                     timeout_secs: 30,
                     system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                    token_budget: None,
+                    retry_max: 3,
+                    retry_base_delay_ms: 100,
+                    retry_max_delay_ms: 10000,
+                },
             ],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -807,11 +813,11 @@ mod tests {
                 api_key: Some("key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-}],
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            }],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
                 require_tls: true,
@@ -878,7 +884,7 @@ mod tests {
             retry_max: 3,
             retry_base_delay_ms: 100,
             retry_max_delay_ms: 10000,
-};
+        };
         assert_eq!(config.provider, LLMProvider::OpenAI);
         assert_eq!(config.model, "gpt-4o");
         assert_eq!(config.timeout_secs, 120);
@@ -1001,11 +1007,11 @@ mod tests {
                 api_key: Some("sk-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -1030,11 +1036,11 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -1059,11 +1065,11 @@ mod tests {
                 api_key: Some("key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -1158,11 +1164,11 @@ mod tests {
                 api_key: None,
                 timeout_secs: 60,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -1187,11 +1193,11 @@ mod tests {
                 api_key: Some("or-key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {
@@ -1216,11 +1222,11 @@ mod tests {
                 api_key: Some("key".to_string()),
                 timeout_secs: 30,
                 system_prompt: default_system_prompt(),
-            token_budget: None,
-            retry_max: 3,
-            retry_base_delay_ms: 100,
-            retry_max_delay_ms: 10000,
-},
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
             llms: vec![],
             ravenfabric: RavenFabricConfig::default(),
             security: SecurityConfig {

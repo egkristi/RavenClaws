@@ -143,7 +143,8 @@ async fn main() -> anyhow::Result<()> {
         info!(command = %mcp_command, "Initializing MCP client");
 
         // Parse MCP args
-        let mcp_args: Vec<String> = args.mcp_args
+        let mcp_args: Vec<String> = args
+            .mcp_args
             .as_ref()
             .map(|s| s.split_whitespace().map(|s| s.to_string()).collect())
             .unwrap_or_default();
@@ -192,15 +193,27 @@ async fn main() -> anyhow::Result<()> {
         let response = if !config.llms.is_empty() {
             let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
             if let Some(client) = multi_llm.get_client(0) {
-                agent::run_agent_loop_with_mcp(client.clone(), &exec_prompt, system_prompt, loop_config, mcp_client)
-                    .await?
+                agent::run_agent_loop_with_mcp(
+                    client.clone(),
+                    &exec_prompt,
+                    system_prompt,
+                    loop_config,
+                    mcp_client,
+                )
+                .await?
             } else {
                 anyhow::bail!("No LLM providers available for --exec mode");
             }
         } else {
             let llm = llm::create_client(&config.llm)?;
-            agent::run_agent_loop_with_mcp(llm, &exec_prompt, system_prompt, loop_config, mcp_client)
-                .await?
+            agent::run_agent_loop_with_mcp(
+                llm,
+                &exec_prompt,
+                system_prompt,
+                loop_config,
+                mcp_client,
+            )
+            .await?
         };
         println!("{}", response);
         info!("RavenClaw shutdown complete");
