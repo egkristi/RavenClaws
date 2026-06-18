@@ -20,12 +20,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `cbc76ec` — Release v0.6.0
+**Commit:** `b49e458` — Use native ARM runner for aarch64 build
 
-**Latest CI runs (commit `cbc76ec`):**
-- **Build & Release #70** — ✅ Success (all 5 targets + containers)
-- **Container Build #70** — ✅ Success
-- **Security Scan #58** — ✅ Success (all scans passed)
+**Latest CI runs (commit `b49e458`):**
+- **Build & Release #75** — ✅ Success (all 5 targets + containers)
+- **Container Build #74** — ✅ Success
+- **Security Scan #61** — ✅ Success (all scans passed)
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)

@@ -3,8 +3,8 @@
 **Date:** 2026-06-18  
 **Version:** v0.6.0 — Swarm & Supervisor Modes ✅  
 **Previous Release:** v0.5.3 (2026-06-07) — Native Anthropic Provider ✅  
-**Current Commit:** `cbc76ec` — Release v0.6.0  
-**CI Status:** Build & Release #70 ✅ · Container Build #70 ✅ · Security Scan #58 ✅
+**Current Commit:** `b49e458` — Use native ARM runner for aarch64 build  
+**CI Status:** Build & Release #75 ✅ · Container Build #74 ✅ · Security Scan #61 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.

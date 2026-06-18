@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - RavenFabric integration — secure E2E remote command execution + mesh coordination (v0.6.1)
 - Agent communication — structured message passing; conflict resolution across agents (v0.6.1)
 
+### Fixed
+- **aarch64 build hanging in CI** — Cross-compilation step (`apt-get install gcc-aarch64-linux-gnu`) kept hanging indefinitely on x86_64 GitHub Actions runners. Switched to native `ubuntu-24.04-arm` runner for aarch64 builds, eliminating the need for cross-compilation entirely. This is faster and more reliable.
+
 ## [v0.6.0] — 2026-06-18
 
 ### Added
