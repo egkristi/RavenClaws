@@ -20,7 +20,7 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `356e9af` — Fix formatting in config.rs (cargo fmt)
+**Commit:** `cb5076c` — chore: update ISSUES.md and ROADMAP.md with current status
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)
@@ -221,16 +221,22 @@ public infrastructure types that are not yet wired into the agent loop, causing
 
 ### Security Scan: Multiple jobs fail (CodeQL, Udeps, Outdated, Trivy, K8s)
 
-**Problem:** Security Scan #46 (commit `236c1fb`) failed with 7 errors:
-1. **CodeQL** — exit code 101 (analysis failure — likely Rust toolchain compatibility)
-2. **Cargo Udeps** — exit code 101 (unused dependencies found — informational)
-3. **Cargo Outdated** — exit code 1 (outdated dependencies — informational)
-4. **Trivy (Filesystem)** — exit code 1 (vulnerabilities found — `continue-on-error: true`)
-5. **Trivy (IaC Config)** — exit code 1 (misconfigurations found — `continue-on-error: true`)
-6. **K8s Manifest Validation** — exit code 1 (Kubescape SARIF issue — `continue-on-error: true`)
-7. **Build & Release Check** — exit code 1 (deprecated structs + dead_code — **FIXED**)
+**Problem:** Security Scan runs consistently have multiple jobs that exit with non-zero codes. These are pre-existing known issues — most are informational or have `continue-on-error: true`.
 
-**Status:** 🔴 Partially resolved — Build & Release Check is now ✅ green (fmt, clippy, test all pass). Security Scan #48 is in_progress. Pre-existing issues (CodeQL, Udeps, Outdated, Trivy, K8s validation) remain — mostly informational or have `continue-on-error: true`. CodeQL failure needs investigation — may be a Rust toolchain compatibility issue on GitHub Actions runners.
+**Current status (Run #49, commit `cb5076c`):**
+1. **CodeQL** — exit code 101 (analysis failure — likely Rust toolchain compatibility)
+2. **Cargo Audit** — ✅ passes (when it completes)
+3. **Cargo Deny** — ✅ passes
+4. **Cargo Udeps** — exit code 101 (unused dependencies found — informational)
+5. **Cargo Outdated** — exit code 1 (outdated dependencies — informational)
+6. **Trivy (Filesystem)** — exit code 1 (vulnerabilities found — `continue-on-error: true`)
+7. **Trivy (IaC Config)** — exit code 1 (misconfigurations found — `continue-on-error: true`)
+8. **K8s Manifest Validation** — exit code 1 + invalid SARIF (Kubescape — `continue-on-error: true`)
+9. **Hadolint** — ✅ passes
+10. **OSSF Scorecard** — ✅ passes (with `publish_results: false`)
+11. **Dependency Review** — ✅ passes
+
+**Status:** ⚠️ Pre-existing — all jobs with `continue-on-error: true` do not block the workflow. The Security Scan workflow itself completes with "Success" status (confirmed in Run #48). CodeQL failure needs investigation — may be a Rust toolchain compatibility issue on GitHub Actions runners. Udeps and Outdated are informational signals for periodic review.
 
 ### Container Build: Still running / may fail
 
@@ -239,7 +245,7 @@ checked. Previous Container Build runs (#12-#24) all failed with various issues
 (Trivy action not found, RavenFabric download failures, cross-compilation errors).
 Most of those have been fixed.
 
-**Status:** ✅ Resolved — all Container Build issues fixed. Container Build #60 is in_progress.
+**Status:** ✅ Resolved — all Container Build issues fixed. Container Build #61 (commit `cb5076c`) completed successfully in 1m 33s.
 
 ### GitHub Actions: Node.js 20 deprecation warnings
 
