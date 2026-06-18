@@ -74,18 +74,16 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          for i in 1 2 3; do
-            sudo apt-get update -qq && break
-            echo "apt-get update attempt $i failed, retrying..." && sleep 5
-          done
-          for i in 1 2 3; do
-            sudo apt-get install -y --no-install-recommends -o Dpkg::Options::=--force-confdef \
-              musl-tools \
-              gcc-aarch64-linux-gnu \
-              libssl-dev \
-              pkg-config \
-              cmake && break
-            echo "apt-get install attempt $i failed, retrying..." && sleep 5
+          sudo apt-get update -qq -o Acquire::Retries=3
+          # Install packages individually with timeout to avoid hanging
+          for pkg in musl-tools gcc-aarch64-linux-gnu libssl-dev pkg-config cmake; do
+            for i in 1 2 3; do
+              timeout 120 sudo apt-get install -y --no-install-recommends \
+                -o Dpkg::Options::=--force-confdef \
+                -o Acquire::Retries=3 \
+                "$pkg" && break
+              echo "apt-get install $pkg attempt $i failed, retrying..." && sleep 5
+            done
           done
         timeout-minutes: 20
       - name: Install aarch64 cross-compilation extras
@@ -94,11 +92,14 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          for i in 1 2 3; do
-            sudo apt-get install -y --no-install-recommends -o Dpkg::Options::=--force-confdef \
-              libc6-dev-arm64-cross \
-              linux-libc-dev-arm64-cross && break
-            echo "apt-get install attempt $i failed, retrying..." && sleep 5
+          for pkg in libc6-dev-arm64-cross linux-libc-dev-arm64-cross; do
+            for i in 1 2 3; do
+              timeout 120 sudo apt-get install -y --no-install-recommends \
+                -o Dpkg::Options::=--force-confdef \
+                -o Acquire::Retries=3 \
+                "$pkg" && break
+              echo "apt-get install $pkg attempt $i failed, retrying..." && sleep 5
+            done
           done
         timeout-minutes: 20
       - name: Configure cargo for cross-compilation
