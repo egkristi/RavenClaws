@@ -3,7 +3,7 @@
 **Date:** 2026-06-18  
 **Version:** v0.6.0-dev — Swarm & Supervisor Modes (in development)  
 **Previous Release:** v0.5.3 (2026-06-07) — Native Anthropic Provider ✅  
-**Current Commit:** `cb5076c` — chore: update ISSUES.md and ROADMAP.md with current status
+**Current Commit:** `a11b700` — docs: update ISSUES.md and ROADMAP.md with current CI status (commit cb5076c)
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -64,6 +64,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Native Anthropic provider | ✅ Working | Direct Claude API with tool use, token tracking (v0.5.3) |
 | Retry / fallback / circuit breaker | ✅ Working | Exponential backoff, token budgets, provider fallback chain (v0.5.1) |
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
+| Git hooks (pre-commit / pre-push) | ✅ Working | `.githooks/` — fmt, clippy, tests, binary size, secrets on commit; +release build, Docker, security on push |
 | Structured function calling | ✅ Working | OpenAI Tools format for OpenAI/LiteLLM/OpenRouter/Anthropic |
 | Multi-modal input | ⚠️ Partial | AnthropicClient has image support structure, not wired to CLI |
 
@@ -366,6 +367,7 @@ Agency with guardrails — the security differentiator.
 - [x] **Swarm mode (single-provider)** — 3 parallel agents with different personas ✅ Implemented 2026-06-07
 - [x] **Supervisor mode (multi-model)** — provider-aware task decomposition ✅ Implemented 2026-06-07
 - [x] **Swarm mode (multi-model)** — parallel agents across different providers ✅ Implemented 2026-06-07
+- [x] **Git hooks (pre-commit / pre-push)** — automated verification before every commit and push ✅ Implemented 2026-06-18
 - [ ] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability).
 - [ ] **Agent communication** — structured message passing; conflict resolution across agents.
 - [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion (acts as the user, not a shared service account).

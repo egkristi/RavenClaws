@@ -277,6 +277,41 @@ rustup target add \
 ./scripts/build.sh --target aarch64-unknown-linux-gnu      # one target
 ```
 
+### Git Hooks (Pre-Commit / Pre-Push)
+
+The project includes git hooks that run automated verification before every commit and push:
+
+```bash
+# Install hooks (one-time setup after cloning)
+.githooks/setup.sh
+
+# Verify hooks are active
+.githooks/setup.sh --check
+
+# Remove hooks (restore defaults)
+.githooks/setup.sh --remove
+```
+
+**Pre-commit** (fast — runs in seconds):
+1. `cargo fmt --check` — formatting
+2. `cargo clippy -D warnings` — linting
+3. `cargo test --locked` — unit tests
+4. Binary size check — warns if over 5MB
+5. Secrets scan — no hardcoded API keys/tokens
+
+**Pre-push** (comprehensive — runs in 1-5 minutes):
+1. Full pre-commit suite
+2. Release build (`cargo build --release`)
+3. Binary integrity (architecture, stripped, size)
+4. Docker build (if Docker available)
+5. Security scan (secrets, setuid, Cargo.lock)
+
+**Skip hooks (emergency only):**
+```bash
+git commit --no-verify
+git push --no-verify
+```
+
 ### Multi-arch Docker image
 
 ```bash

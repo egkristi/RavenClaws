@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] — v0.6.0-dev
 
+### Added — 2026-06-18
+- **Git hooks system** — pre-commit and pre-push hooks for automated verification
+  - `.githooks/pre-commit` — fast checks: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test --locked`, binary size check, secrets scan
+  - `.githooks/pre-push` — comprehensive checks: full pre-commit + release build + binary integrity + Docker build + security scan
+  - `.githooks/setup.sh` — install/check/remove hooks with `git config core.hooksPath`
+  - Updated AGENTS.md, README.md with hook documentation and usage instructions
+
 ### Fixed — 2026-06-02
 
 #### Build Fixes After Upstream Merge

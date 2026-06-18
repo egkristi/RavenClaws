@@ -225,6 +225,44 @@ scripts/
 ./scripts/verify.sh --build        # Build + all tests
 ```
 
+### Git Hooks (Pre-Commit / Pre-Push)
+
+The project includes git hooks for automated verification before commits and pushes:
+
+```
+.githooks/
+├── pre-commit    — Fast checks: fmt, clippy, tests, binary size, secrets scan
+├── pre-push      — Full checks: pre-commit + release build + Docker + security
+└── setup.sh      — Install/check/remove hooks
+```
+
+**Install:**
+```bash
+.githooks/setup.sh          # Configure git to use .githooks
+.githooks/setup.sh --check  # Verify hooks are active
+.githooks/setup.sh --remove # Restore default hooks
+```
+
+**What pre-commit checks:**
+1. `cargo fmt --check` — formatting
+2. `cargo clippy -D warnings` — linting
+3. `cargo test --locked` — unit tests
+4. Binary size check — warns if over 5MB
+5. Secrets scan — no hardcoded API keys/tokens
+
+**What pre-push additionally checks:**
+1. Full pre-commit suite
+2. Release build (`cargo build --release`)
+3. Binary integrity (architecture, stripped, size)
+4. Docker build (if Docker available)
+5. Security scan (secrets, setuid, Cargo.lock)
+
+**Skip hooks (emergency only):**
+```bash
+git commit --no-verify
+git push --no-verify
+```
+
 ### Test Runner Functions
 
 - `run_test "name" command args...` — Runs command, captures output to `target/verification-results/`, logs PASS/FAIL
@@ -316,6 +354,8 @@ The `--exec` CLI flag is parsed in `main.rs` but never used. To fix:
 - **Do** update VERIFICATION.md when adding or changing verification tests
 - **Do** update README.md when adding user-facing features
 - **Do** keep the binary under 5MB — if it grows, investigate alternatives
+- **Do** run `.githooks/setup.sh` after cloning the repo to enable pre-commit/pre-push hooks
+- **Do** update `.githooks/` when adding new verification checks that should run before commits
 - **Do** use env vars for all secrets — never config files
 
 ---
