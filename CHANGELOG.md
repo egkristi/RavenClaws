@@ -16,10 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CI/CD hardening** — cross-compilation dependency install now uses `DEBIAN_FRONTEND=noninteractive`, `-o Dpkg::Options::=--force-confdef`, and `timeout-minutes: 10` to prevent apt-get hangs
 - **Node.js 24 migration** — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` set in all 3 workflow files
 - **CodeQL v4 migration** — all `github/codeql-action/*` updated from `@v3` to `@v4`
+- **apt-get retry logic** — cross-compilation dependency install steps now retry up to 3 times on failure, with timeout extended from 10 to 20 minutes
 
 ### Fixed — 2026-06-18
 - **Exec mode test** — fixed `check_llm_response_quality` in `scripts/lib/common.sh` to detect agent loop progress instead of non-existent `"Exec response received"` log message; added empty line filtering for cleaner response detection
 - **apt-get hanging in CI** — `x86_64-unknown-linux-musl` build was getting stuck indefinitely on "Install cross-compilation dependencies" step; added `DEBIAN_FRONTEND=noninteractive` and `timeout-minutes: 10` to prevent hangs
+- **aarch64-unknown-linux-gnu build timeout** — Build & Release #68 failed because `apt-get install` timed out after 10 minutes; added retry loop (3 attempts) and extended timeout to 20 minutes
 
 ### Fixed — 2026-06-02
 

@@ -3,8 +3,8 @@
 **Date:** 2026-06-18  
 **Version:** v0.6.0-dev — Swarm & Supervisor Modes (in development)  
 **Previous Release:** v0.5.3 (2026-06-07) — Native Anthropic Provider ✅  
-**Current Commit:** `5767ff6` — docs: update ISSUES.md and ROADMAP.md commit refs to 3f6578c; add Build & Release #66, Container Build #66, Security Scan #54 to resolved status  
-**CI Status:** Build & Release #67 ✅ · Container Build #67 ✅ · Security Scan #55 ✅
+**Current Commit:** `163a753` — docs: update ROADMAP.md with v0.6 CI/CD hardening items, update CHANGELOG.md, update ISSUES.md  
+**CI Status:** Build & Release #68 ❌ (aarch64-unknown-linux-gnu apt-get timeout → fixed with retries + extended timeout) · Container Build #68 ✅ · Security Scan #56 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.

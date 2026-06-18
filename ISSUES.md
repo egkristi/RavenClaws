@@ -20,12 +20,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release Check job passes (fmt + clippy + test). Security Scan has pre-existing issues (CodeQL, Trivy, K8s validation — see below).
 
-**Commit:** `5767ff6` — docs: update ISSUES.md and ROADMAP.md commit refs to 3f6578c; add Build & Release #66, Container Build #66, Security Scan #54 to resolved status
+**Commit:** `163a753` — docs: update ROADMAP.md with v0.6 CI/CD hardening items, update CHANGELOG.md, update ISSUES.md
 
-**Latest CI runs (commit `5767ff6`):**
-- **Build & Release #67** — ✅ Success
-- **Container Build #67** — ✅ Success
-- **Security Scan #55** — ✅ Success
+**Latest CI runs (commit `163a753`):**
+- **Build & Release #68** — ❌ Failed (aarch64-unknown-linux-gnu: apt-get timeout → fixed with retries + extended timeout)
+- **Container Build #68** — ✅ Success
+- **Security Scan #56** — ✅ Success
 
 **Known limitations (non-blocking):**
 - RavenFabric E2E integration: Still pending (v0.6.1)
