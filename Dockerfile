@@ -95,7 +95,7 @@ USER nonroot
 ENV RAVENCLAW_CONFIG=/config/ravenclaw.toml
 ENV RUST_LOG=info
 
-# Health check
+# Health check (HTTP endpoint requires --serve mode)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
     CMD ["/app/ravenclaw", "--version"]
 

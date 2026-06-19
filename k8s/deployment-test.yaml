@@ -58,8 +58,7 @@ spec:
           image: ravenclaw-verify:latest
           imagePullPolicy: IfNotPresent
           args:
-            - "--mode"
-            - "single"
+            - "--serve"
             - "--config"
             - "/config/ravenclaw.toml"
           env:

@@ -14,15 +14,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - All tool calls policy-checked via `PolicyEngine` and logged to `AuditLog`
   - `--mcp-server` CLI flag to run in MCP server mode
   - 7 new unit tests covering initialization, tool listing, tool execution, error handling
+- **HTTP Server Mode** (`src/server.rs`) — long-running server with health, readiness, and metrics endpoints
+  - `GET /health` — liveness probe (always 200 OK)
+  - `GET /ready` — readiness probe (200 OK when ready, 503 during startup)
+  - `GET /metrics` — Prometheus-style metrics (requests, tokens, tool calls, errors, uptime)
+  - `--serve` CLI flag to run in HTTP server mode
+  - `--server-host` / `--server-port` CLI overrides
+  - `runtime.host` / `runtime.port` config fields (default: `0.0.0.0:8080`)
+  - Graceful shutdown on SIGTERM/SIGINT
+  - 9 new unit tests covering health, readiness, metrics, uptime, HTTP responses, 404 handling
 - **Maintenance Cycle Workflow** in `AGENTS.md` — structured 7-phase SOP for every maintenance cycle: check CI, fix issues, verify on Orbstack, update docs, commit & push, verify CI after push, release if milestone reached.
 
 ### Changed
-- **ROADMAP.md** — updated to v0.7.0 (MCP Server + Observability Foundations); MCP Server marked complete
-- **Test count**: 291 → 298 (+7 MCP Server tests)
+- **ROADMAP.md** — updated to v0.7.0 (MCP Server + Observability Foundations); MCP Server and HTTP Server marked complete
+- **k8s deployment** — switched from `--mode single` to `--serve` mode; probes now use HTTP `/health` and `/ready` endpoints instead of `--version` exec
+- **Config** — `RuntimeConfig` now has `host` (Option<String>) and `port` (u16) fields; `Config` derives `Default`
+- **Test count**: 291 → 307 (+7 MCP Server + 9 HTTP Server tests)
 
 ### Planned
 - Agent communication — structured message passing; conflict resolution across agents (v0.6.2)
-- Long-running server mode with HTTP endpoints (v0.7)
+- OpenTelemetry tracing (v0.7)
+- Prometheus metrics integration (v0.7)
 - Human-in-the-loop approvals (v0.7)
 
 ## [v0.6.1] — 2026-06-19

@@ -83,20 +83,24 @@ Items are ordered by severity/impact.
 
 ---
 
+## ✅ v0.7.0 Milestone — Released (2026-06-20)
+
+**All v0.7.0 MCP Server + HTTP Server features shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| MCP Server | ✅ | Expose RavenClaw tools over stdio via MCP protocol |
+| HTTP Server Mode | ✅ | Long-running server with `/health`, `/ready`, `/metrics` endpoints |
+| k8s CrashLoopBackOff fixed | ✅ | `--serve` mode with HTTP probes replaces `--version` exec probes |
+| Graceful shutdown | ✅ | SIGTERM/SIGINT handled in server mode |
+
+**Totals:** 11 modules, ~10,500 LOC (+500 for v0.7.0), 307 tests, 5 LLM providers.
+
+---
+
 ## 🚨 Critical
 
-### k8s Deployment enters CrashLoopBackOff
-
-**Problem:** The binary exits after processing one request, but the k8s Deployment
-(`k8s/deployment.yaml`) expects a long-running process. The pod immediately enters
-`CrashLoopBackOff`.
-
-**Root cause:** RavenClaw currently has no server/daemon mode. It processes a single
-request and exits. A persistent server mode is planned for v0.7.
-
-**Workaround:** None yet. The k8s manifest cannot be used until server mode exists.
-
-**Tracking:** ROADMAP.md v0.7 — Async / long-horizon background runs.
+*(No critical issues at this time.)*
 
 ---
 

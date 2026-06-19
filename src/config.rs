@@ -29,7 +29,7 @@ pub enum LLMProvider {
     Anthropic,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct Config {
     /// LiteLLM configuration (single provider mode)
     #[serde(default)]
@@ -49,7 +49,6 @@ pub struct Config {
 
     /// Runtime settings
     #[serde(default)]
-    #[allow(dead_code)]
     pub runtime: RuntimeConfig,
 }
 
@@ -188,6 +187,14 @@ pub struct RuntimeConfig {
     #[serde(default = "default_health_interval")]
     #[allow(dead_code)]
     pub health_interval_secs: u64,
+
+    /// HTTP server host (v0.7)
+    #[serde(default)]
+    pub host: Option<String>,
+
+    /// HTTP server port (v0.7)
+    #[serde(default = "default_server_port")]
+    pub port: u16,
 }
 
 impl Default for RuntimeConfig {
@@ -196,6 +203,8 @@ impl Default for RuntimeConfig {
             workdir: default_workdir(),
             max_agents: default_max_agents(),
             health_interval_secs: default_health_interval(),
+            host: None,
+            port: default_server_port(),
         }
     }
 }
@@ -226,6 +235,10 @@ fn default_max_agents() -> usize {
 
 fn default_health_interval() -> u64 {
     60
+}
+
+fn default_server_port() -> u16 {
+    8080
 }
 
 impl Default for LLMConfig {
@@ -865,10 +878,14 @@ mod tests {
             workdir: "/data".to_string(),
             max_agents: 5,
             health_interval_secs: 120,
+            host: Some("127.0.0.1".to_string()),
+            port: 9090,
         };
         assert_eq!(config.workdir, "/data");
         assert_eq!(config.max_agents, 5);
         assert_eq!(config.health_interval_secs, 120);
+        assert_eq!(config.host, Some("127.0.0.1".to_string()));
+        assert_eq!(config.port, 9090);
     }
 
     #[test]

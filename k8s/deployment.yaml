@@ -78,8 +78,7 @@ spec:
           image: ghcr.io/egkristi/ravenclaw:latest
           imagePullPolicy: Always
           args:
-            - "--mode"
-            - "single"
+            - "--serve"
             - "--config"
             - "/config/ravenclaw.toml"
           env:
@@ -110,14 +109,16 @@ spec:
               drop:
                 - ALL
           livenessProbe:
-            exec:
-              command: ["/app/ravenclaw", "--version"]
+            httpGet:
+              path: /health
+              port: 8080
             initialDelaySeconds: 10
             periodSeconds: 30
             timeoutSeconds: 5
           readinessProbe:
-            exec:
-              command: ["/app/ravenclaw", "--version"]
+            httpGet:
+              path: /ready
+              port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
       volumes:

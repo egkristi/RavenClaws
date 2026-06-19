@@ -1,6 +1,6 @@
 [package]
 name = "ravenclaw"
-version = "0.6.1"
+version = "0.7.0"
 edition = "2021"
 authors = ["Erling G M Kristiansen <egkristi@gmail.com>"]
 description = "Lightweight, secure Rust agent framework with multi-provider LLM support"
@@ -65,6 +65,7 @@ url = "2.5"
 tokio-test = "0.4"
 mockito = "1.5"
 serial_test = "3.2"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 [profile.release]
 opt-level = 3

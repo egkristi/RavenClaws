@@ -12,6 +12,7 @@ mod mcp;
 mod policy;
 mod ravenfabric;
 mod sandbox;
+mod server;
 mod tools;
 
 use clap::Parser;
@@ -95,6 +96,18 @@ struct Args {
     /// Run as MCP server (v0.7) — exposes RavenClaw tools over stdio via MCP protocol
     #[arg(long, env = "RAVENCLAW_MCP_SERVER")]
     mcp_server: bool,
+
+    /// Run as HTTP server (v0.7) — long-running with /health, /ready, /metrics endpoints
+    #[arg(long, env = "RAVENCLAW_SERVE")]
+    serve: bool,
+
+    /// HTTP server host (v0.7) — overrides config
+    #[arg(long, env = "RAVENCLAW_SERVER_HOST")]
+    server_host: Option<String>,
+
+    /// HTTP server port (v0.7) — overrides config
+    #[arg(long, env = "RAVENCLAW_SERVER_PORT")]
+    server_port: Option<u16>,
 }
 
 #[tokio::main]
@@ -153,6 +166,23 @@ async fn main() -> anyhow::Result<()> {
             .await
             .map_err(|e| anyhow::anyhow!("MCP server error: {}", e))?;
         info!("RavenClaw MCP server shutdown complete");
+        return Ok(());
+    }
+
+    // Run as HTTP server if --serve is set (v0.7)
+    if args.serve {
+        info!("Starting in HTTP server mode");
+
+        // Apply CLI overrides for server host/port
+        if let Some(host) = args.server_host {
+            config.runtime.host = Some(host);
+        }
+        if let Some(port) = args.server_port {
+            config.runtime.port = port;
+        }
+
+        server::run_server(config).await?;
+        info!("RavenClaw HTTP server shutdown complete");
         return Ok(());
     }
 

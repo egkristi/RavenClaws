@@ -31,7 +31,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.7.0 (2026-06-20) — MCP Server + Observability Foundations  
-**Stats:** 10 source modules, ~10,000 LOC (+300 for v0.7.0), 5 LLM providers, 298 unit tests (+7 for MCP Server), multi-arch CI with signed images + SBOM.
+**Stats:** 11 source modules, ~10,500 LOC (+500 for v0.7.0), 5 LLM providers, 307 unit tests (+9 for HTTP Server), multi-arch CI with signed images + SBOM.
 
 | Component | Status | Details |
 |---|---|---|
@@ -63,6 +63,7 @@ can't be added without breaking one, it doesn't ship in core.
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt` field, CLI `--system-prompt`, env var override |
 | MCP client | ✅ Working | JSON-RPC 2.0 over stdio, tool discovery from external servers (v0.5.2) |
 | **MCP server** | ✅ **v0.7** | Exposes RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
+| **HTTP server mode** | ✅ **v0.7** | Long-running server with `/health`, `/ready`, `/metrics` endpoints; `--serve` flag; fixes k8s CrashLoopBackOff |
 | Native Anthropic provider | ✅ Working | Direct Claude API with tool use, token tracking (v0.5.3) |
 | Retry / fallback / circuit breaker | ✅ Working | Exponential backoff, token budgets, provider fallback chain (v0.5.1) |
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
@@ -386,10 +387,10 @@ Agency with guardrails — the security differentiator.
 ### v0.7 — Observability and ops 📈 **(CURRENT)**
 
 - [x] **MCP Server** — expose RavenClaw tools over stdio via MCP protocol. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
-- [ ] **Long-running server mode** with a real HTTP `/health` `/ready` `/metrics` endpoint (fixes the k8s CrashLoop).
+- [x] **Long-running server mode** with HTTP `/health` `/ready` `/metrics` endpoints (fixes the k8s CrashLoop). ✅ **v0.7.0**
 - [ ] **Prometheus metrics** (requests, tokens, tool calls, errors, latencies).
 - [ ] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs).
-- [ ] **Graceful shutdown**, signal handling, `health_interval_secs` honored.
+- [ ] **Graceful shutdown**, signal handling, `health_interval_secs` honored. ✅ **Partial** — SIGTERM/SIGINT handled in server mode
 - [ ] **Helm chart**; systemd unit; optional self-update with rollback.
 - [ ] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX).
 - [ ] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents.
@@ -460,7 +461,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 | 0.2 | Verified supply chain for downloaded binaries (SHA256 checksum); no panic/abort on client init; cross-compilation deps in CI. |
 | 0.4 | Deny-by-default tool policy, sandboxed execution, audit log, secret zeroization, prompt-injection defense. **(Infrastructure complete, needs wiring)** |
 | 0.6 | E2E-encrypted remote exec via RavenFabric. |
-| 0.7 | MCP Server — policy-checked and audited tool exposure over stdio. |
+| 0.7 | MCP Server — policy-checked and audited tool exposure over stdio. HTTP server mode with health/metrics endpoints. |
 | 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
 | 0.9 | External security review, fuzzing, published threat model. |
 
@@ -483,7 +484,7 @@ Concrete items carried from the current codebase:
 1. ~~**Security infrastructure not wired** — `PolicyEngine`, `Sandbox`, `AuditLog` are complete but never invoked.~~ ✅ **Wired to agent loop (commit 51e42b0)**
 2. ~~**Pattern-matching tool calls** — Fragile `TOOL_CALL:` / `ARGS:` parsing instead of structured JSON.~~ ✅ **Structured function calling (v0.4)**
 3. ~~**No MCP integration** — Reinventing tools instead of using industry standard.~~ ✅ **MCP client (v0.5.2)**
-4. **k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.
+4. ~~**k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.~~ ✅ **Fixed — `--serve` mode with HTTP probes**
 5. ~~**Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4).~~ ✅ **Unified `OpenAICompatibleClient` (v0.5.0)**
 6. ~~**Dead/unwired code:** `rustls` + `zeroize` deps unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop; RavenFabric config fields consumed by client**
 7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.7)*
