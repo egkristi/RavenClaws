@@ -23,7 +23,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.6.0
+- **Version:** 0.6.1
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaw
 - **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
@@ -54,7 +54,7 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (277 tests, 9 modules, 0 failures) | ✅ Working |
+| Verification suite (291 tests, 10 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -69,7 +69,7 @@ src/
 | Tamper-evident audit log | ✅ Working — HMAC-SHA256 chained, structured JSON, verification |
 | MCP client | ✅ Working — JSON-RPC 2.0 over stdio, tool discovery and registration |
 | Retry / fallback chains | ✅ Working — exponential backoff, circuit breaker, token budgets |
-| RavenFabric integration | Partial — config struct exists, binary included in container, runtime wiring pending |
+| RavenFabric integration | ✅ Working — HTTP client with health, list_agents, execute, broadcast; wired to all modes |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented — CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review |
 | Pre-built binaries / releases | 📋 Wired, untagged — CI produces them on tag; none released yet |
@@ -328,6 +328,126 @@ The `--exec` CLI flag is parsed in `main.rs` but never used. To fix:
 3. Add validation in `Config::validate()` if needed
 4. Add env var mapping in `Config::load()` if needed
 5. Update test configs in `tests/config/`
+
+---
+
+## Maintenance Cycle Workflow
+
+This is the **standard operating procedure** for every maintenance cycle. Follow these steps in order, every time.
+
+### Phase 1: Check CI Status
+
+```bash
+curl -s "https://api.github.com/repos/egkristi/RavenClaw/actions/runs?per_page=6&branch=master&event=push" | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+for r in data.get('workflow_runs',[])[:6]:
+    print(f\"#{r['run_number']:5d}  {r['name'][:25]:25s}  {r['status']:15s}  {str(r['conclusion']):10s}  {r['head_commit']['message'][:60] if r.get('head_commit') else '---'}\")"
+```
+
+- Check all 3 workflows: **Build & Release**, **Container Build**, **Security Scan**
+- If any are **in_progress**, wait for them to complete
+- If any **failed**, investigate and fix before proceeding
+- If all green, proceed to Phase 2
+
+### Phase 2: Fix Issues
+
+1. **ISSUES.md** — Read the file, address each issue by severity (Critical → High → Medium → Low)
+2. **VS Code Problems Tab** — Open the problems tab (`Cmd+Shift+M`), fix all errors/warnings
+3. **ROADMAP.md** — Read the file, pick the next uncompleted feature and implement it
+
+### Phase 3: Verify Locally on Orbstack
+
+Run the full verification suite against all deployment targets available on Orbstack:
+
+```bash
+# 1. Local binary (macOS)
+./scripts/verify.sh --local
+
+# 2. Docker container (Orbstack Docker)
+./scripts/verify.sh --docker
+
+# 3. Kubernetes (Orbstack K8s)
+./scripts/verify.sh --k8s
+
+# 4. Linux VM (Orbstack cross-compile)
+./scripts/verify.sh --linux
+
+# 5. Full suite (all of the above + security + performance + LLM quality)
+./scripts/verify.sh --all
+```
+
+- If any tests **fail**, fix the issue and re-run
+- If any issues arise, **register them in ISSUES.md** with appropriate severity
+
+### Phase 4: Update Documentation
+
+When a feature is finished or a fix is complete, update **all** relevant documents:
+
+| Document | When to update |
+|---|---|
+| `ROADMAP.md` | Feature completed → move from ROADMAP to CHANGELOG. CI status updated. |
+| `CHANGELOG.md` | Every feature, fix, or change → add under `[Unreleased]` |
+| `README.md` | User-facing features or config changes |
+| `ISSUES.md` | New bugs discovered, issues resolved, CI status updated |
+| `VERIFICATION.md` | Tests added, changed, or removed |
+| `AGENTS.md` | Workflow changes, new conventions, architecture changes |
+
+### Phase 5: Commit & Push
+
+```bash
+# Stage all changes
+git add -A
+
+# Pre-commit hooks run automatically (fmt, clippy, 291 tests, binary size, secrets)
+git commit -m "Descriptive summary of changes"
+
+# Pre-push hooks run automatically (pre-commit + release build + Docker + security)
+git push
+```
+
+- If pre-commit hooks **fail**, fix and re-commit
+- If pre-push hooks **fail**, fix and re-push
+
+### Phase 6: Verify CI After Push
+
+After pushing, **monitor all 3 GitHub Actions workflows to completion**:
+
+1. **Build & Release** — Check that all 5 build targets succeed
+2. **Container Build** — Check multi-arch images build and push
+3. **Security Scan** — Check CodeQL, cargo-audit, cargo-deny, etc.
+
+```bash
+# Poll until all complete
+curl -s "https://api.github.com/repos/egkristi/RavenClaw/actions/runs?per_page=6&branch=master&event=push" | python3 -c "
+import json,sys
+data=json.load(sys.stdin)
+for r in data.get('workflow_runs',[])[:6]:
+    print(f\"#{r['run_number']:5d}  {r['name'][:25]:25s}  {r['status']:15s}  {str(r['conclusion']):10s}  {r['head_commit']['message'][:60] if r.get('head_commit') else '---'}\")"
+```
+
+- If any pipeline **fails**, investigate, fix, and re-push
+- If any issues arise, **register them in ISSUES.md**
+
+### Phase 7: Release (if milestone reached)
+
+If the completed work constitutes a releasable milestone, follow the full **Release Process** (see below). Otherwise, the cycle is complete.
+
+### Cycle Checklist
+
+```markdown
+## Maintenance Cycle Checklist
+
+- [ ] Phase 1: CI all green
+- [ ] Phase 2: ISSUES.md addressed
+- [ ] Phase 2: VS Code problems fixed
+- [ ] Phase 2: ROADMAP.md progress made
+- [ ] Phase 3: Verification suite passes (--all)
+- [ ] Phase 4: All relevant docs updated
+- [ ] Phase 5: Committed & pushed (hooks pass)
+- [ ] Phase 6: CI all green after push
+- [ ] Phase 7: Release if milestone reached
+```
 
 ---
 
