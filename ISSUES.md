@@ -21,12 +21,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** All three pipelines green — Build & Release, Container Build, Security Scan.
 
-**Commit:** `c98f48b` — RavenFabric: Add built-in HTTP client for remote execution and mesh coordination
+**Commit:** `23e032a` — Update docs: CI status to Build #77, Container #76, Security #63
 
-**Latest CI runs (commit `c98f48b`):**
-- **Build & Release #77** — ✅ Success (5m 23s, all 5 targets + containers)
-- **Container Build #76** — ✅ Success (4m 24s)
-- **Security Scan #63** — ✅ Success (3m 7s, all scans passed)
+**Latest CI runs (commit `23e032a`):**
+- **Build & Release #78** — ✅ Success (2m 25s, all 5 targets + containers)
+- **Container Build #77** — ✅ Success (1m 22s)
+- **Security Scan #64** — ✅ Success (2m 42s, all scans passed)
 
 **Known limitations (non-blocking):**
 - Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.7)
