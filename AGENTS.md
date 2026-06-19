@@ -23,12 +23,12 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.6.1
+- **Version:** 0.7.0
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaw
 - **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
 
-### Architecture (9 modules)
+### Architecture (10 modules)
 
 ```
 src/
@@ -38,7 +38,7 @@ src/
 ├── config.rs    — Config structs, TOML/env loading, validation
 ├── error.rs     — Unified error types
 ├── tools.rs     — Tool abstraction (ToolImpl trait, ToolRegistry, ToolCall, ToolResult) + 4 built-in tools (shell, read/write file, web fetch)
-├── mcp.rs       — MCP client (JSON-RPC 2.0 over stdio, tool discovery)
+├── mcp.rs       — MCP client (JSON-RPC 2.0 over stdio, tool discovery) + MCP server (expose tools over stdio)
 ├── policy.rs    — Deny-by-default policy engine (shell, path, network allow-lists)
 ├── audit.rs     — Tamper-evident audit log (HMAC-SHA256 chained, structured JSON)
 └── sandbox.rs   — Sandboxed execution (workdir jail, path resolution, resource limits, timeouts)
@@ -54,7 +54,7 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (291 tests, 10 modules, 0 failures) | ✅ Working |
+| Verification suite (298 tests, 10 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -68,6 +68,7 @@ src/
 | Sandboxed execution | ✅ Working — workdir jail, path resolution, resource limits, timeouts |
 | Tamper-evident audit log | ✅ Working — HMAC-SHA256 chained, structured JSON, verification |
 | MCP client | ✅ Working — JSON-RPC 2.0 over stdio, tool discovery and registration |
+| MCP server | ✅ v0.7 — expose RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
 | Retry / fallback chains | ✅ Working — exponential backoff, circuit breaker, token budgets |
 | RavenFabric integration | ✅ Working — HTTP client with health, list_agents, execute, broadcast; wired to all modes |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |

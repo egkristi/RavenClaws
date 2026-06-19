@@ -91,6 +91,10 @@ struct Args {
     /// MCP server environment variables (v0.5.2) — KEY=VALUE pairs separated by commas
     #[arg(long, env = "RAVENCLAW_MCP_ENV")]
     mcp_env: Option<String>,
+
+    /// Run as MCP server (v0.7) — exposes RavenClaw tools over stdio via MCP protocol
+    #[arg(long, env = "RAVENCLAW_MCP_SERVER")]
+    mcp_server: bool,
 }
 
 #[tokio::main]
@@ -138,6 +142,19 @@ async fn main() -> anyhow::Result<()> {
     config.llm.retry_base_delay_ms = args.retry_base_delay_ms;
 
     info!(mode = %args.mode, "Configuration loaded");
+
+    // Run as MCP server if --mcp-server is set (v0.7)
+    if args.mcp_server {
+        info!("Starting in MCP server mode");
+        let registry = tools::ToolRegistry::with_default_tools();
+        let mut server = mcp::McpServer::new(registry);
+        server
+            .run()
+            .await
+            .map_err(|e| anyhow::anyhow!("MCP server error: {}", e))?;
+        info!("RavenClaw MCP server shutdown complete");
+        return Ok(());
+    }
 
     // Initialize MCP client if --mcp-command is provided (v0.5.2)
     let mcp_client = if let Some(mcp_command) = &args.mcp_command {

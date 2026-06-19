@@ -21,12 +21,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** All three pipelines green — Build & Release, Container Build, Security Scan.
 
-**Commit:** `91de1b7` — Update docs: CI status to Build #94, Container #93, Security #80
+**Commit:** `8aebc0f` — Fix YAML `if:` conditions with `||` operator using folded block scalar syntax
 
-**Latest CI runs (commit `91de1b7`):**
-- **Build & Release #94** — ✅ Success (all 5 targets + containers)
-- **Container Build #93** — ✅ Success
-- **Security Scan #80** — ✅ Success (CodeQL completed, all scans passed)
+**Latest CI runs (commit `8aebc0f`):**
+- **Build & Release #95** — ✅ Success (all 5 targets + containers)
+- **Container Build #94** — ✅ Success
+- **Security Scan #81** — ✅ Success (CodeQL completed, all scans passed)
 
 **Known limitations (non-blocking):**
 - Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.7)

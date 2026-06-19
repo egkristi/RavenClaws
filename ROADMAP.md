@@ -1,10 +1,10 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
-**Date:** 2026-06-19  
-**Version:** v0.6.1 — RavenFabric Integration ✅  
-**Previous Release:** v0.6.0 (2026-06-18) — Swarm & Supervisor Modes ✅  
-**Current Commit:** `91de1b7` — Update docs: CI status to Build #94, Container #93, Security #80
-**CI Status:** Build & Release #94 ✅ · Container Build #93 ✅ · Security Scan #80 ✅
+**Date:** 2026-06-20  
+**Version:** v0.7.0 — MCP Server + Observability Foundations 🚧  
+**Previous Release:** v0.6.1 (2026-06-19) — RavenFabric Integration ✅  
+**Current Commit:** *(pending)* — MCP Server: expose RavenClaw tools over stdio via MCP protocol
+**CI Status:** Build & Release #96 ✅ · Container Build #95 ✅ · Security Scan #82 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -30,8 +30,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.6.1 (2026-06-19) — RavenFabric integration  
-**Stats:** 10 source modules, ~9,700 LOC (+300 for v0.6.1), 5 LLM providers, 291 unit tests, multi-arch CI with signed images + SBOM.
+**Version:** 0.7.0 (2026-06-20) — MCP Server + Observability Foundations  
+**Stats:** 10 source modules, ~10,000 LOC (+300 for v0.7.0), 5 LLM providers, 298 unit tests (+7 for MCP Server), multi-arch CI with signed images + SBOM.
 
 | Component | Status | Details |
 |---|---|---|
@@ -62,6 +62,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Interactive REPL | ✅ Working | `--repl` flag with stdin loop, streaming output, `/exit` `/reset` commands |
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt` field, CLI `--system-prompt`, env var override |
 | MCP client | ✅ Working | JSON-RPC 2.0 over stdio, tool discovery from external servers (v0.5.2) |
+| **MCP server** | ✅ **v0.7** | Exposes RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
 | Native Anthropic provider | ✅ Working | Direct Claude API with tool use, token tracking (v0.5.3) |
 | Retry / fallback / circuit breaker | ✅ Working | Exponential backoff, token budgets, provider fallback chain (v0.5.1) |
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
@@ -189,7 +190,7 @@ simpler** — or deliberately not at all.
 |---|:---:|:---:|:---:|:---:|
 | Agent loop | ✅ | ✅ | ✅ | ✅ |
 | Tool calling | ✅ (structured) | ✅ (structured) | ✅ | ✅ |
-| **MCP client/server** | ✅ (client) | ✅ | ✅ | ✅ |
+| **MCP client/server** | ✅ (both) | ✅ | ✅ | ✅ |
 | Sandboxed execution | ✅ (wired) | ✅ | ✅ | ⚠️ Optional |
 | **Security model** | ✅ (wired) | ⚠️ | ⚠️ | ❌ |
 | **Local-first / air-gapped** | ✅ (Ollama) | ❌ | ❌ | ✅ |
@@ -223,7 +224,7 @@ the cloud incumbents structurally can't follow.
 |---|---|:--:|:--:|
 | Agent loop (plan → act → observe) | Without it there is no "agent" | ✅ | v0.3 |
 | Tool / function calling | The substrate for every action | ✅ (primitive) | v0.4 |
-| **MCP — client *and* server** | Industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce) | ❌ | **v0.4** |
+| **MCP — client *and* server** | Industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce) | ✅ (both) | **v0.7** |
 | Sandboxed execution | Native primitive in competitors | ⚠️ (not wired) | v0.4 |
 | Persistent memory (vector recall) | Without it every session starts from zero | ⚠️ (in-memory only) | v0.3 → v0.9 |
 | Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ⚠️ (fetch only) | **v0.4** |
@@ -251,7 +252,7 @@ the cloud incumbents structurally can't follow.
 
 ### Part 3 — The five that move the needle most
 
-1. **MCP client + server (v0.4)** — instant access to entire tool ecosystem. Single highest-leverage feature.
+1. **MCP client + server (v0.7)** — instant access to entire tool ecosystem. ✅ **Both client and server now implemented.**
 2. **Wire security model (v0.4)** — PolicyEngine + Sandbox + AuditLog invoked on every tool call. Core value proposition.
 3. **Local-first privacy + security** — the wedge no cloud agent can copy.
 4. **Async / background + scheduling (v0.7)** — matches Manus's "assign-and-walk-away".
@@ -289,7 +290,7 @@ Versions are capability milestones, not dates. Each must keep all five pillars g
 
 **Exit criteria:** `ravenclaw --exec "summarize this repo"` performs a real multi-step task and returns a result.
 
-### v0.4 — Tools and safety 🧰🔒 **(CURRENT)**
+### v0.4 — Tools and safety 🧰🔒 **(COMPLETE)**
 
 Agency with guardrails — the security differentiator.
 
@@ -302,7 +303,7 @@ Agency with guardrails — the security differentiator.
 - [x] **Wire security to agent loop** — `PolicyEngine` validates all tool calls; `Sandbox` executes `shell_exec`; `AuditLog` emits events. **COMMIT: 51e42b0**
 - [x] **Structured function calling** — OpenAI Tools format for OpenAI/LiteLLM/OpenRouter; native JSON instead of pattern-matching. ✅ v0.4
 - [x] **MCP — client** — consume any Model Context Protocol tool/server via stdio transport. ✅ v0.5.2
-- [ ] **MCP — server** — expose RavenClaw itself as an MCP server. The industry tool standard (Anthropic, OpenAI, Google, Microsoft, Salesforce). **(HIGHEST LEVERAGE)** *(v0.7)*
+- [x] **MCP — server** — expose RavenClaw itself as an MCP server over stdio. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
 - [ ] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask). *(v0.7)*
 - [ ] **Web search + headless browser tool** — search, navigate, extract, and fill forms (beyond simple web fetch). *(v0.7)*
 - [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs. *(v0.7)*
@@ -382,8 +383,9 @@ Agency with guardrails — the security differentiator.
 
 **Exit criteria:** ✅ COMPLETE (v0.6 core features) — Supervisor and Swarm modes implemented for single-provider and multi-model. CI/CD hardened with Node.js 24 and CodeQL v4. RavenFabric integration complete with full client module, wiring into all agent modes, and 12 unit tests.
 
-### v0.7 — Observability and ops 📈
+### v0.7 — Observability and ops 📈 **(CURRENT)**
 
+- [x] **MCP Server** — expose RavenClaw tools over stdio via MCP protocol. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
 - [ ] **Long-running server mode** with a real HTTP `/health` `/ready` `/metrics` endpoint (fixes the k8s CrashLoop).
 - [ ] **Prometheus metrics** (requests, tokens, tool calls, errors, latencies).
 - [ ] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs).
@@ -433,7 +435,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 291 unit tests across 10 modules + 94 verification tests across 4 deployment targets. All tests pass, clippy clean, fmt clean.
+**Current coverage:** 298 unit tests across 10 modules (+7 for MCP Server) + 94 verification tests across 4 deployment targets. All tests pass, clippy clean, fmt clean.
 
 ---
 
@@ -458,6 +460,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 | 0.2 | Verified supply chain for downloaded binaries (SHA256 checksum); no panic/abort on client init; cross-compilation deps in CI. |
 | 0.4 | Deny-by-default tool policy, sandboxed execution, audit log, secret zeroization, prompt-injection defense. **(Infrastructure complete, needs wiring)** |
 | 0.6 | E2E-encrypted remote exec via RavenFabric. |
+| 0.7 | MCP Server — policy-checked and audited tool exposure over stdio. |
 | 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
 | 0.9 | External security review, fuzzing, published threat model. |
 

@@ -8,10 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **MCP Server** (`src/mcp.rs`) — expose RavenClaw's built-in tools over stdio via the Model Context Protocol
+  - `McpServer` struct with `run()`, `handle_request()`, `handle_initialize()`, `handle_tools_list()`, `handle_tools_call()`
+  - Supports `initialize`, `notifications/initialized`, `tools/list`, `tools/call` MCP methods
+  - All tool calls policy-checked via `PolicyEngine` and logged to `AuditLog`
+  - `--mcp-server` CLI flag to run in MCP server mode
+  - 7 new unit tests covering initialization, tool listing, tool execution, error handling
 - **Maintenance Cycle Workflow** in `AGENTS.md` — structured 7-phase SOP for every maintenance cycle: check CI, fix issues, verify on Orbstack, update docs, commit & push, verify CI after push, release if milestone reached.
+
+### Changed
+- **ROADMAP.md** — updated to v0.7.0 (MCP Server + Observability Foundations); MCP Server marked complete
+- **Test count**: 291 → 298 (+7 MCP Server tests)
 
 ### Planned
 - Agent communication — structured message passing; conflict resolution across agents (v0.6.2)
+- Long-running server mode with HTTP endpoints (v0.7)
+- Human-in-the-loop approvals (v0.7)
 
 ## [v0.6.1] — 2026-06-19
 

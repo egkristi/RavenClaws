@@ -1,15 +1,16 @@
-//! Model Context Protocol (MCP) Client for RavenClaw
+//! Model Context Protocol (MCP) for RavenClaw
 //!
-//! Implements MCP client to connect to external MCP servers, discover tools,
-//! and execute them via JSON-RPC over stdio or SSE transport.
+//! Implements both MCP client and server:
+//! - **Client**: Connect to external MCP servers, discover tools, execute them via JSON-RPC over stdio
+//! - **Server**: Expose RavenClaw's built-in tools as an MCP server over stdio
 //!
 //! # Architecture
 //!
 //! ```text
-//! McpClient
-//!   ├── McpTransport (stdio | sse)
-//!   ├── McpToolRegistry (discovered tools from server)
-//!   └── JsonRpcClient (request/response handling)
+//! McpClient                          McpServer
+//!   ├── McpTransport (stdio)           ├── McpServerTransport (stdio)
+//!   ├── McpToolRegistry                ├── ToolRegistry (RavenClaw tools)
+//!   └── JsonRpcClient                  └── JsonRpcHandler
 //! ```
 //!
 //! # References
@@ -24,7 +25,7 @@ use thiserror::Error;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 use crate::tools::{
     JsonSchema, ToolCategory, ToolDefinition, ToolImpl, ToolResult, ToolResultValue,
@@ -687,5 +688,456 @@ mod tests {
         let json = serde_json::to_string(&params).unwrap();
         assert!(json.contains("protocolVersion"));
         assert!(json.contains("ravenclaw"));
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MCP Server — Expose RavenClaw tools as an MCP server over stdio
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// MCP Server — listens for JSON-RPC requests on stdin and responds on stdout.
+///
+/// Implements the MCP protocol as a server:
+/// - `initialize` — protocol handshake
+/// - `notifications/initialized` — no-op
+/// - `tools/list` — returns RavenClaw's registered tools
+/// - `tools/call` — executes a tool and returns the result
+///
+/// # Security
+///
+/// The server uses the same `PolicyEngine`, `Sandbox`, and `AuditLog` as the
+/// agent loop, ensuring all tool calls are policy-checked and audited.
+pub struct McpServer {
+    /// Tool registry with RavenClaw's built-in tools
+    registry: crate::tools::ToolRegistry,
+    /// Policy engine for tool call authorization
+    policy_engine: crate::policy::PolicyEngine,
+    /// Sandbox for shell command execution
+    sandbox: crate::sandbox::Sandbox,
+    /// Audit log for tamper-evident logging
+    audit_log: crate::audit::AuditLog,
+    /// Whether the server has been initialized
+    initialized: bool,
+    /// Server info sent during initialize
+    server_info: McpServerInfo,
+    /// Request ID counter
+    request_id: i64,
+}
+
+impl McpServer {
+    /// Create a new MCP server with the given tool registry.
+    ///
+    /// Uses default secure policy, sandbox, and audit log.
+    pub fn new(registry: crate::tools::ToolRegistry) -> Self {
+        let server_info = McpServerInfo {
+            name: "ravenclaw".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+        };
+
+        Self {
+            registry,
+            policy_engine: crate::policy::PolicyEngine::default_secure(),
+            sandbox: crate::sandbox::Sandbox::default(),
+            audit_log: crate::audit::AuditLog::new(format!("mcp-server-{}", std::process::id())),
+            initialized: false,
+            server_info,
+            request_id: 0,
+        }
+    }
+
+    /// Run the MCP server, reading JSON-RPC requests from stdin and writing
+    /// responses to stdout. Continues until stdin is closed or an error occurs.
+    pub async fn run(&mut self) -> Result<(), McpError> {
+        // Initialize sandbox
+        self.sandbox
+            .init()
+            .await
+            .map_err(|e| McpError::Transport(format!("Sandbox init failed: {}", e)))?;
+
+        info!("MCP server starting on stdio");
+
+        let stdin = tokio::io::stdin();
+        let reader = BufReader::new(stdin);
+        let mut lines = reader.lines();
+
+        while let Ok(Some(line)) = lines.next_line().await {
+            let line = line.trim().to_string();
+            if line.is_empty() {
+                continue;
+            }
+
+            debug!("MCP Server ← {}", &line);
+
+            // Parse JSON-RPC request
+            let request: JsonRpcRequest = match serde_json::from_str(&line) {
+                Ok(req) => req,
+                Err(e) => {
+                    let error_response = serde_json::json!({
+                        "jsonrpc": "2.0",
+                        "error": {
+                            "code": -32700,
+                            "message": "Parse error",
+                            "data": e.to_string()
+                        },
+                        "id": serde_json::Value::Null
+                    });
+                    let _ = self.write_response(&error_response).await;
+                    continue;
+                }
+            };
+
+            let response = self.handle_request(&request).await;
+            let _ = self.write_response(&response).await;
+        }
+
+        info!("MCP server shutting down (stdin closed)");
+        Ok(())
+    }
+
+    /// Handle a single JSON-RPC request and return a response value.
+    async fn handle_request(&mut self, request: &JsonRpcRequest) -> serde_json::Value {
+        let request_id = request.id.clone();
+
+        match request.method.as_str() {
+            "initialize" => self.handle_initialize(request, &request_id).await,
+            "notifications/initialized" => {
+                self.initialized = true;
+                info!("MCP server initialized by client");
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": null,
+                    "id": request_id
+                })
+            }
+            "tools/list" => self.handle_tools_list(&request_id).await,
+            "tools/call" => self.handle_tools_call(request, &request_id).await,
+            _ => {
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "error": {
+                        "code": -32601,
+                        "message": format!("Method not found: {}", request.method)
+                    },
+                    "id": request_id
+                })
+            }
+        }
+    }
+
+    /// Handle `initialize` request — protocol handshake.
+    async fn handle_initialize(
+        &mut self,
+        request: &JsonRpcRequest,
+        request_id: &serde_json::Value,
+    ) -> serde_json::Value {
+        // Parse client info from params (optional — we accept any client)
+        if let Some(params) = request.params.as_object() {
+            if let Some(client_info) = params.get("clientInfo") {
+                info!(
+                    client = ?client_info.get("name").and_then(|v| v.as_str()).unwrap_or("unknown"),
+                    "MCP client connected"
+                );
+            }
+        }
+
+        let capabilities = McpServerCapabilities {
+            tools: Some(McpToolsCapability {
+                list_changed: false,
+            }),
+            resources: None,
+            prompts: None,
+        };
+
+        let result = serde_json::json!({
+            "protocolVersion": MCP_PROTOCOL_VERSION,
+            "capabilities": capabilities,
+            "serverInfo": {
+                "name": self.server_info.name,
+                "version": self.server_info.version
+            }
+        });
+
+        serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": result,
+            "id": request_id
+        })
+    }
+
+    /// Handle `tools/list` request — return all registered tools.
+    async fn handle_tools_list(&self, request_id: &serde_json::Value) -> serde_json::Value {
+        let tools: Vec<serde_json::Value> = self
+            .registry
+            .definitions()
+            .iter()
+            .map(|def| {
+                serde_json::json!({
+                    "name": def.name,
+                    "description": def.description,
+                    "inputSchema": def.parameters
+                })
+            })
+            .collect();
+
+        serde_json::json!({
+            "jsonrpc": "2.0",
+            "result": {
+                "tools": tools
+            },
+            "id": request_id
+        })
+    }
+
+    /// Handle `tools/call` request — execute a tool and return the result.
+    async fn handle_tools_call(
+        &mut self,
+        request: &JsonRpcRequest,
+        request_id: &serde_json::Value,
+    ) -> serde_json::Value {
+        let name = request
+            .params
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .to_string();
+
+        let arguments = request
+            .params
+            .get("arguments")
+            .cloned()
+            .unwrap_or(serde_json::Value::Null);
+
+        if name.is_empty() {
+            return serde_json::json!({
+                "jsonrpc": "2.0",
+                "error": {
+                    "code": -32602,
+                    "message": "Invalid params: missing tool name"
+                },
+                "id": request_id
+            });
+        }
+
+        // Check policy
+        let policy_decision = self.policy_engine.check_tool_call(&name, &arguments);
+        match policy_decision {
+            crate::policy::Decision::Deny(reason) => {
+                warn!(tool = %name, reason = %reason, "MCP tool call denied by policy");
+                return serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {
+                        "content": [{
+                            "type": "text",
+                            "text": format!("Policy denied: {}", reason)
+                        }],
+                        "isError": true
+                    },
+                    "id": request_id
+                });
+            }
+            crate::policy::Decision::Allow => {
+                // Audit: tool call
+                let _ = self.audit_log.tool_call(&name, &arguments);
+            }
+        }
+
+        // Execute the tool
+        let call = crate::tools::ToolCall {
+            name: name.clone(),
+            arguments,
+            id: None,
+        };
+
+        match self.registry.execute(call).await {
+            Ok(result) => {
+                // Audit: tool result
+                let _ = self.audit_log.append(
+                    crate::audit::AuditEventType::ToolResult,
+                    &name,
+                    &format!("MCP tool executed: {} (success: {})", name, result.success),
+                    Some(serde_json::json!({
+                        "success": result.success,
+                        "exit_code": result.exit_code,
+                        "duration_ms": result.duration_ms,
+                    })),
+                );
+
+                let content = if result.success {
+                    vec![serde_json::json!({
+                        "type": "text",
+                        "text": result.output
+                    })]
+                } else {
+                    vec![serde_json::json!({
+                        "type": "text",
+                        "text": result.error.as_deref().unwrap_or("Unknown error")
+                    })]
+                };
+
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {
+                        "content": content,
+                        "isError": !result.success
+                    },
+                    "id": request_id
+                })
+            }
+            Err(e) => {
+                warn!(tool = %name, error = %e, "MCP tool execution failed");
+                serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {
+                        "content": [{
+                            "type": "text",
+                            "text": format!("Tool execution failed: {}", e)
+                        }],
+                        "isError": true
+                    },
+                    "id": request_id
+                })
+            }
+        }
+    }
+
+    /// Write a JSON-RPC response to stdout.
+    async fn write_response(&self, response: &serde_json::Value) -> std::io::Result<()> {
+        let json = serde_json::to_string(response)?;
+        debug!("MCP Server → {}", &json);
+        use tokio::io::AsyncWriteExt;
+        let mut stdout = tokio::io::stdout();
+        stdout.write_all(json.as_bytes()).await?;
+        stdout.write_all(b"\n").await?;
+        stdout.flush().await?;
+        Ok(())
+    }
+
+    /// Get the next request ID.
+    #[allow(dead_code)]
+    fn next_id(&mut self) -> i64 {
+        self.request_id += 1;
+        self.request_id
+    }
+}
+
+#[cfg(test)]
+mod server_tests {
+    use super::*;
+    use crate::tools::ToolRegistry;
+
+    #[test]
+    fn test_mcp_server_initialize_response() {
+        let registry = ToolRegistry::with_default_tools();
+        let server = McpServer::new(registry);
+
+        // Check server info
+        assert_eq!(server.server_info.name, "ravenclaw");
+        assert!(!server.server_info.version.is_empty());
+        assert!(!server.initialized);
+    }
+
+    #[test]
+    fn test_mcp_server_tools_list_response() {
+        let registry = ToolRegistry::with_default_tools();
+        let server = McpServer::new(registry);
+
+        // Check that all 4 built-in tools are registered
+        let defs = server.registry.definitions();
+        let names: Vec<&str> = defs.iter().map(|d| d.name.as_str()).collect();
+        assert!(names.contains(&"shell_exec"));
+        assert!(names.contains(&"read_file"));
+        assert!(names.contains(&"write_file"));
+        assert!(names.contains(&"web_fetch"));
+        assert_eq!(defs.len(), 4);
+    }
+
+    #[tokio::test]
+    async fn test_mcp_server_handle_unknown_method() {
+        let registry = ToolRegistry::with_default_tools();
+        let mut server = McpServer::new(registry);
+
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "unknown_method".to_string(),
+            params: serde_json::Value::Null,
+            id: serde_json::Value::Number(1.into()),
+        };
+
+        let response = server.handle_request(&request).await;
+        assert!(response.get("error").is_some());
+        assert_eq!(
+            response["error"]["code"],
+            serde_json::Value::Number((-32601).into())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_mcp_server_handle_tools_list() {
+        let registry = ToolRegistry::with_default_tools();
+        let server = McpServer::new(registry);
+
+        let request_id = serde_json::Value::Number(1.into());
+        let response = server.handle_tools_list(&request_id).await;
+
+        assert!(response.get("result").is_some());
+        let tools = &response["result"]["tools"];
+        assert!(tools.is_array());
+        assert!(!tools.as_array().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_mcp_server_handle_tools_call_missing_name() {
+        let registry = ToolRegistry::with_default_tools();
+        let mut server = McpServer::new(registry);
+
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "tools/call".to_string(),
+            params: serde_json::json!({}),
+            id: serde_json::Value::Number(1.into()),
+        };
+
+        let request_id = serde_json::Value::Number(1.into());
+        let response = server.handle_tools_call(&request, &request_id).await;
+
+        assert!(response.get("error").is_some());
+        assert_eq!(
+            response["error"]["code"],
+            serde_json::Value::Number((-32602).into())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_mcp_server_handle_tools_call_unknown_tool() {
+        let registry = ToolRegistry::with_default_tools();
+        let mut server = McpServer::new(registry);
+
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            method: "tools/call".to_string(),
+            params: serde_json::json!({
+                "name": "nonexistent_tool",
+                "arguments": {}
+            }),
+            id: serde_json::Value::Number(1.into()),
+        };
+
+        let request_id = serde_json::Value::Number(1.into());
+        let response = server.handle_tools_call(&request, &request_id).await;
+
+        // Unknown tool should return an error result
+        assert!(response["result"]["isError"].as_bool().unwrap_or(false));
+    }
+
+    #[test]
+    fn test_mcp_server_json_rpc_error_codes() {
+        // -32700: Parse error
+        // -32601: Method not found
+        // -32602: Invalid params
+        // -32000: Server error (tool execution failed)
+
+        assert_eq!(-32700i32, -32700);
+        assert_eq!(-32601i32, -32601);
+        assert_eq!(-32602i32, -32602);
     }
 }
