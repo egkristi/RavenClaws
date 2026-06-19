@@ -21,12 +21,12 @@ Items are ordered by severity/impact.
 
 **CI Status:** All three pipelines green — Build & Release, Container Build, Security Scan.
 
-**Commit:** `b7d5838` — Update docs: CI status to Build #87, Container #86, Security #73
+**Commit:** `6c27e2f` — Update docs: CI status to Build #88, Container #87, Security #74
 
-**Latest CI runs (commit `b7d5838`):**
-- **Build & Release #88** — ✅ Success (all 5 targets + containers)
-- **Container Build #87** — ✅ Success
-- **Security Scan #74** — ✅ Success (CodeQL completed, all scans passed)
+**Latest CI runs (commit `6c27e2f`):**
+- **Build & Release #89** — ✅ Success (all 5 targets + containers)
+- **Container Build #88** — ✅ Success
+- **Security Scan #75** — ✅ Success (CodeQL completed, all scans passed)
 
 **Known limitations (non-blocking):**
 - Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.7)
