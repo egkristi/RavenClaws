@@ -3,8 +3,8 @@
 **Date:** 2026-06-19  
 **Version:** v0.6.1 — RavenFabric Integration ✅  
 **Previous Release:** v0.6.0 (2026-06-18) — Swarm & Supervisor Modes ✅  
-**Current Commit:** `e02248c` — Update docs: CI status to Build #84, Container #83, Security #70
-**CI Status:** Build & Release #85 ✅ · Container Build #84 ✅ · Security Scan #71 ✅
+**Current Commit:** `3dc666c` — Update docs: CI status to Build #85, Container #84, Security #71
+**CI Status:** Build & Release #86 ✅ · Container Build #85 ✅ · Security Scan #72 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
