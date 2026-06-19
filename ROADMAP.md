@@ -1,10 +1,10 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
-**Date:** 2026-06-18  
+**Date:** 2026-06-19  
 **Version:** v0.6.1 — RavenFabric Integration ✅  
 **Previous Release:** v0.6.0 (2026-06-18) — Swarm & Supervisor Modes ✅  
-**Current Commit:** `ea8bce07` — RavenFabric client module + wiring  
-**CI Status:** Build & Release #76 ✅ · Container Build #75 ✅ · Security Scan #62 ✅
+**Current Commit:** `c98f48b` — RavenFabric: Add built-in HTTP client for remote execution and mesh coordination  
+**CI Status:** Build & Release #77 ✅ · Container Build #76 ✅ · Security Scan #63 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -30,8 +30,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.6.0-dev (2026-06-07) — Swarm & Supervisor modes implemented  
-**Stats:** 9 source modules, ~9,400 LOC (+500 for v0.6), 5 LLM providers, 280+ unit tests, multi-arch CI with signed images + SBOM.
+**Version:** 0.6.1 (2026-06-19) — RavenFabric integration  
+**Stats:** 10 source modules, ~9,700 LOC (+300 for v0.6.1), 5 LLM providers, 291 unit tests, multi-arch CI with signed images + SBOM.
 
 | Component | Status | Details |
 |---|---|---|
@@ -51,7 +51,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Multi-model routing | ✅ Working | `next_client()` round-robin + fallback chain with circuit breaker |
 | RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |
 | `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout; full test coverage |
-| Rust unit tests | ✅ Working | 280+ tests across all 9 modules; `mockito`-based HTTP tests for all 5 providers |
+| Rust unit tests | ✅ Working | 291 tests across all 10 modules; `mockito`-based HTTP tests for all 5 providers + RavenFabric |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard, `FINAL:` marker detection, configurable via `--max-iterations` |
 | Tool-use / function calling | ✅ Working | Tool abstraction + registry + 4 built-in tools + **MCP tool discovery** + agent loop wiring |
 | Deny-by-default policy | ✅ **Wired to agent loop** | `PolicyEngine` validates ALL tool calls before execution (commit 51e42b0) |
@@ -134,7 +134,7 @@ These must be resolved before v0.5 can ship:
 │  · Ollama · Anthropic · MultiModel   │
 └───────────────────────────────────────┘
 
-✅ All modules wired: policy, audit, sandbox, mcp, ravenfabric integrated into agent loop
+✅ All 10 modules wired: policy, audit, sandbox, mcp, ravenfabric integrated into agent loop
 ```
 
 ### Target (v1.0)
@@ -183,9 +183,9 @@ simpler** — or deliberately not at all.
 > air-gappable, signed + SBOM-attested supply chain. These are claims we will
 > benchmark and publish — not marketing.
 
-### RavenClaw vs. Field (v0.6.0)
+### RavenClaw vs. Field (v0.6.1)
 
-| Capability | RavenClaw v0.6 | Cognition (Claude) | Manus | Open Interpreter |
+| Capability | RavenClaw v0.6.1 | Cognition (Claude) | Manus | Open Interpreter |
 |---|:---:|:---:|:---:|:---:|
 | Agent loop | ✅ | ✅ | ✅ | ✅ |
 | Tool calling | ✅ (structured) | ✅ (structured) | ✅ | ✅ |
@@ -433,7 +433,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 277 unit tests across 9 modules + 94 verification tests across 4 deployment targets. All tests pass, clippy clean, fmt clean.
+**Current coverage:** 291 unit tests across 10 modules + 94 verification tests across 4 deployment targets. All tests pass, clippy clean, fmt clean.
 
 ---
 
@@ -482,7 +482,7 @@ Concrete items carried from the current codebase:
 3. ~~**No MCP integration** — Reinventing tools instead of using industry standard.~~ ✅ **MCP client (v0.5.2)**
 4. **k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.
 5. ~~**Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4).~~ ✅ **Unified `OpenAICompatibleClient` (v0.5.0)**
-6. ~~**Dead/unwired code:** `rustls` + `zeroize` deps unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop**
+6. ~~**Dead/unwired code:** `rustls` + `zeroize` deps unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop; RavenFabric config fields consumed by client**
 7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.7)*
 8. **No config hot-reload** — Changes require restart. *(v0.7)*
 9. **Container image ~50 MB** — Target is < 30 MB. *(v0.7)*

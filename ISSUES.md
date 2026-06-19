@@ -5,30 +5,30 @@ Items are ordered by severity/impact.
 
 ---
 
-## ✅ v0.6 Milestone — Released (2026-06-18)
+## ✅ v0.6.1 Milestone — Released (2026-06-19)
 
-**All v0.6 swarm/supervisor features shipped:**
+**All v0.6.1 RavenFabric integration shipped:**
 
 | Feature | Status | Details |
 |---|---|---|
-| Swarm mode (single-provider) | ✅ | 3 parallel agents with different personas |
-| Supervisor mode (single-provider) | ✅ | Task decomposition + sub-agent spawning |
-| Swarm mode (multi-model) | ✅ | Parallel agents across providers |
-| Supervisor mode (multi-model) | ✅ | Provider-aware task decomposition |
+| RavenFabric HTTP Client | ✅ | Built-in client with health, list_agents, execute, broadcast |
+| RavenFabric wired to all modes | ✅ | Single, swarm, supervisor, REPL all pass `Option<RavenFabricClient>` |
+| RavenFabric config integration | ✅ | `endpoint`, `agent_id`, `remote_exec`, `allowed_hosts` from config |
+| Error handling | ✅ | `RavenClawError::RavenFabric` variant with display |
+| Unit tests | ✅ | 12 tests covering config, serialization, connection errors |
 
-**Totals:** 9 modules, ~9,400 LOC (+500 for v0.6), 277+ tests, 5 LLM providers.
+**Totals:** 10 modules, ~9,700 LOC (+300 for v0.6.1), 291 tests, 5 LLM providers.
 
 **CI Status:** All three pipelines green — Build & Release, Container Build, Security Scan.
 
-**Commit:** `ea8bce07` — Update ROADMAP.md, CHANGELOG.md, ISSUES.md with CI status
+**Commit:** `c98f48b` — RavenFabric: Add built-in HTTP client for remote execution and mesh coordination
 
-**Latest CI runs (commit `ea8bce07`):**
-- **Build & Release #76** — ✅ Success (all 5 targets + containers)
-- **Container Build #75** — ✅ Success
-- **Security Scan #62** — ✅ Success (all scans passed)
+**Latest CI runs (commit `c98f48b`):**
+- **Build & Release #77** — ✅ Success (5m 23s, all 5 targets + containers)
+- **Container Build #76** — ✅ Success (4m 24s)
+- **Security Scan #63** — ✅ Success (3m 7s, all scans passed)
 
 **Known limitations (non-blocking):**
-- RavenFabric E2E integration: Still pending (v0.6.1)
 - Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.7)
 - k8s CrashLoop: Server mode planned for v0.7
 
@@ -431,14 +431,17 @@ because they are defined for future use or serde deserialization but not yet
 consumed:
 
 - `ConfigError::MissingEnvVar` — defined but never constructed
-- `RavenClawError::RavenFabric` / `RavenClawError::SecurityViolation` — future use
+- `RavenClawError::SecurityViolation` — future use
 - `LLMError::ProviderNotSupported` — defined but never constructed
 - Various serde-deserialized fields in `ChatResponse`, `Choice`, `Usage`
-- `RavenFabricConfig` fields (`agent_id`, `remote_exec`, `allowed_hosts`)
 - `SecurityConfig` fields (`token_lifetime_secs`, `audit_log`)
 - `RuntimeConfig` fields (`workdir`, `max_agents`, `health_interval_secs`)
 
 **Status:** ⚠️ Low priority — these are API surfaces for future use. Clean up when features are implemented.
+
+**Recently resolved:**
+- `RavenClawError::RavenFabric` — ✅ Now constructed and handled in `ravenfabric.rs`
+- `RavenFabricConfig` fields (`agent_id`, `remote_exec`, `allowed_hosts`) — ✅ Now consumed by `RavenFabricClient`
 
 ---
 

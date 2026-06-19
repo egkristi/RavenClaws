@@ -11,10 +11,10 @@
 RavenClaw is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.6.1 (2026-06-18).** The provider layer (5 providers), one-shot execution (`--exec`),
+> **Status: v0.6.1 (2026-06-19).** The provider layer (5 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
-> retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, and **supervisor mode**
-> all work today. Async background runs are on the [roadmap](ROADMAP.md) for v0.7.
+> retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, **supervisor mode**,
+> and **RavenFabric mesh client** all work today. Async background runs are on the [roadmap](ROADMAP.md) for v0.7.
 > This README marks ✅ built vs. 📋 planned — honestly. Trust is a feature; we don't inflate it.
 
 | Footprint | Security | Providers | Deployment |
