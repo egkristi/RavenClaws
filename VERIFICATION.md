@@ -62,7 +62,7 @@ cargo test                             # Run 307 Rust unit tests
 ./scripts/verify.sh --llm-quality      # LLM response quality only
 ./scripts/verify.sh --build            # Build binaries first, then run all tests
 
-cargo test                             # Run 277 Rust unit tests
+cargo test                             # Run 307 Rust unit tests
 ```
 
 ### Test Categories

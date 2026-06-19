@@ -28,9 +28,43 @@ Items are ordered by severity/impact.
 - **Container Build #94** — ✅ Success
 - **Security Scan #81** — ✅ Success (CodeQL completed, all scans passed)
 
+---
+
+## ✅ v0.7.1 Milestone — Released (2026-06-20)
+
+**HTTP Server Mode shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| HTTP server mode (`--serve`) | ✅ | Long-running server with `/health`, `/ready`, `/metrics` endpoints |
+| Graceful shutdown | ✅ | SIGTERM/SIGINT handled |
+| Prometheus-style metrics | ✅ | Requests, tokens, tool calls, errors, uptime |
+| k8s CrashLoopBackOff | ✅ | Fixed — HTTP probes instead of `--version` exec |
+| Configurable host/port | ✅ | `--server-host`, `--server-port`, `runtime.host`, `runtime.port` |
+| Unit tests | ✅ | 9 new tests (307 total) |
+
+**CI Status:** Build & Release #99 ✅ · Container Build #98 ✅ · Security Scan #84 ✅
+
+**Commit:** `dab9b90` — HTTP Server Mode: long-running server with /health, /ready, /metrics endpoints
+
+---
+
+## ✅ v0.7.0 Milestone — Released (2026-06-20)
+
+**MCP Server shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| MCP Server | ✅ | Expose RavenClaw tools over stdio via MCP protocol |
+| `--mcp-server` flag | ✅ | CLI flag to run in MCP server mode |
+| Policy-checked and audited | ✅ | All tool calls validated via PolicyEngine and logged to AuditLog |
+| Unit tests | ✅ | 7 new tests |
+
+**CI Status:** Build & Release #97 ✅ · Container Build #96 ✅ · Security Scan #83 ✅
+
 **Known limitations (non-blocking):**
-- Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.7)
-- k8s CrashLoop: Server mode planned for v0.7
+- Multi-modal input: AnthropicClient has image structure, not wired to CLI (v0.8)
+- SSE transport for MCP not yet implemented (stdio only)
 
 ---
 

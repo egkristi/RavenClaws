@@ -6,12 +6,12 @@
 [![CI](https://github.com/egkristi/RavenClaw/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
 [![Verification](https://img.shields.io/badge/verification-94%20checks-brightgreen)](VERIFICATION.md)
 [![Binary](https://img.shields.io/badge/binary-~3.4MB-blue)]()
-[![Status](https://img.shields.io/badge/status-v0.6.1-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v0.7.1-brightgreen)](ROADMAP.md)
 
 RavenClaw is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.7.0 (2026-06-20).** The provider layer (5 providers), one-shot execution (`--exec`),
+> **Status: v0.7.1 (2026-06-20).** The provider layer (5 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
 > retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, **supervisor mode**,
 > **RavenFabric mesh client**, **MCP server**, and **HTTP server mode** all work today.
@@ -73,7 +73,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ### Verified across every target
 
-- **291 Rust unit tests** (incl. `mockito`-backed provider request/response/error paths for all 5 providers, plus 12 RavenFabric client tests), runnable anywhere via `cargo test`.
+- **307 Rust unit tests** (incl. `mockito`-backed provider request/response/error paths for all 5 providers, plus 12 RavenFabric client tests), runnable anywhere via `cargo test`.
 - Plus a **94-check verification suite** (`scripts/verify.sh`) spanning **9 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security and performance checks.
 - *Note:* the 94 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
 
@@ -394,7 +394,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | CI/CD pipeline | ✅ Implemented | fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard |
 | Verification suite | ✅ Working | 94 system/integration checks · 9 modules · 4 targets (`scripts/verify.sh`) |
-| Rust unit tests | ✅ Working | 291 tests across 10 modules, incl. `mockito`-backed provider request/response/error paths + 12 RavenFabric client tests |
+| Rust unit tests | ✅ Working | 307 tests across 11 modules, incl. `mockito`-backed provider request/response/error paths + 12 RavenFabric client tests |
 | Reproducible builds | ✅ Working | `Cargo.lock` committed (`--locked`), multi-arch Docker cross-linker, RavenFabric agent checksum-verified |
 | `--exec` one-shot mode | ✅ Working | Run a single task, then exit |
 | Interactive REPL | ✅ Working | `--repl` with `/exit`, `/reset` commands |
@@ -406,6 +406,8 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Swarm mode | ✅ Working | 3 parallel agents with different personas (single + multi-model) |
 | Supervisor mode | ✅ Working | Task decomposition + sub-agent spawning + result aggregation (single + multi-model) |
 | MCP client | ✅ Working | JSON-RPC over stdio, tool discovery and registration |
+| MCP server | ✅ **v0.7.0** | Expose RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
+| HTTP server mode | ✅ **v0.7.1** | Long-running server with `/health`, `/ready`, `/metrics`; `--serve` flag; graceful shutdown |
 | Retry / fallback chains | ✅ Working | Exponential backoff, circuit breaker, token budgets |
 | Deny-by-default policy | ✅ Working | PolicyEngine with shell/path/network allow-lists |
 | Sandboxed execution | ✅ Working | Workdir jail, resource limits, timeouts |

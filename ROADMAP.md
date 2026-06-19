@@ -1,10 +1,10 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
 **Date:** 2026-06-20  
-**Version:** v0.7.0 — MCP Server + Observability Foundations 🚧  
-**Previous Release:** v0.6.1 (2026-06-19) — RavenFabric Integration ✅  
-**Current Commit:** *(pending)* — MCP Server: expose RavenClaw tools over stdio via MCP protocol
-**CI Status:** Build & Release #96 ✅ · Container Build #95 ✅ · Security Scan #82 ✅
+**Version:** v0.7.1 — HTTP Server Mode ✅  
+**Previous Release:** v0.7.0 (2026-06-20) — MCP Server ✅  
+**Current Commit:** `dab9b90` — HTTP Server Mode: long-running server with /health, /ready, /metrics endpoints
+**CI Status:** Build & Release #99 ✅ · Container Build #98 ✅ · Security Scan #84 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -30,7 +30,7 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.7.0 (2026-06-20) — MCP Server + Observability Foundations  
+**Version:** 0.7.1 (2026-06-20) — HTTP Server Mode  
 **Stats:** 11 source modules, ~10,500 LOC (+500 for v0.7.0), 5 LLM providers, 307 unit tests (+9 for HTTP Server), multi-arch CI with signed images + SBOM.
 
 | Component | Status | Details |
@@ -63,7 +63,7 @@ can't be added without breaking one, it doesn't ship in core.
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt` field, CLI `--system-prompt`, env var override |
 | MCP client | ✅ Working | JSON-RPC 2.0 over stdio, tool discovery from external servers (v0.5.2) |
 | **MCP server** | ✅ **v0.7** | Exposes RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
-| **HTTP server mode** | ✅ **v0.7** | Long-running server with `/health`, `/ready`, `/metrics` endpoints; `--serve` flag; fixes k8s CrashLoopBackOff |
+| **HTTP server mode** | ✅ **v0.7.1** | Long-running server with `/health`, `/ready`, `/metrics` endpoints; `--serve` flag; fixes k8s CrashLoopBackOff |
 | Native Anthropic provider | ✅ Working | Direct Claude API with tool use, token tracking (v0.5.3) |
 | Retry / fallback / circuit breaker | ✅ Working | Exponential backoff, token budgets, provider fallback chain (v0.5.1) |
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
@@ -225,7 +225,7 @@ the cloud incumbents structurally can't follow.
 |---|---|:--:|:--:|
 | Agent loop (plan → act → observe) | Without it there is no "agent" | ✅ | v0.3 |
 | Tool / function calling | The substrate for every action | ✅ (primitive) | v0.4 |
-| **MCP — client *and* server** | Industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce) | ✅ (both) | **v0.7** |
+| **MCP — client *and* server** | Industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce) | ✅ (both) | **v0.7** ✅ |
 | Sandboxed execution | Native primitive in competitors | ⚠️ (not wired) | v0.4 |
 | Persistent memory (vector recall) | Without it every session starts from zero | ⚠️ (in-memory only) | v0.3 → v0.9 |
 | Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ⚠️ (fetch only) | **v0.4** |
@@ -384,19 +384,19 @@ Agency with guardrails — the security differentiator.
 
 **Exit criteria:** ✅ COMPLETE (v0.6 core features) — Supervisor and Swarm modes implemented for single-provider and multi-model. CI/CD hardened with Node.js 24 and CodeQL v4. RavenFabric integration complete with full client module, wiring into all agent modes, and 12 unit tests.
 
-### v0.7 — Observability and ops 📈 **(CURRENT)**
+### v0.7 — Observability and ops 📈 **(COMPLETE)**
 
 - [x] **MCP Server** — expose RavenClaw tools over stdio via MCP protocol. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
-- [x] **Long-running server mode** with HTTP `/health` `/ready` `/metrics` endpoints (fixes the k8s CrashLoop). ✅ **v0.7.0**
-- [ ] **Prometheus metrics** (requests, tokens, tool calls, errors, latencies).
+- [x] **Long-running server mode** with HTTP `/health` `/ready` `/metrics` endpoints (fixes the k8s CrashLoop). ✅ **v0.7.1**
+- [x] **Prometheus-style metrics** (requests, tokens, tool calls, errors, uptime). ✅ **v0.7.1**
+- [x] **Graceful shutdown**, signal handling. ✅ **v0.7.1** — SIGTERM/SIGINT handled in server mode
 - [ ] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs).
-- [ ] **Graceful shutdown**, signal handling, `health_interval_secs` honored. ✅ **Partial** — SIGTERM/SIGINT handled in server mode
 - [ ] **Helm chart**; systemd unit; optional self-update with rollback.
 - [ ] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX).
 - [ ] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents.
 - [ ] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces.
 
-**Exit criteria:** RavenClaw runs as a stable long-lived workload with green probes and exported metrics.
+**Exit criteria:** ✅ RavenClaw runs as a stable long-lived workload with green probes and exported metrics.
 
 ### v0.8 — Enterprise and compliance 🏢 *(commercial-licensed)*
 
