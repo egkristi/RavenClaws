@@ -9,6 +9,11 @@ repository = "https://github.com/egkristi/RavenClaw"
 keywords = ["agent", "ai", "llm", "liteLLM", "ravenfabric"]
 categories = ["command-line-utilities", "development-tools"]
 
+[features]
+default = ["otel-grpc"]
+otel-grpc = ["opentelemetry-otlp"]
+otel-stdout = ["opentelemetry-stdout"]
+
 [dependencies]
 # Async runtime
 tokio = { version = "1.42", features = ["full"] }
@@ -30,9 +35,16 @@ uuid = { version = "1.6", features = ["v4"] }
 # Configuration
 config = { version = "0.15", default-features = false, features = ["toml"] }
 
-# Logging
+# Logging / Tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-opentelemetry = "0.29"
+
+# OpenTelemetry (opt-in, for distributed tracing)
+opentelemetry = { version = "0.28", features = ["trace", "metrics"] }
+opentelemetry_sdk = { version = "0.28", features = ["trace", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.28", features = ["trace", "grpc-tonic"], optional = true }
+opentelemetry-stdout = { version = "0.28", features = ["trace"], optional = true }
 
 # Error handling
 thiserror = "2.0"

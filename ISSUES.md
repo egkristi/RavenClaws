@@ -30,6 +30,25 @@ Items are ordered by severity/impact.
 
 ---
 
+## ✅ v0.7.2 Milestone — Released (2026-06-20)
+
+**OpenTelemetry Tracing shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| OpenTelemetry tracing | ✅ | Opt-in distributed tracing with OTLP gRPC/stdout exporter |
+| `#[instrument]` spans | ✅ | Agent loop, HTTP server, tool execution, LLM provider calls |
+| Feature-gated | ✅ | `otel-grpc` (default), `otel-stdout` (optional) |
+| TelemetryGuard | ✅ | Flushes and shuts down OTel exporter on drop |
+| CLI flags | ✅ | `--otel-endpoint`, `--otel-service-name`, `--otel-disabled` |
+| Unit tests | ✅ | 4 new tests (311 total) |
+
+**CI Status:** Build & Release #99 ✅ · Container Build #98 ✅ · Security Scan #84 ✅
+
+**Commit:** `dab9b90` — OpenTelemetry tracing: opt-in distributed tracing with OTLP exporter
+
+---
+
 ## ✅ v0.7.1 Milestone — Released (2026-06-20)
 
 **HTTP Server Mode shipped:**

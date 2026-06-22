@@ -13,6 +13,7 @@ mod policy;
 mod ravenfabric;
 mod sandbox;
 mod server;
+mod telemetry;
 mod tools;
 
 use clap::Parser;
@@ -108,6 +109,18 @@ struct Args {
     /// HTTP server port (v0.7) — overrides config
     #[arg(long, env = "RAVENCLAW_SERVER_PORT")]
     server_port: Option<u16>,
+
+    /// OpenTelemetry OTLP gRPC endpoint (v0.7.2)
+    #[arg(long, env = "RAVENCLAW_OTEL_ENDPOINT")]
+    otel_endpoint: Option<String>,
+
+    /// OpenTelemetry service name (v0.7.2)
+    #[arg(long, env = "RAVENCLAW_OTEL_SERVICE_NAME")]
+    otel_service_name: Option<String>,
+
+    /// Disable OpenTelemetry tracing (v0.7.2)
+    #[arg(long, env = "RAVENCLAW_OTEL_DISABLED")]
+    otel_disabled: bool,
 }
 
 #[tokio::main]
@@ -128,6 +141,20 @@ async fn main() -> anyhow::Result<()> {
 
     // Load configuration
     let mut config = config::Config::load(args.config.as_deref())?;
+
+    // Apply OpenTelemetry CLI overrides (v0.7.2)
+    if let Some(endpoint) = args.otel_endpoint {
+        config.telemetry.otel_endpoint = Some(endpoint);
+    }
+    if let Some(service_name) = args.otel_service_name {
+        config.telemetry.otel_service_name = Some(service_name);
+    }
+    if args.otel_disabled {
+        config.telemetry.otel_disabled = true;
+    }
+
+    // Initialize OpenTelemetry tracing (v0.7.2)
+    let _otel_guard = telemetry::init_tracing(&config.telemetry)?;
 
     // Apply CLI overrides
     if let Some(provider) = args.provider {

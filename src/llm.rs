@@ -11,6 +11,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
 use tokio::time::sleep;
+use tracing::instrument;
 
 /// A streaming chunk of an LLM response
 #[derive(Debug, Clone)]
@@ -503,6 +504,7 @@ impl OpenAICompatibleClient {
 
 #[async_trait::async_trait]
 impl LLMProviderTrait for OpenAICompatibleClient {
+    #[instrument(skip(self, messages), fields(provider = self.provider_name(), model = self.model()))]
     async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
         let request = self.build_request(messages);
         self.send_request_with_retry(request).await
@@ -753,6 +755,7 @@ impl OllamaClient {
 
 #[async_trait::async_trait]
 impl LLMProviderTrait for OllamaClient {
+    #[instrument(skip(self, messages), fields(provider = self.provider_name(), model = self.model()))]
     async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
         // Ollama uses slightly different format
         #[derive(Serialize)]
@@ -905,6 +908,7 @@ impl AnthropicClient {
 
 #[async_trait::async_trait]
 impl LLMProviderTrait for AnthropicClient {
+    #[instrument(skip(self, messages), fields(provider = self.provider_name(), model = self.model()))]
     async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
         // Anthropic uses a different request/response format
         #[derive(Serialize)]
@@ -1154,6 +1158,7 @@ impl ProviderFallbackChain {
     }
 
     /// Execute with fallback — tries each provider in order until success
+    #[instrument(skip(self, messages))]
     pub async fn chat_with_fallback(
         &mut self,
         messages: Vec<ChatMessage>,

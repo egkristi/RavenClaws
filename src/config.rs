@@ -50,6 +50,26 @@ pub struct Config {
     /// Runtime settings
     #[serde(default)]
     pub runtime: RuntimeConfig,
+
+    /// Telemetry / OpenTelemetry settings (v0.7.2)
+    #[serde(default)]
+    pub telemetry: TelemetryConfig,
+}
+
+/// Telemetry / OpenTelemetry configuration (v0.7.2)
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct TelemetryConfig {
+    /// OTLP gRPC endpoint for OpenTelemetry (e.g., "http://jaeger:4317")
+    #[serde(default)]
+    pub otel_endpoint: Option<String>,
+
+    /// Service name for OpenTelemetry traces
+    #[serde(default)]
+    pub otel_service_name: Option<String>,
+
+    /// Disable OpenTelemetry tracing
+    #[serde(default)]
+    pub otel_disabled: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -480,6 +500,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -513,6 +534,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -544,6 +566,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -573,6 +596,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         // OpenAI doesn't need an endpoint, but the llm.endpoint is empty
@@ -606,6 +630,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -675,6 +700,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
@@ -706,6 +732,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -737,6 +764,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -766,6 +794,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -809,6 +838,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -838,6 +868,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -1037,6 +1068,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -1066,6 +1098,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -1095,6 +1128,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -1194,6 +1228,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -1223,6 +1258,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();
@@ -1252,6 +1288,7 @@ mod tests {
                 audit_log: false,
             },
             runtime: RuntimeConfig::default(),
+            telemetry: TelemetryConfig::default(),
         };
 
         let result = config.validate();

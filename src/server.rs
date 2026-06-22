@@ -25,7 +25,7 @@ use std::time::Instant;
 
 use tokio::net::TcpListener;
 use tokio::signal;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, instrument, warn};
 
 use crate::config::Config;
 
@@ -185,6 +185,7 @@ fn metrics_response(state: &ServerState) -> Vec<u8> {
 // ── HTTP handler ───────────────────────────────────────────────────────────
 
 /// Handle a single HTTP connection
+#[instrument(skip_all, fields(peer = ?stream.peer_addr().ok()))]
 async fn handle_connection(mut stream: tokio::net::TcpStream, state: Arc<ServerState>) {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 
@@ -299,6 +300,7 @@ async fn wait_for_shutdown() {
 /// Starts a long-running HTTP server on the configured host:port.
 /// Serves health, readiness, and metrics endpoints.
 /// Handles graceful shutdown on SIGTERM/SIGINT.
+#[instrument(skip_all, fields(bind_addr))]
 pub async fn run_server(config: Config) -> anyhow::Result<()> {
     let host = config
         .runtime
@@ -352,9 +354,6 @@ pub async fn run_server(config: Config) -> anyhow::Result<()> {
 
     Ok(())
 }
-
-// ── Tracing import for debug macro ─────────────────────────────────────────
-use tracing::debug;
 
 // ── Tests ──────────────────────────────────────────────────────────────────
 

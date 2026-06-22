@@ -10,6 +10,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Maintenance Cycle Workflow** in `AGENTS.md` — structured 7-phase SOP for every maintenance cycle: check CI, fix issues, verify on Orbstack, update docs, commit & push, verify CI after push, release if milestone reached.
 
+## [0.7.2] — 2026-06-20
+
+### Added
+- **OpenTelemetry tracing** (`src/telemetry.rs`) — opt-in distributed tracing with OTLP exporter
+  - `TelemetryConfig` with `--otel-endpoint`, `--otel-service-name`, `--otel-disabled` CLI flags
+  - `TelemetryGuard` — flushes and shuts down OTel exporter on drop
+  - gRPC OTLP exporter (default) and stdout exporter fallback
+  - Feature-gated: `otel-grpc` (default), `otel-stdout` (optional)
+  - `#[instrument]` spans on agent loop, HTTP server, tool execution, and LLM provider calls
+  - 4 new unit tests covering config, disabled mode, guard drop, and custom settings
+
+### Changed
+- **Cargo.toml** — added `opentelemetry`, `opentelemetry_sdk`, `opentelemetry-otlp`, `opentelemetry-stdout`, `tracing-opentelemetry` dependencies
+- **Features** — `default = ["otel-grpc"]`, `otel-grpc = ["opentelemetry-otlp"]`, `otel-stdout = ["opentelemetry-stdout"]`
+- **Config** — `Config.telemetry` field added with `TelemetryConfig` struct
+- **311 unit tests** (+4 for telemetry, +0 regressions)
+
 ## [0.7.1] — 2026-02-06
 
 ### Added

@@ -15,7 +15,7 @@ use crate::tools::{ToolCall, ToolRegistry, ToolResult};
 use futures::StreamExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, warn};
+use tracing::{info, instrument, warn};
 
 /// In-memory conversation memory — stores message history for the session.
 /// Messages are lost when the process exits.
@@ -110,6 +110,7 @@ impl Default for AgentLoopConfig {
 /// 2. Executes shell commands in the Sandbox
 /// 3. Logs all tool calls, policy decisions, and results to AuditLog
 #[allow(dead_code)]
+#[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model()))]
 pub async fn run_agent_loop(
     llm: Arc<dyn LLMProviderTrait>,
     initial_prompt: &str,
@@ -315,6 +316,7 @@ pub async fn run_agent_loop(
 /// This version extends run_agent_loop with MCP tool support:
 /// 1. Registers MCP tools into the ToolRegistry
 /// 2. MCP tools are executed alongside built-in tools
+#[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model()))]
 pub async fn run_agent_loop_with_mcp(
     llm: Arc<dyn LLMProviderTrait>,
     initial_prompt: &str,

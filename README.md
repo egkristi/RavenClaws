@@ -408,6 +408,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | MCP client | ✅ Working | JSON-RPC over stdio, tool discovery and registration |
 | MCP server | ✅ **v0.7.0** | Expose RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
 | HTTP server mode | ✅ **v0.7.1** | Long-running server with `/health`, `/ready`, `/metrics`; `--serve` flag; graceful shutdown |
+| OpenTelemetry tracing | ✅ **v0.7.2** | Opt-in distributed tracing with OTLP gRPC/stdout exporter; `#[instrument]` spans on agent loop, HTTP server, tools, LLM calls |
 | Retry / fallback chains | ✅ Working | Exponential backoff, circuit breaker, token budgets |
 | Deny-by-default policy | ✅ Working | PolicyEngine with shell/path/network allow-lists |
 | Sandboxed execution | ✅ Working | Workdir jail, resource limits, timeouts |

@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
-use tracing::{info, warn};
+use tracing::{info, instrument, warn};
 
 // Re-export sandbox for tool implementations
 use crate::sandbox::Sandbox;
@@ -269,6 +269,7 @@ impl ToolRegistry {
     }
 
     /// Execute a tool call
+    #[instrument(skip(self), fields(tool = %call.name))]
     pub async fn execute(&self, call: ToolCall) -> ToolResultValue<ToolResult> {
         let start = std::time::Instant::now();
 

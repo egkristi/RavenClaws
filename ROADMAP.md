@@ -1,9 +1,9 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
 **Date:** 2026-06-20  
-**Version:** v0.7.1 — HTTP Server Mode ✅  
-**Previous Release:** v0.7.0 (2026-06-20) — MCP Server ✅  
-**Current Commit:** `dab9b90` — HTTP Server Mode: long-running server with /health, /ready, /metrics endpoints
+**Version:** v0.7.2 — OpenTelemetry Tracing ✅  
+**Previous Release:** v0.7.1 (2026-06-20) — HTTP Server Mode ✅  
+**Current Commit:** `dab9b90` — OpenTelemetry tracing: opt-in distributed tracing with OTLP exporter
 **CI Status:** Build & Release #99 ✅ · Container Build #98 ✅ · Security Scan #84 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
@@ -30,8 +30,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.7.1 (2026-06-20) — HTTP Server Mode  
-**Stats:** 11 source modules, ~10,500 LOC (+500 for v0.7.0), 5 LLM providers, 307 unit tests (+9 for HTTP Server), multi-arch CI with signed images + SBOM.
+**Version:** 0.7.2 (2026-06-20) — OpenTelemetry Tracing  
+**Stats:** 12 source modules (+telemetry), ~10,800 LOC (+300 for OTel), 5 LLM providers, 311 unit tests (+4 for telemetry), multi-arch CI with signed images + SBOM.
 
 | Component | Status | Details |
 |---|---|---|
@@ -64,6 +64,7 @@ can't be added without breaking one, it doesn't ship in core.
 | MCP client | ✅ Working | JSON-RPC 2.0 over stdio, tool discovery from external servers (v0.5.2) |
 | **MCP server** | ✅ **v0.7** | Exposes RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
 | **HTTP server mode** | ✅ **v0.7.1** | Long-running server with `/health`, `/ready`, `/metrics` endpoints; `--serve` flag; fixes k8s CrashLoopBackOff |
+| **OpenTelemetry tracing** | ✅ **v0.7.2** | Opt-in distributed tracing with OTLP gRPC/stdout exporter; `#[instrument]` spans on agent loop, HTTP server, tools, LLM calls |
 | Native Anthropic provider | ✅ Working | Direct Claude API with tool use, token tracking (v0.5.3) |
 | Retry / fallback / circuit breaker | ✅ Working | Exponential backoff, token budgets, provider fallback chain (v0.5.1) |
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
@@ -390,13 +391,13 @@ Agency with guardrails — the security differentiator.
 - [x] **Long-running server mode** with HTTP `/health` `/ready` `/metrics` endpoints (fixes the k8s CrashLoop). ✅ **v0.7.1**
 - [x] **Prometheus-style metrics** (requests, tokens, tool calls, errors, uptime). ✅ **v0.7.1**
 - [x] **Graceful shutdown**, signal handling. ✅ **v0.7.1** — SIGTERM/SIGINT handled in server mode
-- [ ] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs).
+- [x] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs). ✅ **v0.7.2**
 - [ ] **Helm chart**; systemd unit; optional self-update with rollback.
 - [ ] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX).
 - [ ] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents.
 - [ ] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces.
 
-**Exit criteria:** ✅ RavenClaw runs as a stable long-lived workload with green probes and exported metrics.
+**Exit criteria:** ✅ RavenClaw runs as a stable long-lived workload with green probes, exported metrics, and opt-in distributed tracing.
 
 ### v0.8 — Enterprise and compliance 🏢 *(commercial-licensed)*
 
@@ -436,7 +437,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 298 unit tests across 10 modules (+7 for MCP Server) + 94 verification tests across 4 deployment targets. All tests pass, clippy clean, fmt clean.
+**Current coverage:** 311 unit tests across 12 modules (+4 for telemetry) + 94 verification tests across 4 deployment targets. All tests pass, clippy clean, fmt clean.
 
 ---
 
