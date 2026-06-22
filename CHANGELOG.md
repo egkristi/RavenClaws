@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Helm chart** (`charts/ravenclaw/`) — official Helm chart for deploying RavenClaw on Kubernetes
+  - 11 configurable Kubernetes resources: ServiceAccount, ConfigMap, Secret, Deployment, Service, Ingress, RBAC (Role + RoleBinding), PersistentVolumeClaim, NetworkPolicy, PodDisruptionBudget, ServiceMonitor
+  - Full values.yaml with sensible defaults matching existing `k8s/deployment.yaml`
+  - Optional OpenTelemetry and RavenFabric configuration in ConfigMap
+  - Prometheus ServiceMonitor support for metrics scraping
+  - Helm chart validated with `helm lint` (0 failures)
 - **Maintenance Cycle Workflow** in `AGENTS.md` — structured 7-phase SOP for every maintenance cycle: check CI, fix issues, verify on Orbstack, update docs, commit & push, verify CI after push, release if milestone reached.
 
 ## [0.7.2] — 2026-06-20

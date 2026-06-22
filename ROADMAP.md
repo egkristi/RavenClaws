@@ -1,10 +1,10 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
-**Date:** 2026-06-20  
-**Version:** v0.7.2 — OpenTelemetry Tracing ✅  
-**Previous Release:** v0.7.1 (2026-06-20) — HTTP Server Mode ✅  
-**Current Commit:** `dab9b90` — OpenTelemetry tracing: opt-in distributed tracing with OTLP exporter
-**CI Status:** Build & Release #99 ✅ · Container Build #98 ✅ · Security Scan #84 ✅
+**Date:** 2026-06-22  
+**Version:** v0.7.3 — Helm Chart ✅  
+**Previous Release:** v0.7.2 (2026-06-20) — OpenTelemetry Tracing ✅  
+**Current Commit:** `8edd0d2` — OpenTelemetry tracing: opt-in distributed tracing with OTLP exporter
+**CI Status:** Build & Release #103 ✅ · Container Build #101 ✅ · Security Scan #86 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -30,8 +30,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.7.2 (2026-06-20) — OpenTelemetry Tracing  
-**Stats:** 12 source modules (+telemetry), ~10,800 LOC (+300 for OTel), 5 LLM providers, 311 unit tests (+4 for telemetry), multi-arch CI with signed images + SBOM.
+**Version:** 0.7.3 (2026-06-22) — Helm Chart  
+**Stats:** 12 source modules (+telemetry), ~10,800 LOC, 5 LLM providers, 311 unit tests, multi-arch CI with signed images + SBOM, official Helm chart.
 
 | Component | Status | Details |
 |---|---|---|
@@ -197,7 +197,7 @@ simpler** — or deliberately not at all.
 | **Security model** | ✅ (wired) | ⚠️ | ⚠️ | ❌ |
 | **Local-first / air-gapped** | ✅ (Ollama) | ❌ | ❌ | ✅ |
 | **~3 MB binary** | ✅ | ❌ (cloud) | ❌ (cloud) | ❌ (Python) |
-| **RavenFabric mesh** | ✅ (v0.6.1) | ❌ | ❌ | ❌ |
+| **Helm chart** | ✅ (v0.7.3) | ❌ | ❌ | ❌ |
 | **No telemetry** | ✅ | ❌ | ❌ | ✅ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ⚠️ (fetch only) | ✅ | ✅ | ✅ |
@@ -392,12 +392,12 @@ Agency with guardrails — the security differentiator.
 - [x] **Prometheus-style metrics** (requests, tokens, tool calls, errors, uptime). ✅ **v0.7.1**
 - [x] **Graceful shutdown**, signal handling. ✅ **v0.7.1** — SIGTERM/SIGINT handled in server mode
 - [x] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs). ✅ **v0.7.2**
-- [ ] **Helm chart**; systemd unit; optional self-update with rollback.
+- [x] **Helm chart** (`charts/ravenclaw/`) — 11 Kubernetes resources, full values.yaml, validated with `helm lint`. ✅ **v0.7.3**
 - [ ] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX).
 - [ ] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents.
 - [ ] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces.
 
-**Exit criteria:** ✅ RavenClaw runs as a stable long-lived workload with green probes, exported metrics, and opt-in distributed tracing.
+**Exit criteria:** ✅ RavenClaw runs as a stable long-lived workload with green probes, exported metrics, opt-in distributed tracing, and Helm-based deployment.
 
 ### v0.8 — Enterprise and compliance 🏢 *(commercial-licensed)*
 
@@ -462,7 +462,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 | 0.2 | Verified supply chain for downloaded binaries (SHA256 checksum); no panic/abort on client init; cross-compilation deps in CI. |
 | 0.4 | Deny-by-default tool policy, sandboxed execution, audit log, secret zeroization, prompt-injection defense. **(Infrastructure complete, needs wiring)** |
 | 0.6 | E2E-encrypted remote exec via RavenFabric. |
-| 0.7 | MCP Server — policy-checked and audited tool exposure over stdio. HTTP server mode with health/metrics endpoints. |
+| 0.7 | MCP Server — policy-checked and audited tool exposure over stdio. HTTP server mode with health/metrics endpoints. OpenTelemetry tracing. Helm chart for K8s deployment. |
 | 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
 | 0.9 | External security review, fuzzing, published threat model. |
 
@@ -488,7 +488,7 @@ Concrete items carried from the current codebase:
 4. ~~**k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.~~ ✅ **Fixed — `--serve` mode with HTTP probes**
 5. ~~**Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4).~~ ✅ **Unified `OpenAICompatibleClient` (v0.5.0)**
 6. ~~**Dead/unwired code:** `rustls` + `zeroize` deps unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop; RavenFabric config fields consumed by client**
-7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.7)*
+7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.7)* ✅ **Fixed — graceful shutdown in server mode (v0.7.1)**
 8. **No config hot-reload** — Changes require restart. *(v0.7)*
 9. **Container image ~50 MB** — Target is < 30 MB. *(v0.7)*
 10. **cargo-udeps findings** — Unused dependencies detected. *(periodic review)*

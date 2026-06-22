@@ -1,0 +1,238 @@
+# Default values for ravenclaw Helm chart.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# -- Number of replicas to run
+replicaCount: 1
+
+# -- Image configuration
+image:
+  repository: ghcr.io/egkristi/ravenclaw
+  pullPolicy: Always
+  # -- Overrides the image tag whose default is the chart appVersion
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+
+# -- Override the name of the chart
+nameOverride: ""
+
+# -- Override the full name of the release
+fullnameOverride: ""
+
+# -- Service account configuration
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# -- RBAC configuration
+rbac:
+  # -- Whether to create RBAC resources
+  create: true
+  # -- Additional rules for the Role
+  extraRules: []
+
+# -- Pod annotations
+podAnnotations: {}
+
+# -- Pod labels
+podLabels: {}
+
+# -- Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container security context
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# -- RavenClaw service configuration
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Service port
+  port: 8080
+  # -- Service annotations
+  annotations: {}
+
+# -- Ingress configuration
+ingress:
+  # -- Whether to create an Ingress resource
+  enabled: false
+  # -- Ingress class name
+  className: ""
+  # -- Ingress annotations
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  # -- Ingress hosts
+  hosts:
+    - host: ravenclaw.local
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- TLS configuration
+  tls: []
+  #  - secretName: ravenclaw-tls
+  #    hosts:
+  #      - ravenclaw.local
+
+# -- Resource limits and requests
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "512Mi"
+    cpu: "500m"
+
+# -- Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 30
+  timeoutSeconds: 5
+
+# -- Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /ready
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+# -- Startup probe configuration (optional)
+startupProbe: {}
+  # httpGet:
+  #   path: /health
+  #   port: http
+  # initialDelaySeconds: 5
+  # periodSeconds: 5
+
+# -- Additional CLI arguments passed to ravenclaw
+extraArgs: []
+
+# -- Environment variables
+env:
+  - name: RUST_LOG
+    value: "info"
+
+# -- Environment variables from secrets or configmaps
+envFrom: []
+
+# -- RavenClaw configuration (rendered as ConfigMap)
+config:
+  # -- The LLM provider configuration
+  llm:
+    endpoint: "http://litellm.ravenclaw.svc:4000"
+    model: "gpt-4o-mini"
+    timeout_secs: 30
+  # -- Security configuration
+  security:
+    require_tls: false
+    audit_log: true
+  # -- Runtime configuration
+  runtime:
+    workdir: "/workspace"
+    max_agents: 10
+    health_interval_secs: 60
+  # -- RavenFabric configuration (optional)
+  ravenfabric: {}
+    # endpoint: "http://ravenfabric.ravenclaw.svc:8080"
+    # remote_exec: true
+    # allowed_hosts: ["litellm.ravenclaw.svc", "ravenfabric.ravenclaw.svc"]
+  # -- OpenTelemetry configuration (optional)
+  telemetry: {}
+    # otel_endpoint: "http://otel-collector.observability.svc:4317"
+    # otel_service_name: "ravenclaw"
+    # otel_disabled: false
+
+# -- Existing secrets to mount (will not be created by the chart)
+existingSecrets: []
+  # - name: ravenclaw-secrets
+  #   mountPath: /etc/secrets/ravenclaw
+  #   readOnly: true
+
+# -- Secret values (created as Kubernetes Secret resource)
+# These should be provided via --set or a values file, NOT checked into version control
+secrets: {}
+  # LITELLM_API_KEY: "changeme"
+  # OPENAI_API_KEY: ""
+  # ANTHROPIC_API_KEY: ""
+
+# -- Volume mounts for additional volumes
+extraVolumeMounts: []
+
+# -- Additional volumes
+extraVolumes: []
+
+# -- Workspace volume configuration
+workspace:
+  # -- Size limit for the workspace emptyDir volume
+  sizeLimit: "1Gi"
+  # -- Storage class for persistent workspace (empty string = emptyDir)
+  storageClass: ""
+  # -- Size for persistent workspace (requires storageClass)
+  size: "10Gi"
+
+# -- Node selector for pod placement
+nodeSelector: {}
+
+# -- Tolerations for pod placement
+tolerations: []
+
+# -- Affinity for pod placement
+affinity: {}
+
+# -- Pod priority class name
+priorityClassName: ""
+
+# -- Pod disruption budget configuration
+podDisruptionBudget:
+  # -- Whether to create a PodDisruptionBudget
+  enabled: false
+  # -- Min available pods
+  minAvailable: 1
+  # -- Max unavailable pods
+  maxUnavailable: ""
+
+# -- Network policy configuration
+networkPolicy:
+  # -- Whether to create a NetworkPolicy
+  enabled: false
+  # -- Additional ingress rules
+  ingressRules: []
+  # -- Additional egress rules
+  egressRules: []
+
+# -- ServiceMonitor configuration for Prometheus Operator
+serviceMonitor:
+  # -- Whether to create a ServiceMonitor
+  enabled: false
+  # -- Interval at which metrics should be scraped
+  interval: "30s"
+  # -- Scrape timeout
+  scrapeTimeout: "10s"
+  # -- Additional labels for the ServiceMonitor
+  labels: {}
+  # -- Metric relabeling configs
+  relabelings: []
+  # -- Metric relabeling configs applied before scraping
+  metricRelabelings: []

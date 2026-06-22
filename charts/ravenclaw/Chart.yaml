@@ -1,0 +1,26 @@
+apiVersion: v2
+name: ravenclaw
+description: A Helm chart for deploying RavenClaw on Kubernetes
+type: application
+version: 0.1.0
+appVersion: "0.7.2"
+home: https://github.com/egkristi/RavenClaw
+icon: https://raw.githubusercontent.com/egkristi/RavenClaw/master/docs/logo.png
+sources:
+  - https://github.com/egkristi/RavenClaw
+keywords:
+  - agent
+  - ai
+  - llm
+  - automation
+  - ravenclaw
+maintainers:
+  - name: Erling G M Kristiansen
+    email: egkristi@gmail.com
+    url: https://github.com/egkristi
+annotations:
+  artifacthub.io/changes: |
+    - kind: added
+      description: Initial Helm chart for RavenClaw v0.7.2
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/category: ai-machine-learning

@@ -23,7 +23,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.7.2
+- **Version:** 0.7.3
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaw
 - **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
@@ -73,6 +73,7 @@ src/
 | MCP server | ✅ v0.7.0 — expose RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
 | HTTP server mode | ✅ v0.7.1 — long-running server with `/health`, `/ready`, `/metrics`; `--serve` flag; graceful shutdown |
 | OpenTelemetry tracing | ✅ v0.7.2 — opt-in distributed tracing with OTLP gRPC/stdout exporter; `#[instrument]` spans on agent loop, HTTP server, tools, LLM calls |
+| Helm chart | ✅ v0.7.3 — official Helm chart for K8s deployment with 11 configurable resources |
 | Retry / fallback chains | ✅ Working — exponential backoff, circuit breaker, token budgets |
 | RavenFabric integration | ✅ Working — HTTP client with health, list_agents, execute, broadcast; wired to all modes |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
