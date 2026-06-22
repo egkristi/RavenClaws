@@ -8,6 +8,7 @@ mod audit;
 mod background;
 mod config;
 mod error;
+mod eval;
 mod llm;
 mod mcp;
 mod policy;
@@ -151,6 +152,14 @@ struct Args {
     /// Webhook server port (v0.8) — overrides default 9090
     #[arg(long, env = "RAVENCLAW_WEBHOOK_PORT", default_value = "9090")]
     webhook_port: u16,
+
+    /// Run eval suite from config file (v0.9)
+    #[arg(long, env = "RAVENCLAW_EVAL")]
+    eval: Option<String>,
+
+    /// Output eval results as JSON (v0.9)
+    #[arg(long, env = "RAVENCLAW_EVAL_JSON")]
+    eval_json: bool,
 }
 
 #[tokio::main]
@@ -453,6 +462,22 @@ async fn main() -> anyhow::Result<()> {
 
         info!(task_id = %task_id, "Background task submitted, returning immediately");
         info!("RavenClaw shutdown complete");
+        return Ok(());
+    }
+
+    // Handle --eval mode: run eval suite (v0.9)
+    if let Some(eval_path) = args.eval {
+        info!(path = %eval_path, "Running eval suite");
+        let eval_config = eval::EvalConfig::from_file(&eval_path)?;
+        let llm = llm::create_client(&config.llm)?;
+        let runner = eval::EvalRunner::new(llm, eval_config);
+        let report = runner.run_suite().await;
+        if args.eval_json {
+            println!("{}", report.format_json());
+        } else {
+            println!("{}", report.format_text());
+        }
+        info!("RavenClaw eval complete");
         return Ok(());
     }
 

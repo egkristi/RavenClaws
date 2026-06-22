@@ -9,6 +9,20 @@
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
 
+RavenClaw operates **autonomously** — with a heartbeat, working on tasks over long
+periods independently, without requiring constant human supervision. It plans,
+executes, reflects, and adapts across hours, days, or weeks.
+
+RavenClaw orchestrates **swarms at any scale** — from a handful of specialized
+collaborators to hundreds of workers, each with unique traits, capabilities, and
+personalities. Swarms are self-organizing: RavenClaw provisions, configures, and
+manages its own sub-agents and worker instances dynamically based on task
+requirements.
+
+All of this happens **efficiently and securely** — every agent communication is
+policy-gated, audited, and sandboxed. The five pillars (Secure, Small, Efficient,
+Robust, Simple) apply to the swarm just as they apply to the single agent.
+
 **Core Principles** — every decision is measured against these five. If a feature
 can't be added without breaking one, it doesn't ship in core.
 
@@ -30,8 +44,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.7.3 (2026-06-22) — Helm Chart  
-**Stats:** 14 source modules (+background, +scheduler), ~12,100 LOC, 5 LLM providers, 336 unit tests, multi-arch CI with signed images + SBOM, official Helm chart.
+**Version:** 0.8.0 (2026-06-22) — Scheduling & Triggers  
+**Stats:** 14 source modules (+background, +scheduler, +eval), ~12,600 LOC, 5 LLM providers, 353 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart.
 
 | Component | Status | Details |
 |---|---|---|
@@ -47,7 +61,8 @@ can't be added without breaking one, it doesn't ship in core.
 | Container & K8s security | ✅ Working | Distroless, non-root, read-only FS, dropped caps, seccomp, RBAC |
 | CI/CD pipeline | ✅ Implemented | fmt + clippy `-D warnings` + test, 5-target builds, multi-arch images, **Cosign + SBOM + provenance + Trivy**, crates.io publish, releases — cross-compilation deps installed for all targets |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review — all SARIF results uploaded to GitHub Security tab |
-| Verification suite | ✅ Working | 94 system/integration checks · 9 modules · 4 targets (`scripts/verify.sh`: local, Docker, Linux, K8s, security, performance, LLM-quality) — shell-orchestrated, requires live services |
+| Verification suite | ✅ Working | 114 system/integration checks · 10 modules · 4 targets (`scripts/verify.sh`: local, Docker, Linux, K8s, security, performance, LLM-quality, swarm, eval) — shell-orchestrated, requires live services |
+| Eval harness | ✅ **v0.7.4** | `--eval <path>` mode with 7 assertion types, run traces, text/JSON reports, 24 unit tests + 20 verification tests, sample configs in `tests/eval/` |
 | Multi-model routing | ✅ Working | `next_client()` round-robin + fallback chain with circuit breaker |
 | RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |
 | `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout; full test coverage |
@@ -186,9 +201,9 @@ simpler** — or deliberately not at all.
 > air-gappable, signed + SBOM-attested supply chain. These are claims we will
 > benchmark and publish — not marketing.
 
-### RavenClaw vs. Field (v0.6.1)
+### RavenClaw vs. Field (v0.9 target)
 
-| Capability | RavenClaw v0.6.1 | Cognition (Claude) | Manus | Open Interpreter |
+| Capability | RavenClaw v0.9 | Cognition (Claude) | Manus | Open Interpreter |
 |---|:---:|:---:|:---:|:---:|
 | Agent loop | ✅ | ✅ | ✅ | ✅ |
 | Tool calling | ✅ (structured) | ✅ (structured) | ✅ | ✅ |
@@ -199,6 +214,9 @@ simpler** — or deliberately not at all.
 | **~3 MB binary** | ✅ | ❌ (cloud) | ❌ (cloud) | ❌ (Python) |
 | **Helm chart** | ✅ (v0.7.3) | ❌ | ❌ | ❌ |
 | **No telemetry** | ✅ | ❌ | ❌ | ✅ |
+| **Autonomous heartbeat** | 🔄 **v0.9** | ✅ | ✅ | ❌ |
+| **Scalable swarm (100+ workers)** | 🔄 **v0.9** | ❌ | ❌ | ❌ |
+| **Self-provisioning sub-agents** | 🔄 **v0.9** | ❌ | ❌ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ⚠️ (fetch only) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
@@ -211,6 +229,8 @@ simpler** — or deliberately not at all.
 1. **Trust as a feature** — deny-by-default security, no telemetry, verifiable end-to-end
 2. **Edge-deployable** — ~3.4 MB binary, runs on Raspberry Pi, air-gapped capable
 3. **RavenFabric mesh** — E2E-encrypted remote execution across fleet (unique)
+4. **Autonomous heartbeat** — operates independently for days/weeks, no supervision required
+5. **Self-orchestrating swarm** — dynamically provisions and manages 10s–100s of workers in any topology, each with unique capability profiles
 
 ---
 
@@ -232,6 +252,9 @@ the cloud incumbents structurally can't follow.
 | Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ⚠️ (fetch only) | **v0.4** |
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
 | Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
+| **Autonomous heartbeat (long-running)** | Operates independently for days/weeks without supervision | 🔄 **v0.9** | **v0.9** |
+| **Scalable swarm (100+ workers)** | Dynamic provisioning of 10s–100s of agents in any topology | 🔄 **v0.9** | **v0.9** |
+| **Self-provisioning sub-agents** | Agent spawns agents; recursive supervisor mode | 🔄 **v0.9** | **v0.9** |
 | Async / long-horizon background runs | Manus's killer feature (cloud background) | ✅ **v0.8** | **v0.8** ✅ |
 | Scheduling / triggers (cron, webhook) | Proactive, set-and-forget operation | ✅ **v0.8** | **v0.7** |
 | Streaming + intermediate results | First-class in Vellum; needed for interactive UX | ✅ | v0.3 |
@@ -257,8 +280,8 @@ the cloud incumbents structurally can't follow.
 1. **MCP client + server (v0.7)** — instant access to entire tool ecosystem. ✅ **Both client and server now implemented.**
 2. **Wire security model (v0.4)** — PolicyEngine + Sandbox + AuditLog invoked on every tool call. Core value proposition.
 3. **Local-first privacy + security** — the wedge no cloud agent can copy.
-4. **Async / background + scheduling (v0.7)** — matches Manus's "assign-and-walk-away".
-5. **RavenFabric distributed execution (v0.6.1)** — the capability *no competitor has*.
+4. **Autonomous heartbeat + self-orchestration (v0.9)** — RavenClaw operates independently for days, dynamically spawning and managing swarms of any size. No competitor offers this in a self-hosted, secure package.
+5. **Scalable swarm (100+ workers) (v0.9)** — from a handful of collaborators to hundreds of workers, each with unique profiles. Self-provisioning, self-healing, and policy-governed.
 
 ---
 
@@ -393,9 +416,15 @@ Agency with guardrails — the security differentiator.
 - [x] **Graceful shutdown**, signal handling. ✅ **v0.7.1** — SIGTERM/SIGINT handled in server mode
 - [x] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs). ✅ **v0.7.2**
 - [x] **Helm chart** (`charts/ravenclaw/`) — 11 Kubernetes resources, full values.yaml, validated with `helm lint`. ✅ **v0.7.3**
+- [x] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces. ✅ **v0.7.4**
 - [x] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX). ✅ **v0.8**
 - [x] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents. ✅ **v0.8**
-- [ ] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces.
+  - `EvalConfig`/`EvalTask`/`EvalRunner` with 7 assertion types (contains, not_contains, exact, regex, non_empty, min_length, max_length)
+  - `RunTrace` with step-by-step, LLM call, and tool call tracing
+  - `EvalReport` with text and JSON output formats
+  - CLI `--eval <path>` and `--eval-json` flags
+  - 24 Rust unit tests + 20 verification tests
+  - Sample eval configs in `tests/eval/` (basic-suite.toml, security-suite.toml)
 
 **Exit criteria:** ✅ RavenClaw runs as a stable long-lived workload with green probes, exported metrics, opt-in distributed tracing, and Helm-based deployment.
 
@@ -411,7 +440,23 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - [ ] **Air-gap / offline licensing**; runtime feature-flag gating.
 - [ ] **Output artifacts & reporting** — generate documents, spreadsheets, slides, and sites via the skill system (v0.5); underpins compliance and executive reporting.
 
-### v0.9 — Hardening, ecosystem, advanced reasoning 💎
+### v0.9 — Autonomous heartbeat & self-orchestration 💓
+
+RavenClaw becomes a truly autonomous agent that can operate independently over
+long time horizons, and dynamically orchestrate swarms of any size.
+
+- [ ] **Autonomous heartbeat** — persistent background loop with configurable tick interval; agent wakes, assesses progress, plans next steps, executes, and sleeps. No human-in-the-loop required for routine operation.
+- [ ] **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context. Heartbeat continues across binary restarts.
+- [ ] **Self-provisioning of sub-agents** — RavenClaw dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors.
+- [ ] **Scalable swarm orchestration** — support for 10s to 100s of workers. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid.
+- [ ] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable.
+- [ ] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load.
+- [ ] **Inter-agent communication bus** — structured message passing between swarm members with delivery guarantees, routing, and policy enforcement. All communication is audited.
+- [ ] **Swarm health & telemetry** — heartbeat monitoring per agent, dead-agent detection, automatic replacement. Metrics: task throughput, agent utilization, error rates, communication latency.
+- [ ] **Graceful degradation under load** — when resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
+- [ ] **Self-healing** — failed agents are detected, replaced, and caught up. Supervisor re-assigns orphaned tasks. No single point of failure in mesh topologies.
+
+### v0.10 — Hardening, ecosystem, advanced reasoning 💎
 
 - [ ] **Threat model + external security review.**
 - [ ] **Fuzzing** (`cargo fuzz`) + property tests for config/policy parsers.
@@ -422,6 +467,8 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 
 ### v1.0 — Simply the best 🏆
 
+- [ ] **Autonomous operation validated** — RavenClaw runs unattended for 7+ days, completing tasks via heartbeat loop, recovering from failures, and scaling swarm up/down as needed.
+- [ ] **Swarm scale validated** — 100+ worker agents operating in mesh topology, with < 5% overhead per additional agent.
 - [ ] **API stability** guarantees + semver discipline.
 - [ ] **All performance targets met** and benchmarked against the field (published).
 - [ ] **Complete docs**, examples, migration guides.
@@ -437,7 +484,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 311 unit tests across 12 modules (+4 for telemetry) + 94 verification tests across 4 deployment targets. All tests pass, clippy clean, fmt clean.
+**Current coverage:** 353 unit tests across 14 modules (+eval, +background, +scheduler) + 114 verification tests across 10 modules. All tests pass, clippy clean, fmt clean.
 
 ---
 
@@ -464,7 +511,8 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 | 0.6 | E2E-encrypted remote exec via RavenFabric. |
 | 0.7 | MCP Server — policy-checked and audited tool exposure over stdio. HTTP server mode with health/metrics endpoints. OpenTelemetry tracing. Helm chart for K8s deployment. |
 | 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
-| 0.9 | External security review, fuzzing, published threat model. |
+| 0.9 | Inter-agent communication encryption, swarm-wide policy enforcement, heartbeat authentication, self-provisioning authorization. |
+| 0.10 | External security review, fuzzing, published threat model. |
 
 ---
 

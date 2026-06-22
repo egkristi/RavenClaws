@@ -15,7 +15,9 @@
 #   ./scripts/verify.sh --security       # Security & binary integrity
 #   ./scripts/verify.sh --performance    # Performance benchmarks
 #   ./scripts/verify.sh --llm-quality    # LLM response quality
-#   ./scripts/verify.sh --quick          # Quick smoke test (local + litellm)
+#   ./scripts/verify.sh --swarm          # Swarm & sub-agent scalability
+#   ./scripts/verify.sh --eval           # Eval harness
+#   ./scripts/verify.sh --quick          # Quick smoke test (local + litellm + swarm + eval)
 #   ./scripts/verify.sh --build          # Build + all tests
 #
 # Environment:
@@ -41,6 +43,8 @@ MODULES=(
     "security:test-security.sh:test_security:Security & Binary Integrity"
     "performance:test-performance.sh:test_performance:Performance Benchmarks"
     "llm-quality:test-llm-quality.sh:test_llm_quality:LLM Response Quality"
+    "swarm:test-swarm.sh:test_swarm_and_subagent:Swarm & Sub-Agent Scalability"
+    "eval:test-eval.sh:test_eval_harness:Eval Harness"
 )
 
 list_modules() {
@@ -55,7 +59,7 @@ list_modules() {
     echo ""
     echo -e "${CYAN}Special targets:${NC}"
     echo -e "  ${YELLOW}--all${NC}      Run all modules (default)"
-    echo -e "  ${YELLOW}--quick${NC}    Quick smoke test (litellm + local + security)"
+    echo -e "  ${YELLOW}--quick${NC}    Quick smoke test (litellm + local + swarm + security)"
     echo -e "  ${YELLOW}--build${NC}    Build + run all tests"
     echo -e "  ${YELLOW}--list${NC}     List this help"
 }
@@ -118,6 +122,8 @@ main() {
             init_verification
             run_module "litellm"
             run_module "local"
+            run_module "swarm"
+            run_module "eval"
             run_module "security"
             print_summary "Quick Smoke Test"
             ;;
@@ -141,7 +147,7 @@ main() {
             ;;
         *)
             echo -e "${RED}Unknown option: $mode${NC}"
-            echo "Usage: $0 [--all|--quick|--build|--list|--litellm|--local|--docker|--linux|--k8s|--security|--performance|--llm-quality]"
+            echo "Usage: $0 [--all|--quick|--build|--list|--litellm|--local|--docker|--linux|--k8s|--security|--performance|--llm-quality|--swarm|--eval]"
             exit 1
             ;;
     esac

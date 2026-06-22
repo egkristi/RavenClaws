@@ -159,6 +159,21 @@ Items are ordered by severity/impact.
 
 ## 🔧 Build & CI
 
+### Security Scan: Cargo Deny + Cargo Audit fail on `instant` unmaintained advisory
+
+**Problem:** Security Scan #91 failed with Cargo Deny and Cargo Audit both exiting
+with failure. Root cause: the `notify` crate (added in v0.8 for scheduler file-watch
+triggers) depends on `instant` v0.1.13, which is flagged as unmaintained
+(RUSTSEC-2024-0384).
+
+**Fix:** 
+- Added `RUSTSEC-2024-0384` to `deny.toml` `ignore` list
+- Added `--ignore RUSTSEC-2024-0384` to `cargo audit --deny warnings` in `security-scan.yml`
+
+**Status:** ✅ Resolved — `cargo deny check advisories` passes locally.
+
+### Container Build fails: `aquasecurity/trivy-action@0.29.0` not found
+
 ### Container Build fails: `aquasecurity/trivy-action@0.29.0` not found
 
 **Problem:** The Container Build workflow fails immediately with:

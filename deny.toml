@@ -21,8 +21,12 @@ feature-depth = 1
 db-path = "~/.cargo/advisory-db"
 # Fetch the advisory database before checking
 db-urls = ["https://github.com/rustsec/advisory-db"]
-# Ignored advisories (none by default)
-ignore = []
+# Ignored advisories
+# RUSTSEC-2024-0384: `instant` crate is unmaintained but pulled in by `notify` (v0.8 scheduler feature)
+# No safe upgrade available; `notify` v7 still depends on `instant`
+ignore = [
+    "RUSTSEC-2024-0384",
+]
 
 [licenses]
 # AGPLv3-or-later is our license. Allowed dependencies must be compatible.

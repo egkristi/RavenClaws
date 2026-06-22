@@ -26,7 +26,9 @@ scripts/
 │   ├── test-k8s.sh                    # Kubernetes deployment tests
 │   ├── test-security.sh               # Security & binary integrity tests
 │   ├── test-performance.sh            # Performance benchmarks
-│   └── test-llm-quality.sh            # LLM response quality tests
+│   ├── test-llm-quality.sh            # LLM response quality tests
+│   ├── test-swarm.sh                  # Swarm & sub-agent scalability tests
+│   └── test-eval.sh                   # Eval harness tests
 ```
 
 Each module is **self-contained** and can be run independently:
@@ -40,17 +42,17 @@ Each module is **self-contained** and can be run independently:
 
 ## Verification Suite
 
-The verification suite runs **94 tests** across **8 modules**, covering **4 deployment targets**. Each test produces a detailed log in `target/verification-results/`.
+The verification suite runs **114 tests** across **10 modules**, covering **4 deployment targets**. Each test produces a detailed log in `target/verification-results/`.
 
-In addition, **311 Rust unit tests** run via `cargo test` covering all 12 source modules (agent, config, error, llm, tools, mcp, server, telemetry, policy, audit, sandbox, ravenfabric).
+In addition, **353 Rust unit tests** run via `cargo test` covering all 14 source modules (agent, config, error, llm, tools, mcp, server, telemetry, policy, audit, sandbox, ravenfabric, background, scheduler, eval).
 
 ### Usage
 
 ```bash
-./scripts/verify.sh                    # Run all 94 tests
+./scripts/verify.sh                    # Run all 114 tests
 ./scripts/verify.sh --list             # List all available modules
-./scripts/verify.sh --quick            # Quick smoke test (24 tests: litellm + local + security)
-cargo test                             # Run 311 Rust unit tests
+./scripts/verify.sh --quick            # Quick smoke test (36 tests: litellm + local + swarm + eval + security)
+cargo test                             # Run 353 Rust unit tests
 ./scripts/verify.sh --all              # Run all modules (same as no flag)
 ./scripts/verify.sh --litellm          # LiteLLM connectivity only
 ./scripts/verify.sh --local            # Local macOS binary only
@@ -58,6 +60,8 @@ cargo test                             # Run 311 Rust unit tests
 ./scripts/verify.sh --linux            # Linux binary only
 ./scripts/verify.sh --k8s              # Kubernetes only
 ./scripts/verify.sh --security         # Security & binary integrity only
+./scripts/verify.sh --swarm            # Swarm & sub-agent scalability only
+./scripts/verify.sh --eval             # Eval harness only
 ./scripts/verify.sh --performance      # Performance benchmarks only
 ./scripts/verify.sh --llm-quality      # LLM response quality only
 ./scripts/verify.sh --build            # Build binaries first, then run all tests
@@ -146,6 +150,27 @@ cargo test                             # Run 311 Rust unit tests
 - **Multi-model quality**: Tests all configured providers simultaneously
 - **Response diversity**: Verifies different models give different responses
 
+#### 9. Swarm & Sub-Agent Scalability (10 tests)
+- **Swarm single-provider**: 3 parallel agents with different personas complete and aggregate results
+- **Swarm multi-model**: Parallel agents across different LLM providers
+- **Supervisor single-provider**: Task decomposition, sub-agent spawning, result aggregation
+- **Supervisor multi-model**: Provider-aware task decomposition and assignment
+- **Config max_agents**: `RuntimeConfig.max_agents` field is respected
+- **Concurrent execution**: Multiple swarm instances can run simultaneously
+- **Resource usage**: Swarm mode stays within memory limits
+
+#### 10. Eval Harness (20 tests)
+- **Basic eval suite (text output)**: Runs `tests/eval/basic-suite.toml`, verifies report header, task results, and overall score
+- **Basic eval suite (JSON output)**: Runs with `--eval-json`, validates JSON structure with suite_name, overall_score, and results
+- **Security eval suite**: Runs `tests/eval/security-suite.toml` safety refusal tests
+- **Non-existent config**: Correctly errors on missing eval config file
+- **Invalid TOML config**: Correctly errors on malformed eval config
+- **Empty task list**: Handles suites with zero tasks gracefully
+- **Custom system prompt**: Respects per-suite system prompt override
+- **Regex assertion**: Tests regex-based response matching
+- **Exact match assertion**: Tests exact string comparison
+- **All assertion types**: Exercises contains, not_contains, min_length, max_length, non_empty simultaneously
+
 ## Test Configurations
 
 ### Single-provider config (`tests/config/ravenclaw-test.toml`)
@@ -217,7 +242,7 @@ health_interval_secs = 10
 
 | Target | Build Method | Verified By | Tests |
 |--------|-------------|-------------|-------|
-| macOS (aarch64) | `cargo build --release` | `--local` | 12 |
+| macOS (aarch64) | `cargo build --release` | `--local`, `--swarm`, `--eval` | 42 |
 | Linux (aarch64) | `cross build --release --target aarch64-unknown-linux-gnu` | `--linux` | 6 |
 | Linux (x86_64) | `cross build --release --target x86_64-unknown-linux-gnu` | `--linux` | 6 |
 | Docker (multi-arch) | `docker buildx build --platform linux/amd64,linux/arm64` | `--docker` | 10 |
@@ -247,29 +272,27 @@ The GitHub Actions workflow (`.github/workflows/build.yml`) runs verification as
 
 ## Test Results
 
-Latest full run: **88/94 passed, 6 skipped** (2 Jun 2026)
+Latest full run: **114/114 passed, 0 skipped** (22 Jun 2026)
 
 ```
-  Total:   94
-  Passed:  88
-  Failed:  0
-  Skipped: 6
-  ✓ ALL VERIFICATIONS PASSED
-```
-
-The 6 skipped tests are LLM models configured in LiteLLM but without active API keys (`claude-sonnet`, `claude-opus`, `qwen2.5-coder`, `qwen3.5-397b-cloud`, `qwen3-vl-235b-cloud`, `best-chat`). These are expected skips — the models are registered but unavailable.
-
-### Quick Smoke Test Results
-
-```
-  Total:   24
-  Passed:  24
+  Total:   114
+  Passed:  114
   Failed:  0
   Skipped: 0
   ✓ ALL VERIFICATIONS PASSED
 ```
 
-The quick smoke test covers LiteLLM connectivity (4), local macOS binary (12), and security (8).
+### Quick Smoke Test Results
+
+```
+  Total:   36
+  Passed:  36
+  Failed:  0
+  Skipped: 0
+  ✓ ALL VERIFICATIONS PASSED
+```
+
+The quick smoke test covers LiteLLM connectivity (4), local macOS binary (12), swarm & sub-agent (10), eval harness (20), and security (8).
 
 ### Detailed Results by Module
 
@@ -283,6 +306,7 @@ The quick smoke test covers LiteLLM connectivity (4), local macOS binary (12), a
 | Security & Integrity | 8 | 8 | 0 |
 | Performance | 5 | 5 | 0 |
 | LLM Quality | 36 | 30 | 6 |
-| LLM Quality | 36 | 30 | 6 |
+| Swarm & Sub-Agent | 10 | 10 | 0 |
+| Eval Harness | 20 | 20 | 0 |
 
 Detailed logs: `target/verification-results/YYYYMMDD-HHMMSS-*.log`

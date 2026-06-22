@@ -58,7 +58,7 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (336 tests, 14 modules, 0 failures) | ✅ Working |
+| Verification suite (353 tests, 14 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -225,14 +225,16 @@ scripts/
     ├── test-k8s.sh        — Kubernetes (13 tests)
     ├── test-security.sh   — Binary integrity (8 tests)
     ├── test-performance.sh— Benchmarks (5 benchmarks)
-    └── test-llm-quality.sh— LLM response quality (36 tests)
+    ├── test-llm-quality.sh— LLM response quality (36 tests)
+    ├── test-swarm.sh      — Swarm & sub-agent (10 tests)
+    └── test-eval.sh       — Eval harness (20 tests)
 ```
 
 ### Running Tests
 
 ```bash
-./scripts/verify.sh --all          # Full suite (94 tests)
-./scripts/verify.sh --quick        # Smoke test (litellm + local + security)
+./scripts/verify.sh --all          # Full suite (114 tests)
+./scripts/verify.sh --quick        # Smoke test (litellm + local + swarm + eval + security)
 ./scripts/verify.sh --litellm      # Single module
 ./scripts/verify.sh --build        # Build + all tests
 ```
@@ -441,9 +443,17 @@ for r in data.get('workflow_runs',[])[:6]:
 - If any pipeline **fails**, investigate, fix, and re-push
 - If any issues arise, **register them in ISSUES.md**
 
-### Phase 7: Release (if milestone reached)
+### Phase 7: Release (mandatory for minor versions)
 
-If the completed work constitutes a releasable milestone, follow the full **Release Process** (see below). Otherwise, the cycle is complete.
+**Every completed minor version MUST be released.** Patch versions (bug fixes only) are optional — release if the fix addresses a critical or high-severity issue.
+
+Follow the full **Release Process** (see below). A release includes:
+- Version bump in `Cargo.toml`
+- Changelog section for the new version
+- Signed git tag
+- GitHub Release with binary assets
+- Container images pushed to GHCR and Docker Hub
+- crates.io publication
 
 ### Cycle Checklist
 
@@ -458,7 +468,7 @@ If the completed work constitutes a releasable milestone, follow the full **Rele
 - [ ] Phase 4: All relevant docs updated
 - [ ] Phase 5: Committed & pushed (hooks pass)
 - [ ] Phase 6: CI all green after push
-- [ ] Phase 7: Release if milestone reached
+- [ ] Phase 7: Release (mandatory for minor versions)
 ```
 
 ---
@@ -493,6 +503,8 @@ If the completed work constitutes a releasable milestone, follow the full **Rele
 ---
 
 ## Release Process
+
+**Policy: Every completed minor version MUST be released.** Patch versions (bug fixes only) are optional — release if the fix addresses a critical or high-severity issue.
 
 When all TODOs and features for a version milestone are completed, GitHub Actions for the final commit are green, all tests pass, test coverage is good, and everything else is ready — follow this release process.
 

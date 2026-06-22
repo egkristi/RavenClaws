@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Eval harness** (`src/eval.rs`) — golden-task evaluation framework with run inspection
+  - `EvalConfig`/`EvalTask`/`EvalRunner` — TOML-based eval suite configuration with 7 assertion types (contains, not_contains, exact, regex, non_empty, min_length, max_length)
+  - `RunTrace` — full step-by-step trace of agent runs including LLM calls and tool calls
+  - `EvalReport` — human-readable text and machine-readable JSON output formats
+  - `--eval <path>` CLI flag — run an eval suite from a TOML config file
+  - `--eval-json` CLI flag — output eval results as JSON
+  - 24 Rust unit tests covering all assertion types, config parsing, report formatting, and error handling
+  - Sample eval configs in `tests/eval/basic-suite.toml` and `tests/eval/security-suite.toml`
+  - 20 verification tests in `scripts/lib/test-eval.sh` registered in `verify.sh` as `--eval` module
+  - 353 total unit tests (+24, 0 regressions)
 - **Scheduling & triggers** (`src/scheduler.rs`) — cron, webhook, and file-watch activation for proactive 24/7 agents
   - `TriggerConfig` — configurable trigger with name, prompt, system_prompt, and trigger type
   - `TriggerType` enum — `Cron { expression }`, `Webhook { secret }`, `Watch { path, events, debounce_secs }`
@@ -19,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `--webhook-port` CLI flag — override webhook listener port (env: `RAVENCLAW_WEBHOOK_PORT`)
   - All triggers submit tasks to `BackgroundTaskManager` for execution
   - 17 new unit tests covering config serialization, cron parsing, scheduler lifecycle, webhook response format, and all trigger types
-  - 336 total unit tests (+17, 0 regressions)
+  - 353 total unit tests (+17, 0 regressions)
 - **Async / long-horizon background runs** (`src/background.rs`) — assign-and-walk-away background task execution with disk persistence and resumability across restarts
   - `BackgroundTaskManager` — manages task lifecycle with in-memory index + JSON file persistence
   - `BackgroundTask` — full task struct with id, prompt, status, result, error, timestamps, provider/model metadata

@@ -1,0 +1,73 @@
+# Basic eval suite — tests fundamental LLM capabilities
+# Run with: cargo run --release -- --eval tests/eval/basic-suite.toml
+# Or:       ravenclaw --eval tests/eval/basic-suite.toml
+# For JSON output: ravenclaw --eval tests/eval/basic-suite.toml --eval-json
+
+name = "basic-suite"
+description = "Basic capability tests for LLM providers"
+system_prompt = "You are a helpful assistant. Be concise and accurate."
+max_iterations = 3
+
+[[tasks]]
+name = "math-addition"
+description = "Tests basic arithmetic capability"
+prompt = "What is 2 + 2?"
+golden = "4"
+assertions = [
+    { type = "contains", value = "4" },
+    { type = "non_empty" },
+    { type = "min_length", value = 1 },
+]
+weight = 1.0
+required = true
+
+[[tasks]]
+name = "math-multiplication"
+description = "Tests multiplication capability"
+prompt = "What is 7 * 8?"
+golden = "56"
+assertions = [
+    { type = "contains", value = "56" },
+    { type = "non_empty" },
+]
+weight = 1.0
+required = false
+
+[[tasks]]
+name = "capital-city"
+description = "Tests factual knowledge"
+prompt = "What is the capital of France?"
+golden = "Paris"
+assertions = [
+    { type = "contains", value = "Paris" },
+    { type = "not_contains", value = "London" },
+    { type = "non_empty" },
+]
+weight = 1.0
+required = false
+
+[[tasks]]
+name = "concise-response"
+description = "Tests that the model can be concise"
+prompt = "Say hello in one word."
+golden = "Hello"
+assertions = [
+    { type = "max_length", value = 50 },
+    { type = "non_empty" },
+]
+weight = 0.5
+required = false
+
+[[tasks]]
+name = "json-format"
+description = "Tests ability to output structured data"
+prompt = "Output a JSON object with keys 'name' and 'value'. Use exactly this format: {\"name\": \"test\", \"value\": 42}"
+golden = '{"name": "test", "value": 42}'
+assertions = [
+    { type = "contains", value = "name" },
+    { type = "contains", value = "value" },
+    { type = "contains", value = "42" },
+    { type = "non_empty" },
+]
+weight = 0.5
+required = false
