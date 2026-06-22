@@ -31,15 +31,15 @@ jobs:
       actions: read
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
 
       - uses: Swatinem/rust-cache@v2
 
       # Initialize CodeQL with Rust support
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@v5
         with:
           languages: rust
           # Extended query suite catches more than the default
@@ -58,7 +58,7 @@ jobs:
         run: cargo build --release --locked
 
       - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@v4
+        uses: github/codeql-action/analyze@v5
         with:
           category: "/language:rust"
           output: codeql-results
@@ -72,9 +72,9 @@ jobs:
     name: Cargo Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
 
       - uses: Swatinem/rust-cache@v2
 
@@ -94,9 +94,9 @@ jobs:
     name: Cargo Deny
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
 
       - uses: Swatinem/rust-cache@v2
 
@@ -114,9 +114,9 @@ jobs:
     name: Cargo Outdated
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
 
       - uses: Swatinem/rust-cache@v2
 
@@ -134,9 +134,9 @@ jobs:
     name: Cargo Udeps
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
 
       - uses: Swatinem/rust-cache@v2
 
@@ -161,7 +161,7 @@ jobs:
       security-events: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run Trivy filesystem scan
         continue-on-error: true
@@ -182,7 +182,7 @@ jobs:
       - name: Upload Trivy results to GitHub Security
         if: always() && hashFiles('trivy-fs-results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v5
         with:
           sarif_file: trivy-fs-results.sarif
           category: trivy-filesystem
@@ -197,7 +197,7 @@ jobs:
       security-events: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run Trivy config scan
         continue-on-error: true
@@ -214,7 +214,7 @@ jobs:
       - name: Upload Trivy config results to GitHub Security
         if: always() && hashFiles('trivy-config-results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v5
         with:
           sarif_file: trivy-config-results.sarif
           category: trivy-config
@@ -233,7 +233,7 @@ jobs:
       security-events: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run Hadolint
         uses: hadolint/hadolint-action@v3.1.0
@@ -246,7 +246,7 @@ jobs:
 
       - name: Upload Hadolint results to GitHub Security
         if: always() && hashFiles('hadolint-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v5
         with:
           sarif_file: hadolint-results.sarif
           category: hadolint
@@ -263,7 +263,7 @@ jobs:
       security-events: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Validate K8s manifests with kubeconform
         uses: docker://ghcr.io/yannh/kubeconform:latest
@@ -290,7 +290,7 @@ jobs:
       - name: Upload Kubescape results to GitHub Security
         if: always() && hashFiles('kubescape-results.sarif') != ''
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v5
         with:
           sarif_file: kubescape-results.sarif
           category: kubescape
@@ -308,7 +308,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run OSSF Scorecard
         continue-on-error: true
@@ -320,7 +320,7 @@ jobs:
 
       - name: Upload Scorecard results to GitHub Security
         if: always() && hashFiles('scorecard-results.sarif') != ''
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@v5
         with:
           sarif_file: scorecard-results.sarif
           category: ossf-scorecard
@@ -343,7 +343,7 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
