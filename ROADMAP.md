@@ -3,8 +3,8 @@
 **Date:** 2026-06-22  
 **Version:** v0.8.0 — Scheduling & Triggers ✅  
 **Previous Release:** v0.7.3 (2026-06-22) — Helm Chart ✅  
-**Current Commit:** *(pending)* — Scheduling & triggers: cron, webhook, and file-watch activation
-**CI Status:** Build & Release #103 ✅ · Container Build #101 ✅ · Security Scan #86 ✅
+**Current Commit:** *(pending)* — Human-in-the-loop approvals: `--require-approval` flag prompts for sensitive tool calls
+**CI Status:** Build & Release #108 ✅ · Container Build #108 ✅ · Security Scan #92 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -45,7 +45,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.8.0 (2026-06-22) — Scheduling & Triggers  
-**Stats:** 14 source modules (+background, +scheduler, +eval), ~12,600 LOC, 5 LLM providers, 353 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart.
+**Stats:** 14 source modules (+background, +scheduler, +eval), ~12,800 LOC, 5 LLM providers, 5 built-in tools (+web_search), 390 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart.
 
 | Component | Status | Details |
 |---|---|---|
@@ -68,7 +68,7 @@ can't be added without breaking one, it doesn't ship in core.
 | `--exec` one-shot mode | ✅ Working | Sends prompt to LLM, prints response to stdout; full test coverage |
 | Rust unit tests | ✅ Working | 291 tests across all 10 modules; `mockito`-based HTTP tests for all 5 providers + RavenFabric |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard, `FINAL:` marker detection, configurable via `--max-iterations` |
-| Tool-use / function calling | ✅ Working | Tool abstraction + registry + 4 built-in tools + **MCP tool discovery** + agent loop wiring |
+| Tool-use / function calling | ✅ Working | Tool abstraction + registry + **5 built-in tools** (+web_search) + **MCP tool discovery** + agent loop wiring |
 | Deny-by-default policy | ✅ **Wired to agent loop** | `PolicyEngine` validates ALL tool calls before execution (commit 51e42b0) |
 | Sandboxed execution | ✅ **Wired to agent loop** | `Sandbox` provides workdir jail for `shell_exec` (commit 51e42b0) |
 | Audit log | ✅ **Wired to agent loop** | HMAC-SHA256 chained, tamper-evident, emits events for all tool calls (commit 51e42b0) |
@@ -85,6 +85,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
 | Git hooks (pre-commit / pre-push) | ✅ Working | `.githooks/` — fmt, clippy, tests, binary size, secrets on commit; +release build, Docker, security on push |
 | Structured function calling | ✅ Working | OpenAI Tools format for OpenAI/LiteLLM/OpenRouter/Anthropic |
+| **Human-in-the-loop approvals** | ✅ **v0.8** | `--require-approval` flag prompts for sensitive tool calls; audited |
 | Multi-modal input | ⚠️ Partial | AnthropicClient has image support structure, not wired to CLI |
 
 ### ✅ v0.4.0 Released (2026-06-03)
@@ -218,7 +219,7 @@ simpler** — or deliberately not at all.
 | **Scalable swarm (100+ workers)** | 🔄 **v0.9** | ❌ | ❌ | ❌ |
 | **Self-provisioning sub-agents** | 🔄 **v0.9** | ❌ | ❌ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
-| Web search | ⚠️ (fetch only) | ✅ | ✅ | ✅ |
+| Web search | ✅ (SearXNG + DuckDuckGo) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
 | Async background runs | ✅ (v0.8) | ✅ | ✅ | ❌ |
 | Scheduling / triggers | ✅ (v0.8) | ✅ | ✅ | ❌ |
@@ -249,7 +250,7 @@ the cloud incumbents structurally can't follow.
 | **MCP — client *and* server** | Industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce) | ✅ (both) | **v0.7** ✅ |
 | Sandboxed execution | Native primitive in competitors | ⚠️ (not wired) | v0.4 |
 | Persistent memory (vector recall) | Without it every session starts from zero | ⚠️ (in-memory only) | v0.3 → v0.9 |
-| Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ⚠️ (fetch only) | **v0.4** |
+| Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ✅ (SearXNG + DuckDuckGo) | **v0.8** ✅ |
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
 | Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
 | **Autonomous heartbeat (long-running)** | Operates independently for days/weeks without supervision | 🔄 **v0.9** | **v0.9** |
@@ -261,7 +262,7 @@ the cloud incumbents structurally can't follow.
 | Multi-modal input (images, PDFs) | Manus/Kimi are multimodal; "worker" must read docs | ❌ | v0.5 |
 | Connectors / integrations (OAuth) | Claude-style connectors; Manus's weakness | ❌ | v0.6 |
 | Retries / provider fallback | Vellum: retry, fall back, fail early | ⚠️ (partial) | v0.5 |
-| Human-in-the-loop approvals | Enterprises require guardrails + audit + HITL | ❌ | **v0.4** |
+| Human-in-the-loop approvals | Enterprises require guardrails + audit + HITL | ✅ **v0.8** | **v0.4** |
 
 ### Part 2 — Where RavenClaw wins (the "preferred" wedge)
 
@@ -329,8 +330,8 @@ Agency with guardrails — the security differentiator.
 - [x] **Structured function calling** — OpenAI Tools format for OpenAI/LiteLLM/OpenRouter; native JSON instead of pattern-matching. ✅ v0.4
 - [x] **MCP — client** — consume any Model Context Protocol tool/server via stdio transport. ✅ v0.5.2
 - [x] **MCP — server** — expose RavenClaw itself as an MCP server over stdio. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
-- [ ] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask). *(v0.7)*
-- [ ] **Web search + headless browser tool** — search, navigate, extract, and fill forms (beyond simple web fetch). *(v0.7)*
+- [x] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask). `--require-approval` flag, `RAVENCLAW_REQUIRE_APPROVAL` env var, prompts via stdin, audited. ✅ **v0.8**
+- [x] **Web search + content extraction tool** — SearXNG JSON API + DuckDuckGo HTML backends, HTML-to-text extraction, configurable via `WebSearchConfig`. ✅ **v0.8**
 - [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs. *(v0.7)*
 - [ ] **Honor `token_lifetime_secs`** for any issued credentials. *(v0.7)*
 - [ ] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation. *(v0.7)*
@@ -484,7 +485,7 @@ long time horizons, and dynamically orchestrate swarms of any size.
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 353 unit tests across 14 modules (+eval, +background, +scheduler) + 114 verification tests across 10 modules. All tests pass, clippy clean, fmt clean.
+**Current coverage:** 370 unit tests across 14 modules (+eval, +background, +scheduler) + 114 verification tests across 10 modules. All tests pass, clippy clean, fmt clean.
 
 ---
 

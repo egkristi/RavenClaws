@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Web search + content extraction tool** (`src/tools.rs`) — search the web and extract readable content from results
+  - `WebSearchTool` with SearXNG JSON API and DuckDuckGo HTML backends
+  - `WebSearchConfig` in `config.rs` — configurable endpoint, engine, max_results, fetch_content
+  - `html_to_text()` — strips HTML tags, extracts title, normalizes whitespace, decodes HTML entities
+  - `strip_html_tags()`, `extract_href()`, `urlencoding()` helper functions
+  - `ToolRegistry::with_web_search_config()` — configurable web search registration
+  - 20 new unit tests covering tool definition, config, HTML extraction, URL encoding, error handling
+  - 390 total unit tests (+20, 0 regressions)
 - **Eval harness** (`src/eval.rs`) — golden-task evaluation framework with run inspection
   - `EvalConfig`/`EvalTask`/`EvalRunner` — TOML-based eval suite configuration with 7 assertion types (contains, not_contains, exact, regex, non_empty, min_length, max_length)
   - `RunTrace` — full step-by-step trace of agent runs including LLM calls and tool calls
@@ -17,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - 24 Rust unit tests covering all assertion types, config parsing, report formatting, and error handling
   - Sample eval configs in `tests/eval/basic-suite.toml` and `tests/eval/security-suite.toml`
   - 20 verification tests in `scripts/lib/test-eval.sh` registered in `verify.sh` as `--eval` module
-  - 353 total unit tests (+24, 0 regressions)
+  - 353 total unit tests (+24, 0 regressions) → 390 (+37 for web search + scheduling + background)
 - **Scheduling & triggers** (`src/scheduler.rs`) — cron, webhook, and file-watch activation for proactive 24/7 agents
   - `TriggerConfig` — configurable trigger with name, prompt, system_prompt, and trigger type
   - `TriggerType` enum — `Cron { expression }`, `Webhook { secret }`, `Watch { path, events, debounce_secs }`

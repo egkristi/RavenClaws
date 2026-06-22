@@ -65,6 +65,10 @@ struct Args {
     #[arg(long, short = 'R', conflicts_with = "exec")]
     repl: bool,
 
+    /// Require human approval for sensitive tool calls (HITL)
+    #[arg(long, env = "RAVENCLAW_REQUIRE_APPROVAL")]
+    require_approval: bool,
+
     /// Maximum iterations for the agent loop (default: 10)
     #[arg(long, env = "RAVENCLAW_MAX_ITERATIONS", default_value = "10")]
     max_iterations: usize,
@@ -301,7 +305,7 @@ async fn main() -> anyhow::Result<()> {
         let loop_config = agent::AgentLoopConfig {
             max_iterations: args.max_iterations,
             enable_tools: true,
-            require_approval: false, // Auto-approve for v0.4; HITL would block here
+            require_approval: args.require_approval,
         };
 
         let response = if !config.llms.is_empty() {

@@ -243,6 +243,7 @@ health_interval_secs = 60
 | `single` (multi-model) | ✅ **Working** | Iterates all configured providers, logs each response |
 | `--exec "<task>"` | ✅ **Working** | One-shot task execution with streaming, then exit |
 | `--repl` | ✅ **Working** | Interactive REPL with `/exit`, `/reset` commands |
+| `--require-approval` | ✅ **v0.8** | Human-in-the-loop approval for sensitive tool calls |
 | `swarm` | ✅ **Working** | 3 parallel agents with different personas (single + multi-model); RavenFabric-aware |
 | `supervisor` | ✅ **Working** | Task decomposition + sub-agent spawning + result aggregation (single + multi-model); RavenFabric-aware |
 

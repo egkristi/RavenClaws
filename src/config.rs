@@ -58,6 +58,55 @@ pub struct Config {
     /// Scheduler / triggers configuration (v0.8)
     #[serde(default)]
     pub scheduler: SchedulerConfig,
+
+    /// Web search configuration (v0.8)
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub web_search: WebSearchConfig,
+}
+
+/// Web search configuration (v0.8)
+#[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
+pub struct WebSearchConfig {
+    /// Search API endpoint (SearXNG or compatible)
+    #[serde(default = "default_search_endpoint")]
+    pub endpoint: String,
+
+    /// Search engine to use (e.g., "duckduckgo", "google", "brave")
+    #[serde(default = "default_search_engine")]
+    pub engine: String,
+
+    /// Maximum number of search results to return
+    #[serde(default = "default_search_max_results")]
+    pub max_results: usize,
+
+    /// Whether to fetch and extract content from each search result
+    #[serde(default = "default_true")]
+    pub fetch_content: bool,
+}
+
+impl Default for WebSearchConfig {
+    fn default() -> Self {
+        Self {
+            endpoint: default_search_endpoint(),
+            engine: default_search_engine(),
+            max_results: default_search_max_results(),
+            fetch_content: default_true(),
+        }
+    }
+}
+
+fn default_search_endpoint() -> String {
+    "https://searx.be".to_string()
+}
+
+fn default_search_engine() -> String {
+    "duckduckgo".to_string()
+}
+
+fn default_search_max_results() -> usize {
+    5
 }
 
 /// Scheduler / triggers configuration (v0.8)
@@ -514,6 +563,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -549,6 +599,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -582,6 +633,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -613,6 +665,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         // OpenAI doesn't need an endpoint, but the llm.endpoint is empty
@@ -648,6 +701,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -719,6 +773,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
@@ -752,6 +807,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -785,6 +841,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -816,6 +873,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -861,6 +919,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -892,6 +951,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -1093,6 +1153,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -1124,6 +1185,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -1155,6 +1217,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -1256,6 +1319,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -1287,6 +1351,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
@@ -1318,6 +1383,7 @@ mod tests {
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
+            web_search: WebSearchConfig::default(),
         };
 
         let result = config.validate();
