@@ -725,7 +725,8 @@ impl InjectionDetector {
 
         // Check for unbalanced code blocks that could hide content
         let open_blocks = content.matches("```").count();
-        if !open_blocks.is_multiple_of(2) {
+        #[allow(clippy::manual_is_multiple_of)]
+        if open_blocks % 2 != 0 {
             return Some("Unbalanced code block delimiters".to_string());
         }
 
