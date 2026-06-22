@@ -5,6 +5,7 @@
 
 mod agent;
 mod audit;
+mod background;
 mod config;
 mod error;
 mod llm;
@@ -121,6 +122,26 @@ struct Args {
     /// Disable OpenTelemetry tracing (v0.7.2)
     #[arg(long, env = "RAVENCLAW_OTEL_DISABLED")]
     otel_disabled: bool,
+
+    /// Submit a background task and return immediately (v0.8)
+    #[arg(long, env = "RAVENCLAW_BACKGROUND")]
+    background: bool,
+
+    /// Check status of a background task (v0.8)
+    #[arg(long, env = "RAVENCLAW_TASK_STATUS")]
+    task_status: Option<String>,
+
+    /// List all background tasks (v0.8)
+    #[arg(long, env = "RAVENCLAW_TASK_LIST")]
+    task_list: bool,
+
+    /// Cancel a background task (v0.8)
+    #[arg(long, env = "RAVENCLAW_TASK_CANCEL")]
+    task_cancel: Option<String>,
+
+    /// Resume incomplete background tasks on startup (v0.8)
+    #[arg(long, env = "RAVENCLAW_TASK_RESUME")]
+    task_resume: bool,
 }
 
 #[tokio::main]
@@ -291,6 +312,137 @@ async fn main() -> anyhow::Result<()> {
             .await?
         };
         println!("{}", response);
+        info!("RavenClaw shutdown complete");
+        return Ok(());
+    }
+
+    // Initialize background task manager (v0.8)
+    let bg_manager = background::BackgroundTaskManager::from_config(&config.runtime).await?;
+
+    // Resume incomplete background tasks if --task-resume is set (v0.8)
+    if args.task_resume {
+        let incomplete = bg_manager.resume_incomplete().await;
+        if incomplete.is_empty() {
+            info!("No incomplete background tasks to resume");
+        } else {
+            info!(
+                count = incomplete.len(),
+                "Resuming incomplete background tasks"
+            );
+            for task_id in &incomplete {
+                info!(task_id = %task_id, "Resuming background task");
+                let llm = llm::create_client(&config.llm)?;
+                let bg = bg_manager.clone();
+                let tid = task_id.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = bg.execute(&tid, llm).await {
+                        warn!(task_id = %tid, error = %e, "Background task resume failed");
+                    }
+                });
+            }
+        }
+    }
+
+    // Handle --task-list: list all background tasks (v0.8)
+    if args.task_list {
+        let tasks = bg_manager.list_tasks().await;
+        if tasks.is_empty() {
+            println!("No background tasks found.");
+        } else {
+            println!("{:<38} {:<10} {:<30} PROMPT", "ID", "STATUS", "CREATED");
+            println!("{}", "-".repeat(100));
+            for task in &tasks {
+                let prompt_preview = if task.prompt.len() > 40 {
+                    format!("{}...", &task.prompt[..40])
+                } else {
+                    task.prompt.clone()
+                };
+                println!(
+                    "{:<38} {:<10} {:<30} {}",
+                    task.id, task.status, task.created_at, prompt_preview
+                );
+            }
+        }
+        info!("RavenClaw shutdown complete");
+        return Ok(());
+    }
+
+    // Handle --task-status: check a specific task (v0.8)
+    if let Some(task_id) = args.task_status {
+        match bg_manager.get_task(&task_id).await {
+            Ok(task) => {
+                println!("Task ID:     {}", task.id);
+                println!("Status:      {}", task.status);
+                println!("Created:     {}", task.created_at);
+                println!("Updated:     {}", task.updated_at);
+                println!("Prompt:      {}", task.prompt);
+                if let Some(result) = &task.result {
+                    println!("Result:      {}", result);
+                }
+                if let Some(error) = &task.error {
+                    println!("Error:       {}", error);
+                }
+                if let Some(provider) = &task.provider {
+                    println!("Provider:    {}", provider);
+                }
+                if let Some(model) = &task.model {
+                    println!("Model:       {}", model);
+                }
+                println!("Iterations:  {}", task.iterations);
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+            }
+        }
+        info!("RavenClaw shutdown complete");
+        return Ok(());
+    }
+
+    // Handle --task-cancel: cancel a background task (v0.8)
+    if let Some(task_id) = args.task_cancel {
+        match bg_manager.cancel(&task_id).await {
+            Ok(()) => println!("Task '{}' cancelled.", task_id),
+            Err(e) => eprintln!("Error: {}", e),
+        }
+        info!("RavenClaw shutdown complete");
+        return Ok(());
+    }
+
+    // Handle --background mode: submit task and return immediately (v0.8)
+    if args.background {
+        info!("Running in background task submission mode");
+        let system_prompt = &config.llm.system_prompt;
+
+        // Read prompt from stdin if not provided via --exec
+        let prompt = if let Some(exec_prompt) = args.exec {
+            exec_prompt
+        } else {
+            // Read from stdin
+            let mut input = String::new();
+            use std::io::Read;
+            let stdin = std::io::stdin();
+            let mut handle = stdin.lock();
+            handle.read_to_string(&mut input)?;
+            if input.trim().is_empty() {
+                anyhow::bail!("No prompt provided. Use --exec or pipe input to stdin.");
+            }
+            input.trim().to_string()
+        };
+
+        let task_id = bg_manager.submit(prompt, system_prompt.clone()).await?;
+        println!("{}", task_id);
+
+        // Execute the task in the background
+        let bg = bg_manager.clone();
+        let tid = task_id.clone();
+        let llm = llm::create_client(&config.llm)?;
+        tokio::spawn(async move {
+            if let Err(e) = bg.execute(&tid, llm).await {
+                warn!(task_id = %tid, error = %e, "Background task execution failed");
+            }
+        });
+
+        info!(task_id = %task_id, "Background task submitted, returning immediately");
         info!("RavenClaw shutdown complete");
         return Ok(());
     }

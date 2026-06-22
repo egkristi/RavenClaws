@@ -1,9 +1,9 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
 **Date:** 2026-06-22  
-**Version:** v0.7.3 — Helm Chart ✅  
-**Previous Release:** v0.7.2 (2026-06-20) — OpenTelemetry Tracing ✅  
-**Current Commit:** `8edd0d2` — OpenTelemetry tracing: opt-in distributed tracing with OTLP exporter
+**Version:** v0.8.0 — Async Background Runs ✅  
+**Previous Release:** v0.7.3 (2026-06-22) — Helm Chart ✅  
+**Current Commit:** *(pending)* — Async background runs: assign-and-walk-away execution with disk persistence
 **CI Status:** Build & Release #103 ✅ · Container Build #101 ✅ · Security Scan #86 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
@@ -31,7 +31,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.7.3 (2026-06-22) — Helm Chart  
-**Stats:** 12 source modules (+telemetry), ~10,800 LOC, 5 LLM providers, 311 unit tests, multi-arch CI with signed images + SBOM, official Helm chart.
+**Stats:** 13 source modules (+background), ~11,200 LOC, 5 LLM providers, 319 unit tests, multi-arch CI with signed images + SBOM, official Helm chart.
 
 | Component | Status | Details |
 |---|---|---|
@@ -202,7 +202,7 @@ simpler** — or deliberately not at all.
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ⚠️ (fetch only) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
-| Async background runs | ❌ | ✅ | ✅ | ❌ |
+| Async background runs | ✅ (v0.8) | ✅ | ✅ | ❌ |
 | Scheduling / triggers | ❌ | ✅ | ✅ | ❌ |
 | Sub-agents / swarm | ✅ (v0.6) | ✅ | ✅ | ❌ |
 | OAuth connectors | ❌ | ✅ | ✅ | ⚠️ Plugins |
@@ -232,7 +232,7 @@ the cloud incumbents structurally can't follow.
 | Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ⚠️ (fetch only) | **v0.4** |
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
 | Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
-| Async / long-horizon background runs | Manus's killer feature (cloud background) | ❌ | **v0.7** |
+| Async / long-horizon background runs | Manus's killer feature (cloud background) | ✅ **v0.8** | **v0.8** ✅ |
 | Scheduling / triggers (cron, webhook) | Proactive, set-and-forget operation | ❌ | **v0.7** |
 | Streaming + intermediate results | First-class in Vellum; needed for interactive UX | ✅ | v0.3 |
 | Multi-modal input (images, PDFs) | Manus/Kimi are multimodal; "worker" must read docs | ❌ | v0.5 |
@@ -393,7 +393,7 @@ Agency with guardrails — the security differentiator.
 - [x] **Graceful shutdown**, signal handling. ✅ **v0.7.1** — SIGTERM/SIGINT handled in server mode
 - [x] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs). ✅ **v0.7.2**
 - [x] **Helm chart** (`charts/ravenclaw/`) — 11 Kubernetes resources, full values.yaml, validated with `helm lint`. ✅ **v0.7.3**
-- [ ] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX).
+- [x] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX). ✅ **v0.8**
 - [ ] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents.
 - [ ] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces.
 

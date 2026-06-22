@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Async / long-horizon background runs** (`src/background.rs`) — assign-and-walk-away background task execution with disk persistence and resumability across restarts
+  - `BackgroundTaskManager` — manages task lifecycle with in-memory index + JSON file persistence
+  - `BackgroundTask` — full task struct with id, prompt, status, result, error, timestamps, provider/model metadata
+  - `TaskStatus` — Pending → Running → Completed / Failed / Cancelled lifecycle
+  - `--background` CLI flag — submit a task and return immediately (prints task ID to stdout)
+  - `--task-status <id>` — check status and full details of a specific task
+  - `--task-list` — list all tasks with status, creation time, and prompt preview
+  - `--task-cancel <id>` — cancel a pending or running task
+  - `--task-resume` — on startup, find and re-execute any incomplete tasks from disk
+  - Tasks stored as individual JSON files in `<workdir>/tasks/` directory
+  - 8 new unit tests covering creation, submission, status transitions, cancellation, listing, persistence across restarts, and error handling
+  - 319 total unit tests (+8, 0 regressions)
 - **Helm chart** (`charts/ravenclaw/`) — official Helm chart for deploying RavenClaw on Kubernetes
   - 11 configurable Kubernetes resources: ServiceAccount, ConfigMap, Secret, Deployment, Service, Ingress, RBAC (Role + RoleBinding), PersistentVolumeClaim, NetworkPolicy, PodDisruptionBudget, ServiceMonitor
   - Full values.yaml with sensible defaults matching existing `k8s/deployment.yaml`
