@@ -25,7 +25,6 @@ env:
   REGISTRY_GHCR: ghcr.io
   REGISTRY_DOCKERHUB: index.docker.io
   IMAGE_NAME: ${{ github.repository }}
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   # ── Build and push container images ──────────────────────────
