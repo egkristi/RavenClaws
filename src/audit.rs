@@ -72,6 +72,8 @@ pub enum AuditEventType {
     ApprovalDenied,
     /// A sandbox violation occurred
     SandboxViolation,
+    /// A security violation occurred (e.g., prompt injection detected)
+    SecurityViolation,
     /// The agent started
     AgentStart,
     /// The agent finished

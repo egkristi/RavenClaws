@@ -443,11 +443,9 @@ for r in data.get('workflow_runs',[])[:6]:
 - If any pipeline **fails**, investigate, fix, and re-push
 - If any issues arise, **register them in ISSUES.md**
 
-### Phase 7: Release (mandatory for minor versions)
+### Phase 7: Release (mandatory for all versions)
 
-**Every completed minor version MUST be released.** Patch versions (bug fixes only) are optional — release if the fix addresses a critical or high-severity issue.
-
-Follow the full **Release Process** (see below). A release includes:
+**Every completed version MUST be released.** No exceptions. Whether it's a minor version with new features or a patch version with bug fixes — if it's merged to master, it ships. A release includes:
 - Version bump in `Cargo.toml`
 - Changelog section for the new version
 - Signed git tag
@@ -468,7 +466,7 @@ Follow the full **Release Process** (see below). A release includes:
 - [ ] Phase 4: All relevant docs updated
 - [ ] Phase 5: Committed & pushed (hooks pass)
 - [ ] Phase 6: CI all green after push
-- [ ] Phase 7: Release (mandatory for minor versions)
+- [ ] Phase 7: Release (mandatory for all versions)
 ```
 
 ---
@@ -504,7 +502,7 @@ Follow the full **Release Process** (see below). A release includes:
 
 ## Release Process
 
-**Policy: Every completed minor version MUST be released.** Patch versions (bug fixes only) are optional — release if the fix addresses a critical or high-severity issue.
+**Policy: Every completed version MUST be released.** No exceptions. Whether it's a minor version with new features or a patch version with bug fixes — if it's merged to master, it ships.
 
 When all TODOs and features for a version milestone are completed, GitHub Actions for the final commit are green, all tests pass, test coverage is good, and everything else is ready — follow this release process.
 

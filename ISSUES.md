@@ -503,7 +503,6 @@ because they are defined for future use or serde deserialization but not yet
 consumed:
 
 - `ConfigError::MissingEnvVar` — defined but never constructed
-- `RavenClawError::SecurityViolation` — future use
 - `LLMError::ProviderNotSupported` — defined but never constructed
 - Various serde-deserialized fields in `ChatResponse`, `Choice`, `Usage`
 - `SecurityConfig` fields (`token_lifetime_secs`, `audit_log`)
@@ -514,6 +513,8 @@ consumed:
 **Recently resolved:**
 - `RavenClawError::RavenFabric` — ✅ Now constructed and handled in `ravenfabric.rs`
 - `RavenFabricConfig` fields (`agent_id`, `remote_exec`, `allowed_hosts`) — ✅ Now consumed by `RavenFabricClient`
+- `RavenClawError::SecurityViolation` — ✅ Now constructed in `agent.rs` when prompt-injection is detected
+- `SecurityConfig.prompt_injection_protection` — ✅ Now consumed by agent loop
 
 ---
 

@@ -241,6 +241,13 @@ pub struct SecurityConfig {
     #[serde(default = "default_true")]
     #[allow(dead_code)]
     pub audit_log: bool,
+
+    /// Enable prompt-injection defense
+    /// When true, LLM responses are scanned for injection patterns
+    /// and output schema violations before processing.
+    #[serde(default = "default_true")]
+    #[allow(dead_code)]
+    pub prompt_injection_protection: bool,
 }
 
 impl Default for SecurityConfig {
@@ -249,6 +256,7 @@ impl Default for SecurityConfig {
             require_tls: default_true(),
             token_lifetime_secs: default_token_lifetime(),
             audit_log: default_true(),
+            prompt_injection_protection: default_true(),
         }
     }
 }
@@ -567,6 +575,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -603,6 +612,7 @@ mod tests {
                 require_tls: true,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -637,6 +647,7 @@ mod tests {
                 require_tls: true,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -669,6 +680,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -705,6 +717,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -777,6 +790,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -811,6 +825,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -845,6 +860,7 @@ mod tests {
                 require_tls: true,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -877,6 +893,7 @@ mod tests {
                 require_tls: true,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -923,6 +940,7 @@ mod tests {
                 require_tls: true,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -955,6 +973,7 @@ mod tests {
                 require_tls: true,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -988,6 +1007,7 @@ mod tests {
             require_tls: false,
             token_lifetime_secs: 7200,
             audit_log: false,
+            prompt_injection_protection: false,
         };
         assert!(!config.require_tls);
         assert_eq!(config.token_lifetime_secs, 7200);
@@ -1157,6 +1177,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -1189,6 +1210,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -1221,6 +1243,7 @@ mod tests {
                 require_tls: true,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -1323,6 +1346,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -1355,6 +1379,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
@@ -1387,6 +1412,7 @@ mod tests {
                 require_tls: false,
                 token_lifetime_secs: 3600,
                 audit_log: false,
+                prompt_injection_protection: false,
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),

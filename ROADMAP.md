@@ -3,8 +3,8 @@
 **Date:** 2026-06-22  
 **Version:** v0.8.0 — Scheduling & Triggers ✅  
 **Previous Release:** v0.7.3 (2026-06-22) — Helm Chart ✅  
-**Current Commit:** *(pending)* — Human-in-the-loop approvals: `--require-approval` flag prompts for sensitive tool calls
-**CI Status:** Build & Release #108 ✅ · Container Build #108 ✅ · Security Scan #92 ✅
+**Current Commit:** *(pending)* — Prompt-injection defense: instruction-boundary enforcement + output schema validation
+**CI Status:** Build & Release #110 ✅ · Container Build #110 ✅ · Security Scan #94 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -45,7 +45,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.8.0 (2026-06-22) — Scheduling & Triggers  
-**Stats:** 14 source modules (+background, +scheduler, +eval), ~12,800 LOC, 5 LLM providers, 5 built-in tools (+web_search), 390 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material.
+**Stats:** 14 source modules (+background, +scheduler, +eval), ~13,100 LOC, 5 LLM providers, 5 built-in tools (+web_search), 390 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense.
 
 | Component | Status | Details |
 |---|---|---|
@@ -86,6 +86,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Git hooks (pre-commit / pre-push) | ✅ Working | `.githooks/` — fmt, clippy, tests, binary size, secrets on commit; +release build, Docker, security on push |
 | Structured function calling | ✅ Working | OpenAI Tools format for OpenAI/LiteLLM/OpenRouter/Anthropic |
 | **Human-in-the-loop approvals** | ✅ **v0.8** | `--require-approval` flag prompts for sensitive tool calls; audited |
+| **Prompt-injection defense** | ✅ **v0.8** | `InjectionDetector` with 50+ patterns, instruction-boundary enforcement, output schema validation; wired to both agent loops; audited |
 | Multi-modal input | ⚠️ Partial | AnthropicClient has image support structure, not wired to CLI |
 
 ### ✅ v0.4.0 Released (2026-06-03)
@@ -334,7 +335,7 @@ Agency with guardrails — the security differentiator.
 - [x] **Web search + content extraction tool** — SearXNG JSON API + DuckDuckGo HTML backends, HTML-to-text extraction, configurable via `WebSearchConfig`. ✅ **v0.8**
 - [x] **Wire `zeroize`** for secret material — API keys in `LLMConfig` and HMAC secret key in `AuditLog` zeroized on drop. ✅ **v0.8**
 - [ ] **Honor `token_lifetime_secs`** for any issued credentials. *(v0.7)*
-- [ ] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation. *(v0.7)*
+- [x] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation. ✅ **v0.8**
 
 **Exit criteria:** an agent runs tools, but only those allowed by policy, with a complete audit log. Security features actively invoked, not just present.
 

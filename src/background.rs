@@ -259,6 +259,7 @@ impl BackgroundTaskManager {
             max_iterations: 10,
             enable_tools: true,
             require_approval: false,
+            prompt_injection_protection: true,
         };
 
         let result = crate::agent::run_agent_loop(

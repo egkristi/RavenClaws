@@ -501,6 +501,252 @@ impl PolicyEngine {
     }
 }
 
+// ── Prompt-injection defense ───────────────────────────────────────────────
+
+/// Result of an injection check on LLM output
+#[allow(dead_code)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum InjectionVerdict {
+    /// Output appears safe
+    Clean,
+    /// Possible injection detected with a reason
+    Suspicious(String),
+}
+
+/// Detects prompt-injection attempts in LLM responses.
+///
+/// Two layers of defense:
+/// 1. **Instruction-boundary enforcement** — scans for patterns that indicate
+///    the LLM is trying to override its system instructions or produce
+///    unauthorized output.
+/// 2. **Output schema validation** — ensures structured output (tool calls,
+///    JSON responses) conforms to expected format.
+#[allow(dead_code)]
+#[derive(Debug, Clone)]
+pub struct InjectionDetector {
+    /// If true, instruction-boundary scanning is enabled
+    check_instruction_boundary: bool,
+    /// If true, output schema validation is enabled
+    check_output_schema: bool,
+    /// Custom patterns to flag as injection attempts
+    custom_patterns: Vec<String>,
+}
+
+#[allow(dead_code)]
+impl InjectionDetector {
+    /// Create a new injection detector with default settings
+    pub fn new() -> Self {
+        Self {
+            check_instruction_boundary: true,
+            check_output_schema: true,
+            custom_patterns: Vec::new(),
+        }
+    }
+
+    /// Create a detector with all checks disabled (permissive)
+    pub fn permissive() -> Self {
+        Self {
+            check_instruction_boundary: false,
+            check_output_schema: false,
+            custom_patterns: Vec::new(),
+        }
+    }
+
+    /// Enable or disable instruction-boundary checking
+    pub fn with_instruction_boundary(mut self, enabled: bool) -> Self {
+        self.check_instruction_boundary = enabled;
+        self
+    }
+
+    /// Enable or disable output schema checking
+    pub fn with_output_schema(mut self, enabled: bool) -> Self {
+        self.check_output_schema = enabled;
+        self
+    }
+
+    /// Add a custom injection pattern
+    pub fn with_custom_pattern(mut self, pattern: &str) -> Self {
+        self.custom_patterns.push(pattern.to_string());
+        self
+    }
+
+    /// Check LLM response content for injection attempts.
+    ///
+    /// Returns `InjectionVerdict::Clean` if the output appears safe,
+    /// or `InjectionVerdict::Suspicious(reason)` if injection is detected.
+    pub fn check(&self, content: &str) -> InjectionVerdict {
+        // Check instruction-boundary violations
+        if self.check_instruction_boundary {
+            if let Some(reason) = self.check_instruction_boundary_violations(content) {
+                return InjectionVerdict::Suspicious(reason);
+            }
+        }
+
+        // Check output schema
+        if self.check_output_schema {
+            if let Some(reason) = self.check_output_schema_violations(content) {
+                return InjectionVerdict::Suspicious(reason);
+            }
+        }
+
+        InjectionVerdict::Clean
+    }
+
+    /// Check for instruction-boundary violations — patterns where the LLM
+    /// attempts to override its system prompt or produce unauthorized output.
+    fn check_instruction_boundary_violations(&self, content: &str) -> Option<String> {
+        let content_lower = content.to_lowercase();
+
+        // Known prompt-injection / jailbreak patterns
+        let injection_patterns = [
+            // Direct instruction override attempts
+            ("ignore_previous", "Attempt to ignore previous instructions"),
+            ("ignore above", "Attempt to ignore previous instructions"),
+            (
+                "ignore all previous",
+                "Attempt to ignore previous instructions",
+            ),
+            (
+                "ignore the above",
+                "Attempt to ignore previous instructions",
+            ),
+            (
+                "ignore your previous",
+                "Attempt to ignore previous instructions",
+            ),
+            (
+                "ignore all instructions",
+                "Attempt to ignore all instructions",
+            ),
+            ("forget all previous", "Attempt to forget instructions"),
+            ("forget your instructions", "Attempt to forget instructions"),
+            ("disregard previous", "Attempt to disregard instructions"),
+            ("disregard all", "Attempt to disregard all instructions"),
+            // System prompt override
+            ("new system prompt", "Attempt to override system prompt"),
+            ("override system", "Attempt to override system prompt"),
+            ("you are now", "Suspicious role-switch pattern"),
+            ("from now on you are", "Suspicious role-switch pattern"),
+            ("act as a", "Suspicious role-switch pattern"),
+            ("pretend to be", "Suspicious role-switch pattern"),
+            // Delimiter-based injection
+            ("---begin override---", "Delimiter-based injection attempt"),
+            ("<system>", "Delimiter-based injection attempt"),
+            ("</system>", "Delimiter-based injection attempt"),
+            ("<override>", "Delimiter-based injection attempt"),
+            ("</override>", "Delimiter-based injection attempt"),
+            // Output manipulation
+            ("output your", "Attempt to extract system prompt"),
+            ("print your", "Attempt to extract system prompt"),
+            ("reveal your", "Attempt to extract system prompt"),
+            ("show your prompt", "Attempt to extract system prompt"),
+            ("show your instructions", "Attempt to extract system prompt"),
+            (
+                "what are your instructions",
+                "Attempt to extract system prompt",
+            ),
+            (
+                "what is your system prompt",
+                "Attempt to extract system prompt",
+            ),
+            // Role-playing jailbreaks
+            ("dan ", "Potential DAN jailbreak pattern"),
+            ("do anything now", "Potential jailbreak pattern"),
+            ("you have been released", "Potential jailbreak pattern"),
+            ("you are free", "Potential jailbreak pattern"),
+            ("no restrictions", "Potential jailbreak pattern"),
+            ("no rules", "Potential jailbreak pattern"),
+            ("no limitations", "Potential jailbreak pattern"),
+            ("no filtering", "Potential jailbreak pattern"),
+            ("no censorship", "Potential jailbreak pattern"),
+            // Token smuggling
+            ("base64", "Potential token smuggling"),
+            ("rot13", "Potential obfuscation attempt"),
+            ("caesar cipher", "Potential obfuscation attempt"),
+            ("encoded message", "Potential obfuscation attempt"),
+            ("decode this", "Potential obfuscation attempt"),
+            // Meta-instruction attacks
+            ("this is a test", "Suspicious meta-instruction pattern"),
+            (
+                "this is a security test",
+                "Suspicious meta-instruction pattern",
+            ),
+            ("this is a prompt", "Suspicious meta-instruction pattern"),
+            ("the user is lying", "Suspicious meta-instruction pattern"),
+            ("the user is testing", "Suspicious meta-instruction pattern"),
+            ("you must obey", "Suspicious imperative pattern"),
+            ("you will obey", "Suspicious imperative pattern"),
+            ("you are required", "Suspicious imperative pattern"),
+            ("you must respond", "Suspicious imperative pattern"),
+            ("respond with exactly", "Suspicious imperative pattern"),
+            ("say exactly", "Suspicious imperative pattern"),
+            ("repeat exactly", "Suspicious imperative pattern"),
+            ("repeat after me", "Suspicious imperative pattern"),
+            ("repeat the words", "Suspicious imperative pattern"),
+        ];
+
+        for (pattern, reason) in &injection_patterns {
+            if content_lower.contains(pattern) {
+                return Some(format!("{}: '{}'", reason, pattern));
+            }
+        }
+
+        // Check custom patterns
+        for pattern in &self.custom_patterns {
+            if content_lower.contains(&pattern.to_lowercase()) {
+                return Some(format!("Custom pattern matched: '{}'", pattern));
+            }
+        }
+
+        None
+    }
+
+    /// Check for output schema violations — ensures structured output
+    /// conforms to expected format.
+    fn check_output_schema_violations(&self, content: &str) -> Option<String> {
+        // If the content contains a TOOL_CALL: marker, validate the JSON args
+        if content.contains("TOOL_CALL:") {
+            // Find all ARGS: lines and validate JSON
+            for line in content.lines() {
+                let trimmed = line.trim();
+                if let Some(args_str) = trimmed.strip_prefix("ARGS:") {
+                    let args_str = args_str.trim();
+                    if !args_str.is_empty()
+                        && serde_json::from_str::<serde_json::Value>(args_str).is_err()
+                    {
+                        return Some(format!(
+                            "Invalid JSON in tool call arguments: '{}'",
+                            args_str
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Check for unbalanced code blocks that could hide content
+        let open_blocks = content.matches("```").count();
+        if !open_blocks.is_multiple_of(2) {
+            return Some("Unbalanced code block delimiters".to_string());
+        }
+
+        // Check for extremely long content that might be a smuggling attempt
+        if content.len() > 100_000 {
+            return Some(format!(
+                "Response too long ({} chars), possible smuggling attempt",
+                content.len()
+            ));
+        }
+
+        None
+    }
+}
+
+impl Default for InjectionDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ── Helper functions ───────────────────────────────────────────────────────
 
 fn default_shell_timeout() -> u64 {

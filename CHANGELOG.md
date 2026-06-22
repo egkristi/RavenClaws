@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Prompt-injection defense** (`src/policy.rs`) — two-layer LLM output security that detects and blocks prompt-injection attempts before they reach the agent loop
+  - `InjectionDetector` — scans LLM responses for 50+ known injection/jailbreak patterns (instruction override, system prompt extraction, DAN jailbreak, token smuggling, meta-instruction attacks)
+  - `InjectionVerdict` — `Clean` or `Suspicious(reason)` result type
+  - Instruction-boundary enforcement — detects attempts to ignore/disregard/override system instructions
+  - Output schema validation — validates JSON in tool call arguments, detects unbalanced code blocks, enforces maximum response length (100KB)
+  - Wired into both `run_agent_loop` and `run_agent_loop_with_mcp` — checks every LLM response before processing
+  - `SecurityConfig.prompt_injection_protection` — enable/disable via config (default: enabled)
+  - `AgentLoopConfig.prompt_injection_protection` — per-invocation control
+  - `AuditEventType::SecurityViolation` — new audit event type for injection detection
+  - All violations are logged to audit log with reason, iteration, and content preview
+  - 390 total unit tests (0 regressions)
 - **`zeroize` for secret material** — API keys in `LLMConfig` and HMAC secret key in `AuditLog` are zeroized on drop, preventing secret leakage from memory dumps
   - `use zeroize::Zeroize` in `config.rs` and `audit.rs`
   - `impl Drop for LLMConfig` — zeroizes `api_key` field

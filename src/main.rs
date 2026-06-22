@@ -306,6 +306,7 @@ async fn main() -> anyhow::Result<()> {
             max_iterations: args.max_iterations,
             enable_tools: true,
             require_approval: args.require_approval,
+            prompt_injection_protection: config.security.prompt_injection_protection,
         };
 
         let response = if !config.llms.is_empty() {

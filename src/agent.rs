@@ -90,6 +90,8 @@ pub struct AgentLoopConfig {
     pub enable_tools: bool,
     /// Require human approval for tool calls
     pub require_approval: bool,
+    /// Enable prompt-injection defense on LLM responses
+    pub prompt_injection_protection: bool,
 }
 
 impl Default for AgentLoopConfig {
@@ -98,6 +100,7 @@ impl Default for AgentLoopConfig {
             max_iterations: 10,
             enable_tools: false,
             require_approval: false,
+            prompt_injection_protection: true,
         }
     }
 }
@@ -124,6 +127,13 @@ pub async fn run_agent_loop(
     })?;
     let audit_log = AuditLog::new(format!("agent-{}", std::process::id()));
 
+    // Initialize injection detector
+    let injection_detector = if config.prompt_injection_protection {
+        Some(crate::policy::InjectionDetector::new())
+    } else {
+        None
+    };
+
     // Initialize tool registry
     let registry = ToolRegistry::with_default_tools();
 
@@ -133,6 +143,7 @@ pub async fn run_agent_loop(
         max_iterations = config.max_iterations,
         enable_tools = config.enable_tools,
         require_approval = config.require_approval,
+        prompt_injection_protection = config.prompt_injection_protection,
         "Agent loop starting with security integration"
     );
 
@@ -151,6 +162,7 @@ pub async fn run_agent_loop(
             "max_iterations": config.max_iterations,
             "enable_tools": config.enable_tools,
             "require_approval": config.require_approval,
+            "prompt_injection_protection": config.prompt_injection_protection,
         })),
     );
 
@@ -178,6 +190,34 @@ pub async fn run_agent_loop(
         let content = first_choice
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
+
+        // Prompt-injection defense: check LLM response before processing
+        if let Some(ref detector) = injection_detector {
+            match detector.check(&content) {
+                crate::policy::InjectionVerdict::Suspicious(reason) => {
+                    warn!(
+                        iteration = iteration,
+                        reason = %reason,
+                        "Prompt-injection detected in LLM response"
+                    );
+                    let _ = audit_log.append(
+                        AuditEventType::SecurityViolation,
+                        "injection_detector",
+                        &format!("Prompt-injection detected: {}", reason),
+                        Some(serde_json::json!({
+                            "reason": reason,
+                            "iteration": iteration,
+                            "content_preview": &content[..content.len().min(200)],
+                        })),
+                    );
+                    return Err(crate::error::RavenClawError::SecurityViolation(format!(
+                        "LLM response blocked: potential prompt injection ({})",
+                        reason
+                    )));
+                }
+                crate::policy::InjectionVerdict::Clean => {}
+            }
+        }
 
         // Check for structured tool calls first (OpenAI Tools format)
         if config.enable_tools {
@@ -334,6 +374,13 @@ pub async fn run_agent_loop_with_mcp(
     })?;
     let audit_log = AuditLog::new(format!("agent-{}", std::process::id()));
 
+    // Initialize injection detector
+    let injection_detector = if config.prompt_injection_protection {
+        Some(crate::policy::InjectionDetector::new())
+    } else {
+        None
+    };
+
     // Initialize tool registry with default tools
     let mut registry = ToolRegistry::with_default_tools();
 
@@ -356,6 +403,7 @@ pub async fn run_agent_loop_with_mcp(
         enable_tools = config.enable_tools,
         tool_count = registry.len(),
         require_approval = config.require_approval,
+        prompt_injection_protection = config.prompt_injection_protection,
         "Agent loop starting with MCP integration"
     );
 
@@ -376,6 +424,7 @@ pub async fn run_agent_loop_with_mcp(
             "mcp_enabled": mcp_client.is_some(),
             "tool_count": registry.len(),
             "require_approval": config.require_approval,
+            "prompt_injection_protection": config.prompt_injection_protection,
         })),
     );
 
@@ -403,6 +452,34 @@ pub async fn run_agent_loop_with_mcp(
         let content = first_choice
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
+
+        // Prompt-injection defense: check LLM response before processing
+        if let Some(ref detector) = injection_detector {
+            match detector.check(&content) {
+                crate::policy::InjectionVerdict::Suspicious(reason) => {
+                    warn!(
+                        iteration = iteration,
+                        reason = %reason,
+                        "Prompt-injection detected in LLM response"
+                    );
+                    let _ = audit_log.append(
+                        AuditEventType::SecurityViolation,
+                        "injection_detector",
+                        &format!("Prompt-injection detected: {}", reason),
+                        Some(serde_json::json!({
+                            "reason": reason,
+                            "iteration": iteration,
+                            "content_preview": &content[..content.len().min(200)],
+                        })),
+                    );
+                    return Err(crate::error::RavenClawError::SecurityViolation(format!(
+                        "LLM response blocked: potential prompt injection ({})",
+                        reason
+                    )));
+                }
+                crate::policy::InjectionVerdict::Clean => {}
+            }
+        }
 
         // Check for structured tool calls first (OpenAI Tools format)
         if config.enable_tools {
@@ -1715,10 +1792,12 @@ mod tests {
             max_iterations: 5,
             enable_tools: true,
             require_approval: true,
+            prompt_injection_protection: true,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
         assert!(config.require_approval);
+        assert!(config.prompt_injection_protection);
     }
 
     #[test]
