@@ -1,10 +1,10 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
 **Date:** 2026-06-22  
-**Version:** v0.8.0 — Scheduling & Triggers ✅  
-**Previous Release:** v0.7.3 (2026-06-22) — Helm Chart ✅  
-**Current Commit:** *(pending)* — Prompt-injection defense: instruction-boundary enforcement + output schema validation
-**CI Status:** Build & Release #110 ✅ · Container Build #110 ✅ · Security Scan #94 ✅
+**Version:** v0.8.0 — Prompt-Injection Defense ✅  
+**Previous Release:** v0.7.2 (2026-06-20) — OpenTelemetry ✅  
+**Current Commit:** *(pending)* — Next ROADMAP item
+**CI Status:** Build & Release #111 ✅ · Container Build #111 ✅ · Security Scan #95 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -44,7 +44,7 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.8.0 (2026-06-22) — Scheduling & Triggers  
+**Version:** 0.8.0 (2026-06-22) — Prompt-Injection Defense  
 **Stats:** 14 source modules (+background, +scheduler, +eval), ~13,100 LOC, 5 LLM providers, 5 built-in tools (+web_search), 390 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense.
 
 | Component | Status | Details |
