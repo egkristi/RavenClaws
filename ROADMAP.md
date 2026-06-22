@@ -45,7 +45,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.8.0 (2026-06-22) — Scheduling & Triggers  
-**Stats:** 14 source modules (+background, +scheduler, +eval), ~12,800 LOC, 5 LLM providers, 5 built-in tools (+web_search), 390 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart.
+**Stats:** 14 source modules (+background, +scheduler, +eval), ~12,800 LOC, 5 LLM providers, 5 built-in tools (+web_search), 390 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material.
 
 | Component | Status | Details |
 |---|---|---|
@@ -332,7 +332,7 @@ Agency with guardrails — the security differentiator.
 - [x] **MCP — server** — expose RavenClaw itself as an MCP server over stdio. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
 - [x] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask). `--require-approval` flag, `RAVENCLAW_REQUIRE_APPROVAL` env var, prompts via stdin, audited. ✅ **v0.8**
 - [x] **Web search + content extraction tool** — SearXNG JSON API + DuckDuckGo HTML backends, HTML-to-text extraction, configurable via `WebSearchConfig`. ✅ **v0.8**
-- [ ] **Wire `zeroize`** for secret material; automatic secret/PII redaction in logs. *(v0.7)*
+- [x] **Wire `zeroize`** for secret material — API keys in `LLMConfig` and HMAC secret key in `AuditLog` zeroized on drop. ✅ **v0.8**
 - [ ] **Honor `token_lifetime_secs`** for any issued credentials. *(v0.7)*
 - [ ] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation. *(v0.7)*
 
@@ -509,6 +509,7 @@ long time horizons, and dynamically orchestrate swarms of any size.
 | 0.1 | Memory-safe Rust, TLS check, no creds in config, distroless, signed images, SBOM, Trivy. |
 | 0.2 | Verified supply chain for downloaded binaries (SHA256 checksum); no panic/abort on client init; cross-compilation deps in CI. |
 | 0.4 | Deny-by-default tool policy, sandboxed execution, audit log, secret zeroization, prompt-injection defense. **(Infrastructure complete, needs wiring)** |
+| 0.8 | Secret zeroization on drop (`zeroize` for API keys + HMAC keys), `atty` replaced with `std::io::IsTerminal`. |
 | 0.6 | E2E-encrypted remote exec via RavenFabric. |
 | 0.7 | MCP Server — policy-checked and audited tool exposure over stdio. HTTP server mode with health/metrics endpoints. OpenTelemetry tracing. Helm chart for K8s deployment. |
 | 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
@@ -536,7 +537,7 @@ Concrete items carried from the current codebase:
 3. ~~**No MCP integration** — Reinventing tools instead of using industry standard.~~ ✅ **MCP client (v0.5.2)**
 4. ~~**k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.~~ ✅ **Fixed — `--serve` mode with HTTP probes**
 5. ~~**Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4).~~ ✅ **Unified `OpenAICompatibleClient` (v0.5.0)**
-6. ~~**Dead/unwired code:** `rustls` + `zeroize` deps unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop; RavenFabric config fields consumed by client**
+6. ~~**Dead/unwired code:** `rustls` dep unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop; RavenFabric config fields consumed by client; `zeroize` wired for secret material**
 7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.7)* ✅ **Fixed — graceful shutdown in server mode (v0.7.1)**
 8. **No config hot-reload** — Changes require restart. *(v0.7)*
 9. **Container image ~50 MB** — Target is < 30 MB. *(v0.7)*

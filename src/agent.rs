@@ -543,12 +543,12 @@ pub async fn run_agent_loop_with_mcp(
 /// Returns `true` if the user approved, `false` if denied.
 /// If stdin is not a terminal (piped), auto-approves with a warning.
 async fn prompt_for_approval(tool_name: &str, args: &serde_json::Value) -> bool {
-    use std::io::Write;
+    use std::io::{IsTerminal, Write};
 
     let args_str = serde_json::to_string_pretty(args).unwrap_or_default();
 
     // Check if stdin is a terminal
-    if !atty::is(atty::Stream::Stdin) {
+    if !std::io::stdin().is_terminal() {
         warn!(
             tool = %tool_name,
             "stdin is not a TTY — auto-approving tool call (use --require-approval only in interactive mode)"

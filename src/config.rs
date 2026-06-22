@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use zeroize::Zeroize;
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
@@ -339,6 +340,15 @@ impl Default for LLMConfig {
     }
 }
 
+/// Zeroize sensitive fields on drop — API keys are cleared from memory
+impl Drop for LLMConfig {
+    fn drop(&mut self) {
+        if let Some(ref mut key) = self.api_key {
+            key.zeroize();
+        }
+    }
+}
+
 impl Config {
     /// Load configuration from file and environment
     pub fn load(config_path: Option<&str>) -> Result<Self, ConfigError> {
@@ -531,10 +541,8 @@ mod tests {
 
     #[test]
     fn test_system_prompt_custom() {
-        let config = LLMConfig {
-            system_prompt: "You are a helpful coding assistant.".to_string(),
-            ..LLMConfig::default()
-        };
+        let mut config = LLMConfig::default();
+        config.system_prompt = "You are a helpful coding assistant.".to_string();
         assert_eq!(config.system_prompt, "You are a helpful coding assistant.");
     }
 
@@ -1019,7 +1027,7 @@ mod tests {
         assert_eq!(config.provider, LLMProvider::OpenAI);
         assert_eq!(config.model, "gpt-4o");
         assert_eq!(config.timeout_secs, 120);
-        assert_eq!(config.api_key.unwrap(), "sk-test");
+        assert_eq!(config.api_key.clone().unwrap(), "sk-test");
     }
 
     #[test]
@@ -1041,7 +1049,7 @@ mod tests {
         let config = Config::load(None).unwrap();
         assert_eq!(config.llm.endpoint, "http://localhost:4000");
         assert_eq!(config.llm.model, "gpt-4o");
-        assert_eq!(config.llm.api_key.unwrap(), "env-key");
+        assert_eq!(config.llm.api_key.clone().unwrap(), "env-key");
 
         // Clean up env vars set by this test
         std::env::remove_var("RAVENCLAW__LLM__ENDPOINT");

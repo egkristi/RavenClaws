@@ -28,6 +28,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use thiserror::Error;
 use tracing::info;
+use zeroize::Zeroize;
 
 // ── Error types ────────────────────────────────────────────────────────────
 
@@ -120,6 +121,13 @@ pub struct AuditLog {
     trace_logging: bool,
     /// Optional file path for persistence
     file_path: Option<PathBuf>,
+}
+
+/// Zeroize the HMAC secret key on drop
+impl Drop for AuditLog {
+    fn drop(&mut self) {
+        self.key.zeroize();
+    }
 }
 
 #[allow(dead_code)]

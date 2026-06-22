@@ -81,8 +81,10 @@ allow-workspace = false
 deny = []
 # Skip these crates when checking for duplicates
 skip = [
-    # tokio-util is pulled in by multiple deps at different versions
-    { name = "tokio-util", version = "0.7" },
+    # winnow has 3 versions: 0.6 (cron), 0.7 (toml_edit), 1.0 (config/toml)
+    # All are transitive deps with no unified upgrade path
+    { name = "winnow", version = "0.6" },
+    { name = "winnow", version = "0.7" },
 ]
 skip-tree = []
 

@@ -85,8 +85,8 @@ toml = "0.8"
 # Lightweight regex for eval assertions (v0.9)
 regex-lite = "0.1"
 
-# TTY detection for HITL approval prompts (v0.8)
-atty = "0.2"
+# Secret zeroization — clear sensitive data from memory on drop (v0.8)
+zeroize = { version = "1.8", features = ["zeroize_derive"] }
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **`zeroize` for secret material** — API keys in `LLMConfig` and HMAC secret key in `AuditLog` are zeroized on drop, preventing secret leakage from memory dumps
+  - `use zeroize::Zeroize` in `config.rs` and `audit.rs`
+  - `impl Drop for LLMConfig` — zeroizes `api_key` field
+  - `impl Drop for AuditLog` — zeroizes `key` field
+  - Replaced `atty` dependency with `std::io::IsTerminal` (Rust 1.70+ stable)
+  - 390 total unit tests (0 regressions)
 - **Web search + content extraction tool** (`src/tools.rs`) — search the web and extract readable content from results
   - `WebSearchTool` with SearXNG JSON API and DuckDuckGo HTML backends
   - `WebSearchConfig` in `config.rs` — configurable endpoint, engine, max_results, fetch_content
