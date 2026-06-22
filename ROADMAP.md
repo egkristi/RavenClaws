@@ -1,9 +1,9 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
 **Date:** 2026-06-22  
-**Version:** v0.8.0 — Async Background Runs ✅  
+**Version:** v0.8.0 — Scheduling & Triggers ✅  
 **Previous Release:** v0.7.3 (2026-06-22) — Helm Chart ✅  
-**Current Commit:** *(pending)* — Async background runs: assign-and-walk-away execution with disk persistence
+**Current Commit:** *(pending)* — Scheduling & triggers: cron, webhook, and file-watch activation
 **CI Status:** Build & Release #103 ✅ · Container Build #101 ✅ · Security Scan #86 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
@@ -31,7 +31,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.7.3 (2026-06-22) — Helm Chart  
-**Stats:** 13 source modules (+background), ~11,200 LOC, 5 LLM providers, 319 unit tests, multi-arch CI with signed images + SBOM, official Helm chart.
+**Stats:** 14 source modules (+background, +scheduler), ~12,100 LOC, 5 LLM providers, 336 unit tests, multi-arch CI with signed images + SBOM, official Helm chart.
 
 | Component | Status | Details |
 |---|---|---|
@@ -203,7 +203,7 @@ simpler** — or deliberately not at all.
 | Web search | ⚠️ (fetch only) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
 | Async background runs | ✅ (v0.8) | ✅ | ✅ | ❌ |
-| Scheduling / triggers | ❌ | ✅ | ✅ | ❌ |
+| Scheduling / triggers | ✅ (v0.8) | ✅ | ✅ | ❌ |
 | Sub-agents / swarm | ✅ (v0.6) | ✅ | ✅ | ❌ |
 | OAuth connectors | ❌ | ✅ | ✅ | ⚠️ Plugins |
 
@@ -233,7 +233,7 @@ the cloud incumbents structurally can't follow.
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
 | Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
 | Async / long-horizon background runs | Manus's killer feature (cloud background) | ✅ **v0.8** | **v0.8** ✅ |
-| Scheduling / triggers (cron, webhook) | Proactive, set-and-forget operation | ❌ | **v0.7** |
+| Scheduling / triggers (cron, webhook) | Proactive, set-and-forget operation | ✅ **v0.8** | **v0.7** |
 | Streaming + intermediate results | First-class in Vellum; needed for interactive UX | ✅ | v0.3 |
 | Multi-modal input (images, PDFs) | Manus/Kimi are multimodal; "worker" must read docs | ❌ | v0.5 |
 | Connectors / integrations (OAuth) | Claude-style connectors; Manus's weakness | ❌ | v0.6 |
@@ -394,7 +394,7 @@ Agency with guardrails — the security differentiator.
 - [x] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs). ✅ **v0.7.2**
 - [x] **Helm chart** (`charts/ravenclaw/`) — 11 Kubernetes resources, full values.yaml, validated with `helm lint`. ✅ **v0.7.3**
 - [x] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX). ✅ **v0.8**
-- [ ] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents.
+- [x] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents. ✅ **v0.8**
 - [ ] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces.
 
 **Exit criteria:** ✅ RavenClaw runs as a stable long-lived workload with green probes, exported metrics, opt-in distributed tracing, and Helm-based deployment.

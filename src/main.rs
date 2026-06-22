@@ -13,6 +13,7 @@ mod mcp;
 mod policy;
 mod ravenfabric;
 mod sandbox;
+mod scheduler;
 mod server;
 mod telemetry;
 mod tools;
@@ -142,6 +143,14 @@ struct Args {
     /// Resume incomplete background tasks on startup (v0.8)
     #[arg(long, env = "RAVENCLAW_TASK_RESUME")]
     task_resume: bool,
+
+    /// Run the scheduler with configured triggers (v0.8)
+    #[arg(long, env = "RAVENCLAW_SCHEDULER")]
+    scheduler: bool,
+
+    /// Webhook server port (v0.8) — overrides default 9090
+    #[arg(long, env = "RAVENCLAW_WEBHOOK_PORT", default_value = "9090")]
+    webhook_port: u16,
 }
 
 #[tokio::main]
@@ -444,6 +453,27 @@ async fn main() -> anyhow::Result<()> {
 
         info!(task_id = %task_id, "Background task submitted, returning immediately");
         info!("RavenClaw shutdown complete");
+        return Ok(());
+    }
+
+    // Handle --scheduler mode: run configured triggers (v0.8)
+    if args.scheduler {
+        info!("Running in scheduler mode with configured triggers");
+
+        let scheduler = scheduler::Scheduler::new(bg_manager.clone(), &config.scheduler);
+        scheduler.start().await?;
+
+        info!(
+            trigger_count = config.scheduler.triggers.len(),
+            "Scheduler started — waiting for triggers"
+        );
+
+        // Wait for shutdown signal
+        tokio::signal::ctrl_c().await?;
+        info!("Received Ctrl+C, stopping scheduler...");
+
+        scheduler.stop().await;
+        info!("RavenClaw scheduler shutdown complete");
         return Ok(());
     }
 

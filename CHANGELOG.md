@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Scheduling & triggers** (`src/scheduler.rs`) — cron, webhook, and file-watch activation for proactive 24/7 agents
+  - `TriggerConfig` — configurable trigger with name, prompt, system_prompt, and trigger type
+  - `TriggerType` enum — `Cron { expression }`, `Webhook { secret }`, `Watch { path, events, debounce_secs }`
+  - `Scheduler` — manages trigger lifecycle with `start()`/`stop()` methods
+  - Cron triggers — parses cron expressions via `cron` crate, sleeps until next scheduled time
+  - Webhook triggers — TCP listener on configurable port (default 9090), JSON-RPC style POST handler
+  - Watch triggers — filesystem monitoring via `notify` crate with debouncing and event filtering
+  - `--scheduler` CLI flag — runs scheduler mode with all configured triggers
+  - `--webhook-port` CLI flag — override webhook listener port (env: `RAVENCLAW_WEBHOOK_PORT`)
+  - All triggers submit tasks to `BackgroundTaskManager` for execution
+  - 17 new unit tests covering config serialization, cron parsing, scheduler lifecycle, webhook response format, and all trigger types
+  - 336 total unit tests (+17, 0 regressions)
 - **Async / long-horizon background runs** (`src/background.rs`) — assign-and-walk-away background task execution with disk persistence and resumability across restarts
   - `BackgroundTaskManager` — manages task lifecycle with in-memory index + JSON file persistence
   - `BackgroundTask` — full task struct with id, prompt, status, result, error, timestamps, provider/model metadata

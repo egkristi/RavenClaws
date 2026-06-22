@@ -73,6 +73,12 @@ rand = "0.8"
 # URL parsing for policy engine
 url = "2.5"
 
+# Cron expression parsing for scheduler (v0.8)
+cron = "0.15"
+
+# File system watcher for scheduler triggers (v0.8)
+notify = { version = "7", default-features = false, features = ["macos_kqueue"] }
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockito = "1.5"

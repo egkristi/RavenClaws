@@ -28,13 +28,14 @@ RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider 
 - **Repository:** https://github.com/egkristi/RavenClaw
 - **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
 
-### Architecture (13 modules)
+### Architecture (14 modules)
 
 ```
 src/
 ├── main.rs      — CLI entry point (clap), config loading, mode dispatch
 ├── agent.rs     — Agent implementations (single, swarm, supervisor, REPL, ConversationMemory, agent loop with tool wiring)
 ├── background.rs— Background task manager (async long-horizon runs, disk persistence, resumability)
+├── scheduler.rs — Scheduling & triggers (cron, webhook, file-watch activation for proactive 24/7 agents)
 ├── llm.rs       — LLM provider abstraction (trait + 5 clients + multi-model manager + streaming)
 ├── config.rs    — Config structs, TOML/env loading, validation
 ├── error.rs     — Unified error types
@@ -57,7 +58,7 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (319 tests, 13 modules, 0 failures) | ✅ Working |
+| Verification suite (336 tests, 14 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -76,6 +77,7 @@ src/
 | OpenTelemetry tracing | ✅ v0.7.2 — opt-in distributed tracing with OTLP gRPC/stdout exporter; `#[instrument]` spans on agent loop, HTTP server, tools, LLM calls |
 | Helm chart | ✅ v0.7.3 — official Helm chart for K8s deployment with 11 configurable resources |
 | Async background runs | ✅ v0.8.0 — assign-and-walk-away execution with disk persistence and resumability |
+| Scheduling & triggers | ✅ v0.8.0 — cron, webhook, and file-watch activation for proactive 24/7 agents |
 | Retry / fallback chains | ✅ Working — exponential backoff, circuit breaker, token budgets |
 | RavenFabric integration | ✅ Working — HTTP client with health, list_agents, execute, broadcast; wired to all modes |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
@@ -183,6 +185,7 @@ If a feature cannot be tested (e.g., hardware-dependent), document the reason in
 | `main.rs` | CLI parsing, config loading, mode dispatch | Agent logic, LLM calls, config structs |
 | `agent.rs` | Agent run functions (single, swarm, supervisor, REPL, agent loop) | LLM client creation, config parsing |
 | `background.rs` | `BackgroundTaskManager`, `BackgroundTask`, `TaskStatus`, disk persistence | Agent logic, LLM calls |
+| `scheduler.rs` | `Scheduler`, `TriggerConfig`, `TriggerType`, cron/webhook/watch runners | Agent logic, LLM calls |
 | `llm.rs` | `LLMProviderTrait`, client implementations, `MultiModelManager` | Agent logic, config structs |
 | `config.rs` | `Config`, `LLMConfig`, validation, env loading | Agent logic, HTTP requests |
 | `error.rs` | `RavenClawError` enum, `Result<T>` alias | Everything else |

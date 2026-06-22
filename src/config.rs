@@ -54,6 +54,18 @@ pub struct Config {
     /// Telemetry / OpenTelemetry settings (v0.7.2)
     #[serde(default)]
     pub telemetry: TelemetryConfig,
+
+    /// Scheduler / triggers configuration (v0.8)
+    #[serde(default)]
+    pub scheduler: SchedulerConfig,
+}
+
+/// Scheduler / triggers configuration (v0.8)
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct SchedulerConfig {
+    /// List of trigger configurations
+    #[serde(default)]
+    pub triggers: Vec<crate::scheduler::TriggerConfig>,
 }
 
 /// Telemetry / OpenTelemetry configuration (v0.7.2)
@@ -501,6 +513,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -535,6 +548,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -567,6 +581,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -597,6 +612,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         // OpenAI doesn't need an endpoint, but the llm.endpoint is empty
@@ -631,6 +647,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -701,6 +718,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
@@ -733,6 +751,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -765,6 +784,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -795,6 +815,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -839,6 +860,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -869,6 +891,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -1069,6 +1092,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -1099,6 +1123,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -1129,6 +1154,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -1229,6 +1255,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -1259,6 +1286,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
@@ -1289,6 +1317,7 @@ mod tests {
             },
             runtime: RuntimeConfig::default(),
             telemetry: TelemetryConfig::default(),
+            scheduler: SchedulerConfig::default(),
         };
 
         let result = config.validate();
