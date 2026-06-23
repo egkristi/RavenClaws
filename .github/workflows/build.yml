@@ -118,7 +118,7 @@ jobs:
             shasum -a 256 ${{ matrix.output }}.tar.gz >> ${{ matrix.output }}.sha256
           fi
       - name: Upload artifact
-      - uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.output }}
           path: dist/*
