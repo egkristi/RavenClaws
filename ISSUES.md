@@ -5,6 +5,26 @@ Items are ordered by severity/impact.
 
 ---
 
+## ✅ v0.9.0 Milestone — Released (2026-06-22)
+
+**Autonomous Heartbeat & Long-Horizon Task Persistence shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| Autonomous heartbeat agent | ✅ | Persistent assess→plan→act→persist→sleep loop with configurable tick interval |
+| Heartbeat state persistence | ✅ | `workdir/heartbeat-<id>.json` — survives restarts, resumes from last checkpoint |
+| Long-horizon task persistence | ✅ | BackgroundTaskManager persists tasks as JSON files; `--task-resume` re-executes incomplete tasks |
+| `token_lifetime_secs` enforcement | ✅ | Agent sessions auto-terminate after configured duration |
+| CLI flags | ✅ | `--heartbeat`, `--heartbeat-goal`, `--heartbeat-tick-interval`, `--heartbeat-max-ticks`, `--heartbeat-session` |
+| Config section | ✅ | `[heartbeat]` in `ravenclaw.toml` |
+| Unit tests | ✅ | 8 heartbeat tests + token_lifetime_secs enforcement (401 total) |
+
+**CI Status:** Build & Release #125 ✅ · Container Build #125 ✅ · Security Scan #102 ⚠️ (Cargo Audit: RUSTSEC-2026-0185 quinn-proto — fixed locally, pending commit)
+
+**Commit:** *(pending — working tree has all changes)*
+
+---
+
 ## ✅ v0.6.1 Milestone — Released (2026-06-19)
 
 **All v0.6.1 RavenFabric integration shipped:**

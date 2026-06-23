@@ -148,6 +148,7 @@ config:
   security:
     require_tls: false
     audit_log: true
+    token_lifetime_secs: 0
   # -- Runtime configuration
   runtime:
     workdir: "/workspace"

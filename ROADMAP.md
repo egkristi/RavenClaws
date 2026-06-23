@@ -44,8 +44,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.8.0 (2026-06-22) — Prompt-Injection Defense  
-**Stats:** 14 source modules (+background, +scheduler, +eval), ~13,100 LOC, 5 LLM providers, 5 built-in tools (+web_search), 390 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense.
+**Version:** 0.9.0 (2026-06-22) — Autonomous Heartbeat  
+**Stats:** 15 source modules (+background, +scheduler, +eval, +heartbeat), ~13,500 LOC, 5 LLM providers, 5 built-in tools (+web_search), 401 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence.
 
 | Component | Status | Details |
 |---|---|---|
@@ -133,19 +133,19 @@ These must be resolved before v0.5 can ship:
 
 ## Architecture
 
-### Current (v0.6.1)
+### Current (v0.9)
 
 ```text
         ┌──────────┐
         │  main.rs │  CLI (clap) · JSON logging · mode dispatch
         └────┬─────┘
-   ┌─────────┼──────────────────────────────────────────────────┐
+   ┌─────────┼──────────────────────────────────────────────────────────┐
 ┌──┴───┐ ┌───┴────┐ ┌───┴─────┐ ┌───┴───┐ ┌────────────┐ ┌──────┴───────┐
 │agent │ │ config │ │  error  │ │ tools │ │policy      │ │ ravenfabric  │
 │ loop │ │        │ │         │ │       │ │audit       │ │ client       │
 │ mem  │ │        │ │         │ │       │ │sandbox     │ │ health       │
 │swarm │ │        │ │         │ │       │ │mcp         │ │ execute      │
-│super │ │        │ │         │ │       │ │            │ │ broadcast    │
+│super │ │        │ │         │ │       │ │heartbeat   │ │ broadcast    │
 └──┬───┘ └────────┘ └─────────┘ └───────┘ └────────────┘ └──────────────┘
    │
 ┌──┴───────────────────────────────────┐
@@ -154,14 +154,14 @@ These must be resolved before v0.5 can ship:
 │  · Ollama · Anthropic · MultiModel   │
 └───────────────────────────────────────┘
 
-✅ All 10 modules wired: policy, audit, sandbox, mcp, ravenfabric integrated into agent loop
+✅ 15 modules: policy, audit, sandbox, mcp, ravenfabric, heartbeat integrated
 ```
 
 ### Target (v1.0)
 
 ```text
                     ┌──────────┐
-                    │   CLI    │  single · serve · swarm · supervisor
+                    │   CLI    │  single · serve · swarm · supervisor · heartbeat
                     └────┬─────┘
                   ┌──────┴───────┐
                   │  Agent Core  │  perceive → plan → act → observe (+ memory)
@@ -172,11 +172,14 @@ These must be resolved before v0.5 can ship:
      │ policy✅│    │ routing+ │   │ swarm/superv. │
      │ sandbox✅│   │ fallback+│   │ RavenFabric ✅│
      │ audit  ✅│   │ budgets  │   │  (E2E remote) │
-     └─────────┘    └──────────┘   └───────────────┘
-          │
-   ┌──────┴───────┐
-   │ Observability│  metrics · tracing · health endpoint
-   └──────────────┘
+     └─────────┘    └──────────┘   └───────┬───────┘
+          │                                │
+   ┌──────┴───────┐              ┌─────────┴─────────┐
+   │ Observability│              │  HeartbeatAgent   │
+   │ metrics ·    │              │  assess → plan →  │
+   │ tracing ·    │              │  act → persist →  │
+   │ health       │              │  sleep (loop)     │
+   └──────────────┘              └───────────────────┘
 
 ✅ = Infrastructure exists, needs wiring to agent loop (v0.4)
 ```
@@ -216,7 +219,8 @@ simpler** — or deliberately not at all.
 | **~3 MB binary** | ✅ | ❌ (cloud) | ❌ (cloud) | ❌ (Python) |
 | **Helm chart** | ✅ (v0.7.3) | ❌ | ❌ | ❌ |
 | **No telemetry** | ✅ | ❌ | ❌ | ✅ |
-| **Autonomous heartbeat** | 🔄 **v0.9** | ✅ | ✅ | ❌ |
+| **Autonomous heartbeat** | ✅ **v0.9** | ✅ | ✅ | ❌ |
+| **Long-horizon task persistence** | ✅ **v0.9** | ✅ | ✅ | ❌ |
 | **Scalable swarm (100+ workers)** | 🔄 **v0.9** | ❌ | ❌ | ❌ |
 | **Self-provisioning sub-agents** | 🔄 **v0.9** | ❌ | ❌ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
@@ -231,7 +235,7 @@ simpler** — or deliberately not at all.
 1. **Trust as a feature** — deny-by-default security, no telemetry, verifiable end-to-end
 2. **Edge-deployable** — ~3.4 MB binary, runs on Raspberry Pi, air-gapped capable
 3. **RavenFabric mesh** — E2E-encrypted remote execution across fleet (unique)
-4. **Autonomous heartbeat** — operates independently for days/weeks, no supervision required
+4. **Autonomous heartbeat** — operates independently for days/weeks, no supervision required ✅ v0.9
 5. **Self-orchestrating swarm** — dynamically provisions and manages 10s–100s of workers in any topology, each with unique capability profiles
 
 ---
@@ -254,7 +258,7 @@ the cloud incumbents structurally can't follow.
 | Web search + headless browser | Manus/Perplexity center on browse/summarize/fill-forms | ✅ (SearXNG + DuckDuckGo) | **v0.8** ✅ |
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
 | Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
-| **Autonomous heartbeat (long-running)** | Operates independently for days/weeks without supervision | 🔄 **v0.9** | **v0.9** |
+| **Autonomous heartbeat (long-running)** | Operates independently for days/weeks without supervision | ✅ **v0.9** | **v0.9** |
 | **Scalable swarm (100+ workers)** | Dynamic provisioning of 10s–100s of agents in any topology | 🔄 **v0.9** | **v0.9** |
 | **Self-provisioning sub-agents** | Agent spawns agents; recursive supervisor mode | 🔄 **v0.9** | **v0.9** |
 | Async / long-horizon background runs | Manus's killer feature (cloud background) | ✅ **v0.8** | **v0.8** ✅ |
@@ -282,7 +286,7 @@ the cloud incumbents structurally can't follow.
 1. **MCP client + server (v0.7)** — instant access to entire tool ecosystem. ✅ **Both client and server now implemented.**
 2. **Wire security model (v0.4)** — PolicyEngine + Sandbox + AuditLog invoked on every tool call. Core value proposition.
 3. **Local-first privacy + security** — the wedge no cloud agent can copy.
-4. **Autonomous heartbeat + self-orchestration (v0.9)** — RavenClaw operates independently for days, dynamically spawning and managing swarms of any size. No competitor offers this in a self-hosted, secure package.
+4. **Autonomous heartbeat + self-orchestration (v0.9)** — RavenClaw operates independently for days, dynamically spawning and managing swarms of any size. No competitor offers this in a self-hosted, secure package. ✅ **Heartbeat implemented.**
 5. **Scalable swarm (100+ workers) (v0.9)** — from a handful of collaborators to hundreds of workers, each with unique profiles. Self-provisioning, self-healing, and policy-governed.
 
 ---
@@ -334,7 +338,7 @@ Agency with guardrails — the security differentiator.
 - [x] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask). `--require-approval` flag, `RAVENCLAW_REQUIRE_APPROVAL` env var, prompts via stdin, audited. ✅ **v0.8**
 - [x] **Web search + content extraction tool** — SearXNG JSON API + DuckDuckGo HTML backends, HTML-to-text extraction, configurable via `WebSearchConfig`. ✅ **v0.8**
 - [x] **Wire `zeroize`** for secret material — API keys in `LLMConfig` and HMAC secret key in `AuditLog` zeroized on drop. ✅ **v0.8**
-- [ ] **Honor `token_lifetime_secs`** for any issued credentials. *(v0.7)*
+- [x] **Honor `token_lifetime_secs`** for any issued credentials — agent sessions auto-terminate after configured duration. Enforced in both `run_agent_loop` and `run_agent_loop_with_mcp`. ✅ **v0.8**
 - [x] **Prompt-injection defense** — instruction-boundary enforcement, output schema validation. ✅ **v0.8**
 
 **Exit criteria:** an agent runs tools, but only those allowed by policy, with a complete audit log. Security features actively invoked, not just present.
@@ -447,8 +451,13 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 RavenClaw becomes a truly autonomous agent that can operate independently over
 long time horizons, and dynamically orchestrate swarms of any size.
 
-- [ ] **Autonomous heartbeat** — persistent background loop with configurable tick interval; agent wakes, assesses progress, plans next steps, executes, and sleeps. No human-in-the-loop required for routine operation.
-- [ ] **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context. Heartbeat continues across binary restarts.
+- [x] **Autonomous heartbeat** — persistent background loop with configurable tick interval; agent wakes, assesses progress, plans next steps, executes, and sleeps. No human-in-the-loop required for routine operation. ✅ **v0.9**
+- [x] **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context. Heartbeat continues across binary restarts. ✅ **v0.9**
+  - `HeartbeatState` persisted to `workdir/heartbeat-<id>.json` after every tick
+  - `HeartbeatAgent::new()` auto-resumes from saved state on restart
+  - `BackgroundTaskManager` persists all tasks as individual JSON files in `<workdir>/tasks/`
+  - `--task-resume` flag re-executes incomplete tasks on startup
+  - 401 total unit tests (0 regressions)
 - [ ] **Self-provisioning of sub-agents** — RavenClaw dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors.
 - [ ] **Scalable swarm orchestration** — support for 10s to 100s of workers. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid.
 - [ ] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable.

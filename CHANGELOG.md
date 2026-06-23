@@ -5,6 +5,40 @@ All notable changes to RavenClaw are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- (no new features yet)
+
+## [0.9.0] — 2026-06-22
+
+### Added
+- **`token_lifetime_secs` enforcement** — `SecurityConfig.token_lifetime_secs` is now honored at runtime. When set to a non-zero value, agent sessions automatically terminate after the configured duration, enforcing credential/session expiry.
+  - `AgentLoopConfig.token_lifetime_secs` — new field (default: 0 = unlimited)
+  - Wired into both `run_agent_loop` and `run_agent_loop_with_mcp` — checked before each iteration
+  - Session start time tracked via `std::time::Instant`
+  - On expiry: returns `RavenClawError::SecurityViolation` with elapsed time details
+  - Audit log records `SecurityViolation` event with elapsed time, limit, and iteration
+  - Removed `#[allow(dead_code)]` from `config.rs` `SecurityConfig.token_lifetime_secs`
+  - 393 total unit tests (0 regressions)
+- **Autonomous heartbeat agent** (`src/heartbeat.rs`) — persistent background loop that operates without human supervision, with configurable tick interval, progress assessment, planning, and execution.
+  - `HeartbeatConfig` — config struct with goal, tick_interval_secs, max_iterations_per_tick, workdir, max_ticks, enable_tools
+  - `HeartbeatState` — persisted state (id, goal, tick, progress, assessments, plans, results) with JSON serialization
+  - `HeartbeatAgent` — full implementation with assess→plan→act→persist→sleep loop
+  - State persistence to `workdir/heartbeat-<id>.json` — survives restarts and resumes from last checkpoint
+  - LLM-driven goal completion detection (responds to `GOAL_COMPLETE` / `[DONE]` markers)
+  - Agent loop integration for tool execution during each tick
+  - CLI flags: `--heartbeat`, `--heartbeat-goal`, `--heartbeat-tick-interval`, `--heartbeat-max-ticks`, `--heartbeat-session`
+  - Config section: `[heartbeat]` in `ravenclaw.toml`
+  - 8 unit tests covering config defaults, state lifecycle, serialization, and prompt building
+  - 401 total unit tests (0 regressions)
+- **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context.
+  - `HeartbeatState` persisted to `workdir/heartbeat-<id>.json` after every tick
+  - `HeartbeatAgent::new()` auto-resumes from saved state on restart
+  - `BackgroundTaskManager` persists all tasks as individual JSON files in `<workdir>/tasks/`
+  - `--task-resume` flag re-executes incomplete tasks on startup
+  - 401 total unit tests (0 regressions)
+
 ## [0.8.0] — 2026-06-22
 
 ### Added

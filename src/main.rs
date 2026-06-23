@@ -9,6 +9,7 @@ mod background;
 mod config;
 mod error;
 mod eval;
+mod heartbeat;
 mod llm;
 mod mcp;
 mod policy;
@@ -164,6 +165,26 @@ struct Args {
     /// Output eval results as JSON (v0.9)
     #[arg(long, env = "RAVENCLAW_EVAL_JSON")]
     eval_json: bool,
+
+    /// Run in autonomous heartbeat mode (v0.9)
+    #[arg(long, env = "RAVENCLAW_HEARTBEAT")]
+    heartbeat: bool,
+
+    /// Goal prompt for heartbeat mode (v0.9)
+    #[arg(long, env = "RAVENCLAW_HEARTBEAT_GOAL")]
+    heartbeat_goal: Option<String>,
+
+    /// Tick interval in seconds for heartbeat mode (v0.9, default: 300)
+    #[arg(long, env = "RAVENCLAW_HEARTBEAT_TICK_INTERVAL", default_value = "300")]
+    heartbeat_tick_interval: u64,
+
+    /// Maximum ticks for heartbeat mode (v0.9, 0 = unlimited)
+    #[arg(long, env = "RAVENCLAW_HEARTBEAT_MAX_TICKS", default_value = "0")]
+    heartbeat_max_ticks: u64,
+
+    /// Heartbeat session ID for resuming (v0.9)
+    #[arg(long, env = "RAVENCLAW_HEARTBEAT_SESSION")]
+    heartbeat_session: Option<String>,
 }
 
 #[tokio::main]
@@ -307,6 +328,7 @@ async fn main() -> anyhow::Result<()> {
             enable_tools: true,
             require_approval: args.require_approval,
             prompt_injection_protection: config.security.prompt_injection_protection,
+            token_lifetime_secs: config.security.token_lifetime_secs,
         };
 
         let response = if !config.llms.is_empty() {
@@ -504,6 +526,46 @@ async fn main() -> anyhow::Result<()> {
 
         scheduler.stop().await;
         info!("RavenClaw scheduler shutdown complete");
+        return Ok(());
+    }
+
+    // Handle --heartbeat mode: autonomous heartbeat agent (v0.9)
+    if args.heartbeat {
+        info!("Running in autonomous heartbeat mode");
+
+        // Determine goal: CLI arg > config > error
+        let goal = if let Some(goal) = args.heartbeat_goal {
+            goal
+        } else if !config.heartbeat.goal.is_empty() {
+            config.heartbeat.goal.clone()
+        } else {
+            anyhow::bail!(
+                "No goal provided for heartbeat mode. Use --heartbeat-goal or set [heartbeat].goal in config."
+            );
+        };
+
+        // Build heartbeat config from CLI overrides + config
+        let hb_config = heartbeat::HeartbeatConfig {
+            goal,
+            tick_interval_secs: args.heartbeat_tick_interval,
+            max_iterations_per_tick: config.heartbeat.max_iterations_per_tick,
+            workdir: config.heartbeat.workdir.clone(),
+            max_ticks: args.heartbeat_max_ticks,
+            enable_tools: config.heartbeat.enable_tools,
+        };
+
+        let llm = llm::create_client(&config.llm)?;
+        let mut agent =
+            heartbeat::HeartbeatAgent::new(llm, hb_config, args.heartbeat_session).await?;
+
+        info!(
+            heartbeat_id = %agent.id(),
+            "Heartbeat agent initialized"
+        );
+
+        let result = agent.run().await?;
+        println!("{}", result);
+        info!("RavenClaw heartbeat complete");
         return Ok(());
     }
 

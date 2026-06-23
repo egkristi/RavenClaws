@@ -64,6 +64,10 @@ pub struct Config {
     #[serde(default)]
     #[allow(dead_code)]
     pub web_search: WebSearchConfig,
+
+    /// Heartbeat / autonomous agent configuration (v0.9)
+    #[serde(default)]
+    pub heartbeat: crate::heartbeat::HeartbeatConfig,
 }
 
 /// Web search configuration (v0.8)
@@ -232,9 +236,10 @@ pub struct SecurityConfig {
     #[serde(default = "default_true")]
     pub require_tls: bool,
 
-    /// Maximum token lifetime in seconds
+    /// Maximum token lifetime in seconds (0 = unlimited)
+    /// When non-zero, agent sessions automatically terminate after this duration.
+    /// Enforced in the agent loop — checked before each iteration.
     #[serde(default = "default_token_lifetime")]
-    #[allow(dead_code)]
     pub token_lifetime_secs: u64,
 
     /// Enable audit logging
@@ -581,6 +586,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -618,6 +624,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -653,6 +660,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -686,6 +694,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         // OpenAI doesn't need an endpoint, but the llm.endpoint is empty
@@ -723,6 +732,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -796,6 +806,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
@@ -831,6 +842,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -866,6 +878,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -899,6 +912,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -946,6 +960,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -979,6 +994,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -1183,6 +1199,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -1216,6 +1233,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -1249,6 +1267,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -1352,6 +1371,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -1385,6 +1405,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();
@@ -1418,6 +1439,7 @@ mod tests {
             telemetry: TelemetryConfig::default(),
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
+            heartbeat: crate::heartbeat::HeartbeatConfig::default(),
         };
 
         let result = config.validate();

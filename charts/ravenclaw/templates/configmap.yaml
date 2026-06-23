@@ -22,6 +22,7 @@ data:
     [security]
     require_tls = {{ .Values.config.security.require_tls }}
     audit_log = {{ .Values.config.security.audit_log }}
+    token_lifetime_secs = {{ .Values.config.security.token_lifetime_secs | default 0 }}
 
     [runtime]
     workdir = "{{ .Values.config.runtime.workdir }}"

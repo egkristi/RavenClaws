@@ -6,21 +6,22 @@
 [![CI](https://github.com/egkristi/RavenClaw/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
 [![Verification](https://img.shields.io/badge/verification-94%20checks-brightgreen)](VERIFICATION.md)
 [![Binary](https://img.shields.io/badge/binary-~3.4MB-blue)]()
-[![Status](https://img.shields.io/badge/status-v0.7.1-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v0.9.0-brightgreen)](ROADMAP.md)
 
 RavenClaw is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.7.1 (2026-06-20).** The provider layer (5 providers), one-shot execution (`--exec`),
+> **Status: v0.9.0 (2026-06-22).** The provider layer (5 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
 > retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, **supervisor mode**,
-> **RavenFabric mesh client**, **MCP server**, and **HTTP server mode** all work today.
+> **RavenFabric mesh client**, **MCP server**, **HTTP server mode**, **autonomous heartbeat agent**,
+> **long-horizon task persistence**, and **scheduling/triggers** all work today.
 > This README marks ✅ built vs. 📋 planned — honestly. Trust is a feature; we don't inflate it.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
 | **~3.4 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
-| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **307 unit tests + 94 verification checks** |
+| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **401 unit tests + 114 verification checks** |
 
 ---
 
@@ -226,7 +227,7 @@ allowed_hosts = ["litellm", "ravenfabric"]
 
 [security]
 require_tls = true
-token_lifetime_secs = 3600   # surface present; enforcement on roadmap (v0.4)
+token_lifetime_secs = 3600   # agent sessions auto-terminate after 1 hour (0 = unlimited)
 audit_log = true             # surface present; enforcement on roadmap (v0.4)
 
 [runtime]

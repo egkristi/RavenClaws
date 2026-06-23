@@ -92,6 +92,10 @@ pub struct AgentLoopConfig {
     pub require_approval: bool,
     /// Enable prompt-injection defense on LLM responses
     pub prompt_injection_protection: bool,
+    /// Maximum session lifetime in seconds (0 = unlimited)
+    /// When non-zero, the agent loop will stop after this duration
+    /// to enforce credential/session expiry.
+    pub token_lifetime_secs: u64,
 }
 
 impl Default for AgentLoopConfig {
@@ -101,6 +105,7 @@ impl Default for AgentLoopConfig {
             enable_tools: false,
             require_approval: false,
             prompt_injection_protection: true,
+            token_lifetime_secs: 0,
         }
     }
 }
@@ -137,6 +142,9 @@ pub async fn run_agent_loop(
     // Initialize tool registry
     let registry = ToolRegistry::with_default_tools();
 
+    // Track session start time for token lifetime enforcement
+    let session_start = std::time::Instant::now();
+
     info!(
         provider = llm.provider_name(),
         model = llm.model(),
@@ -144,6 +152,7 @@ pub async fn run_agent_loop(
         enable_tools = config.enable_tools,
         require_approval = config.require_approval,
         prompt_injection_protection = config.prompt_injection_protection,
+        token_lifetime_secs = config.token_lifetime_secs,
         "Agent loop starting with security integration"
     );
 
@@ -163,6 +172,7 @@ pub async fn run_agent_loop(
             "enable_tools": config.enable_tools,
             "require_approval": config.require_approval,
             "prompt_injection_protection": config.prompt_injection_protection,
+            "token_lifetime_secs": config.token_lifetime_secs,
         })),
     );
 
@@ -170,6 +180,35 @@ pub async fn run_agent_loop(
     memory.add_user_message(initial_prompt);
 
     for iteration in 0..config.max_iterations {
+        // Check token lifetime: enforce session expiry
+        if config.token_lifetime_secs > 0 {
+            let elapsed = session_start.elapsed().as_secs();
+            if elapsed >= config.token_lifetime_secs {
+                warn!(
+                    iteration = iteration,
+                    elapsed_secs = elapsed,
+                    token_lifetime_secs = config.token_lifetime_secs,
+                    "Agent loop reached token lifetime limit"
+                );
+                let _ = audit_log.append(
+                    AuditEventType::SecurityViolation,
+                    "token_lifetime",
+                    &format!(
+                        "Session expired after {} seconds (limit: {}s)",
+                        elapsed, config.token_lifetime_secs
+                    ),
+                    Some(serde_json::json!({
+                        "elapsed_secs": elapsed,
+                        "token_lifetime_secs": config.token_lifetime_secs,
+                        "iteration": iteration,
+                    })),
+                );
+                return Err(crate::error::RavenClawError::SecurityViolation(format!(
+                    "Session token expired after {} seconds (limit: {}s)",
+                    elapsed, config.token_lifetime_secs
+                )));
+            }
+        }
         let messages = memory.history().to_vec();
 
         let response = match llm.chat(messages).await {
@@ -396,6 +435,9 @@ pub async fn run_agent_loop_with_mcp(
         }
     }
 
+    // Track session start time for token lifetime enforcement
+    let session_start = std::time::Instant::now();
+
     info!(
         provider = llm.provider_name(),
         model = llm.model(),
@@ -404,6 +446,7 @@ pub async fn run_agent_loop_with_mcp(
         tool_count = registry.len(),
         require_approval = config.require_approval,
         prompt_injection_protection = config.prompt_injection_protection,
+        token_lifetime_secs = config.token_lifetime_secs,
         "Agent loop starting with MCP integration"
     );
 
@@ -425,6 +468,7 @@ pub async fn run_agent_loop_with_mcp(
             "tool_count": registry.len(),
             "require_approval": config.require_approval,
             "prompt_injection_protection": config.prompt_injection_protection,
+            "token_lifetime_secs": config.token_lifetime_secs,
         })),
     );
 
@@ -432,6 +476,35 @@ pub async fn run_agent_loop_with_mcp(
     memory.add_user_message(initial_prompt);
 
     for iteration in 0..config.max_iterations {
+        // Check token lifetime: enforce session expiry
+        if config.token_lifetime_secs > 0 {
+            let elapsed = session_start.elapsed().as_secs();
+            if elapsed >= config.token_lifetime_secs {
+                warn!(
+                    iteration = iteration,
+                    elapsed_secs = elapsed,
+                    token_lifetime_secs = config.token_lifetime_secs,
+                    "Agent loop reached token lifetime limit"
+                );
+                let _ = audit_log.append(
+                    AuditEventType::SecurityViolation,
+                    "token_lifetime",
+                    &format!(
+                        "Session expired after {} seconds (limit: {}s)",
+                        elapsed, config.token_lifetime_secs
+                    ),
+                    Some(serde_json::json!({
+                        "elapsed_secs": elapsed,
+                        "token_lifetime_secs": config.token_lifetime_secs,
+                        "iteration": iteration,
+                    })),
+                );
+                return Err(crate::error::RavenClawError::SecurityViolation(format!(
+                    "Session token expired after {} seconds (limit: {}s)",
+                    elapsed, config.token_lifetime_secs
+                )));
+            }
+        }
         let messages = memory.history().to_vec();
 
         let response = match llm.chat(messages).await {
@@ -1793,11 +1866,13 @@ mod tests {
             enable_tools: true,
             require_approval: true,
             prompt_injection_protection: true,
+            token_lifetime_secs: 0,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
         assert!(config.require_approval);
         assert!(config.prompt_injection_protection);
+        assert_eq!(config.token_lifetime_secs, 0);
     }
 
     #[test]
@@ -1902,5 +1977,36 @@ mod tests {
         assert!(result.is_some());
         let tool_result = result.unwrap();
         assert_eq!(tool_result.tool_name, "read_file");
+    }
+
+    #[test]
+    fn test_agent_loop_config_token_lifetime_zero_disabled() {
+        let config = AgentLoopConfig {
+            max_iterations: 10,
+            enable_tools: false,
+            require_approval: false,
+            prompt_injection_protection: false,
+            token_lifetime_secs: 0,
+        };
+        assert_eq!(config.token_lifetime_secs, 0);
+        // 0 means unlimited — no timeout enforced
+    }
+
+    #[test]
+    fn test_agent_loop_config_token_lifetime_nonzero() {
+        let config = AgentLoopConfig {
+            max_iterations: 10,
+            enable_tools: false,
+            require_approval: false,
+            prompt_injection_protection: false,
+            token_lifetime_secs: 3600,
+        };
+        assert_eq!(config.token_lifetime_secs, 3600);
+    }
+
+    #[test]
+    fn test_agent_loop_config_default_includes_token_lifetime() {
+        let config = AgentLoopConfig::default();
+        assert_eq!(config.token_lifetime_secs, 0);
     }
 }

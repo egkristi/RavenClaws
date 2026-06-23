@@ -260,6 +260,7 @@ impl BackgroundTaskManager {
             enable_tools: true,
             require_approval: false,
             prompt_injection_protection: true,
+            token_lifetime_secs: 0,
         };
 
         let result = crate::agent::run_agent_loop(
