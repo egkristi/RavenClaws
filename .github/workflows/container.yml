@@ -152,7 +152,7 @@ jobs:
 
       - name: Upload SBOM as artifact
         if: always() && hashFiles('sbom.spdx.json') != ''
-      - uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: sbom.spdx.json
