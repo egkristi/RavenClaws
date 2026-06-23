@@ -23,12 +23,12 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.9.0 (autonomous heartbeat)
+- **Version:** 0.9.0 (autonomous heartbeat + self-provisioning swarm)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaw
 - **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
 
-### Architecture (15 modules)
+### Architecture (16 modules)
 
 ```
 src/
@@ -37,6 +37,7 @@ src/
 ├── background.rs— Background task manager (async long-horizon runs, disk persistence, resumability)
 ├── scheduler.rs — Scheduling & triggers (cron, webhook, file-watch activation for proactive 24/7 agents)
 ├── heartbeat.rs — Autonomous heartbeat agent (persistent assess→plan→act→persist→sleep loop, state persistence, resumability)
+├── swarm.rs     — Swarm orchestration (self-provisioning sub-agents, recursive supervision, WorkerProfile, SwarmTopology, dynamic role assignment)
 ├── llm.rs       — LLM provider abstraction (trait + 5 clients + multi-model manager + streaming)
 ├── config.rs    — Config structs, TOML/env loading, validation
 ├── error.rs     — Unified error types
@@ -59,7 +60,7 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (401 tests, 15 modules, 0 failures) | ✅ Working |
+| Verification suite (416 tests, 16 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -67,6 +68,7 @@ src/
 | System prompt / persona | ✅ Working — `LLMConfig.system_prompt`, CLI `--system-prompt`, env var |
 | Swarm mode | ✅ Working — 3 parallel agents with different personas (single + multi-model) |
 | Supervisor mode | ✅ Working — task decomposition + sub-agent spawning + result aggregation (single + multi-model) |
+| Self-provisioning swarm orchestration | ✅ v0.9.0 — recursive supervisor spawning, WorkerProfile, SwarmTopology, dynamic role assignment, 5 built-in profiles |
 | Tool-use / function calling | ✅ Working — ToolImpl trait + ToolRegistry + 4 built-in tools + agent loop wiring |
 | Agent loop / ReAct planning | ✅ Working — perceive→plan→act→observe with max-iteration guard, tool call detection |
 | Deny-by-default policy | ✅ Working — PolicyEngine with shell/path/network allow-lists |
@@ -190,6 +192,7 @@ If a feature cannot be tested (e.g., hardware-dependent), document the reason in
 | `background.rs` | `BackgroundTaskManager`, `BackgroundTask`, `TaskStatus`, disk persistence | Agent logic, LLM calls |
 | `scheduler.rs` | `Scheduler`, `TriggerConfig`, `TriggerType`, cron/webhook/watch runners | Agent logic, LLM calls |
 | `heartbeat.rs` | `HeartbeatAgent`, `HeartbeatConfig`, `HeartbeatState`, assess→plan→act→persist→sleep loop | Agent logic, LLM calls |
+| `swarm.rs` | `SwarmOrchestrator`, `WorkerProfile`, `SwarmConfig`, `SwarmTopology`, recursive supervision, dynamic role assignment | Agent logic, LLM calls |
 | `llm.rs` | `LLMProviderTrait`, client implementations, `MultiModelManager` | Agent logic, config structs |
 | `config.rs` | `Config`, `LLMConfig`, validation, env loading | Agent logic, HTTP requests |
 | `error.rs` | `RavenClawError` enum, `Result<T>` alias | Everything else |
@@ -417,7 +420,7 @@ When a feature is finished or a fix is complete, update **all** relevant documen
 # Stage all changes
 git add -A
 
-# Pre-commit hooks run automatically (fmt, clippy, 291 tests, binary size, secrets)
+# Pre-commit hooks run automatically (fmt, clippy, 416 tests, binary size, secrets)
 git commit -m "Descriptive summary of changes"
 
 # Pre-push hooks run automatically (pre-commit + release build + Docker + security)

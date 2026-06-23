@@ -1108,6 +1108,7 @@ pub fn create_client(config: &LLMConfig) -> Result<Arc<dyn LLMProviderTrait>, LL
 }
 
 /// Multi-model manager for handling multiple providers simultaneously
+#[derive(Clone)]
 pub struct MultiModelManager {
     clients: Vec<Arc<dyn LLMProviderTrait>>,
 }

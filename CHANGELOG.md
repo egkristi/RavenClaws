@@ -8,7 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- (no new features yet)
+- **Self-provisioning of sub-agents** (`src/swarm.rs`) — RavenClaw dynamically spawns new agent instances based on task decomposition. Supervisor mode becomes recursive: supervisors spawn sub-supervisors, creating task decomposition trees of arbitrary depth.
+  - `SwarmOrchestrator` — core orchestrator with recursive supervision, task analysis, role assignment, and result aggregation
+  - `WorkerProfile` — declarative profile with persona, allowed_tools, provider/model overrides, resource limits, and delegation capability
+  - `SwarmTopology` — four topologies: Star, Mesh, Hierarchical, Hybrid
+  - `SwarmConfig` — configurable max_depth (default: 3), max_workers (default: 100), dynamic_role_assignment, profiles
+  - 5 built-in worker profiles: researcher, creative, executor, reviewer, supervisor
+  - Recursive supervision via `Box::pin` to avoid Rust's recursive async fn limitation
+  - LLM-based dynamic role assignment (`analyze_task_roles`) with fallback to default roles
+  - CLI flags: `--swarm-topology`, `--swarm-max-depth`, `--swarm-max-workers`, `--swarm-dynamic-roles`, `--swarm-profiles`
+  - Config section: `[swarm]` in `ravenclaw.toml`
+  - Mode dispatch: `--mode orchestrate` for both single-provider and multi-model paths
+  - `MultiModelManager` made `Clone` for sub-orchestrator spawning
+  - 17 unit tests covering all profiles, config serde, orchestrator construction, depth limits, task analysis fallback
+  - 416 total unit tests (0 regressions)
 
 ## [0.9.0] — 2026-06-22
 

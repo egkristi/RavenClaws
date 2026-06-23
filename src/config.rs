@@ -68,6 +68,10 @@ pub struct Config {
     /// Heartbeat / autonomous agent configuration (v0.9)
     #[serde(default)]
     pub heartbeat: crate::heartbeat::HeartbeatConfig,
+
+    /// Swarm orchestration configuration (v0.9)
+    #[serde(default)]
+    pub swarm: crate::swarm::SwarmConfig,
 }
 
 /// Web search configuration (v0.8)
@@ -587,6 +591,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -625,6 +630,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -661,6 +667,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -695,6 +702,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         // OpenAI doesn't need an endpoint, but the llm.endpoint is empty
@@ -733,6 +741,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -807,6 +816,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
@@ -843,6 +853,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -879,6 +890,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -913,6 +925,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -961,6 +974,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -995,6 +1009,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -1200,6 +1215,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -1234,6 +1250,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -1268,6 +1285,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -1372,6 +1390,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -1406,6 +1425,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();
@@ -1440,6 +1460,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            swarm: crate::swarm::SwarmConfig::default(),
         };
 
         let result = config.validate();

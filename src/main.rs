@@ -17,6 +17,7 @@ mod ravenfabric;
 mod sandbox;
 mod scheduler;
 mod server;
+mod swarm;
 mod telemetry;
 mod tools;
 
@@ -185,6 +186,26 @@ struct Args {
     /// Heartbeat session ID for resuming (v0.9)
     #[arg(long, env = "RAVENCLAW_HEARTBEAT_SESSION")]
     heartbeat_session: Option<String>,
+
+    /// Swarm topology: star, mesh, hierarchical, hybrid (v0.9)
+    #[arg(long, env = "RAVENCLAW_SWARM_TOPOLOGY", default_value = "star")]
+    swarm_topology: String,
+
+    /// Maximum recursion depth for hierarchical swarm (v0.9, default: 3)
+    #[arg(long, env = "RAVENCLAW_SWARM_MAX_DEPTH", default_value = "3")]
+    swarm_max_depth: usize,
+
+    /// Maximum workers in the swarm (v0.9, default: 100)
+    #[arg(long, env = "RAVENCLAW_SWARM_MAX_WORKERS", default_value = "100")]
+    swarm_max_workers: usize,
+
+    /// Enable dynamic role assignment (v0.9)
+    #[arg(long, env = "RAVENCLAW_SWARM_DYNAMIC_ROLES")]
+    swarm_dynamic_roles: bool,
+
+    /// Worker profiles file path (v0.9, JSON)
+    #[arg(long, env = "RAVENCLAW_SWARM_PROFILES")]
+    swarm_profiles: Option<String>,
 }
 
 #[tokio::main]
@@ -587,6 +608,49 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
+    // Apply swarm CLI overrides (v0.9)
+    config.swarm.topology = match args.swarm_topology.to_lowercase().as_str() {
+        "mesh" => swarm::SwarmTopology::Mesh,
+        "hierarchical" => swarm::SwarmTopology::Hierarchical,
+        "hybrid" => swarm::SwarmTopology::Hybrid,
+        _ => swarm::SwarmTopology::Star,
+    };
+    config.swarm.max_depth = args.swarm_max_depth;
+    config.swarm.max_workers = args.swarm_max_workers;
+    if args.swarm_dynamic_roles {
+        config.swarm.dynamic_role_assignment = true;
+    }
+
+    // Load worker profiles from file if specified
+    if let Some(profiles_path) = args.swarm_profiles {
+        match std::fs::read_to_string(&profiles_path) {
+            Ok(content) => match serde_json::from_str::<Vec<swarm::WorkerProfile>>(&content) {
+                Ok(profiles) => {
+                    config.swarm.profiles = profiles;
+                    info!(
+                        count = config.swarm.profiles.len(),
+                        path = %profiles_path,
+                        "Loaded worker profiles"
+                    );
+                }
+                Err(e) => {
+                    warn!(
+                        error = %e,
+                        path = %profiles_path,
+                        "Failed to parse worker profiles, using defaults"
+                    );
+                }
+            },
+            Err(e) => {
+                warn!(
+                    error = %e,
+                    path = %profiles_path,
+                    "Failed to read worker profiles file, using defaults"
+                );
+            }
+        }
+    }
+
     // Initialize RavenFabric client (v0.6.1)
     let ravenfabric = ravenfabric::RavenFabricClient::new(&config.ravenfabric);
     if let Some(ref rf) = ravenfabric {
@@ -633,9 +697,22 @@ async fn main() -> anyhow::Result<()> {
                 info!("Running in supervisor mode (multi-model)");
                 agent::run_supervisor_multi(multi_llm, config, ravenfabric).await?;
             }
+            "orchestrate" => {
+                info!("Running in swarm orchestration mode (multi-model)");
+                let mut orchestrator = swarm::SwarmOrchestrator::new(
+                    config.swarm.clone(),
+                    None,
+                    Some(multi_llm),
+                    ravenfabric,
+                );
+                orchestrator.init().await?;
+                let task = "Complete the assigned task using available providers.";
+                let result = orchestrator.orchestrate(task).await?;
+                println!("{}", result);
+            }
             _ => {
                 anyhow::bail!(
-                    "Unknown mode: {}. Use: single, swarm, or supervisor",
+                    "Unknown mode: {}. Use: single, swarm, supervisor, or orchestrate",
                     args.mode
                 );
             }
@@ -674,9 +751,22 @@ async fn main() -> anyhow::Result<()> {
                 info!("Running in supervisor mode");
                 agent::run_supervisor(llm, config, ravenfabric).await?;
             }
+            "orchestrate" => {
+                info!("Running in swarm orchestration mode");
+                let mut orchestrator = swarm::SwarmOrchestrator::new(
+                    config.swarm.clone(),
+                    Some(llm),
+                    None,
+                    ravenfabric,
+                );
+                orchestrator.init().await?;
+                let task = "Complete the assigned task using available providers.";
+                let result = orchestrator.orchestrate(task).await?;
+                println!("{}", result);
+            }
             _ => {
                 anyhow::bail!(
-                    "Unknown mode: {}. Use: single, swarm, or supervisor",
+                    "Unknown mode: {}. Use: single, swarm, supervisor, or orchestrate",
                     args.mode
                 );
             }

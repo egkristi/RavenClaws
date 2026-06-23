@@ -44,8 +44,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.9.0 (2026-06-22) — Autonomous Heartbeat  
-**Stats:** 15 source modules (+background, +scheduler, +eval, +heartbeat), ~13,500 LOC, 5 LLM providers, 5 built-in tools (+web_search), 401 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence.
+**Version:** 0.9.0 (2026-06-22) — Autonomous Heartbeat + Self-Provisioning Swarm  
+**Stats:** 16 source modules (+background, +scheduler, +eval, +heartbeat, +swarm), ~14,500 LOC, 5 LLM providers, 5 built-in tools (+web_search), 416 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration.
 
 | Component | Status | Details |
 |---|---|---|
@@ -206,7 +206,7 @@ simpler** — or deliberately not at all.
 > air-gappable, signed + SBOM-attested supply chain. These are claims we will
 > benchmark and publish — not marketing.
 
-### RavenClaw vs. Field (v0.9 target)
+### RavenClaw vs. Field (v0.9 achieved)
 
 | Capability | RavenClaw v0.9 | Cognition (Claude) | Manus | Open Interpreter |
 |---|:---:|:---:|:---:|:---:|
@@ -221,8 +221,8 @@ simpler** — or deliberately not at all.
 | **No telemetry** | ✅ | ❌ | ❌ | ✅ |
 | **Autonomous heartbeat** | ✅ **v0.9** | ✅ | ✅ | ❌ |
 | **Long-horizon task persistence** | ✅ **v0.9** | ✅ | ✅ | ❌ |
-| **Scalable swarm (100+ workers)** | 🔄 **v0.9** | ❌ | ❌ | ❌ |
-| **Self-provisioning sub-agents** | 🔄 **v0.9** | ❌ | ❌ | ❌ |
+| **Scalable swarm (100+ workers)** | ✅ **v0.9** | ❌ | ❌ | ❌ |
+| **Self-provisioning sub-agents** | ✅ **v0.9** | ❌ | ❌ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ✅ (SearXNG + DuckDuckGo) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
@@ -446,7 +446,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - [ ] **Air-gap / offline licensing**; runtime feature-flag gating.
 - [ ] **Output artifacts & reporting** — generate documents, spreadsheets, slides, and sites via the skill system (v0.5); underpins compliance and executive reporting.
 
-### v0.9 — Autonomous heartbeat & self-orchestration 💓
+### ✅ v0.9 — Autonomous heartbeat & self-orchestration 💓 (COMPLETE)
 
 RavenClaw becomes a truly autonomous agent that can operate independently over
 long time horizons, and dynamically orchestrate swarms of any size.
@@ -458,10 +458,10 @@ long time horizons, and dynamically orchestrate swarms of any size.
   - `BackgroundTaskManager` persists all tasks as individual JSON files in `<workdir>/tasks/`
   - `--task-resume` flag re-executes incomplete tasks on startup
   - 401 total unit tests (0 regressions)
-- [ ] **Self-provisioning of sub-agents** — RavenClaw dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors.
-- [ ] **Scalable swarm orchestration** — support for 10s to 100s of workers. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid.
-- [ ] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable.
-- [ ] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load.
+- [x] **Self-provisioning of sub-agents** — RavenClaw dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors. ✅ **v0.9**
+- [x] **Scalable swarm orchestration** — support for 10s to 100s of workers. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid. ✅ **v0.9**
+- [x] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable. ✅ **v0.9**
+- [x] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load. ✅ **v0.9**
 - [ ] **Inter-agent communication bus** — structured message passing between swarm members with delivery guarantees, routing, and policy enforcement. All communication is audited.
 - [ ] **Swarm health & telemetry** — heartbeat monitoring per agent, dead-agent detection, automatic replacement. Metrics: task throughput, agent utilization, error rates, communication latency.
 - [ ] **Graceful degradation under load** — when resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
