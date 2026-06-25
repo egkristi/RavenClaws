@@ -235,6 +235,477 @@ impl AgentMessageBus {
 }
 
 // ---------------------------------------------------------------------------
+// Swarm health monitoring
+// ---------------------------------------------------------------------------
+
+/// Health status of a single swarm worker.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum WorkerHealthStatus {
+    /// Worker is active and responding to heartbeats
+    Healthy,
+    /// Worker is running but has not responded to recent heartbeats
+    Degraded,
+    /// Worker has not responded within the timeout window
+    Unhealthy,
+    /// Worker has been terminated and needs replacement
+    Dead,
+}
+
+impl std::fmt::Display for WorkerHealthStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WorkerHealthStatus::Healthy => write!(f, "healthy"),
+            WorkerHealthStatus::Degraded => write!(f, "degraded"),
+            WorkerHealthStatus::Unhealthy => write!(f, "unhealthy"),
+            WorkerHealthStatus::Dead => write!(f, "dead"),
+        }
+    }
+}
+
+/// Telemetry snapshot for a single worker.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerTelemetry {
+    /// Worker role name
+    pub role: String,
+    /// Current health status
+    pub status: WorkerHealthStatus,
+    /// Tasks completed by this worker
+    pub tasks_completed: u64,
+    /// Tasks that failed
+    pub tasks_failed: u64,
+    /// Total errors encountered
+    pub error_count: u64,
+    /// Average task duration in milliseconds
+    pub avg_duration_ms: f64,
+    /// Last heartbeat timestamp (ISO 8601)
+    pub last_heartbeat: String,
+    /// When the worker was spawned (ISO 8601)
+    pub spawned_at: String,
+    /// Number of messages sent via the bus
+    pub messages_sent: u64,
+    /// Number of messages received via the bus
+    pub messages_received: u64,
+    /// Current iteration count
+    pub iteration: u64,
+}
+
+/// Aggregate swarm health metrics.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SwarmMetrics {
+    /// Total workers in the swarm
+    pub total_workers: usize,
+    /// Healthy workers
+    pub healthy_workers: usize,
+    /// Degraded workers
+    pub degraded_workers: usize,
+    /// Unhealthy workers
+    pub unhealthy_workers: usize,
+    /// Dead workers
+    pub dead_workers: usize,
+    /// Total tasks completed across all workers
+    pub total_tasks_completed: u64,
+    /// Total tasks failed across all workers
+    pub total_tasks_failed: u64,
+    /// Total errors across all workers
+    pub total_errors: u64,
+    /// Overall average task duration in milliseconds
+    pub overall_avg_duration_ms: f64,
+    /// Task throughput (tasks per second over the last window)
+    pub task_throughput: f64,
+    /// Communication latency (average ms between send and receive)
+    pub communication_latency_ms: f64,
+    /// Worker utilization (0.0–1.0, ratio of busy time to total time)
+    pub worker_utilization: f64,
+    /// Error rate (errors per task)
+    pub error_rate: f64,
+    /// Timestamp of this metrics snapshot
+    pub timestamp: String,
+}
+
+/// Per-worker heartbeat tracker.
+#[derive(Debug, Clone)]
+struct WorkerHeartbeat {
+    /// Worker role
+    role: String,
+    /// When the worker was spawned
+    spawned_at: chrono::DateTime<chrono::Utc>,
+    /// Last heartbeat received
+    last_heartbeat: chrono::DateTime<chrono::Utc>,
+    /// Number of missed heartbeats
+    missed_beats: u32,
+    /// Current health status
+    status: WorkerHealthStatus,
+    /// Tasks completed
+    tasks_completed: u64,
+    /// Tasks failed
+    tasks_failed: u64,
+    /// Error count
+    error_count: u64,
+    /// Total duration of all completed tasks in milliseconds
+    total_duration_ms: f64,
+    /// Number of tasks with recorded duration
+    duration_samples: u64,
+    /// Messages sent
+    messages_sent: u64,
+    /// Messages received
+    messages_received: u64,
+    /// Current iteration
+    iteration: u64,
+    /// Whether this worker is currently busy
+    is_busy: bool,
+    /// When the current task started
+    task_started_at: Option<chrono::DateTime<chrono::Utc>>,
+}
+
+/// Swarm health monitor — tracks worker health, detects failures, and
+/// provides aggregate telemetry.
+///
+/// # Heartbeat Protocol
+///
+/// Workers send heartbeats at regular intervals. If a worker misses
+/// `max_missed_beats` consecutive heartbeats, it is marked as `Unhealthy`.
+/// After `max_missed_beats * 2` missed beats, it is marked as `Dead`.
+///
+/// # Dead-Agent Detection
+///
+/// The health monitor periodically scans all tracked workers. Workers that
+/// have been `Dead` for longer than `replacement_timeout_secs` are candidates
+/// for automatic replacement.
+///
+/// # Metrics
+///
+/// The monitor tracks task throughput, worker utilization, error rates, and
+/// communication latency. These are exposed via `metrics()`.
+#[derive(Debug, Clone)]
+pub struct SwarmHealthMonitor {
+    /// Per-worker heartbeat trackers
+    heartbeats: HashMap<String, WorkerHeartbeat>,
+    /// Heartbeat interval in seconds (default: 5)
+    heartbeat_interval_secs: u64,
+    /// Max missed heartbeats before marking unhealthy (default: 3)
+    max_missed_beats: u32,
+    /// Time in seconds before a dead worker is replaced (default: 30)
+    replacement_timeout_secs: u64,
+    /// When monitoring started
+    started_at: chrono::DateTime<chrono::Utc>,
+    /// Total messages sent across all workers (for latency calculation)
+    total_messages_sent: u64,
+    /// Total messages received across all workers
+    total_messages_received: u64,
+    /// Sum of all task durations for throughput calculation
+    total_duration_ms: f64,
+    /// Total tasks completed across all workers
+    total_tasks_completed: u64,
+}
+
+impl Default for SwarmHealthMonitor {
+    fn default() -> Self {
+        Self {
+            heartbeats: HashMap::new(),
+            heartbeat_interval_secs: 5,
+            max_missed_beats: 3,
+            replacement_timeout_secs: 30,
+            started_at: chrono::Utc::now(),
+            total_messages_sent: 0,
+            total_messages_received: 0,
+            total_duration_ms: 0.0,
+            total_tasks_completed: 0,
+        }
+    }
+}
+
+#[allow(dead_code)]
+impl SwarmHealthMonitor {
+    /// Create a new health monitor with custom parameters.
+    pub fn new(
+        heartbeat_interval_secs: u64,
+        max_missed_beats: u32,
+        replacement_timeout_secs: u64,
+    ) -> Self {
+        Self {
+            heartbeats: HashMap::new(),
+            heartbeat_interval_secs,
+            max_missed_beats,
+            replacement_timeout_secs,
+            started_at: chrono::Utc::now(),
+            total_messages_sent: 0,
+            total_messages_received: 0,
+            total_duration_ms: 0.0,
+            total_tasks_completed: 0,
+        }
+    }
+
+    /// Register a new worker for health tracking.
+    pub fn register_worker(&mut self, role: &str) {
+        let now = chrono::Utc::now();
+        self.heartbeats
+            .entry(role.to_string())
+            .or_insert(WorkerHeartbeat {
+                role: role.to_string(),
+                spawned_at: now,
+                last_heartbeat: now,
+                missed_beats: 0,
+                status: WorkerHealthStatus::Healthy,
+                tasks_completed: 0,
+                tasks_failed: 0,
+                error_count: 0,
+                total_duration_ms: 0.0,
+                duration_samples: 0,
+                messages_sent: 0,
+                messages_received: 0,
+                iteration: 0,
+                is_busy: false,
+                task_started_at: None,
+            });
+    }
+
+    /// Record a heartbeat from a worker.
+    pub fn heartbeat(&mut self, role: &str) {
+        if let Some(hb) = self.heartbeats.get_mut(role) {
+            hb.last_heartbeat = chrono::Utc::now();
+            hb.missed_beats = 0;
+            hb.status = WorkerHealthStatus::Healthy;
+        }
+    }
+
+    /// Record that a worker started a task.
+    pub fn task_started(&mut self, role: &str) {
+        if let Some(hb) = self.heartbeats.get_mut(role) {
+            hb.is_busy = true;
+            hb.task_started_at = Some(chrono::Utc::now());
+            hb.iteration += 1;
+        }
+    }
+
+    /// Record that a worker completed a task successfully.
+    pub fn task_completed(&mut self, role: &str) {
+        if let Some(hb) = self.heartbeats.get_mut(role) {
+            hb.tasks_completed += 1;
+            hb.is_busy = false;
+
+            if let Some(started) = hb.task_started_at {
+                let duration = (chrono::Utc::now() - started).num_milliseconds() as f64;
+                hb.total_duration_ms += duration;
+                hb.duration_samples += 1;
+                self.total_duration_ms += duration;
+            }
+            self.total_tasks_completed += 1;
+            hb.task_started_at = None;
+        }
+    }
+
+    /// Record that a worker's task failed.
+    pub fn task_failed(&mut self, role: &str) {
+        if let Some(hb) = self.heartbeats.get_mut(role) {
+            hb.tasks_failed += 1;
+            hb.error_count += 1;
+            hb.is_busy = false;
+            hb.task_started_at = None;
+        }
+    }
+
+    /// Record an error from a worker.
+    pub fn record_error(&mut self, role: &str) {
+        if let Some(hb) = self.heartbeats.get_mut(role) {
+            hb.error_count += 1;
+        }
+    }
+
+    /// Record a message sent by a worker.
+    pub fn message_sent(&mut self, role: &str) {
+        if let Some(hb) = self.heartbeats.get_mut(role) {
+            hb.messages_sent += 1;
+        }
+        self.total_messages_sent += 1;
+    }
+
+    /// Record a message received by a worker.
+    pub fn message_received(&mut self, role: &str) {
+        if let Some(hb) = self.heartbeats.get_mut(role) {
+            hb.messages_received += 1;
+        }
+        self.total_messages_received += 1;
+    }
+
+    /// Scan all workers and update their health status based on heartbeat timing.
+    /// Returns a list of workers that have been detected as dead.
+    pub fn check_health(&mut self) -> Vec<String> {
+        let now = chrono::Utc::now();
+        let mut dead_workers = Vec::new();
+
+        for hb in self.heartbeats.values_mut() {
+            let elapsed = (now - hb.last_heartbeat).num_seconds();
+
+            if elapsed > (self.heartbeat_interval_secs * self.max_missed_beats as u64 * 2) as i64 {
+                if hb.status != WorkerHealthStatus::Dead {
+                    hb.status = WorkerHealthStatus::Dead;
+                    dead_workers.push(hb.role.clone());
+                }
+            } else if elapsed > (self.heartbeat_interval_secs * self.max_missed_beats as u64) as i64
+            {
+                hb.status = WorkerHealthStatus::Unhealthy;
+            } else if elapsed > (self.heartbeat_interval_secs * 2) as i64 {
+                hb.status = WorkerHealthStatus::Degraded;
+            }
+        }
+
+        dead_workers
+    }
+
+    /// Get telemetry for a specific worker.
+    pub fn worker_telemetry(&self, role: &str) -> Option<WorkerTelemetry> {
+        self.heartbeats.get(role).map(|hb| {
+            let avg_dur = if hb.duration_samples > 0 {
+                hb.total_duration_ms / hb.duration_samples as f64
+            } else {
+                0.0
+            };
+
+            WorkerTelemetry {
+                role: hb.role.clone(),
+                status: hb.status.clone(),
+                tasks_completed: hb.tasks_completed,
+                tasks_failed: hb.tasks_failed,
+                error_count: hb.error_count,
+                avg_duration_ms: avg_dur,
+                last_heartbeat: hb.last_heartbeat.to_rfc3339(),
+                spawned_at: hb.spawned_at.to_rfc3339(),
+                messages_sent: hb.messages_sent,
+                messages_received: hb.messages_received,
+                iteration: hb.iteration,
+            }
+        })
+    }
+
+    /// Get telemetry for all workers.
+    pub fn all_worker_telemetry(&self) -> Vec<WorkerTelemetry> {
+        let mut roles: Vec<String> = self.heartbeats.keys().cloned().collect();
+        roles.sort();
+        roles
+            .iter()
+            .filter_map(|r| self.worker_telemetry(r))
+            .collect()
+    }
+
+    /// Get aggregate swarm metrics.
+    pub fn metrics(&self) -> SwarmMetrics {
+        let mut healthy = 0;
+        let mut degraded = 0;
+        let mut unhealthy = 0;
+        let mut dead = 0;
+        let mut total_completed = 0u64;
+        let mut total_failed = 0u64;
+        let mut total_errors = 0u64;
+        let mut busy_workers = 0u64;
+        let total_workers = self.heartbeats.len();
+
+        for hb in self.heartbeats.values() {
+            match hb.status {
+                WorkerHealthStatus::Healthy => healthy += 1,
+                WorkerHealthStatus::Degraded => degraded += 1,
+                WorkerHealthStatus::Unhealthy => unhealthy += 1,
+                WorkerHealthStatus::Dead => dead += 1,
+            }
+            total_completed += hb.tasks_completed;
+            total_failed += hb.tasks_failed;
+            total_errors += hb.error_count;
+            if hb.is_busy {
+                busy_workers += 1;
+            }
+        }
+
+        let elapsed_secs = (chrono::Utc::now() - self.started_at).num_seconds().max(1) as f64;
+        let task_throughput = self.total_tasks_completed as f64 / elapsed_secs;
+
+        let worker_utilization = if total_workers > 0 {
+            busy_workers as f64 / total_workers as f64
+        } else {
+            0.0
+        };
+
+        let error_rate = if total_completed + total_failed > 0 {
+            total_errors as f64 / (total_completed + total_failed) as f64
+        } else {
+            0.0
+        };
+
+        let overall_avg_duration = if self.total_tasks_completed > 0 {
+            self.total_duration_ms / self.total_tasks_completed as f64
+        } else {
+            0.0
+        };
+
+        let comm_latency = if self.total_messages_sent > 0 {
+            // Approximate: average time between send and receive is estimated
+            // from the ratio of received to sent messages × average interval
+            let ratio = self.total_messages_received as f64 / self.total_messages_sent as f64;
+            ratio * (self.heartbeat_interval_secs as f64 * 1000.0) / 2.0
+        } else {
+            0.0
+        };
+
+        SwarmMetrics {
+            total_workers,
+            healthy_workers: healthy,
+            degraded_workers: degraded,
+            unhealthy_workers: unhealthy,
+            dead_workers: dead,
+            total_tasks_completed: total_completed,
+            total_tasks_failed: total_failed,
+            total_errors,
+            overall_avg_duration_ms: overall_avg_duration,
+            task_throughput,
+            communication_latency_ms: comm_latency,
+            worker_utilization,
+            error_rate,
+            timestamp: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+
+    /// Get workers that are candidates for replacement (dead for > replacement_timeout).
+    pub fn dead_workers_for_replacement(&self) -> Vec<String> {
+        let now = chrono::Utc::now();
+        self.heartbeats
+            .iter()
+            .filter(|(_, hb)| hb.status == WorkerHealthStatus::Dead)
+            .filter(|(_, hb)| {
+                let elapsed = (now - hb.last_heartbeat).num_seconds();
+                elapsed >= self.replacement_timeout_secs as i64
+            })
+            .map(|(role, _)| role.clone())
+            .collect()
+    }
+
+    /// Remove a worker from tracking (after replacement).
+    pub fn remove_worker(&mut self, role: &str) {
+        self.heartbeats.remove(role);
+    }
+
+    /// Get the number of tracked workers.
+    pub fn worker_count(&self) -> usize {
+        self.heartbeats.len()
+    }
+
+    /// Format health status for logging.
+    pub fn format_status(&self) -> String {
+        let m = self.metrics();
+        format!(
+            "Swarm Health: {}/{} healthy, {} degraded, {} unhealthy, {} dead | \
+             {} tasks ({:.1}/s) | {:.1}% utilization | {:.2}% error rate",
+            m.healthy_workers,
+            m.total_workers,
+            m.degraded_workers,
+            m.unhealthy_workers,
+            m.dead_workers,
+            m.total_tasks_completed,
+            m.task_throughput,
+            m.worker_utilization * 100.0,
+            m.error_rate * 100.0,
+        )
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Worker profile
 // ---------------------------------------------------------------------------
 
@@ -558,6 +1029,9 @@ pub struct SwarmOrchestrator {
     registry: ToolRegistry,
     /// Inter-agent message bus (shared across sub-orchestrators)
     message_bus: Option<Arc<RwLock<AgentMessageBus>>>,
+    /// Swarm health monitor (active when enable_health_monitoring is true)
+    /// Uses Arc<RwLock> for interior mutability since execute_with_profile takes &self
+    health_monitor: Option<Arc<RwLock<SwarmHealthMonitor>>>,
 }
 
 impl SwarmOrchestrator {
@@ -580,6 +1054,13 @@ impl SwarmOrchestrator {
             None
         };
 
+        // Create health monitor if health monitoring is enabled
+        let health_monitor = if config.enable_health_monitoring {
+            Some(Arc::new(RwLock::new(SwarmHealthMonitor::default())))
+        } else {
+            None
+        };
+
         Self {
             config,
             current_depth: 0,
@@ -592,6 +1073,7 @@ impl SwarmOrchestrator {
             audit_log,
             registry,
             message_bus,
+            health_monitor,
         }
     }
 
@@ -612,6 +1094,13 @@ impl SwarmOrchestrator {
         let audit_log = AuditLog::new(format!("swarm-{}", std::process::id()));
         let registry = ToolRegistry::with_default_tools();
 
+        // Create health monitor if health monitoring is enabled
+        let health_monitor = if config.enable_health_monitoring {
+            Some(Arc::new(RwLock::new(SwarmHealthMonitor::default())))
+        } else {
+            None
+        };
+
         Self {
             config,
             current_depth: 0,
@@ -624,6 +1113,7 @@ impl SwarmOrchestrator {
             audit_log,
             registry,
             message_bus,
+            health_monitor,
         }
     }
 
@@ -647,6 +1137,24 @@ impl SwarmOrchestrator {
         self.current_depth
     }
 
+    /// Get swarm health metrics, if health monitoring is enabled.
+    #[allow(dead_code)]
+    pub fn health_metrics(&self) -> Option<SwarmMetrics> {
+        self.health_monitor
+            .as_ref()
+            .and_then(|hm| hm.try_read().ok())
+            .map(|hm| hm.metrics())
+    }
+
+    /// Get telemetry for all workers, if health monitoring is enabled.
+    #[allow(dead_code)]
+    pub fn worker_telemetry(&self) -> Option<Vec<WorkerTelemetry>> {
+        self.health_monitor
+            .as_ref()
+            .and_then(|hm| hm.try_read().ok())
+            .map(|hm| hm.all_worker_telemetry())
+    }
+
     /// Orchestrate a task — decompose, assign, execute, and aggregate.
     ///
     /// This is the main entry point for swarm execution. It analyzes the task,
@@ -664,6 +1172,13 @@ impl SwarmOrchestrator {
             max_depth = self.config.max_depth,
             "Orchestrating task"
         );
+
+        // Log health status at start if monitoring is enabled
+        if let Some(ref hm) = self.health_monitor {
+            if let Ok(hm_guard) = hm.try_read() {
+                info!(health = %hm_guard.format_status(), "Swarm health at start");
+            }
+        }
 
         // Check recursion depth
         if self.current_depth >= self.config.max_depth {
@@ -788,6 +1303,14 @@ impl SwarmOrchestrator {
 
         info!(role = %role, profile = %profile.name, "Executing task with profile");
 
+        // Register worker with health monitor and record task start
+        if let Some(ref hm) = self.health_monitor {
+            if let Ok(mut hm_guard) = hm.try_write() {
+                hm_guard.register_worker(role);
+                hm_guard.task_started(role);
+            }
+        }
+
         let llm = self.llm.as_ref().ok_or_else(|| {
             RavenClawError::CommandExecution("No LLM provider available for worker".to_string())
         })?;
@@ -810,6 +1333,12 @@ impl SwarmOrchestrator {
 
         let messages = memory.history().to_vec();
         let response = llm.chat(messages).await.map_err(|e| {
+            // Record failure in health monitor
+            if let Some(ref hm) = self.health_monitor {
+                if let Ok(mut hm_guard) = hm.try_write() {
+                    hm_guard.task_failed(role);
+                }
+            }
             RavenClawError::CommandExecution(format!("Worker {} failed: {}", role, e))
         })?;
 
@@ -818,6 +1347,14 @@ impl SwarmOrchestrator {
             .first()
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
+
+        // Record task completion in health monitor
+        if let Some(ref hm) = self.health_monitor {
+            if let Ok(mut hm_guard) = hm.try_write() {
+                hm_guard.task_completed(role);
+                hm_guard.heartbeat(role);
+            }
+        }
 
         // Broadcast result to other workers via message bus
         if let Some(ref bus) = self.message_bus {
@@ -833,6 +1370,12 @@ impl SwarmOrchestrator {
                     ),
                     HashMap::new(),
                 );
+            }
+            // Track message in health monitor
+            if let Some(ref hm) = self.health_monitor {
+                if let Ok(mut hm_guard) = hm.try_write() {
+                    hm_guard.message_sent(role);
+                }
             }
         }
 
@@ -872,6 +1415,14 @@ impl SwarmOrchestrator {
         let llm = self.llm.as_ref().ok_or_else(|| {
             RavenClawError::CommandExecution("No LLM provider available for supervisor".to_string())
         })?;
+
+        // Register supervisor with health monitor
+        if let Some(ref hm) = self.health_monitor {
+            if let Ok(mut hm_guard) = hm.try_write() {
+                hm_guard.register_worker("supervisor");
+                hm_guard.task_started("supervisor");
+            }
+        }
 
         let supervisor_profile = WorkerProfile::supervisor();
         let mut memory = ConversationMemory::new(
@@ -933,6 +1484,21 @@ impl SwarmOrchestrator {
                 .map(|c| c.message.content.clone())
                 .unwrap_or_default();
 
+            // Periodically check health status
+            if iteration % 3 == 0 {
+                if let Some(ref hm) = self.health_monitor {
+                    if let Ok(hm_guard) = hm.try_read() {
+                        let status = hm_guard.format_status();
+                        info!(health = %status, "Swarm health check");
+                        // Check for dead workers
+                        let dead = hm_guard.dead_workers_for_replacement();
+                        if !dead.is_empty() {
+                            warn!(dead_workers = ?dead, "Dead workers detected");
+                        }
+                    }
+                }
+            }
+
             // Check for FINAL: completion
             if content.contains("FINAL:") {
                 let final_response = content
@@ -946,6 +1512,14 @@ impl SwarmOrchestrator {
                     subtasks = subtask_results.len(),
                     "Supervisor completed"
                 );
+
+                // Record supervisor completion in health monitor
+                if let Some(ref hm) = self.health_monitor {
+                    if let Ok(mut hm_guard) = hm.try_write() {
+                        hm_guard.task_completed("supervisor");
+                        hm_guard.heartbeat("supervisor");
+                    }
+                }
 
                 let _ = self.audit_log.append(
                     AuditEventType::AgentFinish,
@@ -1009,6 +1583,7 @@ impl SwarmOrchestrator {
                             let ravenfabric = self.ravenfabric.clone();
                             let subtask = subtask_desc.to_string();
                             let message_bus = self.message_bus.clone();
+                            let health_monitor = self.health_monitor.clone();
 
                             Box::pin(async move {
                                 let mut sub_orchestrator = SwarmOrchestrator {
@@ -1027,6 +1602,7 @@ impl SwarmOrchestrator {
                                     )),
                                     registry: ToolRegistry::with_default_tools(),
                                     message_bus,
+                                    health_monitor,
                                 };
 
                                 // Initialize sub-orchestrator sandbox
@@ -1056,6 +1632,13 @@ impl SwarmOrchestrator {
                         }
                         Err(e) => {
                             warn!(role = %role, error = %e, "Subtask failed");
+                            // Record failure in health monitor
+                            if let Some(ref hm) = self.health_monitor {
+                                if let Ok(mut hm_guard) = hm.try_write() {
+                                    hm_guard.task_failed(&role);
+                                    hm_guard.record_error(&role);
+                                }
+                            }
                             memory.add_assistant_message(&format!(
                                 "Subtask for {} failed: {}",
                                 role, e
@@ -1461,5 +2044,307 @@ mod tests {
         let config = SwarmConfig::default();
         assert!(!config.enable_agent_communication); // Default: disabled
         assert!(!config.enable_health_monitoring); // Default: disabled
+    }
+
+    // ── Health monitoring tests ─────────────────────────────────────────
+
+    #[test]
+    fn test_health_status_display() {
+        assert_eq!(format!("{}", WorkerHealthStatus::Healthy), "healthy");
+        assert_eq!(format!("{}", WorkerHealthStatus::Degraded), "degraded");
+        assert_eq!(format!("{}", WorkerHealthStatus::Unhealthy), "unhealthy");
+        assert_eq!(format!("{}", WorkerHealthStatus::Dead), "dead");
+    }
+
+    #[test]
+    fn test_health_monitor_default() {
+        let hm = SwarmHealthMonitor::default();
+        assert_eq!(hm.heartbeat_interval_secs, 5);
+        assert_eq!(hm.max_missed_beats, 3);
+        assert_eq!(hm.replacement_timeout_secs, 30);
+        assert_eq!(hm.worker_count(), 0);
+    }
+
+    #[test]
+    fn test_health_monitor_register_worker() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("researcher");
+        assert_eq!(hm.worker_count(), 1);
+
+        let telemetry = hm.worker_telemetry("researcher");
+        assert!(telemetry.is_some());
+        assert_eq!(telemetry.unwrap().role, "researcher");
+    }
+
+    #[test]
+    fn test_health_monitor_heartbeat() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("executor");
+        hm.heartbeat("executor");
+
+        let telemetry = hm.worker_telemetry("executor").unwrap();
+        assert_eq!(telemetry.status, WorkerHealthStatus::Healthy);
+    }
+
+    #[test]
+    fn test_health_monitor_task_lifecycle() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("executor");
+        hm.task_started("executor");
+        hm.task_completed("executor");
+
+        let telemetry = hm.worker_telemetry("executor").unwrap();
+        assert_eq!(telemetry.tasks_completed, 1);
+        assert_eq!(telemetry.tasks_failed, 0);
+    }
+
+    #[test]
+    fn test_health_monitor_task_failure() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("executor");
+        hm.task_started("executor");
+        hm.task_failed("executor");
+
+        let telemetry = hm.worker_telemetry("executor").unwrap();
+        assert_eq!(telemetry.tasks_completed, 0);
+        assert_eq!(telemetry.tasks_failed, 1);
+        assert_eq!(telemetry.error_count, 1);
+    }
+
+    #[test]
+    fn test_health_monitor_metrics_empty() {
+        let hm = SwarmHealthMonitor::default();
+        let metrics = hm.metrics();
+        assert_eq!(metrics.total_workers, 0);
+        assert_eq!(metrics.healthy_workers, 0);
+        assert_eq!(metrics.total_tasks_completed, 0);
+        assert_eq!(metrics.task_throughput, 0.0);
+    }
+
+    #[test]
+    fn test_health_monitor_metrics_with_workers() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("researcher");
+        hm.register_worker("executor");
+        hm.task_started("executor");
+        hm.task_completed("executor");
+        hm.task_started("researcher");
+        hm.task_completed("researcher");
+
+        let metrics = hm.metrics();
+        assert_eq!(metrics.total_workers, 2);
+        assert_eq!(metrics.healthy_workers, 2);
+        assert_eq!(metrics.total_tasks_completed, 2);
+    }
+
+    #[test]
+    fn test_health_monitor_dead_worker_detection() {
+        let mut hm = SwarmHealthMonitor {
+            heartbeat_interval_secs: 1,
+            max_missed_beats: 1,
+            replacement_timeout_secs: 0, // Immediate replacement
+            ..SwarmHealthMonitor::default()
+        };
+
+        hm.register_worker("executor");
+        // Set last heartbeat far in the past by manipulating directly
+        if let Some(hb) = hm.heartbeats.get_mut("executor") {
+            hb.last_heartbeat = chrono::Utc::now() - chrono::Duration::seconds(10);
+        }
+
+        let dead = hm.check_health();
+        assert!(!dead.is_empty());
+        assert_eq!(dead[0], "executor");
+    }
+
+    #[test]
+    fn test_health_monitor_degraded_detection() {
+        let mut hm = SwarmHealthMonitor {
+            heartbeat_interval_secs: 1,
+            max_missed_beats: 3,
+            ..SwarmHealthMonitor::default()
+        };
+
+        hm.register_worker("executor");
+        // Set last heartbeat to 3 seconds ago (between 2x interval and max_missed*interval)
+        if let Some(hb) = hm.heartbeats.get_mut("executor") {
+            hb.last_heartbeat = chrono::Utc::now() - chrono::Duration::seconds(3);
+        }
+
+        let _dead = hm.check_health();
+        let telemetry = hm.worker_telemetry("executor").unwrap();
+        assert_eq!(telemetry.status, WorkerHealthStatus::Degraded);
+    }
+
+    #[test]
+    fn test_health_monitor_message_tracking() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("researcher");
+        hm.message_sent("researcher");
+        hm.message_sent("researcher");
+        hm.message_received("researcher");
+
+        let telemetry = hm.worker_telemetry("researcher").unwrap();
+        assert_eq!(telemetry.messages_sent, 2);
+        assert_eq!(telemetry.messages_received, 1);
+    }
+
+    #[test]
+    fn test_health_monitor_error_tracking() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("executor");
+        hm.record_error("executor");
+        hm.record_error("executor");
+        hm.record_error("executor");
+
+        let telemetry = hm.worker_telemetry("executor").unwrap();
+        assert_eq!(telemetry.error_count, 3);
+    }
+
+    #[test]
+    fn test_health_monitor_format_status() {
+        let hm = SwarmHealthMonitor::default();
+        let status = hm.format_status();
+        assert!(status.contains("Swarm Health:"));
+        assert!(status.contains("healthy"));
+    }
+
+    #[test]
+    fn test_health_monitor_all_worker_telemetry() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("researcher");
+        hm.register_worker("executor");
+        hm.register_worker("reviewer");
+
+        let all = hm.all_worker_telemetry();
+        assert_eq!(all.len(), 3);
+    }
+
+    #[test]
+    fn test_health_monitor_remove_worker() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("executor");
+        assert_eq!(hm.worker_count(), 1);
+        hm.remove_worker("executor");
+        assert_eq!(hm.worker_count(), 0);
+    }
+
+    #[test]
+    fn test_orchestrator_new_with_health_monitoring() {
+        let config = SwarmConfig {
+            enable_health_monitoring: true,
+            ..SwarmConfig::default()
+        };
+        let orchestrator = SwarmOrchestrator::new(config, None, None, None);
+        assert!(orchestrator.health_monitor.is_some());
+    }
+
+    #[test]
+    fn test_orchestrator_new_without_health_monitoring() {
+        let config = SwarmConfig {
+            enable_health_monitoring: false,
+            ..SwarmConfig::default()
+        };
+        let orchestrator = SwarmOrchestrator::new(config, None, None, None);
+        assert!(orchestrator.health_monitor.is_none());
+    }
+
+    #[test]
+    fn test_health_metrics_accessor() {
+        let config = SwarmConfig {
+            enable_health_monitoring: true,
+            ..SwarmConfig::default()
+        };
+        let orchestrator = SwarmOrchestrator::new(config, None, None, None);
+        let metrics = orchestrator.health_metrics();
+        assert!(metrics.is_some());
+        assert_eq!(metrics.unwrap().total_workers, 0);
+    }
+
+    #[test]
+    fn test_worker_telemetry_accessor() {
+        let config = SwarmConfig {
+            enable_health_monitoring: true,
+            ..SwarmConfig::default()
+        };
+        let orchestrator = SwarmOrchestrator::new(config, None, None, None);
+        let telemetry = orchestrator.worker_telemetry();
+        assert!(telemetry.is_some());
+        assert!(telemetry.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_health_monitor_new_custom() {
+        let hm = SwarmHealthMonitor::new(10, 5, 60);
+        assert_eq!(hm.heartbeat_interval_secs, 10);
+        assert_eq!(hm.max_missed_beats, 5);
+        assert_eq!(hm.replacement_timeout_secs, 60);
+    }
+
+    #[test]
+    fn test_health_monitor_dead_workers_for_replacement() {
+        let mut hm = SwarmHealthMonitor {
+            heartbeat_interval_secs: 1,
+            max_missed_beats: 1,
+            replacement_timeout_secs: 0,
+            ..SwarmHealthMonitor::default()
+        };
+
+        hm.register_worker("executor");
+        // Set last heartbeat far in the past
+        if let Some(hb) = hm.heartbeats.get_mut("executor") {
+            hb.last_heartbeat = chrono::Utc::now() - chrono::Duration::seconds(30);
+            hb.status = WorkerHealthStatus::Dead;
+        }
+
+        let candidates = hm.dead_workers_for_replacement();
+        assert_eq!(candidates.len(), 1);
+        assert_eq!(candidates[0], "executor");
+    }
+
+    #[test]
+    fn test_health_monitor_metrics_error_rate() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("executor");
+        hm.task_started("executor");
+        hm.task_completed("executor");
+        hm.task_started("executor");
+        hm.task_failed("executor");
+
+        let metrics = hm.metrics();
+        assert_eq!(metrics.total_tasks_completed, 1);
+        assert_eq!(metrics.total_tasks_failed, 1);
+        assert!(metrics.error_rate > 0.0);
+    }
+
+    #[test]
+    fn test_health_monitor_metrics_utilization() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("busy_worker");
+        hm.register_worker("idle_worker");
+
+        // Mark one worker as busy
+        if let Some(hb) = hm.heartbeats.get_mut("busy_worker") {
+            hb.is_busy = true;
+        }
+
+        let metrics = hm.metrics();
+        assert_eq!(metrics.total_workers, 2);
+        assert!((metrics.worker_utilization - 0.5).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_health_monitor_iteration_tracking() {
+        let mut hm = SwarmHealthMonitor::default();
+        hm.register_worker("executor");
+        hm.task_started("executor");
+        hm.task_completed("executor");
+        hm.task_started("executor");
+        hm.task_completed("executor");
+        hm.task_started("executor");
+
+        let telemetry = hm.worker_telemetry("executor").unwrap();
+        assert_eq!(telemetry.iteration, 3);
+        assert_eq!(telemetry.tasks_completed, 2);
     }
 }

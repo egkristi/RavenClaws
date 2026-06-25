@@ -44,7 +44,7 @@ Each module is **self-contained** and can be run independently:
 
 The verification suite runs **114 tests** across **10 modules**, covering **4 deployment targets**. Each test produces a detailed log in `target/verification-results/`.
 
-In addition, **353 Rust unit tests** run via `cargo test` covering all 14 source modules (agent, config, error, llm, tools, mcp, server, telemetry, policy, audit, sandbox, ravenfabric, background, scheduler, eval).
+In addition, **452 Rust unit tests** run via `cargo test` covering all 16 source modules (agent, config, error, llm, tools, mcp, server, telemetry, policy, audit, sandbox, ravenfabric, background, scheduler, eval, swarm).
 
 ### Usage
 

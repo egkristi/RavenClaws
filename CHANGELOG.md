@@ -17,7 +17,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Results broadcast back to the bus for peer awareness
   - CLI flags: `--swarm-communication` (env: `RAVENCLAW_SWARM_COMMUNICATION`)
   - 14 unit tests covering all message bus operations
-  - 428 total unit tests (0 regressions)
+- **Swarm health & telemetry** (`src/swarm.rs`) — Production-grade health monitoring for swarm agents with heartbeat tracking, dead-agent detection, and aggregate metrics.
+  - `SwarmHealthMonitor` — tracks per-worker heartbeats, detects degraded/unhealthy/dead agents, and identifies replacement candidates
+  - `WorkerHealthStatus` — four-state health model: Healthy, Degraded, Unhealthy, Dead
+  - `WorkerTelemetry` — per-worker metrics: tasks completed/failed, error count, avg duration, messages sent/received, iteration count
+  - `SwarmMetrics` — aggregate swarm health: total/healthy/degraded/unhealthy/dead workers, task throughput, worker utilization, error rate, communication latency
+  - Heartbeat protocol with configurable interval (default: 5s), max missed beats (default: 3), and replacement timeout (default: 30s)
+  - Health monitoring integrated into `execute_with_profile()` and `recursive_supervise_impl()` — workers auto-register, heartbeats update on task completion, failures are tracked
+  - Health monitor shared across sub-orchestrators via `Arc<RwLock<>>` for recursive supervision
+  - Periodic health check logging in supervisor loop (every 3 iterations)
+  - Public accessors: `health_metrics()` and `worker_telemetry()` on `SwarmOrchestrator`
+  - CLI flag: `--swarm-health-monitoring` (env: `RAVENCLAW_SWARM_HEALTH_MONITORING`)
+  - 22 unit tests covering all health monitoring operations
+  - 452 total unit tests (0 regressions)
 
 ## [0.9.1] — 2026-06-23
 

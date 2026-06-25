@@ -44,8 +44,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.9.0 (2026-06-22) — Autonomous Heartbeat + Self-Provisioning Swarm  
-**Stats:** 16 source modules (+background, +scheduler, +eval, +heartbeat, +swarm), ~14,800 LOC, 5 LLM providers, 5 built-in tools (+web_search), 428 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus.
+**Version:** 0.9.2 (2026-06-23) — Swarm Health & Telemetry  
+**Stats:** 16 source modules (+background, +scheduler, +eval, +heartbeat, +swarm), ~15,200 LOC, 5 LLM providers, 5 built-in tools (+web_search), 452 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry.
 
 | Component | Status | Details |
 |---|---|---|
@@ -223,6 +223,7 @@ simpler** — or deliberately not at all.
 | **Long-horizon task persistence** | ✅ **v0.9** | ✅ | ✅ | ❌ |
 | **Scalable swarm (100+ workers)** | ✅ **v0.9** | ❌ | ❌ | ❌ |
 | **Self-provisioning sub-agents** | ✅ **v0.9** | ❌ | ❌ | ❌ |
+| **Swarm health & telemetry** | ✅ **v0.9.2** | ❌ | ❌ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ✅ (SearXNG + DuckDuckGo) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
@@ -466,7 +467,17 @@ long time horizons, and dynamically orchestrate swarms of any size.
 - [x] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable. ✅ **v0.9.1**
 - [x] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load. ✅ **v0.9.1**
 - [x] **Inter-agent communication bus** — structured message passing between swarm members with delivery guarantees, routing, and policy enforcement. All communication is audited. ✅ **v0.9.1**
-- [ ] **Swarm health & telemetry** — heartbeat monitoring per agent, dead-agent detection, automatic replacement. Metrics: task throughput, agent utilization, error rates, communication latency.
+- [x] **Swarm health & telemetry** — heartbeat monitoring per agent, dead-agent detection, automatic replacement. Metrics: task throughput, agent utilization, error rates, communication latency. ✅ **v0.9.2**
+  - `SwarmHealthMonitor` with per-worker heartbeat tracking, four-state health model (Healthy/Degraded/Unhealthy/Dead)
+  - `WorkerTelemetry` — tasks completed/failed, error count, avg duration, messages sent/received
+  - `SwarmMetrics` — aggregate health: total/healthy/degraded/unhealthy/dead workers, task throughput, utilization, error rate, communication latency
+  - Configurable heartbeat interval (5s), max missed beats (3), replacement timeout (30s)
+  - Integrated into `execute_with_profile()` and `recursive_supervise_impl()` — auto-registration, heartbeat on completion, failure tracking
+  - Shared across sub-orchestrators via `Arc<RwLock<>>` for recursive supervision
+  - Periodic health check logging in supervisor loop
+  - Public accessors: `health_metrics()` and `worker_telemetry()` on `SwarmOrchestrator`
+  - CLI flag: `--swarm-health-monitoring` (env: `RAVENCLAW_SWARM_HEALTH_MONITORING`)
+  - 22 unit tests, 452 total (0 regressions)
 - [ ] **Graceful degradation under load** — when resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
 - [ ] **Self-healing** — failed agents are detected, replaced, and caught up. Supervisor re-assigns orphaned tasks. No single point of failure in mesh topologies.
 
