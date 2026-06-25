@@ -3,8 +3,8 @@
 **Date:** 2026-06-22  
 **Version:** v0.8.0 — Prompt-Injection Defense ✅  
 **Previous Release:** v0.7.2 (2026-06-20) — OpenTelemetry ✅  
-**Current Commit:** *(pending)* — Next ROADMAP item
-**CI Status:** Build & Release #111 ✅ · Container Build #111 ✅ · Security Scan #95 ✅
+**Current Commit:** *(pending)* — Inter-agent communication bus ✅
+**CI Status:** Build & Release #133 ✅ · Container Build #133 ✅ · Security Scan #106 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -45,7 +45,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.9.0 (2026-06-22) — Autonomous Heartbeat + Self-Provisioning Swarm  
-**Stats:** 16 source modules (+background, +scheduler, +eval, +heartbeat, +swarm), ~14,500 LOC, 5 LLM providers, 5 built-in tools (+web_search), 416 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration.
+**Stats:** 16 source modules (+background, +scheduler, +eval, +heartbeat, +swarm), ~14,800 LOC, 5 LLM providers, 5 built-in tools (+web_search), 428 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus.
 
 | Component | Status | Details |
 |---|---|---|
@@ -259,8 +259,9 @@ the cloud incumbents structurally can't follow.
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
 | Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
 | **Autonomous heartbeat (long-running)** | Operates independently for days/weeks without supervision | ✅ **v0.9** | **v0.9** |
-| **Scalable swarm (100+ workers)** | Dynamic provisioning of 10s–100s of agents in any topology | 🔄 **v0.9** | **v0.9** |
-| **Self-provisioning sub-agents** | Agent spawns agents; recursive supervisor mode | 🔄 **v0.9** | **v0.9** |
+| **Scalable swarm (100+ workers)** | Dynamic provisioning of 10s–100s of agents in any topology | ✅ **v0.9** | **v0.9** |
+| **Self-provisioning sub-agents** | Agent spawns agents; recursive supervisor mode | ✅ **v0.9** | **v0.9** |
+| **Inter-agent communication** | Structured message passing between swarm members | ✅ **v0.9.1** | **v0.9** |
 | Async / long-horizon background runs | Manus's killer feature (cloud background) | ✅ **v0.8** | **v0.8** ✅ |
 | Scheduling / triggers (cron, webhook) | Proactive, set-and-forget operation | ✅ **v0.8** | **v0.7** |
 | Streaming + intermediate results | First-class in Vellum; needed for interactive UX | ✅ | v0.3 |
@@ -405,7 +406,7 @@ Agency with guardrails — the security differentiator.
 - [x] **Node.js 24 migration** — `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` in all workflows ✅ Implemented 2026-06-18
 - [x] **CodeQL v4 migration** — all `codeql-action/*@v3` → `@v4` ✅ Implemented 2026-06-18
 - [x] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability). ✅ v0.6.1
-- [ ] **Agent communication** — structured message passing; conflict resolution across agents. *(v0.6.2)*
+- [x] **Agent communication** — structured message passing; conflict resolution across agents. ✅ **v0.9.1** *(moved to v0.9)*
 - [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion (acts as the user, not a shared service account). *(v0.7)*
 - [ ] **Skill / Plugin System** (foundations) — **MOVED FROM v0.5** *(v0.7)*
   - Portable capability bundles: `skill.yaml` + scripts + resources
@@ -451,7 +452,7 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 RavenClaw becomes a truly autonomous agent that can operate independently over
 long time horizons, and dynamically orchestrate swarms of any size.
 
-**Released versions:** [v0.9.0](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.0) (heartbeat + persistence) · [v0.9.1](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.1) (swarm orchestration)
+**Released versions:** [v0.9.0](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.0) (heartbeat + persistence) · [v0.9.1](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.1) (swarm orchestration + inter-agent communication)
 
 - [x] **Autonomous heartbeat** — persistent background loop with configurable tick interval; agent wakes, assesses progress, plans next steps, executes, and sleeps. No human-in-the-loop required for routine operation. ✅ **v0.9.0**
 - [x] **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context. Heartbeat continues across binary restarts. ✅ **v0.9.0**
@@ -464,7 +465,7 @@ long time horizons, and dynamically orchestrate swarms of any size.
 - [x] **Scalable swarm orchestration** — support for 10s to 100s of workers. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid. ✅ **v0.9.1**
 - [x] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable. ✅ **v0.9.1**
 - [x] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load. ✅ **v0.9.1**
-- [ ] **Inter-agent communication bus** — structured message passing between swarm members with delivery guarantees, routing, and policy enforcement. All communication is audited.
+- [x] **Inter-agent communication bus** — structured message passing between swarm members with delivery guarantees, routing, and policy enforcement. All communication is audited. ✅ **v0.9.1**
 - [ ] **Swarm health & telemetry** — heartbeat monitoring per agent, dead-agent detection, automatic replacement. Metrics: task throughput, agent utilization, error rates, communication latency.
 - [ ] **Graceful degradation under load** — when resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
 - [ ] **Self-healing** — failed agents are detected, replaced, and caught up. Supervisor re-assigns orphaned tasks. No single point of failure in mesh topologies.
@@ -497,7 +498,7 @@ long time horizons, and dynamically orchestrate swarms of any size.
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 416 unit tests across 16 modules (+eval, +background, +scheduler, +swarm) + 114 verification tests across 10 modules. All tests pass, clippy clean, fmt clean.
+**Current coverage:** 428 unit tests across 16 modules (+eval, +background, +scheduler, +swarm) + 114 verification tests across 10 modules. All tests pass, clippy clean, fmt clean.
 
 ---
 

@@ -206,6 +206,14 @@ struct Args {
     /// Worker profiles file path (v0.9, JSON)
     #[arg(long, env = "RAVENCLAW_SWARM_PROFILES")]
     swarm_profiles: Option<String>,
+
+    /// Enable inter-agent communication in swarm mode (v0.9)
+    #[arg(long, env = "RAVENCLAW_SWARM_COMMUNICATION")]
+    swarm_communication: bool,
+
+    /// Enable swarm health monitoring (v0.9)
+    #[arg(long, env = "RAVENCLAW_SWARM_HEALTH_MONITORING")]
+    swarm_health_monitoring: bool,
 }
 
 #[tokio::main]
@@ -619,6 +627,12 @@ async fn main() -> anyhow::Result<()> {
     config.swarm.max_workers = args.swarm_max_workers;
     if args.swarm_dynamic_roles {
         config.swarm.dynamic_role_assignment = true;
+    }
+    if args.swarm_communication {
+        config.swarm.enable_agent_communication = true;
+    }
+    if args.swarm_health_monitoring {
+        config.swarm.enable_health_monitoring = true;
     }
 
     // Load worker profiles from file if specified

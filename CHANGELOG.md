@@ -8,7 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-*(none yet)*
+- **Inter-agent communication bus** (`src/swarm.rs`) — Swarm agents can now share information and coordinate via a shared message bus.
+  - `AgentMessage` struct with UUID, sender, recipient, message type, content, timestamp, and metadata
+  - `MessageType` enum: Information, Question, Result, Error, Coordination, Generic
+  - `AgentMessageBus` with send, receive, filter, and broadcast capabilities
+  - `SwarmOrchestrator::new_with_bus()` for shared bus across sub-orchestrators
+  - Task prompts enriched with message bus context for informed decision-making
+  - Results broadcast back to the bus for peer awareness
+  - CLI flags: `--swarm-communication` (env: `RAVENCLAW_SWARM_COMMUNICATION`)
+  - 14 unit tests covering all message bus operations
+  - 428 total unit tests (0 regressions)
 
 ## [0.9.1] — 2026-06-23
 

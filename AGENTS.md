@@ -23,7 +23,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.9.0 (autonomous heartbeat + self-provisioning swarm)
+- **Version:** 0.9.1 (autonomous heartbeat + self-provisioning swarm + inter-agent communication)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaw
 - **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
@@ -60,7 +60,7 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (416 tests, 16 modules, 0 failures) | ✅ Working |
+| Verification suite (428 tests, 16 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -69,6 +69,7 @@ src/
 | Swarm mode | ✅ Working — 3 parallel agents with different personas (single + multi-model) |
 | Supervisor mode | ✅ Working — task decomposition + sub-agent spawning + result aggregation (single + multi-model) |
 | Self-provisioning swarm orchestration | ✅ v0.9.0 — recursive supervisor spawning, WorkerProfile, SwarmTopology, dynamic role assignment, 5 built-in profiles |
+| Inter-agent communication bus | ✅ v0.9.1 — AgentMessageBus with send/receive/broadcast, MessageType enum, shared bus across sub-orchestrators |
 | Tool-use / function calling | ✅ Working — ToolImpl trait + ToolRegistry + 4 built-in tools + agent loop wiring |
 | Agent loop / ReAct planning | ✅ Working — perceive→plan→act→observe with max-iteration guard, tool call detection |
 | Deny-by-default policy | ✅ Working — PolicyEngine with shell/path/network allow-lists |

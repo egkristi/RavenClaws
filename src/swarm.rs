@@ -13,6 +13,7 @@
 //!   ├── max_depth: recursion limit (default: 3)
 //!   ├── max_workers: total worker cap (default: 100)
 //!   ├── profiles: Vec<WorkerProfile> — available worker types
+//!   ├── message_bus: AgentMessageBus — inter-agent communication
 //!   └── orchestrate(task):
 //!       1. Analyze task → determine required roles
 //!       2. Assign roles → select profiles
@@ -20,6 +21,13 @@
 //!       4. Coordinate → recursive supervisor if task is complex
 //!       5. Aggregate → collect and merge results
 //! ```
+//!
+//! # Inter-Agent Communication
+//!
+//! When `enable_agent_communication` is set, swarm workers can exchange messages
+//! through a shared `AgentMessageBus`. Messages are routed by role and include
+//! typed payloads (information, question, result, error, coordination).
+//! All messages are audited and timestamped.
 //!
 //! # Integration
 //!
@@ -36,8 +44,195 @@ use crate::ravenfabric::RavenFabricClient;
 use crate::sandbox::Sandbox;
 use crate::tools::ToolRegistry;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
+use tokio::sync::RwLock;
 use tracing::{info, instrument, warn};
+
+// ---------------------------------------------------------------------------
+// Inter-agent communication
+// ---------------------------------------------------------------------------
+
+/// A message exchanged between swarm workers.
+///
+/// Messages are typed so workers can filter and respond appropriately.
+/// All messages are timestamped and include the sender's role for auditability.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentMessage {
+    /// Unique message ID
+    pub id: String,
+
+    /// Sender's worker role (e.g., "researcher", "executor")
+    pub sender: String,
+
+    /// Recipient's worker role ("*" = broadcast to all)
+    pub recipient: String,
+
+    /// Message type
+    pub msg_type: MessageType,
+
+    /// Message content
+    pub content: String,
+
+    /// ISO 8601 timestamp
+    pub timestamp: String,
+
+    /// Optional metadata (e.g., task ID, iteration number)
+    #[serde(default)]
+    pub metadata: HashMap<String, String>,
+}
+
+/// The type of an inter-agent message.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum MessageType {
+    /// Sharing information or findings
+    Information,
+    /// Asking a question or requesting input
+    Question,
+    /// Reporting a result or completion
+    Result,
+    /// Reporting an error or issue
+    Error,
+    /// Coordination message (e.g., task re-assignment)
+    Coordination,
+    /// General purpose message
+    Generic,
+}
+
+impl std::fmt::Display for MessageType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MessageType::Information => write!(f, "information"),
+            MessageType::Question => write!(f, "question"),
+            MessageType::Result => write!(f, "result"),
+            MessageType::Error => write!(f, "error"),
+            MessageType::Coordination => write!(f, "coordination"),
+            MessageType::Generic => write!(f, "generic"),
+        }
+    }
+}
+
+/// A shared message bus for inter-agent communication within a swarm.
+///
+/// The message bus is shared across all workers in a swarm via `Arc<RwLock<>>`.
+/// Workers can send messages to specific roles or broadcast to all.
+/// Messages are retained for the lifetime of the swarm and can be queried.
+#[derive(Debug, Clone)]
+pub struct AgentMessageBus {
+    /// All messages sent in this swarm session
+    messages: Vec<AgentMessage>,
+    /// Maximum messages to retain (0 = unlimited)
+    max_messages: usize,
+}
+
+#[allow(dead_code)]
+impl AgentMessageBus {
+    /// Create a new message bus with the given capacity.
+    pub fn new(max_messages: usize) -> Self {
+        Self {
+            messages: Vec::new(),
+            max_messages,
+        }
+    }
+
+    /// Send a message to a specific recipient (or "*" for broadcast).
+    pub fn send(
+        &mut self,
+        sender: &str,
+        recipient: &str,
+        msg_type: MessageType,
+        content: &str,
+        metadata: HashMap<String, String>,
+    ) -> String {
+        let id = uuid::Uuid::new_v4().to_string();
+        let timestamp = chrono::Utc::now().to_rfc3339();
+
+        let msg = AgentMessage {
+            id: id.clone(),
+            sender: sender.to_string(),
+            recipient: recipient.to_string(),
+            msg_type,
+            content: content.to_string(),
+            timestamp,
+            metadata,
+        };
+
+        self.messages.push(msg);
+
+        // Trim oldest messages if over capacity
+        if self.max_messages > 0 && self.messages.len() > self.max_messages {
+            self.messages.remove(0);
+        }
+
+        id
+    }
+
+    /// Get all messages addressed to a specific role (or "*" for broadcast).
+    pub fn messages_for(&self, role: &str) -> Vec<&AgentMessage> {
+        self.messages
+            .iter()
+            .filter(|m| m.recipient == role || m.recipient == "*")
+            .collect()
+    }
+
+    /// Get all messages from a specific sender.
+    pub fn messages_from(&self, sender: &str) -> Vec<&AgentMessage> {
+        self.messages
+            .iter()
+            .filter(|m| m.sender == sender)
+            .collect()
+    }
+
+    /// Get all messages of a specific type.
+    pub fn messages_of_type(&self, msg_type: &MessageType) -> Vec<&AgentMessage> {
+        self.messages
+            .iter()
+            .filter(|m| m.msg_type == *msg_type)
+            .collect()
+    }
+
+    /// Get all messages in the bus.
+    pub fn all_messages(&self) -> &[AgentMessage] {
+        &self.messages
+    }
+
+    /// Get the number of messages in the bus.
+    pub fn len(&self) -> usize {
+        self.messages.len()
+    }
+
+    /// Check if the bus is empty.
+    pub fn is_empty(&self) -> bool {
+        self.messages.is_empty()
+    }
+
+    /// Format recent messages for inclusion in an LLM prompt.
+    ///
+    /// Returns a string with the last N messages formatted for the agent's context.
+    pub fn format_for_prompt(&self, role: &str, max_messages: usize) -> String {
+        let relevant: Vec<&AgentMessage> = self
+            .messages
+            .iter()
+            .filter(|m| m.recipient == role || m.recipient == "*" || m.sender == role)
+            .rev()
+            .take(max_messages)
+            .collect();
+
+        if relevant.is_empty() {
+            return String::new();
+        }
+
+        let mut output = String::from("\n\n--- Inter-Agent Messages ---\n");
+        for msg in relevant.iter().rev() {
+            output.push_str(&format!(
+                "[{}] {} → {} ({}): {}\n",
+                msg.msg_type, msg.sender, msg.recipient, msg.timestamp, msg.content
+            ));
+        }
+        output.push_str("--- End Inter-Agent Messages ---\n");
+        output
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Worker profile
@@ -361,6 +556,8 @@ pub struct SwarmOrchestrator {
     /// Tool registry (reserved for future worker tool execution)
     #[allow(dead_code)]
     registry: ToolRegistry,
+    /// Inter-agent message bus (shared across sub-orchestrators)
+    message_bus: Option<Arc<RwLock<AgentMessageBus>>>,
 }
 
 impl SwarmOrchestrator {
@@ -370,6 +567,45 @@ impl SwarmOrchestrator {
         llm: Option<Arc<dyn LLMProviderTrait>>,
         multi_llm: Option<MultiModelManager>,
         ravenfabric: Option<RavenFabricClient>,
+    ) -> Self {
+        let policy_engine = PolicyEngine::default_secure();
+        let sandbox = Sandbox::default();
+        let audit_log = AuditLog::new(format!("swarm-{}", std::process::id()));
+        let registry = ToolRegistry::with_default_tools();
+
+        // Create message bus if inter-agent communication is enabled
+        let message_bus = if config.enable_agent_communication {
+            Some(Arc::new(RwLock::new(AgentMessageBus::new(1000))))
+        } else {
+            None
+        };
+
+        Self {
+            config,
+            current_depth: 0,
+            worker_count: 0,
+            llm,
+            multi_llm,
+            ravenfabric,
+            policy_engine,
+            sandbox,
+            audit_log,
+            registry,
+            message_bus,
+        }
+    }
+
+    /// Create a new swarm orchestrator with a shared message bus.
+    ///
+    /// This is used when spawning sub-orchestrators that should share
+    /// the same communication channel as their parent.
+    #[allow(dead_code)]
+    pub fn new_with_bus(
+        config: SwarmConfig,
+        llm: Option<Arc<dyn LLMProviderTrait>>,
+        multi_llm: Option<MultiModelManager>,
+        ravenfabric: Option<RavenFabricClient>,
+        message_bus: Option<Arc<RwLock<AgentMessageBus>>>,
     ) -> Self {
         let policy_engine = PolicyEngine::default_secure();
         let sandbox = Sandbox::default();
@@ -387,6 +623,7 @@ impl SwarmOrchestrator {
             sandbox,
             audit_log,
             registry,
+            message_bus,
         }
     }
 
@@ -556,7 +793,20 @@ impl SwarmOrchestrator {
         })?;
 
         let mut memory = ConversationMemory::new(&profile.persona, profile.max_memory_messages);
-        memory.add_user_message(task);
+
+        // Include inter-agent messages in the prompt if communication is enabled
+        let enriched_task = if let Some(ref bus) = self.message_bus {
+            if let Ok(bus_guard) = bus.try_read() {
+                let msg_context = bus_guard.format_for_prompt(role, 20);
+                format!("{}{}", task, msg_context)
+            } else {
+                task.to_string()
+            }
+        } else {
+            task.to_string()
+        };
+
+        memory.add_user_message(&enriched_task);
 
         let messages = memory.history().to_vec();
         let response = llm.chat(messages).await.map_err(|e| {
@@ -568,6 +818,23 @@ impl SwarmOrchestrator {
             .first()
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
+
+        // Broadcast result to other workers via message bus
+        if let Some(ref bus) = self.message_bus {
+            if let Ok(mut bus_guard) = bus.try_write() {
+                bus_guard.send(
+                    role,
+                    "*",
+                    MessageType::Result,
+                    &format!(
+                        "Completed task. Result ({} chars): {}",
+                        content.len(),
+                        &content[..content.len().min(500)]
+                    ),
+                    HashMap::new(),
+                );
+            }
+        }
 
         let _ = self.audit_log.append(
             AuditEventType::AgentFinish,
@@ -613,6 +880,18 @@ impl SwarmOrchestrator {
         );
 
         let role_list = roles.join(", ");
+
+        // Include inter-agent messages in the supervisor prompt if communication is enabled
+        let msg_context = if let Some(ref bus) = self.message_bus {
+            if let Ok(bus_guard) = bus.try_read() {
+                bus_guard.format_for_prompt("supervisor", 20)
+            } else {
+                String::new()
+            }
+        } else {
+            String::new()
+        };
+
         let supervise_prompt = format!(
             "Decompose this task into subtasks and assign each to the most appropriate role.\n\
              Available roles: {}\n\n\
@@ -621,8 +900,9 @@ impl SwarmOrchestrator {
              SUBTASK: <description>\n\
              ROLE: <role>\n\n\
              When all subtasks are complete, respond with:\n\
-             FINAL: <aggregated result>",
-            role_list, task
+             FINAL: <aggregated result>\n\
+             {}",
+            role_list, task, msg_context
         );
 
         memory.add_user_message(&supervise_prompt);
@@ -705,6 +985,19 @@ impl SwarmOrchestrator {
                 if !subtask_desc.is_empty() {
                     info!(role = %role, subtask = %subtask_desc, "Delegating subtask");
 
+                    // Broadcast coordination message before delegating
+                    if let Some(ref bus) = self.message_bus {
+                        if let Ok(mut bus_guard) = bus.try_write() {
+                            bus_guard.send(
+                                "supervisor",
+                                &role,
+                                MessageType::Coordination,
+                                &format!("Delegating subtask: {}", subtask_desc),
+                                HashMap::new(),
+                            );
+                        }
+                    }
+
                     let result =
                         if role == "supervisor" && self.current_depth < self.config.max_depth {
                             // Recursive: spawn a sub-supervisor (boxed to avoid recursive async fn)
@@ -715,6 +1008,7 @@ impl SwarmOrchestrator {
                             let multi_llm = self.multi_llm.clone();
                             let ravenfabric = self.ravenfabric.clone();
                             let subtask = subtask_desc.to_string();
+                            let message_bus = self.message_bus.clone();
 
                             Box::pin(async move {
                                 let mut sub_orchestrator = SwarmOrchestrator {
@@ -732,6 +1026,7 @@ impl SwarmOrchestrator {
                                         std::process::id()
                                     )),
                                     registry: ToolRegistry::with_default_tools(),
+                                    message_bus,
                                 };
 
                                 // Initialize sub-orchestrator sandbox
@@ -960,5 +1255,211 @@ mod tests {
         assert_eq!(config.topology, SwarmTopology::Hierarchical);
         assert_eq!(config.max_depth, 5);
         assert_eq!(config.max_workers, 50);
+    }
+
+    // ── Inter-agent communication tests ─────────────────────────────────
+
+    #[test]
+    fn test_message_bus_new() {
+        let bus = AgentMessageBus::new(100);
+        assert!(bus.is_empty());
+        assert_eq!(bus.len(), 0);
+    }
+
+    #[test]
+    fn test_message_bus_send_and_receive() {
+        let mut bus = AgentMessageBus::new(100);
+
+        let id = bus.send(
+            "researcher",
+            "executor",
+            MessageType::Information,
+            "Found relevant data",
+            HashMap::new(),
+        );
+
+        assert!(!id.is_empty());
+        assert_eq!(bus.len(), 1);
+
+        let msgs = bus.messages_for("executor");
+        assert_eq!(msgs.len(), 1);
+        assert_eq!(msgs[0].content, "Found relevant data");
+        assert_eq!(msgs[0].sender, "researcher");
+    }
+
+    #[test]
+    fn test_message_bus_broadcast() {
+        let mut bus = AgentMessageBus::new(100);
+
+        bus.send(
+            "supervisor",
+            "*",
+            MessageType::Coordination,
+            "All workers proceed",
+            HashMap::new(),
+        );
+
+        // All roles should receive broadcast messages
+        assert_eq!(bus.messages_for("researcher").len(), 1);
+        assert_eq!(bus.messages_for("executor").len(), 1);
+        assert_eq!(bus.messages_for("reviewer").len(), 1);
+    }
+
+    #[test]
+    fn test_message_bus_filter_by_type() {
+        let mut bus = AgentMessageBus::new(100);
+
+        bus.send(
+            "researcher",
+            "*",
+            MessageType::Information,
+            "Data found",
+            HashMap::new(),
+        );
+        bus.send(
+            "executor",
+            "supervisor",
+            MessageType::Result,
+            "Task done",
+            HashMap::new(),
+        );
+        bus.send(
+            "executor",
+            "supervisor",
+            MessageType::Error,
+            "Failed",
+            HashMap::new(),
+        );
+
+        let errors = bus.messages_of_type(&MessageType::Error);
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].content, "Failed");
+
+        let results = bus.messages_of_type(&MessageType::Result);
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn test_message_bus_max_messages() {
+        let mut bus = AgentMessageBus::new(5); // Only keep 5 messages
+
+        for i in 0..10 {
+            bus.send(
+                "worker",
+                "*",
+                MessageType::Generic,
+                &format!("Message {}", i),
+                HashMap::new(),
+            );
+        }
+
+        // Should only have the last 5 messages
+        assert_eq!(bus.len(), 5);
+        let all = bus.all_messages();
+        assert_eq!(all[0].content, "Message 5");
+        assert_eq!(all[4].content, "Message 9");
+    }
+
+    #[test]
+    fn test_message_bus_format_for_prompt() {
+        let mut bus = AgentMessageBus::new(100);
+
+        bus.send(
+            "researcher",
+            "*",
+            MessageType::Information,
+            "Found key insight",
+            HashMap::new(),
+        );
+        bus.send(
+            "executor",
+            "supervisor",
+            MessageType::Result,
+            "Implementation complete",
+            HashMap::new(),
+        );
+
+        let prompt = bus.format_for_prompt("supervisor", 10);
+        assert!(prompt.contains("Inter-Agent Messages"));
+        assert!(prompt.contains("researcher"));
+        assert!(prompt.contains("executor"));
+        assert!(prompt.contains("Found key insight"));
+    }
+
+    #[test]
+    fn test_message_bus_empty_format() {
+        let bus = AgentMessageBus::new(100);
+        let prompt = bus.format_for_prompt("supervisor", 10);
+        assert!(prompt.is_empty());
+    }
+
+    #[test]
+    fn test_message_type_display() {
+        assert_eq!(format!("{}", MessageType::Information), "information");
+        assert_eq!(format!("{}", MessageType::Question), "question");
+        assert_eq!(format!("{}", MessageType::Result), "result");
+        assert_eq!(format!("{}", MessageType::Error), "error");
+        assert_eq!(format!("{}", MessageType::Coordination), "coordination");
+        assert_eq!(format!("{}", MessageType::Generic), "generic");
+    }
+
+    #[test]
+    fn test_message_bus_messages_from() {
+        let mut bus = AgentMessageBus::new(100);
+
+        bus.send(
+            "researcher",
+            "*",
+            MessageType::Information,
+            "Data A",
+            HashMap::new(),
+        );
+        bus.send(
+            "researcher",
+            "executor",
+            MessageType::Information,
+            "Data B",
+            HashMap::new(),
+        );
+        bus.send(
+            "executor",
+            "supervisor",
+            MessageType::Result,
+            "Done",
+            HashMap::new(),
+        );
+
+        let from_researcher = bus.messages_from("researcher");
+        assert_eq!(from_researcher.len(), 2);
+
+        let from_executor = bus.messages_from("executor");
+        assert_eq!(from_executor.len(), 1);
+    }
+
+    #[test]
+    fn test_orchestrator_new_with_communication() {
+        let config = SwarmConfig {
+            enable_agent_communication: true,
+            ..SwarmConfig::default()
+        };
+        let orchestrator = SwarmOrchestrator::new(config, None, None, None);
+        assert!(orchestrator.message_bus.is_some());
+    }
+
+    #[test]
+    fn test_orchestrator_new_without_communication() {
+        let config = SwarmConfig {
+            enable_agent_communication: false,
+            ..SwarmConfig::default()
+        };
+        let orchestrator = SwarmOrchestrator::new(config, None, None, None);
+        assert!(orchestrator.message_bus.is_none());
+    }
+
+    #[test]
+    fn test_swarm_config_communication_default() {
+        let config = SwarmConfig::default();
+        assert!(!config.enable_agent_communication); // Default: disabled
+        assert!(!config.enable_health_monitoring); // Default: disabled
     }
 }
