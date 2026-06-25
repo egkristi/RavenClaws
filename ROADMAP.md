@@ -446,22 +446,24 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - [ ] **Air-gap / offline licensing**; runtime feature-flag gating.
 - [ ] **Output artifacts & reporting** — generate documents, spreadsheets, slides, and sites via the skill system (v0.5); underpins compliance and executive reporting.
 
-### ✅ v0.9 — Autonomous heartbeat & self-orchestration 💓 (COMPLETE)
+### ✅ v0.9 — Autonomous heartbeat & self-orchestration 💓 (v0.9.1 released)
 
 RavenClaw becomes a truly autonomous agent that can operate independently over
 long time horizons, and dynamically orchestrate swarms of any size.
 
-- [x] **Autonomous heartbeat** — persistent background loop with configurable tick interval; agent wakes, assesses progress, plans next steps, executes, and sleeps. No human-in-the-loop required for routine operation. ✅ **v0.9**
-- [x] **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context. Heartbeat continues across binary restarts. ✅ **v0.9**
+**Released versions:** [v0.9.0](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.0) (heartbeat + persistence) · [v0.9.1](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.1) (swarm orchestration)
+
+- [x] **Autonomous heartbeat** — persistent background loop with configurable tick interval; agent wakes, assesses progress, plans next steps, executes, and sleeps. No human-in-the-loop required for routine operation. ✅ **v0.9.0**
+- [x] **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context. Heartbeat continues across binary restarts. ✅ **v0.9.0**
   - `HeartbeatState` persisted to `workdir/heartbeat-<id>.json` after every tick
   - `HeartbeatAgent::new()` auto-resumes from saved state on restart
   - `BackgroundTaskManager` persists all tasks as individual JSON files in `<workdir>/tasks/`
   - `--task-resume` flag re-executes incomplete tasks on startup
   - 401 total unit tests (0 regressions)
-- [x] **Self-provisioning of sub-agents** — RavenClaw dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors. ✅ **v0.9**
-- [x] **Scalable swarm orchestration** — support for 10s to 100s of workers. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid. ✅ **v0.9**
-- [x] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable. ✅ **v0.9**
-- [x] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load. ✅ **v0.9**
+- [x] **Self-provisioning of sub-agents** — RavenClaw dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors. ✅ **v0.9.1**
+- [x] **Scalable swarm orchestration** — support for 10s to 100s of workers. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid. ✅ **v0.9.1**
+- [x] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable. ✅ **v0.9.1**
+- [x] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load. ✅ **v0.9.1**
 - [ ] **Inter-agent communication bus** — structured message passing between swarm members with delivery guarantees, routing, and policy enforcement. All communication is audited.
 - [ ] **Swarm health & telemetry** — heartbeat monitoring per agent, dead-agent detection, automatic replacement. Metrics: task throughput, agent utilization, error rates, communication latency.
 - [ ] **Graceful degradation under load** — when resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
@@ -495,7 +497,7 @@ long time horizons, and dynamically orchestrate swarms of any size.
 - **CI gates:** `fmt`, `clippy -D warnings`, `test`, Trivy (CRITICAL/HIGH fail), SBOM per release.
 - **Coverage goal:** ≥ 80% line coverage by v1.0; no `unwrap`/`expect` on non-test hot paths.
 
-**Current coverage:** 370 unit tests across 14 modules (+eval, +background, +scheduler) + 114 verification tests across 10 modules. All tests pass, clippy clean, fmt clean.
+**Current coverage:** 416 unit tests across 16 modules (+eval, +background, +scheduler, +swarm) + 114 verification tests across 10 modules. All tests pass, clippy clean, fmt clean.
 
 ---
 
@@ -503,7 +505,7 @@ long time horizons, and dynamically orchestrate swarms of any size.
 
 | Metric | Target | Current |
 |---|---|---|
-| Stripped binary size | < 15 MB | ~3.4 MB ✅ |
+| Stripped binary size | < 15 MB | ~5 MB ✅ |
 | Container image size | < 30 MB | ~50 MB ⚠️ |
 | Cold start (single mode) | < 50 ms | ~7 ms ✅ |
 | Idle memory (server mode) | < 20 MB RSS | N/A (no server) |

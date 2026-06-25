@@ -5,6 +5,26 @@ Items are ordered by severity/impact.
 
 ---
 
+## ✅ v0.9.1 Milestone — Released (2026-06-23)
+
+**Self-provisioning sub-agents & swarm orchestration shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| Self-provisioning of sub-agents | ✅ | Recursive supervisor spawning with `Box::pin` to avoid Rust's recursive async fn limitation |
+| Scalable swarm orchestration | ✅ | 4 topologies (Star, Mesh, Hierarchical, Hybrid), configurable `max_depth` (default 3) and `max_workers` (default 100) |
+| Worker personality & capability profiles | ✅ | 5 built-in profiles: researcher, creative, executor, reviewer, supervisor — each with persona, tools, provider/model overrides, resource limits |
+| Dynamic role assignment | ✅ | LLM-based task analysis assigns roles based on capability profiles and current load |
+| CLI flags | ✅ | `--swarm-topology`, `--swarm-max-depth`, `--swarm-max-workers`, `--swarm-dynamic-roles`, `--swarm-profiles` |
+| Config section | ✅ | `[swarm]` in `ravenclaw.toml` with serde defaults |
+| Unit tests | ✅ | 17 swarm tests (416 total) |
+
+**CI Status:** Build & Release #129 ✅ · Container Build #129 ✅ · Security Scan #104 ✅
+
+**Commit:** `cca0dda`
+
+---
+
 ## ✅ v0.9.0 Milestone — Released (2026-06-22)
 
 **Autonomous Heartbeat & Long-Horizon Task Persistence shipped:**
@@ -21,7 +41,7 @@ Items are ordered by severity/impact.
 
 **CI Status:** Build & Release #125 ✅ · Container Build #125 ✅ · Security Scan #102 ⚠️ (Cargo Audit: RUSTSEC-2026-0185 quinn-proto — fixed locally, pending commit)
 
-**Commit:** *(pending — working tree has all changes)*
+**Commit:** `313176b`
 
 ---
 

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+*(none yet)*
+
+## [0.9.1] — 2026-06-23
+
+### Added
 - **Self-provisioning of sub-agents** (`src/swarm.rs`) — RavenClaw dynamically spawns new agent instances based on task decomposition. Supervisor mode becomes recursive: supervisors spawn sub-supervisors, creating task decomposition trees of arbitrary depth.
   - `SwarmOrchestrator` — core orchestrator with recursive supervision, task analysis, role assignment, and result aggregation
   - `WorkerProfile` — declarative profile with persona, allowed_tools, provider/model overrides, resource limits, and delegation capability
