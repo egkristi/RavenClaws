@@ -175,4 +175,6 @@ jobs:
           cosign sign --yes \
             --oidc-provider github-actions \
             --bundle cosign-bundle.sigstore.json \
+            --fulcio-url https://fulcio.sigstore.dev \
+            --rekor-url https://rekor.sigstore.dev \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"
