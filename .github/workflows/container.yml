@@ -172,6 +172,7 @@ jobs:
 
       - name: Sign container image
         run: |
-          cosign sign --yes "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"
-        env:
-          COSIGN_EXPERIMENTAL: 1
+          cosign sign --yes \
+            --oidc-provider github-actions \
+            --bundle cosign-bundle.sigstore.json \
+            "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"
