@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- (no unreleased changes yet)
+
+## [0.9.2] — 2026-06-25
+
+### Added
 - **Inter-agent communication bus** (`src/swarm.rs`) — Swarm agents can now share information and coordinate via a shared message bus.
   - `AgentMessage` struct with UUID, sender, recipient, message type, content, timestamp, and metadata
   - `MessageType` enum: Information, Question, Result, Error, Coordination, Generic
