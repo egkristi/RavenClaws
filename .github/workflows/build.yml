@@ -27,7 +27,16 @@ jobs:
       - uses: Swatinem/rust-cache@v2.9.1
       - run: cargo fmt --check
       - run: cargo clippy --locked --all-targets -- -D warnings
-      - run: cargo test --locked
+      - name: Run cargo test --locked
+        run: |
+          set -o pipefail
+          cargo test --locked -- --nocapture 2>&1 | tee test-output.log
+      - name: Upload test output on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-output
+          path: test-output.log
 
   # ── Cross-platform Binary Builds ─────────────────────────────
   build-binaries:
