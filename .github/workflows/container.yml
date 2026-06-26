@@ -171,8 +171,9 @@ jobs:
       - uses: sigstore/cosign-installer@v4.1.2
 
       - name: Sign container image
+        env:
+          COSIGN_DEBUG: "1"
         run: |
           cosign sign --yes \
             --use-signing-config=false \
-            --timestamp-server-url https://tsa.sigstore.dev/api/v1/timestamp \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"

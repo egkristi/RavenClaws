@@ -206,10 +206,11 @@ jobs:
 
       - name: Run Cosign sign
         if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          COSIGN_DEBUG: "1"
         run: |
           cosign sign --yes \
             --use-signing-config=false \
-            --timestamp-server-url https://tsa.sigstore.dev/api/v1/timestamp \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
 
       # ── Attestation (tagged releases only) ────────────────────
