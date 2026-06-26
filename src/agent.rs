@@ -12,7 +12,6 @@ use crate::policy::{Decision, PolicyEngine};
 use crate::ravenfabric::RavenFabricClient;
 use crate::sandbox::Sandbox;
 use crate::tools::{ToolCall, ToolRegistry, ToolResult};
-use futures::StreamExt;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, instrument, warn};
@@ -60,7 +59,6 @@ impl ConversationMemory {
     }
 
     /// Get the current message history.
-    #[allow(dead_code)]
     pub fn history(&self) -> &[ChatMessage] {
         &self.messages
     }
@@ -116,7 +114,6 @@ impl Default for AgentLoopConfig {
 /// 1. Checks all tool calls against PolicyEngine before execution
 /// 2. Executes shell commands in the Sandbox
 /// 3. Logs all tool calls, policy decisions, and results to AuditLog
-#[allow(dead_code)]
 #[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model()))]
 pub async fn run_agent_loop(
     llm: Arc<dyn LLMProviderTrait>,
@@ -936,85 +933,6 @@ fn parse_tool_call(content: &str) -> Option<(String, serde_json::Value)> {
     let args: serde_json::Value = serde_json::from_str(args_str).ok()?;
 
     Some((tool_name, args))
-}
-
-/// Legacy function for backward compatibility (without security)
-#[deprecated(note = "Use run_agent_loop with security integration instead")]
-#[allow(dead_code)]
-async fn execute_tool_call(content: &str, registry: &ToolRegistry) -> Option<ToolResult> {
-    let (tool_name, args) = parse_tool_call(content)?;
-
-    let call = ToolCall {
-        name: tool_name.clone(),
-        arguments: args,
-        id: None,
-    };
-
-    match registry.execute(call).await {
-        Ok(result) => Some(result),
-        Err(e) => Some(ToolResult {
-            tool_name,
-            success: false,
-            output: String::new(),
-            error: Some(e.to_string()),
-            exit_code: Some(1),
-            duration_ms: None,
-        }),
-    }
-}
-
-/// Run a one-shot command via --exec mode with streaming output
-/// Sends the prompt to the LLM and prints tokens as they arrive.
-#[allow(dead_code)]
-pub async fn run_exec_stream(
-    llm: Arc<dyn LLMProviderTrait>,
-    prompt: &str,
-    system_prompt: &str,
-) -> Result<String> {
-    info!(
-        provider = llm.provider_name(),
-        model = llm.model(),
-        "Exec one-shot streaming mode"
-    );
-
-    let messages = vec![
-        ChatMessage {
-            role: "system".to_string(),
-            content: system_prompt.to_string(),
-        },
-        ChatMessage {
-            role: "user".to_string(),
-            content: prompt.to_string(),
-        },
-    ];
-
-    let mut full_response = String::new();
-
-    match llm.chat_stream(messages).await {
-        Ok(mut stream) => {
-            while let Some(chunk) = stream.next().await {
-                match chunk {
-                    Ok(chunk) => {
-                        if !chunk.content.is_empty() {
-                            print!("{}", chunk.content);
-                            full_response.push_str(&chunk.content);
-                        }
-                    }
-                    Err(e) => {
-                        warn!(error = %e, "Stream error");
-                        break;
-                    }
-                }
-            }
-            println!();
-        }
-        Err(e) => {
-            warn!(error = %e, "Failed to start stream");
-            return Err(crate::error::RavenClawsError::Llm(e));
-        }
-    }
-
-    Ok(full_response)
 }
 
 /// Run a single autonomous agent (single-provider mode)

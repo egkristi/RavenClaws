@@ -15,6 +15,7 @@ use tracing::instrument;
 
 /// A streaming chunk of an LLM response
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct StreamChunk {
     pub content: String,
     #[allow(dead_code)]
@@ -22,6 +23,7 @@ pub struct StreamChunk {
 }
 
 /// Type alias for streaming response
+#[allow(dead_code)]
 pub type StreamResult = Pin<Box<dyn Stream<Item = Result<StreamChunk, LLMError>> + Send>>;
 
 use crate::config::{LLMConfig, LLMProvider};
@@ -300,6 +302,7 @@ pub struct Usage {
 #[async_trait::async_trait]
 pub trait LLMProviderTrait: Send + Sync {
     async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError>;
+    #[allow(dead_code)]
     async fn chat_stream(&self, messages: Vec<ChatMessage>) -> Result<StreamResult, LLMError> {
         // Default: non-streaming fallback
         let response = self.chat(messages).await?;
@@ -606,133 +609,6 @@ impl LLMProviderTrait for OpenAICompatibleClient {
     }
 }
 
-/// LiteLLM client (OpenAI-compatible API) — DEPRECATED in v0.5, kept for backward compatibility
-#[deprecated(
-    since = "0.5.0",
-    note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::LiteLLM instead"
-)]
-#[allow(dead_code)]
-pub struct LiteLLMClient {
-    client: Client,
-    config: LLMConfig,
-}
-
-#[allow(deprecated, dead_code)]
-impl LiteLLMClient {
-    pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(config.timeout_secs))
-            .build()
-            .map_err(|e| LLMError::RequestFailed(format!("Failed to create HTTP client: {}", e)))?;
-
-        Ok(Self {
-            client,
-            config: config.clone(),
-        })
-    }
-}
-
-#[allow(deprecated, dead_code)]
-#[async_trait::async_trait]
-impl LLMProviderTrait for LiteLLMClient {
-    async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
-        let request = ChatRequest {
-            model: self.config.model.clone(),
-            messages,
-            temperature: Some(0.7),
-            max_tokens: Some(2048),
-            stream: None,
-            tools: None,
-            tool_choice: None,
-        };
-
-        let req = self
-            .client
-            .post(format!(
-                "{}/v1/chat/completions",
-                self.config.endpoint.trim_end_matches('/')
-            ))
-            .json(&request);
-
-        let req = if let Some(ref key) = self.config.api_key {
-            req.header("Authorization", format!("Bearer {}", key))
-        } else {
-            req
-        };
-
-        let response = req
-            .send()
-            .await
-            .map_err(|e| LLMError::RequestFailed(e.to_string()))?;
-
-        handle_openai_response(response).await
-    }
-
-    async fn chat_stream(&self, messages: Vec<ChatMessage>) -> Result<StreamResult, LLMError> {
-        // Delegate to unified implementation
-        let unified = OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::LiteLLM)?;
-        unified.chat_stream(messages).await
-    }
-
-    fn provider_name(&self) -> &str {
-        "litellm"
-    }
-
-    fn model(&self) -> &str {
-        &self.config.model
-    }
-}
-
-/// OpenRouter client (OpenAI-compatible with model routing) — DEPRECATED in v0.5
-#[deprecated(
-    since = "0.5.0",
-    note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::OpenRouter instead"
-)]
-#[allow(dead_code)]
-pub struct OpenRouterClient {
-    client: Client,
-    config: LLMConfig,
-}
-
-#[allow(deprecated, dead_code)]
-impl OpenRouterClient {
-    pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(config.timeout_secs))
-            .build()
-            .map_err(|e| LLMError::RequestFailed(format!("Failed to create HTTP client: {}", e)))?;
-
-        Ok(Self {
-            client,
-            config: config.clone(),
-        })
-    }
-}
-
-#[allow(deprecated, dead_code)]
-#[async_trait::async_trait]
-impl LLMProviderTrait for OpenRouterClient {
-    async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
-        let unified =
-            OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::OpenRouter)?;
-        unified.chat(messages).await
-    }
-
-    async fn chat_stream(&self, messages: Vec<ChatMessage>) -> Result<StreamResult, LLMError> {
-        let unified =
-            OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::OpenRouter)?;
-        unified.chat_stream(messages).await
-    }
-
-    fn provider_name(&self) -> &str {
-        "openrouter"
-    }
-
-    fn model(&self) -> &str {
-        &self.config.model
-    }
-}
-
 /// Ollama client (local/self-hosted models)
 pub struct OllamaClient {
     client: Client,
@@ -831,54 +707,6 @@ impl LLMProviderTrait for OllamaClient {
 
     fn provider_name(&self) -> &str {
         "ollama"
-    }
-
-    fn model(&self) -> &str {
-        &self.config.model
-    }
-}
-
-/// OpenAI native client — DEPRECATED in v0.5
-#[deprecated(
-    since = "0.5.0",
-    note = "Use OpenAICompatibleClient with OpenAICompatibleProvider::OpenAI instead"
-)]
-#[allow(dead_code)]
-pub struct OpenAIClient {
-    client: Client,
-    config: LLMConfig,
-}
-
-#[allow(deprecated, dead_code)]
-impl OpenAIClient {
-    pub fn new(config: &LLMConfig) -> Result<Self, LLMError> {
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(config.timeout_secs))
-            .build()
-            .map_err(|e| LLMError::RequestFailed(format!("Failed to create HTTP client: {}", e)))?;
-
-        Ok(Self {
-            client,
-            config: config.clone(),
-        })
-    }
-}
-
-#[allow(deprecated, dead_code)]
-#[async_trait::async_trait]
-impl LLMProviderTrait for OpenAIClient {
-    async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
-        let unified = OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::OpenAI)?;
-        unified.chat(messages).await
-    }
-
-    async fn chat_stream(&self, messages: Vec<ChatMessage>) -> Result<StreamResult, LLMError> {
-        let unified = OpenAICompatibleClient::new(&self.config, OpenAICompatibleProvider::OpenAI)?;
-        unified.chat_stream(messages).await
-    }
-
-    fn provider_name(&self) -> &str {
-        "openai"
     }
 
     fn model(&self) -> &str {

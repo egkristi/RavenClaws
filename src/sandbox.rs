@@ -139,10 +139,19 @@ impl Sandbox {
     }
 
     /// Create a sandbox with default configuration
-    pub fn default() -> Self {
+    pub fn new_default() -> Self {
         Self::new(SandboxConfig::default())
     }
+}
 
+impl Default for Sandbox {
+    fn default() -> Self {
+        Self::new(SandboxConfig::default())
+    }
+}
+
+#[allow(dead_code)]
+impl Sandbox {
     /// Initialize the sandbox — create the workdir if configured
     pub async fn init(&mut self) -> Result<(), SandboxError> {
         if self.config.create_workdir {
@@ -164,6 +173,7 @@ impl Sandbox {
     }
 
     /// Get the sandbox configuration
+    #[allow(dead_code)]
     pub fn config(&self) -> &SandboxConfig {
         &self.config
     }

@@ -5,23 +5,24 @@
 [![License](https://img.shields.io/badge/license-AGPLv3%20%2B%20Commercial-blue.svg)](LICENSING.md)
 [![CI](https://github.com/egkristi/RavenClaws/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
 [![Verification](https://img.shields.io/badge/verification-94%20checks-brightgreen)](VERIFICATION.md)
-[![Binary](https://img.shields.io/badge/binary-~3.4MB-blue)]()
+[![Binary](https://img.shields.io/badge/binary-~5.2MB-blue)]()
 [![Status](https://img.shields.io/badge/status-v0.9.0-brightgreen)](ROADMAP.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.9.0 (2026-06-22).** The provider layer (5 providers), one-shot execution (`--exec`),
+> **Status: v0.9.2 (2026-06-25).** The provider layer (5 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
 > retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, **supervisor mode**,
 > **RavenFabric mesh client**, **MCP server**, **HTTP server mode**, **autonomous heartbeat agent**,
-> **long-horizon task persistence**, and **scheduling/triggers** all work today.
+> **long-horizon task persistence**, **scheduling/triggers**, **inter-agent communication bus**,
+> **swarm health & telemetry**, and **library crate** all work today.
 > This README marks ✅ built vs. 📋 planned — honestly. Trust is a feature; we don't inflate it.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
-| **~3.4 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
-| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **401 unit tests + 114 verification checks** |
+| **~5.2 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
+| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **452 unit tests + 114 verification checks** |
 
 ---
 
@@ -35,7 +36,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 pillars at once:
 
 - **Secure** — memory-safe Rust (`unsafe` forbidden), fail-closed, no creds in config, verified supply chain.
-- **Small** — one static binary (~3 MB), distroless image, lean dependency tree.
+- **Small** — one static binary (~5 MB), distroless image, lean dependency tree.
 - **Efficient** — native performance, low memory, fast cold start, streaming everywhere.
 - **Robust** — graceful degradation, provider fallback, deterministic config, verified across 4 deployment targets.
 - **Simple** — one command to run, sensible defaults, no external services required for single-agent use.
@@ -48,7 +49,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ### Small & efficient
 
-- **~3.4 MB** stripped release binary (measured) — no interpreter, no runtime image baggage.
+- **~5.2 MB** stripped release binary (measured) — no interpreter, no runtime image baggage.
 - **Single static binary** — no Python, no Node, no JVM, zero runtime dependencies.
 - Native Rust with `lto` + `panic=abort`. Design targets (benchmarked toward v1.0 via the [verification suite](VERIFICATION.md)): **< 50 ms** cold start, **< 20 MB** RSS, **< 15 MB** binary across all targets.
 
@@ -431,7 +432,7 @@ and Vellum — by category:
 | Our commitment | How we back it |
 |---|---|
 | Memory-safe core | Rust with `unsafe` forbidden |
-| Tiny footprint | ~3.4 MB binary, distroless image, 0 runtime deps |
+| Tiny footprint | ~5.2 MB binary, distroless image, 0 runtime deps |
 | Trustworthy releases | Cosign signing · SBOM · provenance · CodeQL · Trivy · OSSF Scorecard |
 | Runs anywhere, privately | Self-hostable, air-gappable, no telemetry |
 | Honest about status | ✅/📋 markers everywhere; benchmarks published, not asserted |

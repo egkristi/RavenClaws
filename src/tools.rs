@@ -349,6 +349,20 @@ pub struct ShellTool {
 
 impl ShellTool {
     pub fn new() -> Self {
+        Self::default()
+    }
+
+    #[allow(dead_code)]
+    pub fn new_with_sandbox(sandbox: Sandbox) -> Self {
+        Self {
+            sandbox: Some(sandbox),
+            ..Self::default()
+        }
+    }
+}
+
+impl Default for ShellTool {
+    fn default() -> Self {
         let mut properties = HashMap::new();
         properties.insert(
             "command".to_string(),
@@ -382,45 +396,6 @@ impl ShellTool {
                 category: ToolCategory::Shell,
             },
             sandbox: None,
-        }
-    }
-
-    /// Create a new ShellTool with sandbox support
-    #[allow(dead_code)]
-    pub fn with_sandbox(sandbox: Sandbox) -> Self {
-        let mut properties = HashMap::new();
-        properties.insert(
-            "command".to_string(),
-            JsonSchema::string("The shell command to execute"),
-        );
-        properties.insert(
-            "timeout_secs".to_string(),
-            JsonSchema {
-                schema_type: "integer".to_string(),
-                description: Some("Timeout in seconds (default: 30)".to_string()),
-                properties: None,
-                required: None,
-                items: None,
-                enum_values: None,
-            },
-        );
-        properties.insert(
-            "workdir".to_string(),
-            JsonSchema::string("Working directory (default: sandbox workdir)"),
-        );
-
-        Self {
-            definition: ToolDefinition {
-                name: "shell_exec".to_string(),
-                description: "Execute a shell command in a sandboxed environment. Use for running scripts, compiling code, or any command-line operation.".to_string(),
-                parameters: JsonSchema::object(
-                    properties,
-                    vec!["command".to_string()],
-                ),
-                requires_approval: true,
-                category: ToolCategory::Shell,
-            },
-            sandbox: Some(sandbox),
         }
     }
 }
@@ -476,6 +451,12 @@ pub struct ReadFileTool {
 
 impl ReadFileTool {
     pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for ReadFileTool {
+    fn default() -> Self {
         let mut properties = HashMap::new();
         properties.insert(
             "path".to_string(),
@@ -559,6 +540,12 @@ pub struct WriteFileTool {
 
 impl WriteFileTool {
     pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for WriteFileTool {
+    fn default() -> Self {
         let mut properties = HashMap::new();
         properties.insert(
             "path".to_string(),
@@ -683,6 +670,12 @@ pub struct WebFetchTool {
 
 impl WebFetchTool {
     pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Default for WebFetchTool {
+    fn default() -> Self {
         let mut properties = HashMap::new();
         properties.insert("url".to_string(), JsonSchema::string("The URL to fetch"));
         properties.insert(
@@ -799,12 +792,7 @@ pub struct WebSearchTool {
 
 impl WebSearchTool {
     pub fn new() -> Self {
-        Self::with_config(
-            "https://searx.be".to_string(),
-            "duckduckgo".to_string(),
-            5,
-            true,
-        )
+        Self::default()
     }
 
     pub fn with_config(
@@ -860,7 +848,20 @@ impl WebSearchTool {
             fetch_content,
         }
     }
+}
 
+impl Default for WebSearchTool {
+    fn default() -> Self {
+        Self::with_config(
+            "https://searx.be".to_string(),
+            "duckduckgo".to_string(),
+            5,
+            true,
+        )
+    }
+}
+
+impl WebSearchTool {
     /// Search via SearXNG API (self-hosted, privacy-respecting)
     async fn search_searxng(
         &self,

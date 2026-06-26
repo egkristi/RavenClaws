@@ -1,0 +1,16 @@
+{{- if and .Values.workspace.storageClass (not (empty .Values.workspace.storageClass)) -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ravenclaws.fullname" . }}-workspace
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "ravenclaws.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.workspace.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.workspace.size }}
+{{- end }}

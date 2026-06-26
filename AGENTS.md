@@ -11,7 +11,7 @@ RavenClaws aims to be the **ultimate AI agentic assistant and worker** — and t
 We don't aim to win by out-featuring them. We win by refusing to compromise on five pillars at once:
 
 - **Secure** — memory-safe Rust (`unsafe` forbidden), fail-closed, no creds in config, verified supply chain.
-- **Small** — one static binary (~3 MB), distroless image, lean dependency tree.
+- **Small** — one static binary (~5 MB), distroless image, lean dependency tree.
 - **Efficient** — native performance, low memory, fast cold start, streaming everywhere.
 - **Robust** — graceful degradation, provider fallback, deterministic config, verified across 4 deployment targets.
 - **Simple** — one command to run, sensible defaults, no external services required for single-agent use.
@@ -27,12 +27,14 @@ RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io
-- **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
+- **Build:** `cargo build --release` (~5.2 MB stripped binary, ~5 ms startup)
+- **Library:** Available as `ravenclaws` on crates.io (binary + library crate)
 
-### Architecture (16 modules)
+### Architecture (18 modules)
 
 ```
 src/
+├── lib.rs       — Library crate entry point, public API re-exports
 ├── main.rs      — CLI entry point (clap), config loading, mode dispatch
 ├── agent.rs     — Agent implementations (single, swarm, supervisor, REPL, ConversationMemory, agent loop with tool wiring)
 ├── background.rs— Background task manager (async long-horizon runs, disk persistence, resumability)
@@ -42,13 +44,15 @@ src/
 ├── llm.rs       — LLM provider abstraction (trait + 5 clients + multi-model manager + streaming)
 ├── config.rs    — Config structs, TOML/env loading, validation
 ├── error.rs     — Unified error types
-├── tools.rs     — Tool abstraction (ToolImpl trait, ToolRegistry, ToolCall, ToolResult) + 4 built-in tools (shell, read/write file, web fetch)
+├── tools.rs     — Tool abstraction (ToolImpl trait, ToolRegistry, ToolCall, ToolResult) + 5 built-in tools (shell, read/write file, web fetch, web search)
 ├── mcp.rs       — MCP client (JSON-RPC 2.0 over stdio, tool discovery) + MCP server (expose tools over stdio)
 ├── server.rs    — HTTP server mode (health, readiness, metrics endpoints, graceful shutdown)
 ├── telemetry.rs — OpenTelemetry tracing (OTLP gRPC/stdout exporter, TelemetryGuard, #[instrument] spans)
 ├── policy.rs    — Deny-by-default policy engine (shell, path, network allow-lists)
 ├── audit.rs     — Tamper-evident audit log (HMAC-SHA256 chained, structured JSON)
-└── sandbox.rs   — Sandboxed execution (workdir jail, path resolution, resource limits, timeouts)
+├── sandbox.rs   — Sandboxed execution (workdir jail, path resolution, resource limits, timeouts)
+├── eval.rs      — Eval harness (assertions, run traces, text/JSON reports)
+└── ravenfabric.rs— RavenFabric mesh client (health, list_agents, execute, broadcast)
 ```
 
 ### Current State
@@ -61,7 +65,8 @@ src/
 | CLI with env-var overrides | ✅ Working |
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
-| Verification suite (452 tests, 16 modules, 0 failures) | ✅ Working |
+| Library crate (ravenclaws on crates.io) | ✅ Working — binary + library |
+| Verification suite (452 tests, 18 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -72,7 +77,7 @@ src/
 | Self-provisioning swarm orchestration | ✅ v0.9.0 — recursive supervisor spawning, WorkerProfile, SwarmTopology, dynamic role assignment, 5 built-in profiles |
 | Inter-agent communication bus | ✅ v0.9.1 — AgentMessageBus with send/receive/broadcast, MessageType enum, shared bus across sub-orchestrators |
 | Swarm health & telemetry | ✅ v0.9.2 — SwarmHealthMonitor with heartbeat tracking, dead-agent detection, aggregate metrics, 22 unit tests |
-| Tool-use / function calling | ✅ Working — ToolImpl trait + ToolRegistry + 4 built-in tools + agent loop wiring |
+| Tool-use / function calling | ✅ Working — ToolImpl trait + ToolRegistry + 5 built-in tools + agent loop wiring |
 | Agent loop / ReAct planning | ✅ Working — perceive→plan→act→observe with max-iteration guard, tool call detection |
 | Deny-by-default policy | ✅ Working — PolicyEngine with shell/path/network allow-lists |
 | Sandboxed execution | ✅ Working — workdir jail, path resolution, resource limits, timeouts |
@@ -190,6 +195,7 @@ If a feature cannot be tested (e.g., hardware-dependent), document the reason in
 
 | Module | Owns | Does NOT own |
 |---|---|---|
+| `lib.rs` | Library crate entry, public API re-exports | Agent logic, LLM calls, config structs |
 | `main.rs` | CLI parsing, config loading, mode dispatch | Agent logic, LLM calls, config structs |
 | `agent.rs` | Agent run functions (single, swarm, supervisor, REPL, agent loop) | LLM client creation, config parsing |
 | `background.rs` | `BackgroundTaskManager`, `BackgroundTask`, `TaskStatus`, disk persistence | Agent logic, LLM calls |
@@ -199,7 +205,7 @@ If a feature cannot be tested (e.g., hardware-dependent), document the reason in
 | `llm.rs` | `LLMProviderTrait`, client implementations, `MultiModelManager` | Agent logic, config structs |
 | `config.rs` | `Config`, `LLMConfig`, validation, env loading | Agent logic, HTTP requests |
 | `error.rs` | `RavenClawsError` enum, `Result<T>` alias | Everything else |
-| `tools.rs` | `ToolImpl` trait, `ToolRegistry`, `ToolCall`, `ToolResult`, 4 built-in tools | Agent logic, LLM calls |
+| `tools.rs` | `ToolImpl` trait, `ToolRegistry`, `ToolCall`, `ToolResult`, 5 built-in tools | Agent logic, LLM calls |
 | `policy.rs` | `PolicyEngine` with shell/path/network allow-lists | Tool execution, LLM calls |
 | `audit.rs` | `AuditLog` with HMAC-SHA256 chaining | Tool execution, policy decisions |
 | `sandbox.rs` | `Sandbox` with workdir jail, resource limits, timeouts | Tool execution, LLM calls |

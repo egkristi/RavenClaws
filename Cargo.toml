@@ -9,6 +9,10 @@ repository = "https://github.com/egkristi/RavenClaws"
 keywords = ["agent", "ai", "llm", "liteLLM", "ravenfabric"]
 categories = ["command-line-utilities", "development-tools"]
 
+[lib]
+name = "ravenclaws"
+path = "src/lib.rs"
+
 [[bin]]
 name = "ravenclaws"
 path = "src/main.rs"

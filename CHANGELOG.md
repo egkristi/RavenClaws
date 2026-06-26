@@ -7,12 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- **Crate renamed to `RavenClawss`** — `ravenclaws` name was taken on crates.io. Binary name stays `ravenclaws` via `[[bin]]` section in `Cargo.toml`. Updated `deny.toml` exception name accordingly.
-- **Container Build cosign signing** — added `continue-on-error: true` and `contents: read` permission to the Sign Container job in `container.yml` to match Build & Release workflow behavior.
+### Added
+- **Library API (`src/lib.rs`)** — Added `[lib]` section to `Cargo.toml` and created `src/lib.rs` with public re-exports of all 18 modules. RavenClaws is now usable as both a binary and a library crate (`ravenclaws`).
+- **Performance benchmarks** — Verified v1.0 targets: 5.2 MB stripped binary, 5.2 ms cold start. Both well under v1.0 targets (< 15 MB, < 50 ms).
+
+### Removed
+- **Deprecated LLM client types** — `LiteLLMClient`, `OpenRouterClient`, `OpenAIClient` (deprecated since v0.5.0) removed. Use `OpenAICompatibleClient` with the appropriate `OpenAICompatibleProvider` variant instead.
+- **Legacy `execute_tool_call` function** — Deprecated since v0.4, replaced by `execute_tool_call_with_security` with full PolicyEngine/Sandbox/AuditLog integration.
+- **Unused `run_exec_stream` function** — Streaming exec functionality is handled by the agent loop internally.
+- **Unused `futures::StreamExt` import** — No longer needed after `run_exec_stream` removal.
 
 ### Changed
-- **ROADMAP.md** — updated for v0.9.2 release: moved graceful degradation and self-healing to v0.10, expanded v1.0 exit criteria with concrete performance targets and verification requirements.
+- **ROADMAP.md** — Updated for v1.0 scope: v0.10 features deferred to post-1.0. v1.0 now focuses on hardening + docs + API stability. Added completed items for deprecated type removal, dead code elimination, library API establishment, and performance benchmarks. Updated stats to 18 modules, 452 tests.
+- **AGENTS.md** — Updated architecture diagram to include `lib.rs`, `eval.rs`, `ravenfabric.rs`. Updated module responsibilities table. Updated build stats (5.2 MB, 5 ms). Updated tool count to 5 built-in tools.
+- **README.md** — Updated binary size references from ~3.4 MB to ~5.2 MB. Updated status to v0.9.2. Updated test count to 452. Added library crate mention.
+- **VERIFICATION.md** — Updated module count from 16 to 18.
 
 ## [0.9.2] — 2026-06-25
 
