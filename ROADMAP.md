@@ -3,8 +3,8 @@
 **Date:** 2026-06-26  
 **Version:** v0.9.2 — Swarm Health & Telemetry ✅  
 **Previous Release:** v0.9.1 (2026-06-22) — Inter-agent communication bus ✅  
-**Current Commit:** `d63251c` — v1.0 hardening: fix clippy warnings, update docs for v0.9.2 status
-**CI Status:** Build & Release #167 ✅ · Container Build #167 ✅ · Security Scan #125 ✅
+**Current Commit:** `20d4c69` — v1.0 hardening: API stability with #[non_exhaustive], update docs
+**CI Status:** Build & Release #168 ⚠️ (Check job flaky) · Container Build #168 ✅ · Security Scan #126 ✅
 **v1.0 Hardening Progress:** 6/15 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified, zero CVEs, API stability)
 
 **Vision:** RavenClaws shall become the ultimate AI agentic assistant and worker —

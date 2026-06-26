@@ -199,6 +199,26 @@ Items are ordered by severity/impact.
 
 ## 🔧 Build & CI
 
+### Build & Release #168: Check job fails with `cargo test --locked` exit code 101
+
+**Problem:** Build & Release #168 (commit `20d4c69`) failed during the Check job.
+The `cargo test --locked` step exited with code 101 (test panic/failure).
+
+**Investigation:**
+- All 452 unit tests pass locally on macOS (aarch64) with zero failures
+- `cargo fmt --check` and `cargo clippy -D warnings` both passed in CI
+- Container Build #168 ✅ and Security Scan #126 ✅ both passed
+- Cannot access CI logs directly (requires admin rights to repository)
+- Exit code 101 indicates a test panic, but no specific test name is available from annotations
+
+**Likely cause:** Transient CI runner issue or environment-specific test failure
+(possibly a timing-sensitive test or filesystem-related test that behaves
+differently on Ubuntu vs macOS).
+
+**Status:** ⚠️ Needs investigation — re-run CI to confirm if transient. If
+persistent, identify the failing test by adding `-- --test-threads=1` or
+`RUST_BACKTRACE=1` to the CI workflow.
+
 ### Security Scan: Cargo Deny + Cargo Audit fail on `instant` unmaintained advisory
 
 **Problem:** Security Scan #91 failed with Cargo Deny and Cargo Audit both exiting
