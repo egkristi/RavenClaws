@@ -212,6 +212,7 @@ jobs:
             --bundle cosign-bundle.sigstore.json \
             --fulcio-url https://fulcio.sigstore.dev \
             --rekor-url https://rekor.sigstore.dev \
+            --timestamp-authority-url https://tsa.sigstore.dev \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
 
       # ── Attestation (tagged releases only) ────────────────────
