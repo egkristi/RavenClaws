@@ -174,4 +174,5 @@ jobs:
         run: |
           cosign sign --yes \
             --use-signing-config=false \
+            --new-bundle-format=false \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"
