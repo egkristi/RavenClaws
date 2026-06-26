@@ -171,8 +171,7 @@ jobs:
       - uses: sigstore/cosign-installer@v4.1.2
 
       - name: Sign container image
-        env:
-          COSIGN_EXPERIMENTAL: 1
         run: |
           cosign sign --yes \
+            --use-signing-config=false \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"
