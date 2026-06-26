@@ -1,5 +1,9 @@
 # Deploying RavenClaws.io
 
+> **Canonical reference:** [`WEBSITE.md`](../WEBSITE.md) in the repo root contains the
+> full deployment walkthrough, content management guide, and AI agent instructions.
+> This file is a local copy for quick reference.
+
 This folder is a self-contained static site (no build step) for **https://ravenclaws.io**,
 deployed to **Cloudflare** using **Workers Static Assets** via **Wrangler**.
 
@@ -78,20 +82,26 @@ the site is live before attaching the custom domain.
 
 ## 4. Attach the custom domain (ravenclaws.io)
 
-**Option A — from `wrangler.jsonc` (already configured).**
-The `routes` block in `wrangler.jsonc` claims `ravenclaws.io` and `www.ravenclaws.io`
-as custom domains. This works automatically **if the domain's DNS is managed in the
-same Cloudflare account**. Just `npm run deploy` and Cloudflare provisions the
-records + TLS certificate.
+Custom domains are **deliberately not** in `wrangler.jsonc`. Attaching them with a
+`routes` + `custom_domain` block during a Workers Builds deploy fails the whole build
+if anything is off (zone not in the account, a conflicting apex/`www` DNS record, or a
+build token without Zone-DNS permission). Attach them from the dashboard instead —
+it succeeds independently of the deploy and tells you the exact conflict:
 
-**Option B — from the dashboard.**
-If you'd rather wire it up by hand (or DNS lives elsewhere), delete the `routes`
-block from `wrangler.jsonc`, deploy, then go to:
-
-> Cloudflare dashboard → **Workers & Pages** → `ravenclaws-site` → **Settings** →
+> Cloudflare dashboard → **Workers & Pages** → **ravenclaws** → **Settings** →
 > **Domains & Routes** → **Add** → **Custom domain** → `ravenclaws.io`
 
-Repeat for `www.ravenclaws.io`. Cloudflare creates the DNS records and certificate.
+Repeat for `www.ravenclaws.io`. Cloudflare creates the DNS records and TLS certificate.
+
+**Prerequisites for the custom domain to attach:**
+
+1. **The `ravenclaws.io` zone must be in this Cloudflare account** (dashboard →
+   *Add a domain*) with its nameservers pointing at Cloudflare. A Workers custom
+   domain can only be created for a zone Cloudflare manages.
+2. **No conflicting records.** If an apex `A`/`AAAA`/`CNAME` (or a `www` record)
+   already exists, remove it first — the custom domain needs to create its own.
+3. If you ever want Wrangler to manage it again, re-add the `routes` block and ensure
+   the deploy token has **Zone → DNS → Edit** for the zone.
 
 ---
 
@@ -108,7 +118,7 @@ Wrangler diffs the asset manifest and uploads only what changed. That's the whol
 workflow — no build step, no CI, no pipeline.
 
 > **Prefer Cloudflare Pages?** The same `public/` folder deploys unchanged with
-> `npx wrangler pages deploy public --project-name ravenclaws-site`. Use whichever
+> `npx wrangler pages deploy public --project-name ravenclaws`. Use whichever
 > of **Workers** or **Pages** you like in the Cloudflare dashboard — both are driven
 > by Wrangler.
 

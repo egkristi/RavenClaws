@@ -1,5 +1,10 @@
 # Deploying RavenClaws.io
 
+> **AI agent instructions:** The `AGENTS.md` file in the repo root contains a
+> comprehensive **Website (ravenclaws.io)** section with architecture, content
+> management, common tasks, and guardrails for AI agents working on the website.
+> This file is the deployment walkthrough.
+
 This folder is a self-contained static site (no build step) for **https://ravenclaws.io**,
 deployed to **Cloudflare** using **Workers Static Assets** via **Wrangler**.
 
@@ -88,7 +93,7 @@ records + TLS certificate.
 If you'd rather wire it up by hand (or DNS lives elsewhere), delete the `routes`
 block from `wrangler.jsonc`, deploy, then go to:
 
-> Cloudflare dashboard → **Workers & Pages** → `ravenclaws-site` → **Settings** →
+> Cloudflare dashboard → **Workers & Pages** → `ravenclaws-website` → **Settings** →
 > **Domains & Routes** → **Add** → **Custom domain** → `ravenclaws.io`
 
 Repeat for `www.ravenclaws.io`. Cloudflare creates the DNS records and certificate.
@@ -108,7 +113,7 @@ Wrangler diffs the asset manifest and uploads only what changed. That's the whol
 workflow — no build step, no CI, no pipeline.
 
 > **Prefer Cloudflare Pages?** The same `public/` folder deploys unchanged with
-> `npx wrangler pages deploy public --project-name ravenclaws-site`. Use whichever
+> `npx wrangler pages deploy public --project-name ravenclaws-website`. Use whichever
 > of **Workers** or **Pages** you like in the Cloudflare dashboard — both are driven
 > by Wrangler.
 

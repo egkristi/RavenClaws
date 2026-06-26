@@ -6,7 +6,8 @@
   //
   // Docs: https://developers.cloudflare.com/workers/static-assets/
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "ravenclaws-site",
+  // Must match the Workers Builds project name in the Cloudflare dashboard.
+  "name": "ravenclaws",
   "compatibility_date": "2026-06-26",
 
   // All files under ./public are uploaded and served from Cloudflare's edge.
@@ -17,14 +18,13 @@
     "not_found_handling": "404-page"
   },
 
-  // Custom domain routing. Requires the ravenclaws.io zone to live in this
-  // Cloudflare account. If you prefer to attach the domain from the dashboard
-  // (Workers & Pages → your worker → Settings → Domains & Routes), delete this
-  // block. See DEPLOY.md for the full walkthrough.
-  "routes": [
-    { "pattern": "ravenclaws.io", "custom_domain": true },
-    { "pattern": "www.ravenclaws.io", "custom_domain": true }
-  ],
+  // NOTE: Custom domains (ravenclaws.io / www.ravenclaws.io) are intentionally NOT
+  // managed here. Attaching them via `routes` + `custom_domain` during a Workers
+  // Builds deploy fails unless the zone is already in this account, has no
+  // conflicting apex/www DNS records, and the build token can edit Zone DNS.
+  // Attach them once from the dashboard instead — it reports the exact conflict:
+  //   Workers & Pages → ravenclaws → Settings → Domains & Routes → Add → Custom domain
+  // See DEPLOY.md for the full walkthrough.
 
   "observability": {
     "enabled": true

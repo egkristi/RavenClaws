@@ -422,6 +422,12 @@ When a feature is finished or a fix is complete, update **all** relevant documen
 | `ISSUES.md` | New bugs discovered, issues resolved, CI status updated |
 | `VERIFICATION.md` | Tests added, changed, or removed |
 | `AGENTS.md` | Workflow changes, new conventions, architecture changes |
+| `WEBSITE.md` | Deployment workflow changes, new website features |
+| `website/public/index.html` | New features, providers, stats changes, comparison updates |
+| `website/public/docs/*.html` | When corresponding `docs/guides/*.md` is updated |
+| `website/public/_headers` | Security policy changes, new third-party embeds |
+| `website/public/_redirects` | New external resources needing shortlinks |
+| `website/public/sitemap.xml` | Pages added or removed |
 
 ### Phase 5: Commit & Push
 
@@ -761,6 +767,228 @@ Copy this into a new issue or comment when starting a release:
 - [ ] crates.io package published
 - [ ] GitHub Release has all assets
 - [ ] Binary works end-to-end
+```
+
+---
+
+## Website (ravenclaws.io)
+
+The project website lives in `website/` and is a **self-contained static site** deployed to
+**Cloudflare Workers Static Assets** via **Wrangler**. There is no build step, no bundler,
+and no framework — everything the browser needs is hand-authored HTML, CSS, and JS in
+`website/public/`. This mirrors RavenClaws itself: small, simple, zero dependencies.
+
+### Architecture
+
+```
+website/
+├── public/                 # ← everything served at ravenclaws.io
+│   ├── index.html          # landing page (hero, features, comparison, security, license)
+│   ├── 404.html            # custom 404 page
+│   ├── docs/               # documentation hub (mirrors docs/guides/ in the repo)
+│   │   ├── index.html
+│   │   ├── getting-started.html
+│   │   ├── configuration.html
+│   │   ├── swarm-mode.html
+│   │   ├── mcp-integration.html
+│   │   └── heartbeat-mode.html
+│   ├── assets/             # styles.css, main.js, raven-*.webp, favicons, og-image.png
+│   ├── _headers            # security + cache headers (HSTS, CSP, etc.)
+│   ├── _redirects          # shortlinks (/github → GitHub, /crate → crates.io, etc.)
+│   ├── robots.txt
+│   ├── sitemap.xml
+│   └── site.webmanifest    # PWA manifest
+├── wrangler.jsonc          # Cloudflare deploy config (name, routes, assets dir)
+├── package.json            # wrangler dev-dependency + scripts
+└── DEPLOY.md               # full deployment walkthrough (also in WEBSITE.md)
+```
+
+### Key Design Decisions
+
+| Decision | Rationale |
+|---|---|
+| **No build step** | Static HTML/CSS/JS — zero toolchain, instant deploy, no lock-in |
+| **Workers Static Assets** | Cloudflare's recommended approach (not Pages, not Workers Sites) |
+| **Single stylesheet** | `styles.css` used by every page — one theme, no duplication |
+| **Docs mirror repo guides** | `public/docs/*.html` mirrors `docs/guides/*.md` — keep in sync manually |
+| **No analytics** | Consistent with project's "no telemetry, ever" stance |
+| **No GitHub Actions** | Website deploys manually via `npm run deploy` — not part of CI/CD |
+
+### Deployment
+
+The website is **not** deployed via GitHub Actions. It's deployed manually from a
+developer's machine using Wrangler:
+
+```bash
+cd website
+npm install              # one-time: install wrangler
+npx wrangler login       # one-time: authenticate with Cloudflare
+npm run deploy           # = wrangler deploy — uploads public/ to Cloudflare edge
+```
+
+**Prerequisites:**
+- Cloudflare account (free tier)
+- Node.js 18+
+- `ravenclaws.io` zone added to Cloudflare account
+
+**Custom domain:** Already configured in `wrangler.jsonc` via the `routes` block.
+On first deploy, Cloudflare provisions DNS records + TLS certificate automatically.
+
+**Local preview:**
+```bash
+npm run dev       # Cloudflare-accurate preview (honours _headers/_redirects)
+npm run preview   # plain static server (no Cloudflare features)
+```
+
+### Content Management
+
+#### Updating the Landing Page
+
+Edit `website/public/index.html`. The page has these sections:
+- **Hero** — tagline, stats, CTA buttons
+- **Trust strip** — security badges (memory-safe, Cosign-signed, no telemetry, etc.)
+- **Pillars** — the five pillars (Secure, Small, Efficient, Robust, Simple)
+- **Features** — capability cards (agent loop, tools & MCP, multi-provider, swarm, etc.)
+- **Quickstart** — code blocks (install, library, Docker, Helm, serve/REPL)
+- **Providers** — the five supported LLM providers
+- **Comparison table** — RavenClaws vs cloud assistants vs minimal runtimes
+- **Security** — PolicyEngine, Sandbox, Audit log, no phone-home
+- **License** — AGPLv3 + Commercial dual-license
+
+**When to update:** When a new feature ships, a provider is added, stats change
+(test count, binary size, module count), or the comparison table needs updating.
+
+#### Updating Documentation Pages
+
+Each page in `website/public/docs/` mirrors a guide in `docs/guides/`:
+
+| Website page | Source guide |
+|---|---|
+| `public/docs/getting-started.html` | `docs/guides/getting-started.md` |
+| `public/docs/configuration.html` | `docs/guides/configuration.md` |
+| `public/docs/swarm-mode.html` | `docs/guides/swarm-mode.md` |
+| `public/docs/mcp-integration.html` | `docs/guides/mcp-integration.md` |
+| `public/docs/heartbeat-mode.html` | `docs/guides/heartbeat-mode.md` |
+
+**When to update:** Whenever a guide in `docs/guides/` is updated, the corresponding
+HTML page in `public/docs/` must be updated to match. This is a manual sync — there
+is no automated conversion from Markdown to HTML.
+
+**How to update a docs page:**
+1. Read the source guide from `docs/guides/`
+2. Read the corresponding HTML page from `website/public/docs/`
+3. Update the HTML to reflect the guide changes, keeping the same header/footer/nav
+4. Preview locally with `npm run dev`
+5. Deploy with `npm run deploy`
+
+#### Updating Assets
+
+- **Styles:** `website/public/assets/styles.css` — single theme, dark technical with raven-cyan accents
+- **JavaScript:** `website/public/assets/main.js` — small progressive-enhancement script (scroll shadow, mobile nav toggle, copy buttons, scroll-spy)
+- **Art:** `website/public/assets/raven-*.webp` — raven artwork in WebP format
+- **Favicons:** Multiple sizes in `public/assets/` — update all when changing the logo
+- **OG image:** `website/public/assets/og-image.png` (1200×630) — update when branding changes
+
+**Image optimization guidelines:**
+- Use WebP format for all artwork (smaller than PNG, better quality than JPEG)
+- Keep file sizes under 200KB for hero images, under 50KB for decorative
+- Source artwork is in `~/Downloads/RavenClaws/` (backgrounds removed, resized, optimized)
+
+#### Updating Shortlinks
+
+Edit `website/public/_redirects`:
+
+```
+/github      https://github.com/egkristi/RavenClaws            302
+/crate       https://crates.io/crates/ravenclaws               302
+/api         https://docs.rs/ravenclaws                        302
+/releases    https://github.com/egkristi/RavenClaws/releases   302
+/discuss     https://github.com/egkristi/RavenClaws/discussions 302
+```
+
+**When to update:** When adding a new external resource that deserves a shortlink.
+
+#### Updating Security Headers
+
+Edit `website/public/_headers`. Current policy includes:
+- HSTS (2 years, includeSubDomains, preload)
+- CSP (self-only for scripts/fonts/connections, self+data+https for images)
+- `X-Content-Type-Options: nosniff`
+- `X-Frame-Options: DENY`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy` (no geolocation, microphone, or camera)
+- Long-lived cache for `/assets/*` (1 year, immutable)
+
+**When to update:** When adding third-party embeds (adjust CSP), or when security
+best practices evolve.
+
+#### Updating Sitemap
+
+Edit `website/public/sitemap.xml`. Currently includes 7 URLs (home + 6 docs pages).
+**When to update:** When adding or removing pages.
+
+### Common Tasks
+
+#### Adding a New Docs Page
+
+1. Create `website/public/docs/new-feature.html` — copy an existing docs page as template
+2. Add the page to the sidebar nav in all docs pages (`<aside class="docs-side">`)
+3. Add the URL to `website/public/sitemap.xml`
+4. Preview locally with `npm run dev`
+5. Deploy with `npm run deploy`
+
+#### Updating the Version Number
+
+The version number appears in:
+1. `website/public/index.html` — in the `<script type="application/ld+json">` block (`"softwareVersion": "0.9.2"`)
+2. `website/public/index.html` — hero stats (452 tests, 18 modules — update if these change)
+
+**When to update:** On every release.
+
+#### Updating Stats on the Landing Page
+
+The hero section shows key stats:
+- Binary size (~5.2 MB)
+- Runtime deps (0)
+- LLM providers (5)
+- Unit tests (452)
+- Modules (18)
+
+**When to update:** When any of these numbers change (e.g., new module added, test count changes).
+
+### Guardrails
+
+#### Do NOT
+
+- **Do not** add a build step, bundler, or framework (no React, no Astro, no Hugo, no Jekyll)
+- **Do not** add analytics, tracking pixels, or phone-home of any kind
+- **Do not** add third-party JavaScript (no CDN scripts, no embeds that require JS)
+- **Do not** commit API keys, tokens, or secrets in `wrangler.jsonc` or any website file
+- **Do not** add the website deploy to GitHub Actions — it's intentionally manual
+- **Do not** use relative paths in `_headers` or `_redirects` — Cloudflare requires absolute paths
+- **Do not** remove the CSP or weaken security headers without security review
+
+#### Do
+
+- **Do** keep the website in sync with the repo — when you update a guide in `docs/guides/`, update the matching page in `website/public/docs/`
+- **Do** preview locally with `npm run dev` before deploying
+- **Do** update `sitemap.xml` when adding or removing pages
+- **Do** update `site.webmanifest` when adding new icon sizes
+- **Do** use WebP for all artwork images
+- **Do** keep the website deploy documented in `WEBSITE.md` and `website/DEPLOY.md`
+- **Do** update the version number and stats on the landing page during release
+
+### Quick Reference
+
+```bash
+# Local preview (Cloudflare-accurate)
+cd website && npm run dev
+
+# Deploy to production
+cd website && npm run deploy
+
+# First-time setup
+cd website && npm install && npx wrangler login
 ```
 
 ---
