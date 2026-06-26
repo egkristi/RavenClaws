@@ -7,7 +7,7 @@
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
-FROM --platform=$BUILDPLATFORM rust:1.86-slim-bookworm AS builder
+FROM --platform=$BUILDPLATFORM rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944 AS builder
 
 WORKDIR /app
 
@@ -78,7 +78,7 @@ RUN TARGET=$(cat /tmp/rust_target.txt) && \
     cp "target/$TARGET/release/ravenclaws" /app/ravenclaws
 
 # Stage 2: Runtime (minimal)
-FROM gcr.io/distroless/cc-debian12:nonroot
+FROM gcr.io/distroless/cc-debian12:nonroot@sha256:b0ae8e989418b458e0f25489bc3be523718938a2b70864cc0f6a00af1ddbd985
 
 WORKDIR /app
 

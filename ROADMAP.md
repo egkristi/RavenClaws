@@ -3,9 +3,9 @@
 **Date:** 2026-06-26  
 **Version:** v0.9.2 — Swarm Health & Telemetry ✅  
 **Previous Release:** v0.9.1 (2026-06-22) — Inter-agent communication bus ✅  
-**Current Commit:** `0f21ae3` — v1.0 hardening: MIGRATION.md, CI diagnostics, docs update
-**CI Status:** Build & Release #169 ✅ · Container Build #169 ✅ · Security Scan #127 ✅
-**v1.0 Hardening Progress:** 7/15 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified, zero CVEs, API stability, complete docs)
+**Current Commit:** `eaa92b3` — v1.0 hardening: deny.toml typo fix, VERIFICATION.md stale counts, CHANGELOG cleanup
+**CI Status:** Build & Release #170 ✅ · Container Build #170 ✅ · Security Scan #128 ✅
+**v1.0 Hardening Progress:** 8/15 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified, zero CVEs, API stability, complete docs, reproducible builds)
 
 **Vision:** RavenClaws shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -514,8 +514,8 @@ features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
 - [ ] **Swarm scale validated** — 1000+ worker agents operating in mesh topology, with < 5% overhead per additional agent. Swarm grows and shrinks organically — no fixed limit, no artificial cap.
 - [x] **Complete docs**, examples, migration guides. README includes quickstart, library usage guide, configuration reference, and architecture overview. — `docs/guides/` (getting-started, configuration, swarm-mode, mcp-integration, heartbeat-mode), `examples/` (basic_chat, agent_loop, swarm, mcp_client, heartbeat), `MIGRATION.md`, README with FAQ and doc links.
 - [ ] **All verification tests passing** across all 4 deployment targets (macOS, Linux, Docker, K8s).
-- [ ] **Release automation complete** — signed tags, multi-arch containers, SBOM, provenance, crates.io publish all green.
-- [ ] **Reproducible builds.**
+- [ ] **Release automation complete** — signed tags, multi-arch containers, SBOM, provenance, crates.io publish all green. (CI pipeline fully wired; needs tag-push verification.)
+- [x] **Reproducible builds** — `Cargo.lock` committed, `lto=true` + `codegen-units=1` in release profile, Docker base images pinned to specific digests, `Cargo.toml` includes `exclude` for crate size optimization.
 
 **Exit criteria:** All checkboxes above checked. No critical or high issues in ISSUES.md. CI/CD green across all 3 workflows. v1.0 tag pushed and released.
 

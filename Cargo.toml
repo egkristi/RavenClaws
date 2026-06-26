@@ -8,6 +8,19 @@ license = "AGPL-3.0-or-later"
 repository = "https://github.com/egkristi/RavenClaws"
 keywords = ["agent", "ai", "llm", "liteLLM", "ravenfabric"]
 categories = ["command-line-utilities", "development-tools"]
+homepage = "https://RavenClaws.io"
+documentation = "https://docs.rs/ravenclaws"
+readme = "README.md"
+exclude = [
+    "scripts/*",
+    "k8s/*",
+    "charts/*",
+    "docs/*",
+    "examples/*",
+    "tests/*",
+    ".github/*",
+    ".githooks/*",
+]
 
 [lib]
 name = "ravenclaws"

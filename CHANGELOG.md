@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **VERIFICATION.md** — Updated module count from 16 to 18. Updated stale test counts (311→452). Removed duplicate `cargo test` line.
 - **deny.toml** — Fixed typo in license exception name (`RavenClawss` → `RavenClaws`).
 
+### Fixed
+- **Cargo.toml** — Added missing `homepage`, `documentation`, `readme`, and `exclude` fields for crates.io publication readiness.
+- **Dockerfile** — Pinned base image digests for reproducible builds (`rust:1.86-slim-bookworm` and `gcr.io/distroless/cc-debian12:nonroot` now use `@sha256:...` digests).
+
 ## [0.9.2] — 2026-06-25
 
 ### Added
