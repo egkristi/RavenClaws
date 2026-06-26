@@ -57,7 +57,7 @@ confidence-threshold = 0.8
 # Exceptions for specific crates that use allowed copyleft licenses
 exceptions = [
     # Allow each exception with a reason
-    { allow = ["AGPL-3.0-or-later"], name = "ravenclaw", version = "*" },
+    { allow = ["AGPL-3.0-or-later"], name = "RavenClaws", version = "*" },
 ]
 
 [licenses.private]

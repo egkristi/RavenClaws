@@ -1,5 +1,5 @@
 [package]
-name = "ravenclaw"
+name = "RavenClaws"
 version = "0.9.2"
 edition = "2021"
 authors = ["Erling G M Kristiansen <egkristi@gmail.com>"]
@@ -8,6 +8,10 @@ license = "AGPL-3.0-or-later"
 repository = "https://github.com/egkristi/RavenClaw"
 keywords = ["agent", "ai", "llm", "liteLLM", "ravenfabric"]
 categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "ravenclaw"
+path = "src/main.rs"
 
 [features]
 default = ["otel-grpc"]

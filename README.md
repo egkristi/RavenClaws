@@ -245,7 +245,7 @@ health_interval_secs = 60
 | `--exec "<task>"` | ✅ **Working** | One-shot task execution with streaming, then exit |
 | `--repl` | ✅ **Working** | Interactive REPL with `/exit`, `/reset` commands |
 | `--require-approval` | ✅ **v0.8** | Human-in-the-loop approval for sensitive tool calls |
-| `swarm` | ✅ **Working** | 3 parallel agents with different personas (single + multi-model); RavenFabric-aware |
+| `swarm` | ✅ **Working** | multiple parallel agents with different personas (single + multi-model); RavenFabric-aware |
 | `supervisor` | ✅ **Working** | Task decomposition + sub-agent spawning + result aggregation (single + multi-model); RavenFabric-aware |
 
 ## Building from source
@@ -405,7 +405,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Streaming responses | ✅ Working | SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working | `ConversationMemory` with configurable max history |
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt`, CLI `--system-prompt`, env var |
-| Swarm mode | ✅ Working | 3 parallel agents with different personas (single + multi-model) |
+| Swarm mode | ✅ Working | multiple parallel agents with different personas (single + multi-model) |
 | Supervisor mode | ✅ Working | Task decomposition + sub-agent spawning + result aggregation (single + multi-model) |
 | MCP client | ✅ Working | JSON-RPC over stdio, tool discovery and registration |
 | MCP server | ✅ **v0.7.0** | Expose RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |

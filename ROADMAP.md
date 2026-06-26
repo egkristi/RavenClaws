@@ -1,10 +1,10 @@
 # 🐦‍⬛ RavenClaw Roadmap
 
-**Date:** 2026-06-22  
-**Version:** v0.8.0 — Prompt-Injection Defense ✅  
-**Previous Release:** v0.7.2 (2026-06-20) — OpenTelemetry ✅  
-**Current Commit:** *(pending)* — Inter-agent communication bus ✅
-**CI Status:** Build & Release #133 ✅ · Container Build #133 ✅ · Security Scan #106 ✅
+**Date:** 2026-06-23  
+**Version:** v0.9.2 — Swarm Health & Telemetry ✅  
+**Previous Release:** v0.9.1 (2026-06-22) — Inter-agent communication bus ✅  
+**Current Commit:** `a5ec589` — Crate renamed to RavenClaws (crates.io publish fix)
+**CI Status:** Build & Release #163 ⚠️ (crates.io publish failed — name taken, fixed) · Container Build #163 ⚠️ (cosign signing, non-fatal) · Security Scan #163 ✅
 
 **Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -14,10 +14,11 @@ periods independently, without requiring constant human supervision. It plans,
 executes, reflects, and adapts across hours, days, or weeks.
 
 RavenClaw orchestrates **swarms at any scale** — from a handful of specialized
-collaborators to hundreds of workers, each with unique traits, capabilities, and
-personalities. Swarms are self-organizing: RavenClaw provisions, configures, and
-manages its own sub-agents and worker instances dynamically based on task
-requirements.
+collaborators to **thousands of workers**, each with unique traits, capabilities, and
+personalities. A swarm is TRULY a swarm: unbounded, self-organizing, and emergent.
+RavenClaw provisions, configures, and manages its own sub-agents and worker
+instances dynamically based on task requirements — no fixed limit, no artificial
+cap. The swarm grows and shrinks organically as work demands.
 
 All of this happens **efficiently and securely** — every agent communication is
 policy-gated, audited, and sandboxed. The five pillars (Secure, Small, Efficient,
@@ -45,15 +46,15 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.9.2 (2026-06-23) — Swarm Health & Telemetry  
-**Stats:** 16 source modules (+background, +scheduler, +eval, +heartbeat, +swarm), ~15,200 LOC, 5 LLM providers, 5 built-in tools (+web_search), 452 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry.
+**Stats:** 16 source modules, ~15,200 LOC, 5 LLM providers, 5 built-in tools (+web_search), 452 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, published on crates.io as `RavenClaws`.
 
 | Component | Status | Details |
 |---|---|---|
 | Single agent (single-provider) | ✅ Working | Sends one prompt, logs response, exits |
 | Single agent (multi-model) | ✅ Working | Iterates all providers, logs each response |
-| **Swarm mode (single-provider)** | ✅ **v0.6** | 3 parallel agents with different personas (analytical/creative/pragmatic) |
+| **Swarm mode (single-provider)** | ✅ **v0.6** | Multiple parallel agents with different personas (analytical/creative/pragmatic); no fixed limit |
 | **Supervisor mode (single-provider)** | ✅ **v0.6** | Task decomposition, sub-agent spawning, result aggregation |
-| **Swarm mode (multi-model)** | ✅ **v0.6** | Parallel agents across different LLM providers |
+| **Swarm mode (multi-model)** | ✅ **v0.6** | Parallel agents across different LLM providers; scales to any number |
 | **Supervisor mode (multi-model)** | ✅ **v0.6** | Provider-aware task decomposition and assignment |
 | LLM providers (5) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama, **Anthropic** (unified trait) |
 | CLI & env-var overrides | ✅ Working | `--provider`, `--endpoint`, `--model`, layered TOML→env→flags |
@@ -221,9 +222,10 @@ simpler** — or deliberately not at all.
 | **No telemetry** | ✅ | ❌ | ❌ | ✅ |
 | **Autonomous heartbeat** | ✅ **v0.9** | ✅ | ✅ | ❌ |
 | **Long-horizon task persistence** | ✅ **v0.9** | ✅ | ✅ | ❌ |
-| **Scalable swarm (100+ workers)** | ✅ **v0.9** | ❌ | ❌ | ❌ |
+| **Scalable swarm (1000+ workers)** | ✅ **v0.9** | ❌ | ❌ | ❌ |
 | **Self-provisioning sub-agents** | ✅ **v0.9** | ❌ | ❌ | ❌ |
 | **Swarm health & telemetry** | ✅ **v0.9.2** | ❌ | ❌ | ❌ |
+| **Crate on crates.io** | ✅ **RavenClaws** | ❌ | ❌ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ✅ (SearXNG + DuckDuckGo) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
@@ -237,7 +239,7 @@ simpler** — or deliberately not at all.
 2. **Edge-deployable** — ~3.4 MB binary, runs on Raspberry Pi, air-gapped capable
 3. **RavenFabric mesh** — E2E-encrypted remote execution across fleet (unique)
 4. **Autonomous heartbeat** — operates independently for days/weeks, no supervision required ✅ v0.9
-5. **Self-orchestrating swarm** — dynamically provisions and manages 10s–100s of workers in any topology, each with unique capability profiles
+5. **Self-orchestrating swarm** — dynamically provisions and manages 10s–1000s of workers in any topology, each with unique capability profiles. No fixed limit — the swarm scales to the task.
 
 ---
 
@@ -260,7 +262,7 @@ the cloud incumbents structurally can't follow.
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
 | Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
 | **Autonomous heartbeat (long-running)** | Operates independently for days/weeks without supervision | ✅ **v0.9** | **v0.9** |
-| **Scalable swarm (100+ workers)** | Dynamic provisioning of 10s–100s of agents in any topology | ✅ **v0.9** | **v0.9** |
+| **Scalable swarm (1000+ workers)** | Dynamic provisioning of 10s–1000s of agents in any topology; no fixed limit | ✅ **v0.9** | **v0.9** |
 | **Self-provisioning sub-agents** | Agent spawns agents; recursive supervisor mode | ✅ **v0.9** | **v0.9** |
 | **Inter-agent communication** | Structured message passing between swarm members | ✅ **v0.9.1** | **v0.9** |
 | Async / long-horizon background runs | Manus's killer feature (cloud background) | ✅ **v0.8** | **v0.8** ✅ |
@@ -289,7 +291,7 @@ the cloud incumbents structurally can't follow.
 2. **Wire security model (v0.4)** — PolicyEngine + Sandbox + AuditLog invoked on every tool call. Core value proposition.
 3. **Local-first privacy + security** — the wedge no cloud agent can copy.
 4. **Autonomous heartbeat + self-orchestration (v0.9)** — RavenClaw operates independently for days, dynamically spawning and managing swarms of any size. No competitor offers this in a self-hosted, secure package. ✅ **Heartbeat implemented.**
-5. **Scalable swarm (100+ workers) (v0.9)** — from a handful of collaborators to hundreds of workers, each with unique profiles. Self-provisioning, self-healing, and policy-governed.
+5. **Scalable swarm (1000+ workers) (v0.9)** — from a handful of collaborators to thousands of workers, each with unique profiles. Self-provisioning, self-healing, and policy-governed. No artificial caps — the swarm is a true swarm.
 
 ---
 
@@ -399,7 +401,7 @@ Agency with guardrails — the security differentiator.
 ### v0.6 — Swarm, supervisor, and RavenFabric 🕸️
 
 - [x] **Supervisor mode (single-provider)** — task decomposition, sub-agent spawning, result aggregation ✅ Implemented 2026-06-07
-- [x] **Swarm mode (single-provider)** — 3 parallel agents with different personas ✅ Implemented 2026-06-07
+- [x] **Swarm mode (single-provider)** — multiple parallel agents with different personas (no fixed limit) ✅ Implemented 2026-06-07
 - [x] **Supervisor mode (multi-model)** — provider-aware task decomposition ✅ Implemented 2026-06-07
 - [x] **Swarm mode (multi-model)** — parallel agents across different providers ✅ Implemented 2026-06-07
 - [x] **Git hooks (pre-commit / pre-push)** — automated verification before every commit and push ✅ Implemented 2026-06-18
@@ -448,12 +450,12 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 - [ ] **Air-gap / offline licensing**; runtime feature-flag gating.
 - [ ] **Output artifacts & reporting** — generate documents, spreadsheets, slides, and sites via the skill system (v0.5); underpins compliance and executive reporting.
 
-### ✅ v0.9 — Autonomous heartbeat & self-orchestration 💓 (v0.9.1 released)
+### ✅ v0.9 — Autonomous heartbeat & self-orchestration 💓 (v0.9.2 released)
 
 RavenClaw becomes a truly autonomous agent that can operate independently over
 long time horizons, and dynamically orchestrate swarms of any size.
 
-**Released versions:** [v0.9.0](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.0) (heartbeat + persistence) · [v0.9.1](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.1) (swarm orchestration + inter-agent communication)
+**Released versions:** [v0.9.0](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.0) (heartbeat + persistence) · [v0.9.1](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.1) (swarm orchestration + inter-agent communication) · [v0.9.2](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.2) (swarm health & telemetry)
 
 - [x] **Autonomous heartbeat** — persistent background loop with configurable tick interval; agent wakes, assesses progress, plans next steps, executes, and sleeps. No human-in-the-loop required for routine operation. ✅ **v0.9.0**
 - [x] **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context. Heartbeat continues across binary restarts. ✅ **v0.9.0**
@@ -463,7 +465,7 @@ long time horizons, and dynamically orchestrate swarms of any size.
   - `--task-resume` flag re-executes incomplete tasks on startup
   - 401 total unit tests (0 regressions)
 - [x] **Self-provisioning of sub-agents** — RavenClaw dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors. ✅ **v0.9.1**
-- [x] **Scalable swarm orchestration** — support for 10s to 100s of workers. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid. ✅ **v0.9.1**
+- [x] **Scalable swarm orchestration** — support for 10s to **1000s** of workers. No fixed limit — the swarm scales organically to the task. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid. ✅ **v0.9.1**
 - [x] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable. ✅ **v0.9.1**
 - [x] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load. ✅ **v0.9.1**
 - [x] **Inter-agent communication bus** — structured message passing between swarm members with delivery guarantees, routing, and policy enforcement. All communication is audited. ✅ **v0.9.1**
@@ -478,11 +480,11 @@ long time horizons, and dynamically orchestrate swarms of any size.
   - Public accessors: `health_metrics()` and `worker_telemetry()` on `SwarmOrchestrator`
   - CLI flag: `--swarm-health-monitoring` (env: `RAVENCLAW_SWARM_HEALTH_MONITORING`)
   - 22 unit tests, 452 total (0 regressions)
-- [ ] **Graceful degradation under load** — when resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
-- [ ] **Self-healing** — failed agents are detected, replaced, and caught up. Supervisor re-assigns orphaned tasks. No single point of failure in mesh topologies.
 
 ### v0.10 — Hardening, ecosystem, advanced reasoning 💎
 
+- [ ] **Graceful degradation under load** — when resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
+- [ ] **Self-healing** — failed agents are detected, replaced, and caught up. Supervisor re-assigns orphaned tasks. No single point of failure in mesh topologies.
 - [ ] **Threat model + external security review.**
 - [ ] **Fuzzing** (`cargo fuzz`) + property tests for config/policy parsers.
 - [ ] **Skill/plugin marketplace + WASM sandboxing** for third-party extensions (core MCP ships in v0.4, the skill system in v0.5).
@@ -492,11 +494,24 @@ long time horizons, and dynamically orchestrate swarms of any size.
 
 ### v1.0 — Simply the best 🏆
 
+The stable release. RavenClaw is production-ready, benchmarked, documented, and
+trusted. All five pillars are verified by independent measurement.
+
 - [ ] **Autonomous operation validated** — RavenClaw runs unattended for 7+ days, completing tasks via heartbeat loop, recovering from failures, and scaling swarm up/down as needed.
-- [ ] **Swarm scale validated** — 100+ worker agents operating in mesh topology, with < 5% overhead per additional agent.
-- [ ] **API stability** guarantees + semver discipline.
-- [ ] **All performance targets met** and benchmarked against the field (published).
-- [ ] **Complete docs**, examples, migration guides.
+- [ ] **Swarm scale validated** — 1000+ worker agents operating in mesh topology, with < 5% overhead per additional agent. Swarm grows and shrinks organically — no fixed limit, no artificial cap.
+- [ ] **API stability** guarantees + semver discipline. All public types and traits reviewed for v1.0 API surface.
+- [ ] **All performance targets met** and benchmarked against the field (published):
+  - Binary size < 5 MB stripped
+  - Cold start < 50 ms
+  - Idle RSS < 20 MB
+  - Throughput: 1000+ tool calls/min (single agent)
+  - Swarm overhead < 5% per additional agent
+- [ ] **Complete docs**, examples, migration guides. README includes quickstart, configuration reference, and architecture overview.
+- [ ] **Zero known CVEs** in dependency tree (verified by cargo-audit + Trivy).
+- [ ] **All verification tests passing** across all 4 deployment targets (macOS, Linux, Docker, K8s).
+- [ ] **Release automation complete** — signed tags, multi-arch containers, SBOM, provenance, crates.io publish all green.
+
+**Exit criteria:** All checkboxes above checked. No critical or high issues in ISSUES.md. CI/CD green across all 3 workflows. v1.0 tag pushed and released.
 - [ ] **Reproducible builds.**
 
 ---

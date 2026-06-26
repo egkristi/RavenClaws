@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- (no unreleased changes yet)
+### Fixed
+- **Crate renamed to `RavenClaws`** — `ravenclaw` name was taken on crates.io. Binary name stays `ravenclaw` via `[[bin]]` section in `Cargo.toml`. Updated `deny.toml` exception name accordingly.
+- **Container Build cosign signing** — added `continue-on-error: true` and `contents: read` permission to the Sign Container job in `container.yml` to match Build & Release workflow behavior.
+
+### Changed
+- **ROADMAP.md** — updated for v0.9.2 release: moved graceful degradation and self-healing to v0.10, expanded v1.0 exit criteria with concrete performance targets and verification requirements.
 
 ## [0.9.2] — 2026-06-25
 
