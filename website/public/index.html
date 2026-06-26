@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RavenClaws — The Ultimate AI Agentic Worker · Secure Rust agent framework</title>
+<meta name="description" content="RavenClaws is a lightweight, secure Rust AI-agent framework. One static ~5.2 MB binary, zero runtime dependencies, 5 LLM providers, swarm & autonomous heartbeat modes, MCP client/server, and a verified supply chain. Self-hostable and air-gappable.">
+<link rel="canonical" href="https://ravenclaws.io/">
+<meta name="theme-color" content="#070a10">
+
+<!-- Open Graph / Twitter -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RavenClaws">
+<meta property="og:title" content="RavenClaws — The Ultimate AI Agentic Worker">
+<meta property="og:description" content="Secure AI agents in a single ~5 MB Rust binary. Zero runtime deps, 5 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain. Self-hostable & air-gappable.">
+<meta property="og:url" content="https://ravenclaws.io/">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="RavenClaws — The Ultimate AI Agentic Worker">
+<meta name="twitter:description" content="Secure AI agents in a single ~5 MB Rust binary. Zero runtime deps, 5 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain.">
+<meta name="twitter:image" content="https://ravenclaws.io/assets/og-image.png">
+
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="icon" type="image/png" href="/assets/favicon-512.png" sizes="512x512">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+
+<link rel="preload" as="image" href="/assets/raven-mascot.webp">
+<link rel="stylesheet" href="/assets/styles.css">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "RavenClaws",
+  "applicationCategory": "DeveloperApplication",
+  "operatingSystem": "macOS, Linux, Docker, Kubernetes",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+  "url": "https://ravenclaws.io",
+  "downloadUrl": "https://github.com/egkristi/RavenClaws/releases",
+  "softwareVersion": "0.9.2",
+  "description": "Lightweight, secure Rust agent framework with multi-provider LLM support.",
+  "license": "https://www.gnu.org/licenses/agpl-3.0.html"
+}
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/">
+        <img src="/assets/favicon-512.png" alt="" width="30" height="30">
+        <span>Raven<b>Claws</b></span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#providers">Providers</a>
+        <a href="#security">Security</a>
+        <a href="/docs/">Docs</a>
+        <a href="#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="m3.3 7 8.7 5 8.7-5M12 22V12"/></svg>
+          crates.io
+        </a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.9 10.9c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div class="hero-copy">
+        <p class="eyebrow">Secure · Small · Efficient · Robust · Simple</p>
+        <h1>Secure AI agents in a single <span class="grad-text">~5&nbsp;MB binary</span>.</h1>
+        <p class="lead">RavenClaws is a lightweight, memory-safe <strong>Rust</strong> agent framework with
+          multi-provider LLM support. One static binary. Zero runtime dependencies — no Python, no Node, no JVM.</p>
+        <p class="sub">Self-hostable and air-gappable. Your data and tool calls never leave infrastructure you control — and there is no phone-home.</p>
+
+        <div class="btn-row">
+          <a class="btn btn--primary btn--lg" href="/docs/getting-started">
+            Get started
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a class="btn btn--ghost btn--lg" href="https://github.com/egkristi/RavenClaws" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.9 10.9c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+            View source
+          </a>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat"><b>~5.2<span class="u">MB</span></b><span>stripped binary</span></div>
+          <div class="stat"><b>0</b><span>runtime deps</span></div>
+          <div class="stat"><b>5</b><span>LLM providers</span></div>
+          <div class="stat"><b>452</b><span>unit tests</span></div>
+          <div class="stat"><b>18</b><span>modules</span></div>
+        </div>
+      </div>
+
+      <div class="hero-art">
+        <img src="/assets/raven-mascot.webp" alt="The RavenClaws raven perched on a branch" width="540" height="528" fetchpriority="high">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= TRUST STRIP ================= -->
+<section class="section--tight">
+  <div class="wrap">
+    <div class="trust">
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z"/></svg> Memory-safe Rust · <code>unsafe</code> forbidden</span>
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 12 2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg> Cosign-signed · SBOM · provenance</span>
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20"/><circle cx="12" cy="12" r="10"/></svg> No telemetry, ever</span>
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 8 4v5c0 5-3.5 7.5-8 9-4.5-1.5-8-4-8-9V7l8-4Z"/></svg> AGPLv3 + Commercial</span>
+      <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 5v14M15 5v14M5 19h14"/></svg> Published on crates.io</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PILLARS ================= -->
+<section class="section" id="why">
+  <div class="wrap">
+    <div class="section-head center">
+      <p class="eyebrow">Why RavenClaws</p>
+      <h2 class="section-title">Five pillars. No compromises.</h2>
+      <p class="section-lead">We don't win by out-featuring the field. We win by refusing to bend on five things at once — for a single agent and for a swarm of thousands.</p>
+    </div>
+    <div class="grid pillars">
+      <div class="card pillar">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <span class="k">Secure</span>
+        <h3>Secure</h3>
+        <p>Memory-safe Rust, fail-closed, no creds in config. Every tool call policy-gated, sandboxed, and audited.</p>
+      </div>
+      <div class="card pillar">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></svg></div>
+        <span class="k">Small</span>
+        <h3>Small</h3>
+        <p>One static binary. Distroless image. A lean dependency tree — it runs on a Raspberry Pi.</p>
+      </div>
+      <div class="card pillar">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></div>
+        <span class="k">Efficient</span>
+        <h3>Efficient</h3>
+        <p>Native performance, low memory, ~5&nbsp;ms cold start, streaming everywhere. No interpreter tax.</p>
+      </div>
+      <div class="card pillar">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M21 3v6h-6"/></svg></div>
+        <span class="k">Robust</span>
+        <h3>Robust</h3>
+        <p>Graceful degradation, provider fallback, deterministic config — verified across four deployment targets.</p>
+      </div>
+      <div class="card pillar">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg></div>
+        <span class="k">Simple</span>
+        <h3>Simple</h3>
+        <p>One command to run. Sensible defaults. Zero external services required for single-agent use.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FEATURES ================= -->
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Capabilities</p>
+      <h2 class="section-title">Everything an agentic worker needs — built in.</h2>
+      <p class="section-lead">A real agent loop, a deny-by-default tool system, multi-provider routing, swarms, and autonomous operation. All in one dependency-light binary that's also a library crate.</p>
+    </div>
+
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg></div>
+        <h3>Agent loop (ReAct)</h3>
+        <p>perceive → plan → act → observe, with conversation memory, a max-iteration guard, streaming output, and an interactive REPL.</p>
+      </div>
+
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 7h6v6M20 7l-9 9-4-4-5 5"/></svg></div>
+        <h3>Tools &amp; MCP</h3>
+        <p>Built-in shell, file read/write, web fetch and web search — behind a deny-by-default policy. Full <strong>MCP client and server</strong> over stdio.</p>
+      </div>
+
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
+        <h3>Multi-provider routing</h3>
+        <p>Five providers behind one trait, with round-robin, intelligent fallback chains, a circuit breaker, and token budgets.</p>
+      </div>
+
+      <div class="card col-span-2 feature-media">
+        <span class="tag">Scales to 1000s</span>
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="M8 8.5 11 15M16 8.5 13 15M8 7h8"/></svg></div>
+        <h3>Swarm &amp; supervisor orchestration</h3>
+        <p>Run parallel agents with distinct personas, or let a supervisor decompose a task and spawn sub-agents — recursively. Self-provisioning swarms scale from a handful of collaborators to thousands of workers across star, mesh, hierarchical, and hybrid topologies, with an inter-agent message bus plus health &amp; telemetry.</p>
+        <img src="/assets/raven-flock.webp" alt="A murder of ravens in flight, representing swarm orchestration" loading="lazy" width="1280" height="698">
+      </div>
+
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <h3>Autonomous heartbeat</h3>
+        <p>assess → plan → act → persist → sleep. Long-horizon tasks survive restarts and resume from the last checkpoint — runs unattended for days.</p>
+      </div>
+
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z"/><path d="M12 8v4M12 16h.01"/></svg></div>
+        <h3>Security model</h3>
+        <p>PolicyEngine allow-lists, a workdir sandbox jail, an HMAC-SHA256 tamper-evident audit log, secret zeroization, and prompt-injection defense.</p>
+      </div>
+
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10M9 16v4M15 16v4"/></svg></div>
+        <h3>Server &amp; observability</h3>
+        <p><code>--serve</code> HTTP mode with <code>/health</code>, <code>/ready</code>, <code>/metrics</code>, graceful shutdown, opt-in OpenTelemetry tracing, and an official Helm chart.</p>
+      </div>
+
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 5v14M15 5v14M5 19h14"/></svg></div>
+        <h3>Library crate</h3>
+        <p>Use RavenClaws as a dependency — <code>ravenclaws</code> on crates.io exposes all 18 modules through a stable, semver-disciplined public API.</p>
+      </div>
+
+      <div class="card">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/></svg></div>
+        <h3>Verified supply chain</h3>
+        <p>Multi-arch images signed with Cosign, SBOM + build provenance, plus CodeQL, cargo-audit, cargo-deny, Trivy, Hadolint, Kubescape and OSSF Scorecard in CI.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= QUICKSTART ================= -->
+<section class="section" id="quickstart">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">Quick start</p>
+      <h2 class="section-title">From install to first agent in 30 seconds.</h2>
+      <p class="section-lead">Install the binary, point it at any provider, and run a one-shot task — or embed the library in your own Rust project.</p>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">run an agent</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Install from crates.io</span>
+<span class="tok-d">cargo</span> install ravenclaws
+
+<span class="tok-c"># Point it at any provider (Ollama = fully local)</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__PROVIDER=<span class="tok-s">"ollama"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__MODEL=<span class="tok-s">"llama3.1"</span>
+
+<span class="tok-c"># Run a one-shot task, then exit</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--exec</span> <span class="tok-s">"Summarize the latest release notes"</span></code></pre>
+      </div>
+
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">use as a library — Cargo.toml + main.rs</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Cargo.toml</span>
+[dependencies]
+ravenclaws = <span class="tok-s">"0.9"</span>
+
+<span class="tok-c">// main.rs</span>
+<span class="tok-k">use</span> ravenclaws::{Config, ChatMessage, create_client, LLMProviderTrait};
+
+<span class="tok-k">let</span> config = Config::load()?;
+<span class="tok-k">let</span> <span class="tok-k">mut</span> client = create_client(&amp;config.llm)?;
+<span class="tok-k">let</span> resp = client.chat(&amp;[ChatMessage {
+    role: <span class="tok-s">"user"</span>.into(),
+    content: <span class="tok-s">"Hello! What can you do?"</span>.into(),
+}]).await?;
+println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top:18px">
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">docker</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">docker</span> run --rm -it \
+  -e LITELLM_API_KEY=<span class="tok-s">"…"</span> \
+  ghcr.io/egkristi/ravenclaws:latest</code></pre>
+      </div>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">kubernetes (helm)</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">helm</span> install ravenclaws \
+  ./charts/ravenclaws \
+  <span class="tok-k">-n</span> ravenclaws --create-namespace</code></pre>
+      </div>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">serve + repl</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--serve</span>    <span class="tok-c"># /health /ready /metrics</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--repl</span>     <span class="tok-c"># interactive session</span></code></pre>
+      </div>
+    </div>
+    <p class="muted" style="margin-top:18px">New here? Follow the <a href="/docs/getting-started">Getting Started guide</a> → install, configure a provider, and run a multi-step task with tools.</p>
+  </div>
+</section>
+
+<!-- ================= PROVIDERS ================= -->
+<section class="section" id="providers">
+  <div class="wrap">
+    <div class="section-head center">
+      <p class="eyebrow">Bring your own model</p>
+      <h2 class="section-title">Five providers, one unified API.</h2>
+      <p class="section-lead">Route across cloud and local models with a single trait — then fail over between them automatically. Run fully offline with Ollama.</p>
+    </div>
+    <div class="providers">
+      <div class="prov"><div class="badge">Li</div><b>LiteLLM</b><span>100+ models via proxy</span></div>
+      <div class="prov"><div class="badge">AI</div><b>OpenAI</b><span>GPT-4o, o-series</span></div>
+      <div class="prov"><div class="badge">OR</div><b>OpenRouter</b><span>many hosted models</span></div>
+      <div class="prov"><div class="badge">Ol</div><b>Ollama</b><span>local · air-gapped</span></div>
+      <div class="prov"><div class="badge">An</div><b>Anthropic</b><span>native Claude tool use</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= COMPARISON ================= -->
+<section class="section" id="compare">
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow">How it compares</p>
+      <h2 class="section-title">Parity on table stakes. A wedge cloud agents can't copy.</h2>
+      <p class="section-lead">Anything the field can do, RavenClaws aims to do smaller, safer, and simpler — or deliberately not at all.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>Capability</th>
+            <th class="rc-col">RavenClaws</th>
+            <th>Cloud assistants</th>
+            <th>Minimal runtimes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">Agent loop + structured tools</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="mid">partial</span></td></tr>
+          <tr><td class="name">MCP client <em>and</em> server</td><td class="col-rc rc-col"><span class="yes">✓ both</span></td><td><span class="yes">✓</span></td><td><span class="no">✕</span></td></tr>
+          <tr><td class="name">Deny-by-default security model</td><td class="col-rc rc-col"><span class="yes">✓ wired</span></td><td><span class="mid">bolted on</span></td><td><span class="no">✕</span></td></tr>
+          <tr><td class="name">Local-first / air-gapped</td><td class="col-rc rc-col"><span class="yes">✓ Ollama</span></td><td><span class="no">✕</span></td><td><span class="mid">varies</span></td></tr>
+          <tr><td class="name">~5 MB single binary, edge-deployable</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="no">✕ cloud</span></td><td><span class="mid">varies</span></td></tr>
+          <tr><td class="name">No telemetry · signed + SBOM</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="no">✕</span></td><td><span class="mid">varies</span></td></tr>
+          <tr><td class="name">Autonomous heartbeat (days/weeks)</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">✕</span></td></tr>
+          <tr><td class="name">Scalable swarm (1000+ workers)</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="no">✕</span></td><td><span class="no">✕</span></td></tr>
+          <tr><td class="name">Library crate on crates.io</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="no">✕</span></td><td><span class="mid">varies</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="dim" style="margin-top:14px;font-size:.86rem">Self-reported from the project roadmap (v0.9.2). Capabilities of third-party tools vary by version and configuration.</p>
+  </div>
+</section>
+
+<!-- ================= SECURITY ================= -->
+<section class="section" id="security">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">Trust as a feature</p>
+        <h2 class="section-title">Security wired into the core — not bolted on.</h2>
+        <p class="section-lead">RavenClaws ships a deny-by-default model that's invoked on <em>every</em> tool call, with a verifiable supply chain end to end.</p>
+        <div class="grid" style="gap:12px;margin-top:8px">
+          <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 5v6c0 5 3.4 8.5 8 11 4.6-2.5 8-6 8-11V5l-8-3Z"/></svg><p><strong>PolicyEngine</strong> validates every shell, path, and network call against allow-lists. Empty list means deny.</p></div>
+          <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><p><strong>Sandbox</strong> jails tool execution to a workdir with resource limits and timeouts.</p></div>
+          <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v4H4zM4 10h16v10H4z"/><path d="M8 14h8"/></svg><p><strong>Audit log</strong> records every operation in an HMAC-SHA256 tamper-evident chain.</p></div>
+          <div class="callout"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/><circle cx="12" cy="12" r="9"/></svg><p><strong>No phone-home.</strong> Observability is opt-in and self-hosted. Secrets are env-only and zeroized on drop.</p></div>
+        </div>
+      </div>
+      <div class="hero-art">
+        <img src="/assets/raven-spread.webp" alt="A raven with wings spread, perched on a stone" loading="lazy" width="450" height="245" style="animation:none">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LICENSE ================= -->
+<section class="section" id="license">
+  <div class="wrap">
+    <div class="section-head center">
+      <p class="eyebrow">Licensing</p>
+      <h2 class="section-title">Open core. Commercial when you scale.</h2>
+      <p class="section-lead">A dual-license model: free and source-available for the community, commercial for large or embedded deployments.</p>
+    </div>
+    <div class="lic-grid">
+      <div class="lic">
+        <h3>AGPLv3 — Open source</h3>
+        <p class="price">Free for personal use, OSS projects, and commercial use up to 50 agents / $5M revenue.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Full agent runtime &amp; all 5 providers</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Tools, MCP, sandbox, audit log</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Docker &amp; Kubernetes manifests</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Library crate &amp; the full source</li>
+        </ul>
+        <a class="btn btn--ghost" href="https://github.com/egkristi/RavenClaws" rel="noopener">Get the source</a>
+      </div>
+      <div class="lic commercial">
+        <h3>Commercial — Enterprise</h3>
+        <p class="price">For large-scale deployments, embedding without AGPL obligations, or managed-service offerings.</p>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Use without AGPLv3 obligations</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Swarm &amp; routing at scale, RavenFabric</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> RBAC, SSO/SAML, compliance reporting</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Air-gap licensing · priority support &amp; SLA</li>
+        </ul>
+        <a class="btn btn--primary" href="mailto:egkristi@gmail.com?subject=RavenClaws%20commercial%20license">Talk to us</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CTA ================= -->
+<section class="section">
+  <div class="wrap">
+    <div class="cta">
+      <img src="/assets/raven-carved.webp" alt="A raven perched on a branch carved with RavenClaws.io" width="520" height="292" style="display:block;max-width:min(520px,86%);margin:0 auto 20px;filter:drop-shadow(0 24px 44px rgba(0,0,0,.55))" loading="lazy">
+      <p class="eyebrow" style="justify-content:center">Secure · Small · Efficient · Robust · Simple</p>
+      <h2>Ship an agent you can actually trust.</h2>
+      <p>One static binary. Five providers. Swarms that scale to thousands. Self-hostable, air-gappable, and verifiable end to end.</p>
+      <div class="btn-row" style="justify-content:center">
+        <a class="btn btn--primary btn--lg" href="/docs/getting-started">Get started</a>
+        <a class="btn btn--ghost btn--lg" href="https://github.com/egkristi/RavenClaws" rel="noopener">Star on GitHub</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ================= FOOTER ================= -->
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+        <p>The ultimate AI agentic worker. Secure · Small · Efficient · Robust · Simple. Built in Rust.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Product</h4>
+        <a href="#features">Features</a>
+        <a href="#providers">Providers</a>
+        <a href="#security">Security</a>
+        <a href="#license">License</a>
+      </div>
+      <div class="foot-col">
+        <h4>Docs</h4>
+        <a href="/docs/">Overview</a>
+        <a href="/docs/getting-started">Getting started</a>
+        <a href="/docs/swarm-mode">Swarm mode</a>
+        <a href="/docs/mcp-integration">MCP integration</a>
+        <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      </div>
+      <div class="foot-col">
+        <h4>Project</h4>
+        <a href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+        <a href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a href="https://docs.rs/ravenclaws" rel="noopener">API docs</a>
+        <a href="https://github.com/egkristi/RavenClaws/releases" rel="noopener">Releases</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span data-year>2026</span> RavenClaws · Erling G&nbsp;M Kristiansen · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

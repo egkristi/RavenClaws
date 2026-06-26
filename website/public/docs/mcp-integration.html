@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MCP Integration · RavenClaws Docs</title>
+<meta name="description" content="Use RavenClaws as a Model Context Protocol (MCP) client to consume external tools, or as an MCP server to expose its own built-in tools — all policy-checked and audited.">
+<link rel="canonical" href="https://ravenclaws.io/docs/mcp-integration">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws MCP Integration">
+<meta property="og:description" content="MCP client and server modes over stdio.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration" class="active">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <h5>On this page</h5>
+      <a href="#overview" data-spy>Overview</a>
+      <a href="#client" data-spy>MCP client mode</a>
+      <a href="#server" data-spy>MCP server mode</a>
+      <a href="#security" data-spy>Security</a>
+      <a href="#use-cases" data-spy>Use cases</a>
+      <a href="#best-practices" data-spy>Best practices</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / MCP integration</p>
+      <h1>MCP integration</h1>
+      <p class="lead-box">RavenClaws supports the <a href="https://modelcontextprotocol.io/" rel="noopener">Model Context Protocol (MCP)</a> for connecting to external tools and services. This guide covers both MCP client and server modes.</p>
+
+      <h2 id="overview">Overview</h2>
+      <p>MCP provides a standardized way for AI agents to discover and use external tools. RavenClaws can:</p>
+      <ul>
+        <li><strong>Act as an MCP client</strong> — connect to MCP servers and use their tools.</li>
+        <li><strong>Act as an MCP server</strong> — expose RavenClaws' built-in tools to other MCP clients.</li>
+      </ul>
+
+      <h2 id="client">MCP client mode</h2>
+      <p>In client mode, RavenClaws connects to one or more MCP servers and discovers their available tools. The agent can then use those tools during task execution.</p>
+      <h3>Starting an MCP server</h3>
+      <p>First, you need an MCP server running. Here's an example using the official MCP filesystem server:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">npx</span> @modelcontextprotocol/server-filesystem /path/to/allowed/directory</code></pre></div>
+      <h3>Connecting RavenClaws as a client</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Connect to an MCP server via stdio</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-client</span> <span class="tok-s">"npx @modelcontextprotocol/server-filesystem /tmp"</span> <span class="tok-k">--exec</span> <span class="tok-s">"List files in the current directory"</span></code></pre></div>
+      <h3>Configuration</h3>
+      <p>You can configure MCP servers in your config file:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[mcp]
+servers = [
+  { command = <span class="tok-s">"npx"</span>, args = [<span class="tok-s">"@modelcontextprotocol/server-filesystem"</span>, <span class="tok-s">"/tmp"</span>], name = <span class="tok-s">"filesystem"</span> },
+  { command = <span class="tok-s">"npx"</span>, args = [<span class="tok-s">"@modelcontextprotocol/server-github"</span>], name = <span class="tok-s">"github"</span> },
+]</code></pre></div>
+      <h3>How it works</h3>
+      <ol>
+        <li>RavenClaws spawns the MCP server process.</li>
+        <li>Discovers available tools via the <code>tools/list</code> endpoint.</li>
+        <li>Registers discovered tools in the <code>ToolRegistry</code>.</li>
+        <li>When the agent calls a tool, RavenClaws sends a <code>tools/call</code> request.</li>
+        <li>Results are returned to the agent for further processing.</li>
+      </ol>
+
+      <h2 id="server">MCP server mode</h2>
+      <p>In server mode, RavenClaws exposes its built-in tools (shell, read/write file, web fetch, web search) as MCP tools that other AI agents can discover and use.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-server</span></code></pre></div>
+      <p>This starts RavenClaws in MCP server mode, listening on stdio for JSON-RPC 2.0 requests. Any MCP-compatible client can connect:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json-rpc</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c">// Request: List available tools</span>
+{
+  <span class="tok-s">"jsonrpc"</span>: <span class="tok-s">"2.0"</span>,
+  <span class="tok-s">"id"</span>: <span class="tok-n">1</span>,
+  <span class="tok-s">"method"</span>: <span class="tok-s">"tools/list"</span>,
+  <span class="tok-s">"params"</span>: {}
+}
+
+<span class="tok-c">// Response</span>
+{
+  <span class="tok-s">"jsonrpc"</span>: <span class="tok-s">"2.0"</span>,
+  <span class="tok-s">"id"</span>: <span class="tok-n">1</span>,
+  <span class="tok-s">"result"</span>: {
+    <span class="tok-s">"tools"</span>: [
+      { <span class="tok-s">"name"</span>: <span class="tok-s">"shell"</span>, <span class="tok-s">"description"</span>: <span class="tok-s">"Execute a shell command"</span> },
+      { <span class="tok-s">"name"</span>: <span class="tok-s">"read_file"</span>, <span class="tok-s">"description"</span>: <span class="tok-s">"Read a file from the filesystem"</span> }
+    ]
+  }
+}</code></pre></div>
+
+      <h2 id="security">Security</h2>
+      <p>When running in MCP server mode, all tool calls are still subject to:</p>
+      <ul>
+        <li><strong>PolicyEngine</strong> — deny-by-default allow-lists for shell, path, and network access.</li>
+        <li><strong>Sandbox</strong> — workdir jail with resource limits.</li>
+        <li><strong>AuditLog</strong> — tamper-evident logging of all operations.</li>
+      </ul>
+
+      <h2 id="use-cases">Use cases</h2>
+      <h3>IDE integration</h3>
+      <p>Connect RavenClaws to VS Code via MCP for AI-assisted development:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">VS Code MCP settings</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{
+  <span class="tok-s">"mcp"</span>: {
+    <span class="tok-s">"servers"</span>: {
+      <span class="tok-s">"ravenclaws"</span>: {
+        <span class="tok-s">"command"</span>: <span class="tok-s">"ravenclaws"</span>,
+        <span class="tok-s">"args"</span>: [<span class="tok-s">"--mcp-server"</span>]
+      }
+    }
+  }
+}</code></pre></div>
+      <h3>Multi-agent workflows</h3>
+      <p>Chain multiple RavenClaws instances together:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Agent 1: MCP server with filesystem access</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-server</span> <span class="tok-k">--config</span> agent1.toml &amp;
+
+<span class="tok-c"># Agent 2: MCP client using Agent 1's tools</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-client</span> <span class="tok-s">"ravenclaws --mcp-server --config agent2.toml"</span> \
+  <span class="tok-k">--exec</span> <span class="tok-s">"Analyze the codebase and suggest improvements"</span></code></pre></div>
+
+      <h2 id="best-practices">Best practices</h2>
+      <ol>
+        <li><strong>Use allow-lists</strong> — configure <code>allowed_paths</code> and <code>allowed_shell_commands</code> in server mode.</li>
+        <li><strong>Audit everything</strong> — always enable audit logging in production.</li>
+        <li><strong>Sandbox untrusted code</strong> — enable the sandbox for MCP server mode.</li>
+        <li><strong>Limit exposure</strong> — only expose the tools you need.</li>
+        <li><strong>Monitor</strong> — use health endpoints to verify MCP connections.</li>
+      </ol>
+
+      <nav class="doc-nav">
+        <a class="prev" href="/docs/swarm-mode"><span class="dir">← Previous</span><br><span class="ttl">Swarm mode</span></a>
+        <a class="next" href="/docs/heartbeat-mode"><span class="dir">Next →</span><br><span class="ttl">Heartbeat mode</span></a>
+      </nav>
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-bottom" style="border-top:0">
+      <span>© <span data-year>2026</span> RavenClaws · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

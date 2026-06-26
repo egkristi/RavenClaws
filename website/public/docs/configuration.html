@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Configuration Reference · RavenClaws Docs</title>
+<meta name="description" content="The complete RavenClaws configuration reference — layered config (file, env, flags), every section and key with defaults, example configs, and all CLI flags.">
+<link rel="canonical" href="https://ravenclaws.io/docs/configuration">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws Configuration Reference">
+<meta property="og:description" content="Every config section, key, default, and CLI flag.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration" class="active">Configuration</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <h5>On this page</h5>
+      <a href="#location" data-spy>File location</a>
+      <a href="#env" data-spy>Env var format</a>
+      <a href="#full" data-spy>Full configuration</a>
+      <a href="#examples" data-spy>Example configs</a>
+      <a href="#cli" data-spy>CLI flags</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / Configuration</p>
+      <h1>Configuration reference</h1>
+      <p class="lead-box">RavenClaws uses a layered configuration system. Each layer overrides the previous one.</p>
+      <ol>
+        <li><strong>Default values</strong> (built into the binary)</li>
+        <li><strong>Config file</strong> (<code>ravenclaws.toml</code> in the current directory, or via <code>--config</code>)</li>
+        <li><strong>Environment variables</strong> (prefixed with <code>RAVENCLAWS__</code>, using <code>__</code> as the separator)</li>
+        <li><strong>CLI flags</strong> (highest priority)</li>
+      </ol>
+
+      <h2 id="location">Config file location</h2>
+      <p>By default, RavenClaws looks for <code>ravenclaws.toml</code> in the current directory. You can specify a different path:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--config</span> /path/to/config.toml</code></pre></div>
+
+      <h2 id="env">Environment variable format</h2>
+      <p>Environment variables use the pattern <code>RAVENCLAWS__SECTION__KEY</code>. For nested keys, use additional <code>__</code> separators:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">environment</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">export</span> RAVENCLAWS__LLM__PROVIDER=<span class="tok-s">"openai"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__MODEL=<span class="tok-s">"gpt-4o"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__ENDPOINT=<span class="tok-s">"https://api.openai.com/v1"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__API_KEY=<span class="tok-s">"sk-..."</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__MAX_TOKENS=<span class="tok-s">"4096"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__TEMPERATURE=<span class="tok-s">"0.7"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__SYSTEM_PROMPT=<span class="tok-s">"You are a helpful assistant."</span></code></pre></div>
+
+      <h2 id="full">Full configuration</h2>
+
+      <h3><code>[llm]</code> — LLM provider settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>provider</code></td><td>string</td><td><code>"litellm"</code></td><td>Provider: <code>litellm</code>, <code>openai</code>, <code>openrouter</code>, <code>ollama</code>, <code>anthropic</code></td></tr>
+          <tr><td><code>endpoint</code></td><td>string</td><td>—</td><td>API endpoint URL</td></tr>
+          <tr><td><code>api_key</code></td><td>string</td><td>—</td><td>API key (prefer env var <code>RAVENCLAWS__LLM__API_KEY</code>)</td></tr>
+          <tr><td><code>model</code></td><td>string</td><td><code>"gpt-4o-mini"</code></td><td>Model name</td></tr>
+          <tr><td><code>max_tokens</code></td><td>integer</td><td><code>4096</code></td><td>Maximum tokens in response</td></tr>
+          <tr><td><code>temperature</code></td><td>float</td><td><code>0.7</code></td><td>Response temperature (0.0–2.0)</td></tr>
+          <tr><td><code>system_prompt</code></td><td>string</td><td>—</td><td>System prompt / persona</td></tr>
+          <tr><td><code>max_history</code></td><td>integer</td><td><code>50</code></td><td>Max conversation turns to retain</td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>[runtime]</code> — Runtime settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>max_iterations</code></td><td>integer</td><td><code>25</code></td><td>Max agent loop iterations</td></tr>
+          <tr><td><code>request_timeout_secs</code></td><td>integer</td><td><code>120</code></td><td>LLM request timeout</td></tr>
+          <tr><td><code>sandbox_dir</code></td><td>string</td><td><code>"/tmp/ravenclaws"</code></td><td>Sandbox working directory</td></tr>
+          <tr><td><code>audit_log_path</code></td><td>string</td><td><code>"audit.log"</code></td><td>Audit log file path</td></tr>
+          <tr><td><code>policy_file</code></td><td>string</td><td>—</td><td>Policy allow-list file</td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>[security]</code> — Security settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>allowed_shell_commands</code></td><td>array</td><td><code>[]</code></td><td>Allowed shell commands (empty = deny all)</td></tr>
+          <tr><td><code>allowed_paths</code></td><td>array</td><td><code>[]</code></td><td>Allowed file system paths</td></tr>
+          <tr><td><code>allowed_domains</code></td><td>array</td><td><code>[]</code></td><td>Allowed network domains</td></tr>
+          <tr><td><code>sandbox_enabled</code></td><td>boolean</td><td><code>true</code></td><td>Enable sandboxed execution</td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>[swarm]</code> — Swarm settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>agent_count</code></td><td>integer</td><td><code>3</code></td><td>Number of swarm agents</td></tr>
+          <tr><td><code>profiles</code></td><td>array</td><td>—</td><td>Agent personality profiles</td></tr>
+          <tr><td><code>topology</code></td><td>string</td><td><code>"flat"</code></td><td>Swarm topology: <code>flat</code>, <code>hierarchical</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>[heartbeat]</code> — Heartbeat settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>interval_secs</code></td><td>integer</td><td><code>300</code></td><td>Sleep interval between cycles</td></tr>
+          <tr><td><code>state_file</code></td><td>string</td><td><code>"heartbeat-state.json"</code></td><td>State persistence file</td></tr>
+          <tr><td><code>max_cycles</code></td><td>integer</td><td><code>0</code></td><td>Max cycles (0 = unlimited)</td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>[background]</code> — Background task settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>tasks_dir</code></td><td>string</td><td><code>"background-tasks"</code></td><td>Task persistence directory</td></tr>
+          <tr><td><code>max_concurrent</code></td><td>integer</td><td><code>10</code></td><td>Max concurrent background tasks</td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>[scheduler]</code> — Scheduler settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>triggers</code></td><td>array</td><td><code>[]</code></td><td>Trigger configurations (cron, webhook, file-watch)</td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>[server]</code> — HTTP server settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>host</code></td><td>string</td><td><code>"0.0.0.0"</code></td><td>Server bind address</td></tr>
+          <tr><td><code>port</code></td><td>integer</td><td><code>8080</code></td><td>Server port</td></tr>
+          <tr><td><code>enable_metrics</code></td><td>boolean</td><td><code>true</code></td><td>Enable <code>/metrics</code> endpoint</td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>[telemetry]</code> — OpenTelemetry settings</h3>
+      <table>
+        <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>enabled</code></td><td>boolean</td><td><code>false</code></td><td>Enable OpenTelemetry tracing</td></tr>
+          <tr><td><code>exporter</code></td><td>string</td><td><code>"grpc"</code></td><td>Exporter type: <code>grpc</code> or <code>stdout</code></td></tr>
+          <tr><td><code>endpoint</code></td><td>string</td><td><code>"http://localhost:4317"</code></td><td>OTLP collector endpoint</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="examples">Example configurations</h2>
+      <h3>Minimal (LiteLLM)</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[llm]
+provider = <span class="tok-s">"litellm"</span>
+endpoint = <span class="tok-s">"http://localhost:4000"</span>
+api_key = <span class="tok-s">"sk-litellm-key"</span>
+model = <span class="tok-s">"gpt-4o-mini"</span></code></pre></div>
+
+      <h3>Secure sandbox with policy</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[llm]
+provider = <span class="tok-s">"ollama"</span>
+endpoint = <span class="tok-s">"http://localhost:11434"</span>
+model = <span class="tok-s">"llama3.1"</span>
+
+[runtime]
+sandbox_dir = <span class="tok-s">"/var/lib/ravenclaws/sandbox"</span>
+audit_log_path = <span class="tok-s">"/var/log/ravenclaws/audit.log"</span>
+
+[security]
+allowed_shell_commands = [<span class="tok-s">"ls"</span>, <span class="tok-s">"cat"</span>, <span class="tok-s">"grep"</span>, <span class="tok-s">"find"</span>]
+allowed_paths = [<span class="tok-s">"/var/lib/ravenclaws/data"</span>]
+allowed_domains = [<span class="tok-s">"api.github.com"</span>]
+sandbox_enabled = <span class="tok-k">true</span></code></pre></div>
+
+      <h3>Swarm mode</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[llm]
+provider = <span class="tok-s">"openai"</span>
+api_key = <span class="tok-s">"${OPENAI_API_KEY}"</span>
+model = <span class="tok-s">"gpt-4o"</span>
+
+[swarm]
+agent_count = <span class="tok-n">3</span>
+topology = <span class="tok-s">"flat"</span>
+
+[swarm.profiles]
+coder = <span class="tok-s">"You are an expert software engineer."</span>
+researcher = <span class="tok-s">"You are a thorough research analyst."</span>
+reviewer = <span class="tok-s">"You are a meticulous code reviewer."</span></code></pre></div>
+
+      <h2 id="cli">CLI flags</h2>
+      <table>
+        <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>--config &lt;path&gt;</code></td><td>Config file path</td></tr>
+          <tr><td><code>--exec &lt;prompt&gt;</code></td><td>One-shot execution mode</td></tr>
+          <tr><td><code>--repl</code></td><td>Interactive REPL mode</td></tr>
+          <tr><td><code>--serve</code></td><td>HTTP server mode</td></tr>
+          <tr><td><code>--mcp-server</code></td><td>MCP server mode</td></tr>
+          <tr><td><code>--system-prompt &lt;text&gt;</code></td><td>Override system prompt</td></tr>
+          <tr><td><code>--version</code></td><td>Print version and exit</td></tr>
+          <tr><td><code>--help</code></td><td>Print help and exit</td></tr>
+        </tbody>
+      </table>
+
+      <nav class="doc-nav">
+        <a class="prev" href="/docs/getting-started"><span class="dir">← Previous</span><br><span class="ttl">Getting started</span></a>
+        <a class="next" href="/docs/swarm-mode"><span class="dir">Next →</span><br><span class="ttl">Swarm mode</span></a>
+      </nav>
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-bottom" style="border-top:0">
+      <span>© <span data-year>2026</span> RavenClaws · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

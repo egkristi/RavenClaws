@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Documentation · RavenClaws</title>
+<meta name="description" content="RavenClaws documentation — getting started, configuration reference, swarm mode, MCP integration, and autonomous heartbeat mode.">
+<link rel="canonical" href="https://ravenclaws.io/docs/">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws Documentation">
+<meta property="og:description" content="Install, configure, and orchestrate secure AI agents with RavenClaws.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta property="og:url" content="https://ravenclaws.io/docs/">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a>
+        <a href="/#providers">Providers</a>
+        <a href="/#security">Security</a>
+        <a href="/docs/">Docs</a>
+        <a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.9 10.9c.6.1.8-.3.8-.6v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.7 0-1.3.4-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.4 11.4 0 0 1 6 0C17.3 4.7 18.3 5 18.3 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.4-2.7 5.4-5.3 5.7.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z"/></svg>
+          GitHub
+        </a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<section class="section" style="padding-bottom:32px">
+  <div class="wrap">
+    <div class="hero-grid" style="align-items:center">
+      <div>
+        <p class="eyebrow">Documentation</p>
+        <h1 style="font-size:clamp(2.1rem,4.6vw,3rem)">Build, configure, and orchestrate <span class="grad-text">secure agents</span>.</h1>
+        <p class="section-lead">Everything you need to install RavenClaws, point it at a provider, wire up tools, and scale from a single agent to an autonomous swarm.</p>
+        <div class="btn-row">
+          <a class="btn btn--primary" href="/docs/getting-started">Start here</a>
+          <a class="btn btn--ghost" href="https://docs.rs/ravenclaws" rel="noopener">API reference (docs.rs)</a>
+        </div>
+      </div>
+      <div class="hero-art">
+        <img src="/assets/raven-cyber.webp" alt="Two cybernetic ravens with a glowing cyan core, perched on a branch" width="880" height="513" style="animation:none;border-radius:18px">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" style="padding-top:20px">
+  <div class="wrap">
+    <div class="grid grid-2">
+      <a class="doc-card" href="/docs/getting-started">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v18l7-5 7 5V3z"/></svg></div>
+        <h3>Getting started</h3>
+        <p>Install via Cargo, Docker, or source. Configure a provider and run your first one-shot task, REPL session, and a multi-step task with tools.</p>
+      </a>
+      <a class="doc-card" href="/docs/configuration">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.3 1a7 7 0 0 0-1.7-1l-.3-2.6H9.4l-.3 2.6a7 7 0 0 0-1.7 1l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 1.7 1l.3 2.6h5.2l.3-2.6a7 7 0 0 0 1.7-1l2.3 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/></svg></div>
+        <h3>Configuration reference</h3>
+        <p>The full layered config system: file → env → flags. Every section, key, default, and CLI flag — with example configs for each mode.</p>
+      </a>
+      <a class="doc-card" href="/docs/swarm-mode">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="7" r="2.5"/><circle cx="18" cy="7" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="M8 8.5 11 15M16 8.5 13 15M8 7h8"/></svg></div>
+        <h3>Swarm mode</h3>
+        <p>Multi-agent orchestration: flat swarms, hierarchical supervisors, self-provisioning workers, the inter-agent message bus, and health monitoring.</p>
+      </a>
+      <a class="doc-card" href="/docs/mcp-integration">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 7h6v6M20 7l-9 9-4-4-5 5"/></svg></div>
+        <h3>MCP integration</h3>
+        <p>Use RavenClaws as an MCP client to consume external tools, or as an MCP server to expose its own — all policy-checked and audited.</p>
+      </a>
+      <a class="doc-card col-span-2" href="/docs/heartbeat-mode">
+        <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <h3>Heartbeat mode</h3>
+        <p>Autonomous, long-running agents on an assess → plan → act → persist → sleep cycle. State survives restarts, so agents resume from the last checkpoint and run unattended for days.</p>
+      </a>
+    </div>
+
+    <div class="callout" style="margin-top:28px">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+      <p>These guides mirror the <code>docs/guides/</code> directory in the repository. For the complete generated API, see the <a href="https://docs.rs/ravenclaws" rel="noopener">rustdoc on docs.rs</a>, and the <a href="https://github.com/egkristi/RavenClaws/tree/main/examples" rel="noopener">runnable examples</a> on GitHub.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+        <p>The ultimate AI agentic worker. Secure · Small · Efficient · Robust · Simple. Built in Rust.</p>
+      </div>
+      <div class="foot-col"><h4>Product</h4><a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/#license">License</a></div>
+      <div class="foot-col"><h4>Docs</h4><a href="/docs/">Overview</a><a href="/docs/getting-started">Getting started</a><a href="/docs/configuration">Configuration</a><a href="/docs/swarm-mode">Swarm mode</a></div>
+      <div class="foot-col"><h4>Project</h4><a href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a><a href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a><a href="https://docs.rs/ravenclaws" rel="noopener">API docs</a><a href="https://github.com/egkristi/RavenClaws/releases" rel="noopener">Releases</a></div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span data-year>2026</span> RavenClaws · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

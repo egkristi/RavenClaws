@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Heartbeat Mode · RavenClaws Docs</title>
+<meta name="description" content="Autonomous, long-running RavenClaws agents on an assess → plan → act → persist → sleep cycle. State survives restarts, so agents resume from the last checkpoint.">
+<link rel="canonical" href="https://ravenclaws.io/docs/heartbeat-mode">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws Heartbeat Mode">
+<meta property="og:description" content="Autonomous long-running agents that run unattended for days.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode" class="active">Heartbeat mode</a>
+      <h5>On this page</h5>
+      <a href="#overview" data-spy>Overview</a>
+      <a href="#quick-start" data-spy>Quick start</a>
+      <a href="#configuration" data-spy>Configuration</a>
+      <a href="#state" data-spy>State persistence</a>
+      <a href="#use-cases" data-spy>Use cases</a>
+      <a href="#best-practices" data-spy>Best practices</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / Heartbeat mode</p>
+      <h1>Heartbeat mode</h1>
+      <p class="lead-box">Heartbeat mode enables autonomous, long-running agents that operate on a persistent assess → plan → act → persist → sleep cycle. Ideal for proactive monitoring, maintenance, and continuous-improvement tasks.</p>
+
+      <h2 id="overview">Overview</h2>
+      <p>A heartbeat agent runs indefinitely, following this cycle:</p>
+      <ol>
+        <li><strong>Assess</strong> — evaluate the current state (check files, monitor systems, review logs).</li>
+        <li><strong>Plan</strong> — determine what actions to take based on the assessment.</li>
+        <li><strong>Act</strong> — execute planned actions using available tools.</li>
+        <li><strong>Persist</strong> — save state to disk for resumability.</li>
+        <li><strong>Sleep</strong> — wait for the configured interval, then repeat.</li>
+      </ol>
+
+      <h2 id="quick-start">Quick start</h2>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Run a heartbeat agent that checks every 5 minutes</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--heartbeat</span> <span class="tok-k">--exec</span> <span class="tok-s">"Monitor the /tmp directory for new files and report changes"</span></code></pre></div>
+
+      <h2 id="configuration">Configuration</h2>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[heartbeat]
+interval_secs = <span class="tok-n">300</span>        <span class="tok-c"># Sleep between cycles (5 minutes)</span>
+state_file = <span class="tok-s">"heartbeat-state.json"</span>  <span class="tok-c"># State persistence</span>
+max_cycles = <span class="tok-n">0</span>             <span class="tok-c"># 0 = unlimited</span>
+
+[llm]
+provider = <span class="tok-s">"openai"</span>
+model = <span class="tok-s">"gpt-4o-mini"</span>
+system_prompt = <span class="tok-s">"You are a vigilant system monitor. Assess, plan, and act carefully."</span></code></pre></div>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>interval_secs</code></td><td><code>300</code></td><td>Sleep duration between cycles</td></tr>
+          <tr><td><code>state_file</code></td><td><code>"heartbeat-state.json"</code></td><td>File for persisting state across restarts</td></tr>
+          <tr><td><code>max_cycles</code></td><td><code>0</code></td><td>Maximum cycles (0 = run forever)</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="state">State persistence</h2>
+      <p>Heartbeat agents automatically persist their state to disk after each cycle. This means:</p>
+      <ul>
+        <li><strong>Survives restarts</strong> — if the agent is stopped and restarted, it resumes from the last checkpoint.</li>
+        <li><strong>Crash recovery</strong> — if the process crashes mid-cycle, state up to the last persist is preserved.</li>
+        <li><strong>Manual inspection</strong> — state files are human-readable JSON.</li>
+      </ul>
+      <h3>State file contents</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">heartbeat-state.json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{
+  <span class="tok-s">"cycle"</span>: <span class="tok-n">42</span>,
+  <span class="tok-s">"last_assessment"</span>: <span class="tok-s">"System healthy. 3 files changed since last check."</span>,
+  <span class="tok-s">"last_plan"</span>: <span class="tok-s">"Review changed files for security issues."</span>,
+  <span class="tok-s">"last_action"</span>: <span class="tok-s">"Scanned 3 files. No issues found."</span>,
+  <span class="tok-s">"timestamp"</span>: <span class="tok-s">"2026-06-02T15:30:00Z"</span>
+}</code></pre></div>
+
+      <h2 id="use-cases">Use cases</h2>
+      <h3>File system monitoring</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--heartbeat</span> \
+  <span class="tok-k">--system-prompt</span> <span class="tok-s">"You are a file integrity monitor."</span> \
+  <span class="tok-k">--exec</span> <span class="tok-s">"Monitor /etc for unauthorized changes. Alert if any file is modified."</span></code></pre></div>
+      <h3>Log analysis</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--heartbeat</span> \
+  <span class="tok-k">--system-prompt</span> <span class="tok-s">"You are a log analyst."</span> \
+  <span class="tok-k">--exec</span> <span class="tok-s">"Check /var/log for error patterns every minute. Summarize new errors."</span></code></pre></div>
+      <h3>CI/CD health monitor</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--heartbeat</span> \
+  <span class="tok-k">--system-prompt</span> <span class="tok-s">"You are a CI/CD health monitor."</span> \
+  <span class="tok-k">--exec</span> <span class="tok-s">"Check GitHub Actions workflow status every 10 minutes. Report failures."</span></code></pre></div>
+
+      <h2 id="best-practices">Best practices</h2>
+      <ol>
+        <li><strong>Set appropriate intervals</strong> — don't poll too frequently (respect rate limits).</li>
+        <li><strong>Use specific system prompts</strong> — focus the agent on its monitoring role.</li>
+        <li><strong>Enable audit logging</strong> — track all actions for compliance.</li>
+        <li><strong>Configure the sandbox</strong> — restrict file system access to necessary paths.</li>
+        <li><strong>Monitor the monitor</strong> — use health endpoints to verify the heartbeat is running.</li>
+        <li><strong>Test recovery</strong> — verify state persistence works by restarting the agent.</li>
+      </ol>
+
+      <div class="callout warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+        <p><strong>Limitations.</strong> Heartbeat agents are single-threaded (one cycle at a time); state-file locking is not supported for multi-process access; and very short intervals (&lt; 10 seconds) may cause excessive API usage.</p>
+      </div>
+
+      <nav class="doc-nav">
+        <a class="prev" href="/docs/mcp-integration"><span class="dir">← Previous</span><br><span class="ttl">MCP integration</span></a>
+        <a class="next" href="/docs/"><span class="dir">Next →</span><br><span class="ttl">Docs overview</span></a>
+      </nav>
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-bottom" style="border-top:0">
+      <span>© <span data-year>2026</span> RavenClaws · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

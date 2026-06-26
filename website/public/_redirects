@@ -1,0 +1,11 @@
+# Cloudflare static-asset redirects
+# https://developers.cloudflare.com/workers/static-assets/redirects/
+
+# Friendly shortlinks
+/github      https://github.com/egkristi/RavenClaws            302
+/repo        https://github.com/egkristi/RavenClaws            302
+/crate       https://crates.io/crates/ravenclaws               302
+/crates      https://crates.io/crates/ravenclaws               302
+/api         https://docs.rs/ravenclaws                        302
+/releases    https://github.com/egkristi/RavenClaws/releases   302
+/discuss     https://github.com/egkristi/RavenClaws/discussions 302

@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Getting Started · RavenClaws Docs</title>
+<meta name="description" content="Install RavenClaws via Cargo, Docker, or source, configure an LLM provider, and run your first agent — one-shot, REPL, and multi-step tasks with tools.">
+<link rel="canonical" href="https://ravenclaws.io/docs/getting-started">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="Getting Started with RavenClaws">
+<meta property="og:description" content="From install to your first multi-step agent in minutes.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started" class="active">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <h5>On this page</h5>
+      <a href="#prerequisites" data-spy>Prerequisites</a>
+      <a href="#installation" data-spy>Installation</a>
+      <a href="#first-agent" data-spy>Your first agent</a>
+      <a href="#configuration" data-spy>Configuration</a>
+      <a href="#next-steps" data-spy>Next steps</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / Getting started</p>
+      <h1>Getting started with RavenClaws</h1>
+      <p class="lead-box">This guide walks you through your first RavenClaws agent — from installation to running a multi-step task with tools.</p>
+
+      <h2 id="prerequisites">Prerequisites</h2>
+      <ul>
+        <li><strong>Rust 1.86+</strong> (for building from source)</li>
+        <li><strong>Docker</strong> (optional, for containerized deployment)</li>
+        <li>An <strong>LLM provider</strong> — one of:
+          <ul>
+            <li><a href="https://litellm.ai/" rel="noopener">LiteLLM</a> (recommended for local development)</li>
+            <li><a href="https://platform.openai.com/" rel="noopener">OpenAI</a></li>
+            <li><a href="https://openrouter.ai/" rel="noopener">OpenRouter</a></li>
+            <li><a href="https://ollama.ai/" rel="noopener">Ollama</a> (fully local, no API key needed)</li>
+            <li><a href="https://console.anthropic.com/" rel="noopener">Anthropic</a></li>
+          </ul>
+        </li>
+      </ul>
+
+      <h2 id="installation">Installation</h2>
+      <h3>Option 1 — Install via Cargo (recommended)</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">cargo</span> install ravenclaws</code></pre>
+      </div>
+      <h3>Option 2 — Build from source</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">git</span> clone https://github.com/egkristi/RavenClaws.git
+<span class="tok-d">cd</span> RavenClaws
+<span class="tok-d">cargo</span> build --release
+<span class="tok-c"># Binary is at target/release/ravenclaws</span></code></pre>
+      </div>
+      <h3>Option 3 — Docker</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">docker</span> pull ghcr.io/egkristi/ravenclaws:latest</code></pre>
+      </div>
+
+      <h2 id="first-agent">Quick start — your first agent</h2>
+      <h3>1. Set up your LLM provider</h3>
+      <p>Set the required environment variables:</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">environment</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># For LiteLLM (default):</span>
+<span class="tok-k">export</span> LITELLM_API_KEY=<span class="tok-s">"your-key"</span>
+<span class="tok-k">export</span> LITELLM_ENDPOINT=<span class="tok-s">"http://localhost:4000"</span>
+
+<span class="tok-c"># Or for OpenAI:</span>
+<span class="tok-k">export</span> OPENAI_API_KEY=<span class="tok-s">"sk-..."</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__PROVIDER=<span class="tok-s">"openai"</span>
+
+<span class="tok-c"># Or for Ollama (fully local):</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__PROVIDER=<span class="tok-s">"ollama"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__ENDPOINT=<span class="tok-s">"http://localhost:11434"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__MODEL=<span class="tok-s">"llama3.1"</span></code></pre>
+      </div>
+
+      <h3>2. Run a one-shot task</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--exec</span> <span class="tok-s">"What is the capital of France?"</span></code></pre>
+      </div>
+      <p>You should see a response like: <code>The capital of France is Paris.</code></p>
+
+      <h3>3. Start an interactive REPL</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--repl</span></code></pre>
+      </div>
+      <p>This starts an interactive session where you can have a back-and-forth conversation:</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">repl</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>╭─ RavenClaws REPL ─────────────────────────────╮
+│ Type /exit to quit, /reset to clear history    │
+╰────────────────────────────────────────────────╯
+You: Summarize the key features of Rust
+RavenClaws: Rust is a systems programming language...
+You: /exit
+Goodbye!</code></pre>
+      </div>
+
+      <h3>4. Run a multi-step task with tools</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--exec</span> <span class="tok-s">"Create a file called hello.txt with the text 'Hello, RavenClaws!' and then read it back"</span></code></pre>
+      </div>
+      <p>This uses the built-in <code>write_file</code> and <code>read_file</code> tools to complete the task.</p>
+
+      <h2 id="configuration">Configuration</h2>
+      <p>RavenClaws can be configured via three layers (each overrides the previous):</p>
+      <ol>
+        <li><strong>Config file</strong> (<code>ravenclaws.toml</code>)</li>
+        <li><strong>Environment variables</strong> (prefixed with <code>RAVENCLAWS__</code>)</li>
+        <li><strong>CLI flags</strong></li>
+      </ol>
+      <h3>Minimal config file</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[llm]
+provider = <span class="tok-s">"litellm"</span>
+endpoint = <span class="tok-s">"http://localhost:4000"</span>
+api_key = <span class="tok-s">"your-key"</span>
+model = <span class="tok-s">"gpt-4o-mini"</span></code></pre>
+      </div>
+      <p>See the <a href="/docs/configuration">Configuration Reference</a> for all available options.</p>
+
+      <h2 id="next-steps">Next steps</h2>
+      <ul>
+        <li><a href="/docs/configuration">Configuration Reference</a> — all config options</li>
+        <li><a href="/docs/swarm-mode">Swarm Mode Guide</a> — multi-agent orchestration</li>
+        <li><a href="/docs/mcp-integration">MCP Integration</a> — connect to MCP servers</li>
+        <li><a href="/docs/heartbeat-mode">Heartbeat Mode</a> — autonomous long-running agents</li>
+      </ul>
+
+      <nav class="doc-nav">
+        <a class="prev" href="/docs/"><span class="dir">← Back</span><br><span class="ttl">Docs overview</span></a>
+        <a class="next" href="/docs/configuration"><span class="dir">Next →</span><br><span class="ttl">Configuration reference</span></a>
+      </nav>
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-bottom" style="border-top:0">
+      <span>© <span data-year>2026</span> RavenClaws · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

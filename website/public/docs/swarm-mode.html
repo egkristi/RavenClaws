@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swarm Mode · RavenClaws Docs</title>
+<meta name="description" content="Multi-agent orchestration in RavenClaws — flat swarms, hierarchical supervisors, self-provisioning workers, the inter-agent message bus, and swarm health monitoring.">
+<link rel="canonical" href="https://ravenclaws.io/docs/swarm-mode">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws Swarm Mode">
+<meta property="og:description" content="Orchestrate parallel and hierarchical multi-agent swarms.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/swarm-mode" class="active">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <h5>On this page</h5>
+      <a href="#overview" data-spy>Overview</a>
+      <a href="#quick-start" data-spy>Quick start</a>
+      <a href="#topologies" data-spy>Topologies</a>
+      <a href="#communication" data-spy>Inter-agent comms</a>
+      <a href="#health" data-spy>Health monitoring</a>
+      <a href="#best-practices" data-spy>Best practices</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / Swarm mode</p>
+      <h1>Swarm mode</h1>
+      <p class="lead-box">RavenClaws supports multi-agent orchestration through swarm mode, where multiple AI agents collaborate on tasks. This guide covers the three swarm topologies and how to use them.</p>
+
+      <h2 id="overview">Overview</h2>
+      <p>Swarm mode allows you to run multiple agents simultaneously, each with a different persona or role. Agents can work in parallel on independent subtasks, or collaborate hierarchically with a supervisor.</p>
+
+      <h2 id="quick-start">Quick start</h2>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Run with 3 default agents</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--swarm</span> <span class="tok-s">"Research the Rust programming language and create a summary"</span>
+
+<span class="tok-c"># Run with a supervisor decomposing the task</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--supervisor</span> <span class="tok-s">"Design a microservice architecture for an e-commerce platform"</span></code></pre></div>
+
+      <h2 id="topologies">Topologies</h2>
+
+      <h3>Flat swarm</h3>
+      <p>In a flat swarm, all agents receive the same prompt and work independently. Results are collected and presented together.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">config.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[llm]
+provider = <span class="tok-s">"openai"</span>
+model = <span class="tok-s">"gpt-4o"</span>
+
+[swarm]
+agent_count = <span class="tok-n">3</span>
+topology = <span class="tok-s">"flat"</span>
+
+[swarm.profiles]
+coder = <span class="tok-s">"You are an expert Rust engineer focused on code quality."</span>
+researcher = <span class="tok-s">"You are a thorough technical researcher."</span>
+reviewer = <span class="tok-s">"You are a meticulous code reviewer."</span></code></pre></div>
+      <p><strong>Use cases:</strong> getting multiple perspectives on a problem, parallel research on different aspects of a topic, and code review from different angles.</p>
+
+      <h3>Hierarchical swarm (supervisor)</h3>
+      <p>A supervisor agent decomposes the task into subtasks, spawns sub-agents for each, and aggregates the results.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">config.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[llm]
+provider = <span class="tok-s">"openai"</span>
+model = <span class="tok-s">"gpt-4o"</span>
+
+[swarm]
+agent_count = <span class="tok-n">4</span>
+topology = <span class="tok-s">"hierarchical"</span>
+
+[swarm.profiles]
+supervisor = <span class="tok-s">"You are a project manager. Decompose tasks and delegate."</span>
+architect = <span class="tok-s">"You are a systems architect focused on design."</span>
+implementer = <span class="tok-s">"You are an implementer who writes production-quality code."</span>
+tester = <span class="tok-s">"You are a QA engineer who writes tests."</span></code></pre></div>
+      <p><strong>Use cases:</strong> complex multi-step projects, software design and implementation, and research reports with multiple sections.</p>
+
+      <h3>Self-provisioning swarm</h3>
+      <p>The swarm dynamically creates worker profiles based on task requirements. Agents are spawned recursively as needed.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--swarm</span> <span class="tok-s">"Build a complete REST API in Rust with authentication"</span></code></pre></div>
+      <p>The supervisor will:</p>
+      <ol>
+        <li>Analyze the task</li>
+        <li>Create appropriate worker profiles (e.g. "auth specialist", "API designer", "database expert")</li>
+        <li>Assign subtasks to each worker</li>
+        <li>Collect and merge results</li>
+      </ol>
+
+      <h2 id="communication">Inter-agent communication</h2>
+      <p>Agents in a swarm can communicate via the built-in message bus:</p>
+      <ul>
+        <li><strong>Send</strong> — direct a message to a specific agent</li>
+        <li><strong>Broadcast</strong> — send a message to all agents</li>
+        <li><strong>Receive</strong> — check for incoming messages</li>
+      </ul>
+      <p>This enables collaborative workflows where agents share intermediate results.</p>
+
+      <h2 id="health">Health monitoring</h2>
+      <p>Swarm health is automatically tracked:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--swarm</span> <span class="tok-k">--swarm-health</span> <span class="tok-s">"Run a long analysis task"</span></code></pre></div>
+      <p>The health monitor tracks heartbeat timestamps per agent, performs dead-agent detection (timeout-based), and reports aggregate metrics (messages sent/received, tasks completed).</p>
+
+      <h2 id="config">Configuration</h2>
+      <table>
+        <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>swarm.agent_count</code></td><td><code>3</code></td><td>Number of agents</td></tr>
+          <tr><td><code>swarm.topology</code></td><td><code>"flat"</code></td><td><code>flat</code> or <code>hierarchical</code></td></tr>
+          <tr><td><code>swarm.profiles</code></td><td>—</td><td>Map of agent name to system prompt</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="best-practices">Best practices</h2>
+      <ol>
+        <li><strong>Match profiles to tasks</strong> — give each agent a clear, specific role.</li>
+        <li><strong>Use hierarchical for complex tasks</strong> — let the supervisor decompose the problem.</li>
+        <li><strong>Set appropriate agent counts</strong> — 3–5 agents is usually optimal.</li>
+        <li><strong>Monitor health</strong> — use <code>--swarm-health</code> for long-running swarms.</li>
+        <li><strong>Provide context</strong> — include relevant background in the initial prompt.</li>
+      </ol>
+
+      <div class="callout warn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+        <p><strong>Limitations.</strong> Agents share the same LLM provider configuration; inter-agent communication is synchronous within a cycle; and the maximum practical agent count is ~50, limited by token budgets.</p>
+      </div>
+
+      <nav class="doc-nav">
+        <a class="prev" href="/docs/configuration"><span class="dir">← Previous</span><br><span class="ttl">Configuration</span></a>
+        <a class="next" href="/docs/mcp-integration"><span class="dir">Next →</span><br><span class="ttl">MCP integration</span></a>
+      </nav>
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-bottom" style="border-top:0">
+      <span>© <span data-year>2026</span> RavenClaws · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/main.js" defer></script>
+</body>
+</html>
