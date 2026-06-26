@@ -3,9 +3,9 @@
 **Date:** 2026-06-26  
 **Version:** v0.9.2 — Swarm Health & Telemetry ✅  
 **Previous Release:** v0.9.1 (2026-06-22) — Inter-agent communication bus ✅  
-**Current Commit:** `20d4c69` — v1.0 hardening: API stability with #[non_exhaustive], update docs
-**CI Status:** Build & Release #168 ⚠️ (Check job flaky) · Container Build #168 ✅ · Security Scan #126 ✅
-**v1.0 Hardening Progress:** 6/15 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified, zero CVEs, API stability)
+**Current Commit:** `0f21ae3` — v1.0 hardening: MIGRATION.md, CI diagnostics, docs update
+**CI Status:** Build & Release #169 ✅ · Container Build #169 ✅ · Security Scan #127 ✅
+**v1.0 Hardening Progress:** 7/15 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified, zero CVEs, API stability, complete docs)
 
 **Vision:** RavenClaws shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -512,7 +512,7 @@ features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
 - [x] **API stability** guarantees + semver discipline. All public enums and structs reviewed: `#[non_exhaustive]` added to `RavenClawsError`, `ConfigError`, `LLMError`, `ToolError`, `LLMProvider`, `OpenAICompatibleProvider`, `CircuitState`, `ToolCategory`, `Config`, `LLMConfig`, `SecurityConfig`, `RuntimeConfig`, `RavenFabricConfig`, `TelemetryConfig`, `SchedulerConfig`, `WebSearchConfig`. Doc comments added to all public types.
 - [ ] **Autonomous operation validated** — RavenClaws runs unattended for 7+ days, completing tasks via heartbeat loop, recovering from failures, and scaling swarm up/down as needed.
 - [ ] **Swarm scale validated** — 1000+ worker agents operating in mesh topology, with < 5% overhead per additional agent. Swarm grows and shrinks organically — no fixed limit, no artificial cap.
-- [ ] **Complete docs**, examples, migration guides. README includes quickstart, library usage guide, configuration reference, and architecture overview.
+- [x] **Complete docs**, examples, migration guides. README includes quickstart, library usage guide, configuration reference, and architecture overview. — `docs/guides/` (getting-started, configuration, swarm-mode, mcp-integration, heartbeat-mode), `examples/` (basic_chat, agent_loop, swarm, mcp_client, heartbeat), `MIGRATION.md`, README with FAQ and doc links.
 - [ ] **All verification tests passing** across all 4 deployment targets (macOS, Linux, Docker, K8s).
 - [ ] **Release automation complete** — signed tags, multi-arch containers, SBOM, provenance, crates.io publish all green.
 - [ ] **Reproducible builds.**

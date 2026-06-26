@@ -62,6 +62,26 @@
 //! - Shell commands execute in a [`Sandbox`] with resource limits
 //! - All operations are logged to a tamper-evident [`AuditLog`]
 //! - API keys are zeroized on drop
+//!
+//! ## Feature Flags
+//!
+//! - `otel-grpc` (default) — OpenTelemetry tracing via OTLP gRPC exporter
+//! - `otel-stdout` — OpenTelemetry tracing via stdout exporter
+//!
+//! ## Minimum Supported Rust Version (MSRV)
+//!
+//! Rust 1.86 or later. This crate uses edition 2021.
+//!
+//! ## Semver Guarantees
+//!
+//! RavenClaws follows semantic versioning. The public API consists of all items
+//! documented in this module and re-exported below. Items marked `#[doc(hidden)]`
+//! or in `__private` modules are not part of the public API and may change in
+//! minor releases.
+//!
+//! All public enums and structs are `#[non_exhaustive]` — new variants/fields may
+//! be added in minor releases. Match statements on enums must include a wildcard
+//! arm, and struct literals must use `..` syntax.
 
 pub mod agent;
 pub mod audit;
@@ -80,3 +100,14 @@ pub mod server;
 pub mod swarm;
 pub mod telemetry;
 pub mod tools;
+
+// ── Re-exports of commonly used types ──────────────────────────────────────
+
+pub use agent::{run_agent_loop, run_agent_loop_with_mcp, AgentLoopConfig, ConversationMemory};
+pub use audit::AuditLog;
+pub use config::{Config, LLMConfig, LLMProvider, RuntimeConfig, SecurityConfig};
+pub use error::RavenClawsError;
+pub use llm::{create_client, ChatMessage, ChatResponse, LLMProviderTrait, MultiModelManager};
+pub use policy::PolicyEngine;
+pub use sandbox::Sandbox;
+pub use tools::{ToolCall, ToolImpl, ToolRegistry, ToolResult};

@@ -18,11 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unused `run_exec_stream` function** — Streaming exec functionality is handled by the agent loop internally.
 - **Unused `futures::StreamExt` import** — No longer needed after `run_exec_stream` removal.
 
+### Added
+- **Documentation guides** (`docs/guides/`) — Created comprehensive guides: getting-started, configuration reference, swarm-mode, mcp-integration, and heartbeat-mode. Each guide includes setup instructions, configuration examples, best practices, and use cases.
+- **Runnable examples** (`examples/`) — Created 5 runnable Rust examples: `basic_chat` (minimal library usage), `agent_loop` (full agent loop with tools), `swarm` (multi-agent orchestration), `mcp_client` (MCP server connection), `heartbeat` (autonomous agent). Each example is documented with usage instructions.
+- **README FAQ section** — Added comprehensive FAQ covering common questions: differentiation, API keys, offline use, security model, mode differences, library usage, upgrade paths, deployment targets, and licensing.
+- **Library API re-exports** (`src/lib.rs`) — Added `pub use` re-exports for commonly used types: `Config`, `LLMConfig`, `LLMProvider`, `ChatMessage`, `ChatResponse`, `ToolCall`, `ToolResult`, `ToolRegistry`, `ToolImpl`, `PolicyEngine`, `Sandbox`, `AuditLog`, `RavenClawsError`, `AgentLoopConfig`, `ConversationMemory`, `LLMProviderTrait`, `MultiModelManager`, `create_client`, `run_agent_loop`, `run_agent_loop_with_mcp`, `RuntimeConfig`, `SecurityConfig`. Added MSRV note (Rust 1.86+), semver guarantees section, and feature flag documentation.
+
 ### Changed
-- **ROADMAP.md** — Updated for v1.0 scope: v0.10 features deferred to post-1.0. v1.0 now focuses on hardening + docs + API stability. Added completed items for deprecated type removal, dead code elimination, library API establishment, performance benchmarks, zero CVEs, and API stability. Updated stats to 18 modules, 452 tests. Updated progress to 6/15 v1.0 items.
+- **ROADMAP.md** — Updated for v1.0 scope: v0.10 features deferred to post-1.0. v1.0 now focuses on hardening + docs + API stability. Added completed items for deprecated type removal, dead code elimination, library API establishment, performance benchmarks, zero CVEs, API stability, and complete docs. Updated stats to 18 modules, 452 tests. Updated progress to 7/15 v1.0 items.
 - **AGENTS.md** — Updated architecture diagram to include `lib.rs`, `eval.rs`, `ravenfabric.rs`. Updated module responsibilities table. Updated build stats (5.2 MB, 5 ms). Updated tool count to 5 built-in tools.
-- **README.md** — Updated binary size references from ~3.4 MB to ~5.2 MB. Updated status to v0.9.2. Updated test count to 452. Added library crate mention. Added library usage guide with code example and module table. Updated verification badge to 114 checks. Added library crate badge.
-- **VERIFICATION.md** — Updated module count from 16 to 18.
+- **README.md** — Updated binary size references from ~3.4 MB to ~5.2 MB. Updated status to v0.9.2. Updated test count to 452. Added library crate mention. Added library usage guide with code example and module table. Updated verification badge to 114 checks. Added library crate badge. Added documentation section with links to all guides. Updated library code example to use new `pub use` re-exports.
+- **VERIFICATION.md** — Updated module count from 16 to 18. Updated stale test counts (311→452). Removed duplicate `cargo test` line.
+- **deny.toml** — Fixed typo in license exception name (`RavenClawss` → `RavenClaws`).
 
 ## [0.9.2] — 2026-06-25
 

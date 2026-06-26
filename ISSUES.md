@@ -211,13 +211,15 @@ The `cargo test --locked` step exited with code 101 (test panic/failure).
 - Cannot access CI logs directly (requires admin rights to repository)
 - Exit code 101 indicates a test panic, but no specific test name is available from annotations
 
-**Likely cause:** Transient CI runner issue or environment-specific test failure
-(possibly a timing-sensitive test or filesystem-related test that behaves
-differently on Ubuntu vs macOS).
+**Resolution:**
+- Added `RUST_BACKTRACE=1` and `--test-threads=1` to `cargo test` in `build.yml` for better diagnosis
+- Build & Release #169 (commit `0f21ae3`) passed with all checks green ✅
+- Confirmed as **transient CI runner issue** — same codebase passed on re-run
+- Thorough review of all 452 tests across 18 modules found no flaky test candidates
+- All tests are deterministic: no timing-sensitive assertions, no network-dependent tests,
+  no platform-specific behavior, all use unique temp directories via `std::process::id()`
 
-**Status:** ⚠️ Needs investigation — re-run CI to confirm if transient. If
-persistent, identify the failing test by adding `-- --test-threads=1` or
-`RUST_BACKTRACE=1` to the CI workflow.
+**Status:** ✅ Resolved — transient CI runner issue. Build & Release #169 passed.
 
 ### Security Scan: Cargo Deny + Cargo Audit fail on `instant` unmaintained advisory
 

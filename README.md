@@ -83,6 +83,17 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ---
 
+## Documentation
+
+- **[Getting Started Guide](docs/guides/getting-started.md)** — install, configure, and run your first agent
+- **[Configuration Reference](docs/guides/configuration.md)** — all config options, env vars, and CLI flags
+- **[Swarm Mode Guide](docs/guides/swarm-mode.md)** — multi-agent orchestration with flat and hierarchical topologies
+- **[MCP Integration Guide](docs/guides/mcp-integration.md)** — connect to MCP servers or expose tools via MCP
+- **[Heartbeat Mode Guide](docs/guides/heartbeat-mode.md)** — autonomous long-running agents
+- **[Examples](examples/README.md)** — runnable Rust examples using the library API
+- **[Migration Guide](MIGRATION.md)** — upgrading between versions (v0.1 → v1.0)
+- **[API Reference](https://docs.rs/ravenclaws)** — full rustdoc API documentation
+
 ## Quick Start
 
 ### 30 seconds to your first agent
@@ -117,26 +128,25 @@ ravenclaws = "0.9"
 Then use the library API in your Rust project:
 
 ```rust,no_run
-use ravenclaws::config::Config;
-use ravenclaws::llm::{create_client, LLMProviderTrait, ChatMessage};
+use ravenclaws::{Config, ChatMessage, create_client, LLMProviderTrait};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load configuration from file/env
-    let config = Config::load(None)?;
+    let config = Config::load()?;
 
     // Create an LLM client
-    let llm = create_client(&config.llm)?;
+    let mut client = create_client(&config.llm)?;
 
     // Send a chat request
-    let response = llm.chat(vec![
-        ChatMessage {
+    let response = client
+        .chat(&[ChatMessage {
             role: "user".to_string(),
             content: "Hello! What can you do?".to_string(),
-        },
-    ]).await?;
+        }])
+        .await?;
 
-    println!("{}", response.choices[0].message.content);
+    println!("{}", response.content);
     Ok(())
 }
 ```
@@ -529,6 +539,54 @@ both single-provider and multi-model variants.
 **The five that matter most** toward being *preferred*: MCP (v0.5.2) · agent loop +
 tools + sandbox (v0.3–v0.4) · local-first security model (v0.4) · async/background +
 scheduling (v0.7) · RavenFabric distributed execution (v0.6.1).
+
+## FAQ
+
+### What makes RavenClaws different from other agent frameworks?
+
+RavenClaws is a **single static binary** (~5.2 MB) with zero runtime dependencies — no Python, no Node.js, no JVM. It's designed to be embedded, shipped, and forgotten. Most agent frameworks are SDKs or services you integrate; RavenClaws is a tool you run.
+
+### Do I need an API key?
+
+For local-only use, yes — use **Ollama** (fully local, no API key). For cloud providers (OpenAI, Anthropic, etc.), you'll need their respective API keys.
+
+### Can I use RavenClaws offline?
+
+Yes. With the **Ollama** provider, everything runs locally with no internet connection required.
+
+### How is security handled?
+
+RavenClaws uses a **deny-by-default** security model:
+- `PolicyEngine` validates all tool calls against shell/path/network allow-lists
+- `Sandbox` provides workdir jail with resource limits and timeouts
+- `AuditLog` records all operations in a tamper-evident HMAC-SHA256 chain
+- No credentials in config files — environment variables and K8s Secrets only
+- Memory-safe Rust with `unsafe` forbidden
+
+### What's the difference between `--exec`, `--repl`, and `--serve`?
+
+- `--exec "<task>"` — Run a single task and exit (one-shot)
+- `--repl` — Start an interactive REPL session for back-and-forth conversation
+- `--serve` — Start a long-running HTTP server with `/health`, `/ready`, `/metrics` endpoints
+
+### Can I use RavenClaws as a library in my Rust project?
+
+Yes. RavenClaws is published on [crates.io](https://crates.io/crates/ravenclaws) as both a binary and library crate. Add `ravenclaws = "0.9"` to your `Cargo.toml` and use the public API via `use ravenclaws::...`. See the [examples](examples/README.md) directory for runnable code samples.
+
+### How do I upgrade from an older version?
+
+See the [Migration Guide](MIGRATION.md) for detailed upgrade paths from v0.1 through v1.0.
+
+### What deployment targets are supported?
+
+- **macOS** (aarch64, x86_64) — native binary
+- **Linux** (aarch64, x86_64) — native binary or Docker
+- **Docker** — distroless multi-arch images on GHCR and Docker Hub
+- **Kubernetes** — production-grade manifests with RBAC, network policies, PDBs
+
+### How is RavenClaws licensed?
+
+RavenClaws uses a dual-license model — see [LICENSING.md](LICENSING.md) for details.
 
 ## License
 
