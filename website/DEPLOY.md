@@ -88,7 +88,7 @@ if anything is off (zone not in the account, a conflicting apex/`www` DNS record
 build token without Zone-DNS permission). Attach them from the dashboard instead —
 it succeeds independently of the deploy and tells you the exact conflict:
 
-> Cloudflare dashboard → **Workers & Pages** → **ravenclaws** → **Settings** →
+> Cloudflare dashboard → **Workers & Pages** → **ravenclaws-website** → **Settings** →
 > **Domains & Routes** → **Add** → **Custom domain** → `ravenclaws.io`
 
 Repeat for `www.ravenclaws.io`. Cloudflare creates the DNS records and TLS certificate.
