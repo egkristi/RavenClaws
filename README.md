@@ -1,14 +1,14 @@
-# 🐦‍⬛ RavenClaw — The Ultimate AI Agentic Worker
+# 🐦‍⬛ RavenClaws — The Ultimate AI Agentic Worker
 
 **Secure · Small · Efficient · Robust · Simple. Built in Rust.**
 
 [![License](https://img.shields.io/badge/license-AGPLv3%20%2B%20Commercial-blue.svg)](LICENSING.md)
-[![CI](https://github.com/egkristi/RavenClaw/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
+[![CI](https://github.com/egkristi/RavenClaws/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
 [![Verification](https://img.shields.io/badge/verification-94%20checks-brightgreen)](VERIFICATION.md)
 [![Binary](https://img.shields.io/badge/binary-~3.4MB-blue)]()
 [![Status](https://img.shields.io/badge/status-v0.9.0-brightgreen)](ROADMAP.md)
 
-RavenClaw is a lightweight, secure Rust agent framework with multi-provider LLM
+RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
 > **Status: v0.9.0 (2026-06-22).** The provider layer (5 providers), one-shot execution (`--exec`),
@@ -27,7 +27,7 @@ support. One static binary, zero runtime dependencies — no Python, no Node, no
 
 ## Vision
 
-RavenClaw aims to be the **ultimate AI agentic assistant and worker** — and the
+RavenClaws aims to be the **ultimate AI agentic assistant and worker** — and the
 **preferred alternative** to the field: Nemoclaw, Hermes Agent, TrustClaw, ZeroClaw,
 PicoClaw, NanoClaw, Claude Cowork, Manus, Perplexity Computer, Kimi Claw, and Vellum.
 
@@ -44,7 +44,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ---
 
-## Why RavenClaw?
+## Why RavenClaws?
 
 ### Small & efficient
 
@@ -86,20 +86,20 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ```bash
 # Build from source (requires Rust)
-git clone https://github.com/egkristi/RavenClaw
-cd RavenClaw
+git clone https://github.com/egkristi/RavenClaws
+cd RavenClaws
 cargo build --release
 
 # Run with any provider
 export LITELLM_API_KEY="your-key"
 export RAVENCLAW__LLM__ENDPOINT="http://localhost:4000"
-./target/release/ravenclaw --mode single
+./target/release/ravenclaws --mode single
 
 # …or run a one-shot task and exit
-./target/release/ravenclaw --exec "Summarize the latest release notes"
+./target/release/ravenclaws --exec "Summarize the latest release notes"
 ```
 
-> **Note:** Pre-built binaries publish automatically on tagged releases. See the [GitHub Releases](https://github.com/egkristi/RavenClaw/releases) page for downloads.
+> **Note:** Pre-built binaries publish automatically on tagged releases. See the [GitHub Releases](https://github.com/egkristi/RavenClaws/releases) page for downloads.
 
 ### Docker
 
@@ -107,22 +107,22 @@ export RAVENCLAW__LLM__ENDPOINT="http://localhost:4000"
 docker run --rm -it \
   -e LITELLM_API_KEY="your-key" \
   -e RAVENCLAW__LLM__ENDPOINT="http://litellm:4000" \
-  ghcr.io/egkristi/ravenclaw:latest
+  ghcr.io/egkristi/ravenclaws:latest
 ```
 
 ### Docker Compose (with LiteLLM)
 
 ```bash
 docker compose up -d
-docker compose logs -f ravenclaw
+docker compose logs -f ravenclaws
 ```
 
 ### Kubernetes
 
 ```bash
 kubectl apply -f k8s/deployment.yaml
-kubectl -n ravenclaw get pods
-kubectl -n ravenclaw logs -l app.kubernetes.io/name=ravenclaw
+kubectl -n ravenclaws get pods
+kubectl -n ravenclaws logs -l app.kubernetes.io/name=ravenclaws
 ```
 
 > Single mode currently performs one request and exits. A long-running **server
@@ -258,13 +258,13 @@ health_interval_secs = 60
 ### Build for host
 
 ```bash
-git clone https://github.com/egkristi/RavenClaw
-cd RavenClaw
+git clone https://github.com/egkristi/RavenClaws
+cd RavenClaws
 
 cargo build --release      # release build for current platform
 cargo test                 # unit tests
 ./scripts/verify.sh        # full 94-check verification suite (needs LiteLLM/Docker/kubectl)
-docker build -t ravenclaw:latest .
+docker build -t ravenclaws:latest .
 ```
 
 ### Cross-compile for all architectures
@@ -319,14 +319,14 @@ git push --no-verify
 ```bash
 docker buildx build \
     --platform linux/amd64,linux/arm64 \
-    -t ghcr.io/egkristi/ravenclaw:latest \
+    -t ghcr.io/egkristi/ravenclaws:latest \
     --push .
 ```
 
 ## Downloads
 
 > **Note:** Pre-built binaries publish automatically on tagged releases. See the
-> [GitHub Releases](https://github.com/egkristi/RavenClaw/releases) page for downloads.
+> [GitHub Releases](https://github.com/egkristi/RavenClaws/releases) page for downloads.
 
 | Architecture | Target Triple |
 |---|---|
@@ -342,7 +342,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│                    RavenClaw Agent                        │
+│                    RavenClaws Agent                        │
 │  ┌──────────────────────────────────────────────────┐    │
 │  │         Agent Modes (✅ All Working)               │    │
 │  │  Single · --exec · REPL · Swarm · Supervisor      │    │
@@ -408,7 +408,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Swarm mode | ✅ Working | multiple parallel agents with different personas (single + multi-model) |
 | Supervisor mode | ✅ Working | Task decomposition + sub-agent spawning + result aggregation (single + multi-model) |
 | MCP client | ✅ Working | JSON-RPC over stdio, tool discovery and registration |
-| MCP server | ✅ **v0.7.0** | Expose RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
+| MCP server | ✅ **v0.7.0** | Expose RavenClaws tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
 | HTTP server mode | ✅ **v0.7.1** | Long-running server with `/health`, `/ready`, `/metrics`; `--serve` flag; graceful shutdown |
 | OpenTelemetry tracing | ✅ **v0.7.2** | Opt-in distributed tracing with OTLP gRPC/stdout exporter; `#[instrument]` spans on agent loop, HTTP server, tools, LLM calls |
 | Retry / fallback chains | ✅ Working | Exponential backoff, circuit breaker, token budgets |
@@ -418,15 +418,15 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Multi-model routing | ✅ Working | `next_client()` round-robin wired into agent modes |
 | RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |
 
-## How RavenClaw intends to win
+## How RavenClaws intends to win
 
-RavenClaw is positioned against the field — Nemoclaw, Hermes Agent, TrustClaw,
+RavenClaws is positioned against the field — Nemoclaw, Hermes Agent, TrustClaw,
 ZeroClaw, PicoClaw, NanoClaw, Claude Cowork, Manus, Perplexity Computer, Kimi Claw,
 and Vellum — by category:
 
-- **vs. cloud / hosted assistants** (Claude Cowork, Manus, Perplexity Computer, Kimi Claw): RavenClaw is **self-hostable, offline-capable, and source-available** under AGPLv3. Your data and tool calls never leave infrastructure you control — and there is no phone-home.
-- **vs. minimal agent runtimes** (ZeroClaw, PicoClaw, NanoClaw, TrustClaw): RavenClaw matches their footprint while adding a real **security model** (memory-safe core, verified supply chain, deny-by-default tool policy, sandboxing, tamper-evident audit log) plus **multi-provider** routing with fallback chains.
-- **vs. SDK / platform plays** (Vellum, Hermes Agent, Nemoclaw): RavenClaw is a **single dependency-light binary**, not a service you rent or a framework you marry. Embed it, ship it, forget it.
+- **vs. cloud / hosted assistants** (Claude Cowork, Manus, Perplexity Computer, Kimi Claw): RavenClaws is **self-hostable, offline-capable, and source-available** under AGPLv3. Your data and tool calls never leave infrastructure you control — and there is no phone-home.
+- **vs. minimal agent runtimes** (ZeroClaw, PicoClaw, NanoClaw, TrustClaw): RavenClaws matches their footprint while adding a real **security model** (memory-safe core, verified supply chain, deny-by-default tool policy, sandboxing, tamper-evident audit log) plus **multi-provider** routing with fallback chains.
+- **vs. SDK / platform plays** (Vellum, Hermes Agent, Nemoclaw): RavenClaws is a **single dependency-light binary**, not a service you rent or a framework you marry. Embed it, ship it, forget it.
 
 | Our commitment | How we back it |
 |---|---|
@@ -470,7 +470,7 @@ scheduling (v0.7) · RavenFabric distributed execution (v0.6.1).
 
 ## License
 
-RavenClaw uses a **dual-license model**:
+RavenClaws uses a **dual-license model**:
 
 - **AGPL-3.0-or-later** — open source core. Free for personal use, OSS projects, and commercial use up to 50 agents / $5M revenue.
 - **Commercial** — for large commercial deployments or embedding without AGPL obligations.
@@ -489,4 +489,4 @@ All contributions require signing a Contributor License Agreement (CLA) — see 
 
 ---
 
-**RavenClaw** — Secure · Small · Efficient · Robust · Simple. Simply the best. 🐦‍⬛
+**RavenClaws** — Secure · Small · Efficient · Robust · Simple. Simply the best. 🐦‍⬛

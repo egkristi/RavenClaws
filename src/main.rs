@@ -1,4 +1,4 @@
-//! RavenClaw — Lightweight, secure Rust agent framework
+//! RavenClaws — Lightweight, secure Rust agent framework
 //!
 //! Built for efficiency, security, and easy deployment.
 //! Supports multiple LLM providers: LiteLLM, OpenRouter, Ollama, OpenAI.
@@ -26,13 +26,13 @@ use tracing::{info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Parser, Debug)]
-#[command(name = "ravenclaw")]
+#[command(name = "ravenclaws")]
 #[command(author = "Erling G M Kristiansen")]
 #[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(about = "Lightweight, secure Rust agent framework with multi-provider support", long_about = None)]
 struct Args {
     /// Configuration file path
-    #[arg(short, long, env = "RAVENCLAW_CONFIG")]
+    #[arg(short, long, env = "RAVENCLAWS_CONFIG")]
     config: Option<String>,
 
     /// Agent mode: single, swarm, or supervisor
@@ -40,7 +40,7 @@ struct Args {
     mode: String,
 
     /// Enable verbose logging
-    #[arg(short, long, env = "RAVENCLAW_VERBOSE")]
+    #[arg(short, long, env = "RAVENCLAWS_VERBOSE")]
     verbose: bool,
 
     /// Run a one-shot command
@@ -48,19 +48,19 @@ struct Args {
     exec: Option<String>,
 
     /// Provider type: litellm, openrouter, ollama, openai (overrides config)
-    #[arg(long, env = "RAVENCLAW_PROVIDER")]
+    #[arg(long, env = "RAVENCLAWS_PROVIDER")]
     provider: Option<String>,
 
     /// LLM endpoint (overrides config)
-    #[arg(long, env = "RAVENCLAW_ENDPOINT")]
+    #[arg(long, env = "RAVENCLAWS_ENDPOINT")]
     endpoint: Option<String>,
 
     /// Model name (overrides config)
-    #[arg(long, env = "RAVENCLAW_MODEL")]
+    #[arg(long, env = "RAVENCLAWS_MODEL")]
     model: Option<String>,
 
     /// System prompt / persona (overrides config)
-    #[arg(long, env = "RAVENCLAW_SYSTEM_PROMPT")]
+    #[arg(long, env = "RAVENCLAWS_SYSTEM_PROMPT")]
     system_prompt: Option<String>,
 
     /// Interactive REPL mode (read-eval-print loop)
@@ -68,151 +68,155 @@ struct Args {
     repl: bool,
 
     /// Require human approval for sensitive tool calls (HITL)
-    #[arg(long, env = "RAVENCLAW_REQUIRE_APPROVAL")]
+    #[arg(long, env = "RAVENCLAWS_REQUIRE_APPROVAL")]
     require_approval: bool,
 
     /// Maximum iterations for the agent loop (default: 10)
-    #[arg(long, env = "RAVENCLAW_MAX_ITERATIONS", default_value = "10")]
+    #[arg(long, env = "RAVENCLAWS_MAX_ITERATIONS", default_value = "10")]
     max_iterations: usize,
 
     /// Token budget per run (v0.5) — stops when exceeded
-    #[arg(long, env = "RAVENCLAW_TOKEN_BUDGET")]
+    #[arg(long, env = "RAVENCLAWS_TOKEN_BUDGET")]
     token_budget: Option<u32>,
 
     /// Retry max attempts (v0.5) — default 3
-    #[arg(long, env = "RAVENCLAW_RETRY_MAX", default_value = "3")]
+    #[arg(long, env = "RAVENCLAWS_RETRY_MAX", default_value = "3")]
     retry_max: u32,
 
     /// Retry base delay in ms (v0.5) — default 100
-    #[arg(long, env = "RAVENCLAW_RETRY_BASE_DELAY", default_value = "100")]
+    #[arg(long, env = "RAVENCLAWS_RETRY_BASE_DELAY", default_value = "100")]
     retry_base_delay_ms: u64,
 
     /// Enable provider fallback chain (v0.5) — comma-separated providers
-    #[arg(long, env = "RAVENCLAW_FALLBACK_CHAIN")]
+    #[arg(long, env = "RAVENCLAWS_FALLBACK_CHAIN")]
     fallback_chain: Option<String>,
 
     /// MCP server command (v0.5.2) — stdio transport (e.g., "npx -y @modelcontextprotocol/server-filesystem")
-    #[arg(long, env = "RAVENCLAW_MCP_COMMAND")]
+    #[arg(long, env = "RAVENCLAWS_MCP_COMMAND")]
     mcp_command: Option<String>,
 
     /// MCP server arguments (v0.5.2) — space-separated args for the MCP command
-    #[arg(long, env = "RAVENCLAW_MCP_ARGS")]
+    #[arg(long, env = "RAVENCLAWS_MCP_ARGS")]
     mcp_args: Option<String>,
 
     /// MCP server environment variables (v0.5.2) — KEY=VALUE pairs separated by commas
-    #[arg(long, env = "RAVENCLAW_MCP_ENV")]
+    #[arg(long, env = "RAVENCLAWS_MCP_ENV")]
     mcp_env: Option<String>,
 
-    /// Run as MCP server (v0.7) — exposes RavenClaw tools over stdio via MCP protocol
-    #[arg(long, env = "RAVENCLAW_MCP_SERVER")]
+    /// Run as MCP server (v0.7) — exposes RavenClaws tools over stdio via MCP protocol
+    #[arg(long, env = "RAVENCLAWS_MCP_SERVER")]
     mcp_server: bool,
 
     /// Run as HTTP server (v0.7) — long-running with /health, /ready, /metrics endpoints
-    #[arg(long, env = "RAVENCLAW_SERVE")]
+    #[arg(long, env = "RAVENCLAWS_SERVE")]
     serve: bool,
 
     /// HTTP server host (v0.7) — overrides config
-    #[arg(long, env = "RAVENCLAW_SERVER_HOST")]
+    #[arg(long, env = "RAVENCLAWS_SERVER_HOST")]
     server_host: Option<String>,
 
     /// HTTP server port (v0.7) — overrides config
-    #[arg(long, env = "RAVENCLAW_SERVER_PORT")]
+    #[arg(long, env = "RAVENCLAWS_SERVER_PORT")]
     server_port: Option<u16>,
 
     /// OpenTelemetry OTLP gRPC endpoint (v0.7.2)
-    #[arg(long, env = "RAVENCLAW_OTEL_ENDPOINT")]
+    #[arg(long, env = "RAVENCLAWS_OTEL_ENDPOINT")]
     otel_endpoint: Option<String>,
 
     /// OpenTelemetry service name (v0.7.2)
-    #[arg(long, env = "RAVENCLAW_OTEL_SERVICE_NAME")]
+    #[arg(long, env = "RAVENCLAWS_OTEL_SERVICE_NAME")]
     otel_service_name: Option<String>,
 
     /// Disable OpenTelemetry tracing (v0.7.2)
-    #[arg(long, env = "RAVENCLAW_OTEL_DISABLED")]
+    #[arg(long, env = "RAVENCLAWS_OTEL_DISABLED")]
     otel_disabled: bool,
 
     /// Submit a background task and return immediately (v0.8)
-    #[arg(long, env = "RAVENCLAW_BACKGROUND")]
+    #[arg(long, env = "RAVENCLAWS_BACKGROUND")]
     background: bool,
 
     /// Check status of a background task (v0.8)
-    #[arg(long, env = "RAVENCLAW_TASK_STATUS")]
+    #[arg(long, env = "RAVENCLAWS_TASK_STATUS")]
     task_status: Option<String>,
 
     /// List all background tasks (v0.8)
-    #[arg(long, env = "RAVENCLAW_TASK_LIST")]
+    #[arg(long, env = "RAVENCLAWS_TASK_LIST")]
     task_list: bool,
 
     /// Cancel a background task (v0.8)
-    #[arg(long, env = "RAVENCLAW_TASK_CANCEL")]
+    #[arg(long, env = "RAVENCLAWS_TASK_CANCEL")]
     task_cancel: Option<String>,
 
     /// Resume incomplete background tasks on startup (v0.8)
-    #[arg(long, env = "RAVENCLAW_TASK_RESUME")]
+    #[arg(long, env = "RAVENCLAWS_TASK_RESUME")]
     task_resume: bool,
 
     /// Run the scheduler with configured triggers (v0.8)
-    #[arg(long, env = "RAVENCLAW_SCHEDULER")]
+    #[arg(long, env = "RAVENCLAWS_SCHEDULER")]
     scheduler: bool,
 
     /// Webhook server port (v0.8) — overrides default 9090
-    #[arg(long, env = "RAVENCLAW_WEBHOOK_PORT", default_value = "9090")]
+    #[arg(long, env = "RAVENCLAWS_WEBHOOK_PORT", default_value = "9090")]
     webhook_port: u16,
 
     /// Run eval suite from config file (v0.9)
-    #[arg(long, env = "RAVENCLAW_EVAL")]
+    #[arg(long, env = "RAVENCLAWS_EVAL")]
     eval: Option<String>,
 
     /// Output eval results as JSON (v0.9)
-    #[arg(long, env = "RAVENCLAW_EVAL_JSON")]
+    #[arg(long, env = "RAVENCLAWS_EVAL_JSON")]
     eval_json: bool,
 
     /// Run in autonomous heartbeat mode (v0.9)
-    #[arg(long, env = "RAVENCLAW_HEARTBEAT")]
+    #[arg(long, env = "RAVENCLAWS_HEARTBEAT")]
     heartbeat: bool,
 
     /// Goal prompt for heartbeat mode (v0.9)
-    #[arg(long, env = "RAVENCLAW_HEARTBEAT_GOAL")]
+    #[arg(long, env = "RAVENCLAWS_HEARTBEAT_GOAL")]
     heartbeat_goal: Option<String>,
 
     /// Tick interval in seconds for heartbeat mode (v0.9, default: 300)
-    #[arg(long, env = "RAVENCLAW_HEARTBEAT_TICK_INTERVAL", default_value = "300")]
+    #[arg(
+        long,
+        env = "RAVENCLAWS_HEARTBEAT_TICK_INTERVAL",
+        default_value = "300"
+    )]
     heartbeat_tick_interval: u64,
 
     /// Maximum ticks for heartbeat mode (v0.9, 0 = unlimited)
-    #[arg(long, env = "RAVENCLAW_HEARTBEAT_MAX_TICKS", default_value = "0")]
+    #[arg(long, env = "RAVENCLAWS_HEARTBEAT_MAX_TICKS", default_value = "0")]
     heartbeat_max_ticks: u64,
 
     /// Heartbeat session ID for resuming (v0.9)
-    #[arg(long, env = "RAVENCLAW_HEARTBEAT_SESSION")]
+    #[arg(long, env = "RAVENCLAWS_HEARTBEAT_SESSION")]
     heartbeat_session: Option<String>,
 
     /// Swarm topology: star, mesh, hierarchical, hybrid (v0.9)
-    #[arg(long, env = "RAVENCLAW_SWARM_TOPOLOGY", default_value = "star")]
+    #[arg(long, env = "RAVENCLAWS_SWARM_TOPOLOGY", default_value = "star")]
     swarm_topology: String,
 
     /// Maximum recursion depth for hierarchical swarm (v0.9, default: 3)
-    #[arg(long, env = "RAVENCLAW_SWARM_MAX_DEPTH", default_value = "3")]
+    #[arg(long, env = "RAVENCLAWS_SWARM_MAX_DEPTH", default_value = "3")]
     swarm_max_depth: usize,
 
     /// Maximum workers in the swarm (v0.9, default: 100)
-    #[arg(long, env = "RAVENCLAW_SWARM_MAX_WORKERS", default_value = "100")]
+    #[arg(long, env = "RAVENCLAWS_SWARM_MAX_WORKERS", default_value = "100")]
     swarm_max_workers: usize,
 
     /// Enable dynamic role assignment (v0.9)
-    #[arg(long, env = "RAVENCLAW_SWARM_DYNAMIC_ROLES")]
+    #[arg(long, env = "RAVENCLAWS_SWARM_DYNAMIC_ROLES")]
     swarm_dynamic_roles: bool,
 
     /// Worker profiles file path (v0.9, JSON)
-    #[arg(long, env = "RAVENCLAW_SWARM_PROFILES")]
+    #[arg(long, env = "RAVENCLAWS_SWARM_PROFILES")]
     swarm_profiles: Option<String>,
 
     /// Enable inter-agent communication in swarm mode (v0.9)
-    #[arg(long, env = "RAVENCLAW_SWARM_COMMUNICATION")]
+    #[arg(long, env = "RAVENCLAWS_SWARM_COMMUNICATION")]
     swarm_communication: bool,
 
     /// Enable swarm health monitoring (v0.9)
-    #[arg(long, env = "RAVENCLAW_SWARM_HEALTH_MONITORING")]
+    #[arg(long, env = "RAVENCLAWS_SWARM_HEALTH_MONITORING")]
     swarm_health_monitoring: bool,
 }
 
@@ -225,12 +229,12 @@ async fn main() -> anyhow::Result<()> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| format!("ravenclaw={}", log_level).into()),
+                .unwrap_or_else(|_| format!("ravenclaws={}", log_level).into()),
         )
         .with(tracing_subscriber::fmt::layer().json())
         .init();
 
-    info!(version = env!("CARGO_PKG_VERSION"), "RavenClaw starting");
+    info!(version = env!("CARGO_PKG_VERSION"), "RavenClaws starting");
 
     // Load configuration
     let mut config = config::Config::load(args.config.as_deref())?;
@@ -285,7 +289,7 @@ async fn main() -> anyhow::Result<()> {
             .run()
             .await
             .map_err(|e| anyhow::anyhow!("MCP server error: {}", e))?;
-        info!("RavenClaw MCP server shutdown complete");
+        info!("RavenClaws MCP server shutdown complete");
         return Ok(());
     }
 
@@ -302,7 +306,7 @@ async fn main() -> anyhow::Result<()> {
         }
 
         server::run_server(config).await?;
-        info!("RavenClaw HTTP server shutdown complete");
+        info!("RavenClaws HTTP server shutdown complete");
         return Ok(());
     }
 
@@ -386,7 +390,7 @@ async fn main() -> anyhow::Result<()> {
             .await?
         };
         println!("{}", response);
-        info!("RavenClaw shutdown complete");
+        info!("RavenClaws shutdown complete");
         return Ok(());
     }
 
@@ -437,7 +441,7 @@ async fn main() -> anyhow::Result<()> {
                 );
             }
         }
-        info!("RavenClaw shutdown complete");
+        info!("RavenClaws shutdown complete");
         return Ok(());
     }
 
@@ -468,7 +472,7 @@ async fn main() -> anyhow::Result<()> {
                 eprintln!("Error: {}", e);
             }
         }
-        info!("RavenClaw shutdown complete");
+        info!("RavenClaws shutdown complete");
         return Ok(());
     }
 
@@ -478,7 +482,7 @@ async fn main() -> anyhow::Result<()> {
             Ok(()) => println!("Task '{}' cancelled.", task_id),
             Err(e) => eprintln!("Error: {}", e),
         }
-        info!("RavenClaw shutdown complete");
+        info!("RavenClaws shutdown complete");
         return Ok(());
     }
 
@@ -517,7 +521,7 @@ async fn main() -> anyhow::Result<()> {
         });
 
         info!(task_id = %task_id, "Background task submitted, returning immediately");
-        info!("RavenClaw shutdown complete");
+        info!("RavenClaws shutdown complete");
         return Ok(());
     }
 
@@ -533,7 +537,7 @@ async fn main() -> anyhow::Result<()> {
         } else {
             println!("{}", report.format_text());
         }
-        info!("RavenClaw eval complete");
+        info!("RavenClaws eval complete");
         return Ok(());
     }
 
@@ -554,7 +558,7 @@ async fn main() -> anyhow::Result<()> {
         info!("Received Ctrl+C, stopping scheduler...");
 
         scheduler.stop().await;
-        info!("RavenClaw scheduler shutdown complete");
+        info!("RavenClaws scheduler shutdown complete");
         return Ok(());
     }
 
@@ -594,7 +598,7 @@ async fn main() -> anyhow::Result<()> {
 
         let result = agent.run().await?;
         println!("{}", result);
-        info!("RavenClaw heartbeat complete");
+        info!("RavenClaws heartbeat complete");
         return Ok(());
     }
 
@@ -612,7 +616,7 @@ async fn main() -> anyhow::Result<()> {
             let llm = llm::create_client(&config.llm)?;
             agent::run_repl(llm, config).await?;
         }
-        info!("RavenClaw shutdown complete");
+        info!("RavenClaws shutdown complete");
         return Ok(());
     }
 
@@ -787,7 +791,7 @@ async fn main() -> anyhow::Result<()> {
         }
     }
 
-    info!("RavenClaw shutdown complete");
+    info!("RavenClaws shutdown complete");
     Ok(())
 }
 
@@ -798,7 +802,7 @@ mod tests {
     #[test]
     fn test_cli_default_args() {
         // Verify the CLI struct can be constructed with defaults
-        let args = Args::parse_from(["ravenclaw"]);
+        let args = Args::parse_from(["ravenclaws"]);
         assert_eq!(args.mode, "single");
         assert!(!args.verbose);
         assert!(args.config.is_none());
@@ -811,7 +815,7 @@ mod tests {
     #[test]
     fn test_cli_custom_args() {
         let args = Args::parse_from([
-            "ravenclaw",
+            "ravenclaws",
             "--config",
             "/tmp/config.toml",
             "--mode",
@@ -838,7 +842,7 @@ mod tests {
     #[test]
     fn test_cli_short_args() {
         let args = Args::parse_from([
-            "ravenclaw",
+            "ravenclaws",
             "-c",
             "/tmp/config.toml",
             "-m",
@@ -855,7 +859,7 @@ mod tests {
 
     #[test]
     fn test_cli_invalid_mode() {
-        let args = Args::parse_from(["ravenclaw", "--mode", "invalid"]);
+        let args = Args::parse_from(["ravenclaws", "--mode", "invalid"]);
         assert_eq!(args.mode, "invalid");
         // The mode validation happens at runtime, not in clap
     }
@@ -908,22 +912,22 @@ mod tests {
 
     #[test]
     fn test_cli_verbose_flag() {
-        let args = Args::parse_from(["ravenclaw", "--verbose"]);
+        let args = Args::parse_from(["ravenclaws", "--verbose"]);
         assert!(args.verbose);
 
-        let args = Args::parse_from(["ravenclaw"]);
+        let args = Args::parse_from(["ravenclaws"]);
         assert!(!args.verbose);
     }
 
     #[test]
     fn test_cli_env_var_mapping() {
         // Verify that env var names match CLI args
-        // RAVENCLAW_CONFIG → config
-        // RAVENCLAW_VERBOSE → verbose
-        // RAVENCLAW_PROVIDER → provider
-        // RAVENCLAW_ENDPOINT → endpoint
-        // RAVENCLAW_MODEL → model
-        let args = Args::parse_from(["ravenclaw"]);
+        // RAVENCLAWS_CONFIG → config
+        // RAVENCLAWS_VERBOSE → verbose
+        // RAVENCLAWS_PROVIDER → provider
+        // RAVENCLAWS_ENDPOINT → endpoint
+        // RAVENCLAWS_MODEL → model
+        let args = Args::parse_from(["ravenclaws"]);
         assert_eq!(args.config, None);
         assert!(!args.verbose);
         assert_eq!(args.provider, None);
@@ -933,45 +937,51 @@ mod tests {
 
     #[test]
     fn test_cli_exec_with_provider() {
-        let args = Args::parse_from(["ravenclaw", "--exec", "test prompt", "--provider", "openai"]);
+        let args = Args::parse_from([
+            "ravenclaws",
+            "--exec",
+            "test prompt",
+            "--provider",
+            "openai",
+        ]);
         assert_eq!(args.exec.unwrap(), "test prompt");
         assert_eq!(args.provider.unwrap(), "openai");
     }
 
     #[test]
     fn test_cli_mode_dispatch_single() {
-        let args = Args::parse_from(["ravenclaw", "--mode", "single"]);
+        let args = Args::parse_from(["ravenclaws", "--mode", "single"]);
         assert_eq!(args.mode, "single");
     }
 
     #[test]
     fn test_cli_mode_dispatch_swarm() {
-        let args = Args::parse_from(["ravenclaw", "--mode", "swarm"]);
+        let args = Args::parse_from(["ravenclaws", "--mode", "swarm"]);
         assert_eq!(args.mode, "swarm");
     }
 
     #[test]
     fn test_cli_mode_dispatch_supervisor() {
-        let args = Args::parse_from(["ravenclaw", "--mode", "supervisor"]);
+        let args = Args::parse_from(["ravenclaws", "--mode", "supervisor"]);
         assert_eq!(args.mode, "supervisor");
     }
 
     #[test]
     fn test_cli_endpoint_override() {
-        let args = Args::parse_from(["ravenclaw", "--endpoint", "https://custom.api.com"]);
+        let args = Args::parse_from(["ravenclaws", "--endpoint", "https://custom.api.com"]);
         assert_eq!(args.endpoint.unwrap(), "https://custom.api.com");
     }
 
     #[test]
     fn test_cli_model_override() {
-        let args = Args::parse_from(["ravenclaw", "--model", "gpt-4-turbo"]);
+        let args = Args::parse_from(["ravenclaws", "--model", "gpt-4-turbo"]);
         assert_eq!(args.model.unwrap(), "gpt-4-turbo");
     }
 
     #[test]
     fn test_cli_all_overrides() {
         let args = Args::parse_from([
-            "ravenclaw",
+            "ravenclaws",
             "--provider",
             "ollama",
             "--endpoint",

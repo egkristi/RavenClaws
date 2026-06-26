@@ -1,10 +1,10 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "ravenclaw.fullname" . }}
+  name: {{ include "ravenclaws.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    {{- include "ravenclaw.labels" . | nindent 4 }}
+    {{- include "ravenclaws.labels" . | nindent 4 }}
   {{- with .Values.service.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}
@@ -17,4 +17,4 @@ spec:
       protocol: TCP
       name: http
   selector:
-    {{- include "ravenclaw.selectorLabels" . | nindent 4 }}
+    {{- include "ravenclaws.selectorLabels" . | nindent 4 }}

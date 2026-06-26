@@ -1,4 +1,4 @@
-# RavenClaw swarm mode test configuration
+# RavenClaws test configuration — points to local LiteLLM
 [llm]
 provider = "litellm"
 endpoint = "http://localhost:4000"
@@ -10,6 +10,6 @@ require_tls = false
 audit_log = false
 
 [runtime]
-workdir = "/tmp/ravenclaw-test"
-max_agents = 3
+workdir = "/tmp/ravenclaws-test"
+max_agents = 5
 health_interval_secs = 10

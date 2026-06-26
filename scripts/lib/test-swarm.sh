@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Swarm & Sub-Agent Scalability Tests
+# RavenClaws Verification — Swarm & Sub-Agent Scalability Tests
 # =============================================================================
 # Tests swarm mode and supervisor/sub-agent mode for correct operation and
 # scalability. Verifies that multiple agents can run in parallel, that
@@ -8,7 +8,7 @@
 # handles increasing agent counts gracefully.
 #
 # These tests require:
-#   - A release build of RavenClaw (cargo build --release)
+#   - A release build of RavenClaws (cargo build --release)
 #   - LiteLLM running at http://localhost:4000
 # =============================================================================
 

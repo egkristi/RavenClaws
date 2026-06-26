@@ -1,7 +1,7 @@
 # Basic eval suite — tests fundamental LLM capabilities
 # Run with: cargo run --release -- --eval tests/eval/basic-suite.toml
-# Or:       ravenclaw --eval tests/eval/basic-suite.toml
-# For JSON output: ravenclaw --eval tests/eval/basic-suite.toml --eval-json
+# Or:       ravenclaws --eval tests/eval/basic-suite.toml
+# For JSON output: ravenclaws --eval tests/eval/basic-suite.toml --eval-json
 
 name = "basic-suite"
 description = "Basic capability tests for LLM providers"

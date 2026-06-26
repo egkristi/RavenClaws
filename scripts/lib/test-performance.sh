@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Performance Benchmarks
+# RavenClaws Verification — Performance Benchmarks
 # =============================================================================
 # Measures startup time, config loading time, LLM response time,
 # binary size, and memory usage.

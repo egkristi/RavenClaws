@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Shared Library
+# RavenClaws Verification — Shared Library
 # =============================================================================
 # Common functions, colors, paths, and helpers used by all verification modules.
 # Source this file: source "$(dirname "$0")/lib/common.sh"
@@ -19,17 +19,17 @@ export NC='\033[0m' # No Color
 # ── Paths ─────────────────────────────────────────────────────────────────────
 export SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-export BINARY="$PROJECT_DIR/target/release/ravenclaw"
-export LINUX_BINARY="$PROJECT_DIR/target/aarch64-unknown-linux-gnu/release/ravenclaw"
-export X86_BINARY="$PROJECT_DIR/target/x86_64-unknown-linux-gnu/release/ravenclaw"
-export TEST_CONFIG="$PROJECT_DIR/tests/config/ravenclaw-test.toml"
-export MULTI_CONFIG="$PROJECT_DIR/tests/config/ravenclaw-multi-test.toml"
-export K8S_CONFIG="$PROJECT_DIR/tests/config/ravenclaw-k8s-test.toml"
-export SWARM_CONFIG="$PROJECT_DIR/tests/config/ravenclaw-swarm-test.toml"
-export SUPERVISOR_CONFIG="$PROJECT_DIR/tests/config/ravenclaw-supervisor-test.toml"
+export BINARY="$PROJECT_DIR/target/release/ravenclaws"
+export LINUX_BINARY="$PROJECT_DIR/target/aarch64-unknown-linux-gnu/release/ravenclaws"
+export X86_BINARY="$PROJECT_DIR/target/x86_64-unknown-linux-gnu/release/ravenclaws"
+export TEST_CONFIG="$PROJECT_DIR/tests/config/ravenclaws-test.toml"
+export MULTI_CONFIG="$PROJECT_DIR/tests/config/ravenclaws-multi-test.toml"
+export K8S_CONFIG="$PROJECT_DIR/tests/config/ravenclaws-k8s-test.toml"
+export SWARM_CONFIG="$PROJECT_DIR/tests/config/ravenclaws-swarm-test.toml"
+export SUPERVISOR_CONFIG="$PROJECT_DIR/tests/config/ravenclaws-supervisor-test.toml"
 export RESULTS_DIR="$PROJECT_DIR/target/verification-results"
 export TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-export DOCKER_TAG="ravenclaw-verify:${TIMESTAMP}"
+export DOCKER_TAG="ravenclaws-verify:${TIMESTAMP}"
 
 # ── Global counters ───────────────────────────────────────────────────────────
 export PASS=0
@@ -66,7 +66,7 @@ check_litellm() {
 
 check_binary() {
     if [[ ! -x "$BINARY" ]]; then
-        log_skip "RavenClaw binary not found at $BINARY — run 'cargo build --release' first"
+        log_skip "RavenClaws binary not found at $BINARY — run 'cargo build --release' first"
         return 1
     fi
     # Verify it's a macOS binary (not cross-compiled Linux)
@@ -191,7 +191,7 @@ check_llm_response_quality() {
 # ── Summary ───────────────────────────────────────────────────────────────────
 
 print_summary() {
-    local suite_name="${1:-RavenClaw}"
+    local suite_name="${1:-RavenClaws}"
     local total=$((PASS + FAIL + SKIP))
     echo -e "\n${CYAN}════════════════════════════════════════════════${NC}"
     echo -e "${CYAN}  ${suite_name} — Verification Summary${NC}"
@@ -217,7 +217,7 @@ print_summary() {
 init_verification() {
     mkdir -p "$RESULTS_DIR"
     echo -e "${CYAN}╔══════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║     RavenClaw Verification Suite                ║${NC}"
+    echo -e "${CYAN}║     RavenClaws Verification Suite                ║${NC}"
     echo -e "${CYAN}║     $(date)              ║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
     echo ""

@@ -1,4 +1,4 @@
-# Security Scan — comprehensive security analysis for RavenClaw
+# Security Scan — comprehensive security analysis for RavenClaws
 # Runs on every push, PR, weekly schedule, and can be triggered manually.
 # All findings are uploaded to GitHub Security tab for centralized tracking.
 
@@ -47,7 +47,7 @@ jobs:
           # Fail on any alert classified as error or warning
           # (not just security-severity thresholds)
           config: |
-            name: "RavenClaw CodeQL Config"
+            name: "RavenClaws CodeQL Config"
             paths:
               - src
             paths-ignore:

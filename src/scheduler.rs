@@ -20,7 +20,7 @@
 
 use crate::background::BackgroundTaskManager;
 use crate::config::SchedulerConfig;
-use crate::error::{RavenClawError, Result};
+use crate::error::{RavenClawsError, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -138,7 +138,7 @@ impl Scheduler {
             match &trigger.trigger {
                 TriggerType::Cron { expression } => {
                     let _schedule = expression.parse::<cron::Schedule>().map_err(|e| {
-                        RavenClawError::CommandExecution(format!(
+                        RavenClawsError::CommandExecution(format!(
                             "Invalid cron expression '{}': {}",
                             expression, e
                         ))
@@ -185,7 +185,7 @@ impl Scheduler {
         for trigger in &self.triggers {
             if let TriggerType::Cron { expression } = &trigger.trigger {
                 let schedule = expression.parse::<cron::Schedule>().map_err(|e| {
-                    RavenClawError::CommandExecution(format!(
+                    RavenClawsError::CommandExecution(format!(
                         "Invalid cron expression '{}': {}",
                         expression, e
                     ))
@@ -636,7 +636,7 @@ mod tests {
 
     fn test_dir(name: &str) -> PathBuf {
         let dir = std::env::temp_dir().join(format!(
-            "ravenclaw-test-sched-{}-{}",
+            "ravenclaws-test-sched-{}-{}",
             name,
             std::process::id()
         ));

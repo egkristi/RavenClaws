@@ -1,9 +1,9 @@
-# RavenClaw Docker Bake configuration
+# RavenClaws Docker Bake configuration
 # Multi-arch build with automatic tagging
 # Usage: docker buildx bake -f docker-bake.hcl --push
 
 variable "IMAGE_NAME" {
-  default = "ravenclaw"
+  default = "ravenclaws"
 }
 
 variable "REGISTRY" {
@@ -40,9 +40,9 @@ target "default" {
     GIT_SHA != "" ? ["${REGISTRY}/${IMAGE_NAME}:sha-${GIT_SHA}"] : []
   )
   labels = {
-    "org.opencontainers.image.title" = "RavenClaw"
+    "org.opencontainers.image.title" = "RavenClaws"
     "org.opencontainers.image.description" = "Lightweight, secure Rust agent framework"
-    "org.opencontainers.image.source" = "https://github.com/egkristi/RavenClaw"
+    "org.opencontainers.image.source" = "https://github.com/egkristi/RavenClaws"
     "org.opencontainers.image.licenses" = "AGPL-3.0-or-later"
     "org.opencontainers.image.version" = VERSION != "" ? VERSION : "dev"
     "org.opencontainers.image.revision" = GIT_SHA != "" ? GIT_SHA : "dev"

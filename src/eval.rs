@@ -1,4 +1,4 @@
-//! Eval harness + run inspection for RavenClaw
+//! RavenClaws
 //!
 //! Provides a framework for defining, running, and scoring evaluation tasks
 //! against LLM agents. Captures full run traces for inspection and debugging.
@@ -22,7 +22,7 @@
 //!   └── tool_calls: Vec<ToolCallTrace>
 //! ```
 
-use crate::error::{RavenClawError, Result};
+use crate::error::{RavenClawsError, Result};
 use crate::llm::{ChatMessage, LLMProviderTrait};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -683,11 +683,11 @@ impl EvalConfig {
     /// Load eval config from a TOML file
     pub fn from_file(path: &str) -> Result<Self> {
         let content = std::fs::read_to_string(path).map_err(|e| {
-            RavenClawError::CommandExecution(format!("Failed to read eval config: {}", e))
+            RavenClawsError::CommandExecution(format!("Failed to read eval config: {}", e))
         })?;
 
         let config: EvalConfig = toml::from_str(&content).map_err(|e| {
-            RavenClawError::CommandExecution(format!("Failed to parse eval config: {}", e))
+            RavenClawsError::CommandExecution(format!("Failed to parse eval config: {}", e))
         })?;
 
         Ok(config)

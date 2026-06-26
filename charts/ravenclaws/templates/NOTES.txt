@@ -37,7 +37,7 @@ Your release is named {{ .Release.Name }} and is deployed in the {{ .Release.Nam
 
 **Configuration:**
 
-The RavenClaw configuration is stored in a ConfigMap named {{ include "ravenclaw.fullname" . }}-config.
+The RavenClaws configuration is stored in a ConfigMap named {{ include "ravenclaw.fullname" . }}-config.
 You can modify it and restart the deployment:
 
   kubectl edit configmap {{ include "ravenclaw.fullname" . }}-config -n {{ .Release.Namespace }}
@@ -50,5 +50,5 @@ created externally and referenced via existingSecrets.
 
 **Documentation:**
 
-- https://github.com/egkristi/RavenClaw
-- https://github.com/egkristi/RavenClaw/blob/master/README.md
+- https://github.com/egkristi/RavenClaws
+- https://github.com/egkristi/RavenClaws/blob/master/README.md

@@ -1,15 +1,15 @@
-//! Model Context Protocol (MCP) for RavenClaw
+//! Model Context Protocol (MCP) for RavenClaws
 //!
 //! Implements both MCP client and server:
 //! - **Client**: Connect to external MCP servers, discover tools, execute them via JSON-RPC over stdio
-//! - **Server**: Expose RavenClaw's built-in tools as an MCP server over stdio
+//! - **Server**: Expose RavenClaws's built-in tools as an MCP server over stdio
 //!
 //! # Architecture
 //!
 //! ```text
 //! McpClient                          McpServer
 //!   ├── McpTransport (stdio)           ├── McpServerTransport (stdio)
-//!   ├── McpToolRegistry                ├── ToolRegistry (RavenClaw tools)
+//!   ├── McpToolRegistry                ├── ToolRegistry (RavenClaws tools)
 //!   └── JsonRpcClient                  └── JsonRpcHandler
 //! ```
 //!
@@ -377,7 +377,7 @@ impl McpClient {
                 sampling: None,
             },
             client_info: McpClientInfo {
-                name: "ravenclaw".to_string(),
+                name: "ravenclaws".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
         };
@@ -497,7 +497,7 @@ impl McpClient {
 
 // ── MCP Tool Wrapper ───────────────────────────────────────────────────────
 
-/// Wrapper that adapts MCP tools to RavenClaw's ToolImpl trait
+/// Wrapper that adapts MCP tools to RavenClaws's ToolImpl trait
 pub struct McpToolWrapper {
     definition: ToolDefinition,
     client: Arc<RwLock<McpClient>>,
@@ -680,19 +680,19 @@ mod tests {
                 sampling: None,
             },
             client_info: McpClientInfo {
-                name: "ravenclaw".to_string(),
+                name: "ravenclaws".to_string(),
                 version: "0.5.2".to_string(),
             },
         };
 
         let json = serde_json::to_string(&params).unwrap();
         assert!(json.contains("protocolVersion"));
-        assert!(json.contains("ravenclaw"));
+        assert!(json.contains("ravenclaws"));
     }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MCP Server — Expose RavenClaw tools as an MCP server over stdio
+// MCP Server — Expose RavenClaws tools as an MCP server over stdio
 // ═══════════════════════════════════════════════════════════════════════════
 
 /// MCP Server — listens for JSON-RPC requests on stdin and responds on stdout.
@@ -700,7 +700,7 @@ mod tests {
 /// Implements the MCP protocol as a server:
 /// - `initialize` — protocol handshake
 /// - `notifications/initialized` — no-op
-/// - `tools/list` — returns RavenClaw's registered tools
+/// - `tools/list` — returns RavenClaws's registered tools
 /// - `tools/call` — executes a tool and returns the result
 ///
 /// # Security
@@ -708,7 +708,7 @@ mod tests {
 /// The server uses the same `PolicyEngine`, `Sandbox`, and `AuditLog` as the
 /// agent loop, ensuring all tool calls are policy-checked and audited.
 pub struct McpServer {
-    /// Tool registry with RavenClaw's built-in tools
+    /// Tool registry with RavenClaws's built-in tools
     registry: crate::tools::ToolRegistry,
     /// Policy engine for tool call authorization
     policy_engine: crate::policy::PolicyEngine,
@@ -730,7 +730,7 @@ impl McpServer {
     /// Uses default secure policy, sandbox, and audit log.
     pub fn new(registry: crate::tools::ToolRegistry) -> Self {
         let server_info = McpServerInfo {
-            name: "ravenclaw".to_string(),
+            name: "ravenclaws".to_string(),
             version: env!("CARGO_PKG_VERSION").to_string(),
         };
 
@@ -1031,7 +1031,7 @@ mod server_tests {
         let server = McpServer::new(registry);
 
         // Check server info
-        assert_eq!(server.server_info.name, "ravenclaw");
+        assert_eq!(server.server_info.name, "ravenclaws");
         assert!(!server.server_info.version.is_empty());
         assert!(!server.initialized);
     }

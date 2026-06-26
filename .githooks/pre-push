@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw — Pre-Push Hook
+# RavenClaws — Pre-Push Hook
 # =============================================================================
 # Runs comprehensive verification before pushing to remote:
 #   1. Full pre-commit checks (fmt + clippy + test + binary + secrets)
@@ -23,7 +23,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-BINARY="$PROJECT_DIR/target/release/ravenclaw"
+BINARY="$PROJECT_DIR/target/release/ravenclaws"
 PASS=0
 FAIL=0
 SKIP=0
@@ -120,10 +120,10 @@ check_docker_build() {
         return
     fi
     info "Building Docker image..."
-    if docker build -t ravenclaw-pre-push "$PROJECT_DIR" >/dev/null 2>&1; then
+    if docker build -t ravenclaws-pre-push "$PROJECT_DIR" >/dev/null 2>&1; then
         ok "Docker build successful"
         # Clean up
-        docker rmi ravenclaw-pre-push >/dev/null 2>&1 || true
+        docker rmi ravenclaws-pre-push >/dev/null 2>&1 || true
     else
         fail "Docker build failed"
     fi
@@ -164,7 +164,7 @@ check_security() {
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║     RavenClaw Pre-Push Verification             ║${NC}"
+echo -e "${CYAN}║     RavenClaws Pre-Push Verification             ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
 
 cd "$PROJECT_DIR"

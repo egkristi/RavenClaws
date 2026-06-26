@@ -1,4 +1,4 @@
-//! Sandboxed execution for RavenClaw
+//! RavenClaws
 //!
 //! Provides a workdir jail, resource limits, and timeouts for
 //! sandboxed tool execution. Every shell command and file operation
@@ -89,7 +89,7 @@ impl Default for SandboxConfig {
                 "HOME".to_string(),
                 "USER".to_string(),
                 "TMPDIR".to_string(),
-                "RAVENCLAW_".to_string(),
+                "RAVENCLAWS_".to_string(),
             ],
             create_workdir: true,
         }
@@ -97,7 +97,7 @@ impl Default for SandboxConfig {
 }
 
 fn default_workdir() -> String {
-    "/tmp/ravenclaw-sandbox".to_string()
+    "/tmp/ravenclaws-sandbox".to_string()
 }
 
 fn default_timeout() -> u64 {
@@ -317,7 +317,7 @@ mod tests {
     #[tokio::test]
     async fn test_sandbox_init() {
         let dir =
-            std::env::temp_dir().join(format!("ravenclaw_sandbox_init_{}", std::process::id()));
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_init_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             ..SandboxConfig::default()
@@ -336,7 +336,7 @@ mod tests {
     #[tokio::test]
     async fn test_sandbox_resolve_relative_path() {
         let dir =
-            std::env::temp_dir().join(format!("ravenclaw_sandbox_rel_{}", std::process::id()));
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_rel_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -355,7 +355,7 @@ mod tests {
     #[tokio::test]
     async fn test_sandbox_resolve_absolute_path_in_sandbox() {
         let dir =
-            std::env::temp_dir().join(format!("ravenclaw_sandbox_abs_{}", std::process::id()));
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_abs_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -376,7 +376,7 @@ mod tests {
     #[tokio::test]
     async fn test_sandbox_resolve_path_outside() {
         let dir =
-            std::env::temp_dir().join(format!("ravenclaw_sandbox_outside_{}", std::process::id()));
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_outside_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -411,7 +411,7 @@ mod tests {
     #[tokio::test]
     async fn test_sandbox_check_read_path_not_found() {
         let dir =
-            std::env::temp_dir().join(format!("ravenclaw_sandbox_read_{}", std::process::id()));
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_read_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -463,7 +463,7 @@ mod tests {
     #[tokio::test]
     async fn test_sandbox_create_temp_file() {
         let dir =
-            std::env::temp_dir().join(format!("ravenclaw_sandbox_temp_{}", std::process::id()));
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_temp_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -496,7 +496,7 @@ mod tests {
     #[test]
     fn test_sandbox_config_default() {
         let config = SandboxConfig::default();
-        assert_eq!(config.workdir, "/tmp/ravenclaw-sandbox");
+        assert_eq!(config.workdir, "/tmp/ravenclaws-sandbox");
         assert_eq!(config.timeout_secs, 30);
         assert_eq!(config.max_output_bytes, 65536);
         assert!(!config.allow_network);
@@ -530,7 +530,7 @@ mod tests {
     #[test]
     fn test_sandbox_drop_cleanup() {
         let dir = std::env::temp_dir().join(format!(
-            "ravenclaw_sandbox_drop_test_{}",
+            "ravenclaws_sandbox_drop_test_{}",
             std::process::id()
         ));
         let config = SandboxConfig {
@@ -557,7 +557,7 @@ mod tests {
     #[tokio::test]
     async fn test_sandbox_check_write_path() {
         let dir =
-            std::env::temp_dir().join(format!("ravenclaw_sandbox_write_{}", std::process::id()));
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_write_{}", std::process::id()));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -576,7 +576,7 @@ mod tests {
     fn test_sandbox_config_serialization() {
         let config = SandboxConfig::default();
         let json = serde_json::to_string(&config).unwrap();
-        assert!(json.contains("/tmp/ravenclaw-sandbox"));
+        assert!(json.contains("/tmp/ravenclaws-sandbox"));
         assert!(json.contains("30"));
     }
 

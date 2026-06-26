@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw — Pre-Commit Hook
+# RavenClaws — Pre-Commit Hook
 # =============================================================================
 # Runs fast verification checks before each commit:
 #   1. cargo fmt --check        — formatting
@@ -28,7 +28,7 @@ NC='\033[0m'
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-BINARY="$PROJECT_DIR/target/release/ravenclaw"
+BINARY="$PROJECT_DIR/target/release/ravenclaws"
 PASS=0
 FAIL=0
 
@@ -140,7 +140,7 @@ check_secrets() {
 
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║     RavenClaw Pre-Commit Verification           ║${NC}"
+echo -e "${CYAN}║     RavenClaws Pre-Commit Verification           ║${NC}"
 echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
 
 cd "$PROJECT_DIR"

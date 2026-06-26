@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "ravenclaw.fullname" . }}-config
+  name: {{ include "ravenclaws.fullname" . }}-config
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    {{- include "ravenclaw.labels" . | nindent 4 }}
+    {{- include "ravenclaws.labels" . | nindent 4 }}
 data:
-  ravenclaw.toml: |
+  ravenclaws.toml: |
     [llm]
     endpoint = "{{ .Values.config.llm.endpoint }}"
     model = "{{ .Values.config.llm.model }}"
@@ -32,6 +32,6 @@ data:
     {{- if .Values.config.telemetry.otel_endpoint }}
     [telemetry]
     otel_endpoint = "{{ .Values.config.telemetry.otel_endpoint }}"
-    otel_service_name = "{{ .Values.config.telemetry.otel_service_name | default "ravenclaw" }}"
+    otel_service_name = "{{ .Values.config.telemetry.otel_service_name | default "ravenclaws" }}"
     otel_disabled = {{ .Values.config.telemetry.otel_disabled | default false }}
     {{- end }}

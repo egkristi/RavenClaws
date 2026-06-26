@@ -1,4 +1,4 @@
-//! Tamper-evident audit logging for RavenClaw
+//! RavenClaws
 //!
 //! Every tool call, policy decision, and approval action is recorded
 //! in a structured audit log with HMAC chaining for tamper detection.

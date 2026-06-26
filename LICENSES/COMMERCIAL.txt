@@ -1,8 +1,8 @@
-RavenClaw Commercial License
+RavenClaws Commercial License
 
 Copyright (c) 2026 Erling Kristiansen. All rights reserved.
 
-This Commercial License Agreement ("Agreement") governs the use of RavenClaw
+This Commercial License Agreement ("Agreement") governs the use of RavenClaws
 ("Software") for commercial purposes beyond the terms of the GNU Affero General
 Public License v3.0 ("AGPLv3").
 
@@ -10,24 +10,24 @@ Public License v3.0 ("AGPLv3").
 
 You need a commercial license if you:
 
-1. Use RavenClaw in a commercial product or service with more than 50 concurrent
+1. Use RavenClaws in a commercial product or service with more than 50 concurrent
    agents AND annual revenue exceeding USD 5,000,000, OR
 
-2. Distribute RavenClaw as part of a commercial product without releasing your
+2. Distribute RavenClaws as part of a commercial product without releasing your
    product's source code under AGPLv3, OR
 
-3. Offer RavenClaw as a hosted/managed service (SaaS) to third parties without
+3. Offer RavenClaws as a hosted/managed service (SaaS) to third parties without
    releasing all modifications under AGPLv3.
 
 --- WHO DOES NOT NEED A COMMERCIAL LICENSE ---
 
 You do NOT need a commercial license if you:
 
-- Use RavenClaw for personal, educational, or research purposes
-- Use RavenClaw in an open source project licensed under AGPLv3-compatible terms
-- Use RavenClaw commercially with fewer than 50 concurrent agents AND less than
+- Use RavenClaws for personal, educational, or research purposes
+- Use RavenClaws in an open source project licensed under AGPLv3-compatible terms
+- Use RavenClaws commercially with fewer than 50 concurrent agents AND less than
   USD 5,000,000 in annual revenue
-- Contribute to RavenClaw under the AGPLv3
+- Contribute to RavenClaws under the AGPLv3
 
 --- HOW TO OBTAIN A COMMERCIAL LICENSE ---
 
@@ -50,7 +50,7 @@ The following features are available exclusively under a commercial license
 
 --- OPEN SOURCE CORE ---
 
-The RavenClaw core — agent runtime, all LLM provider clients (LiteLLM,
+The RavenClaws core — agent runtime, all LLM provider clients (LiteLLM,
 OpenRouter, Ollama, OpenAI), single-agent mode, configuration, and security
 scaffolding — is and will remain free and open source under AGPLv3.
 

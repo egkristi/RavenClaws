@@ -1,4 +1,4 @@
-//! Tool / function-calling abstraction for RavenClaw
+//! RavenClaws
 //!
 //! Provides a provider-agnostic tool schema, a registry for built-in tools,
 //! and the execution engine that routes tool calls to their implementations.
@@ -733,7 +733,7 @@ impl ToolImpl for WebFetchTool {
 
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
-            .user_agent("RavenClaw/0.1.0")
+            .user_agent("RavenClaws/0.9.2")
             .build()
             .map_err(|e| {
                 ToolError::ExecutionFailed("web_fetch".to_string(), format!("HTTP client: {}", e))
@@ -869,7 +869,7 @@ impl WebSearchTool {
     ) -> ToolResultValue<Vec<SearchResult>> {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(15))
-            .user_agent("RavenClaw/0.8.0")
+            .user_agent("RavenClaws/0.9.2")
             .build()
             .map_err(|e| {
                 ToolError::ExecutionFailed("web_search".to_string(), format!("HTTP client: {}", e))
@@ -936,7 +936,7 @@ impl WebSearchTool {
     ) -> ToolResultValue<Vec<SearchResult>> {
         let client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(15))
-            .user_agent("Mozilla/5.0 (compatible; RavenClaw/0.8.0)")
+            .user_agent("Mozilla/5.0 (compatible; RavenClaws/0.9.2)")
             .build()
             .map_err(|e| {
                 ToolError::ExecutionFailed("web_search".to_string(), format!("HTTP client: {}", e))
@@ -1119,7 +1119,7 @@ impl ToolImpl for WebSearchTool {
 async fn fetch_and_extract_content(url: &str, max_bytes: usize) -> ToolResultValue<String> {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(15))
-        .user_agent("Mozilla/5.0 (compatible; RavenClaw/0.8.0)")
+        .user_agent("Mozilla/5.0 (compatible; RavenClaws/0.9.2)")
         .build()
         .map_err(|e| {
             ToolError::ExecutionFailed("web_fetch".to_string(), format!("HTTP client: {}", e))
@@ -1679,7 +1679,7 @@ mod tests {
     #[tokio::test]
     async fn test_read_file_not_found() {
         let tool = ReadFileTool::new();
-        let args = serde_json::json!({"path": "/tmp/nonexistent_file_ravenclaw_test"});
+        let args = serde_json::json!({"path": "/tmp/nonexistent_file_ravenclaws_test"});
         let result = tool.execute(args).await;
         assert!(result.is_err());
         assert!(matches!(
@@ -1714,23 +1714,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_write_and_read_file() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("ravenclaws_test_{}", std::process::id()));
         let path = dir.join("test_write.txt");
         let path_str = path.to_string_lossy().to_string();
 
         // Write
         let write_tool = WriteFileTool::new();
-        let args = serde_json::json!({"path": path_str, "content": "Hello, RavenClaw!"});
+        let args = serde_json::json!({"path": path_str, "content": "Hello, RavenClaws!"});
         let result = write_tool.execute(args).await.unwrap();
         assert!(result.success);
-        assert!(result.output.contains("17 bytes"));
+        assert!(result.output.contains("18 bytes"));
 
         // Read back
         let read_tool = ReadFileTool::new();
         let args = serde_json::json!({"path": path_str});
         let result = read_tool.execute(args).await.unwrap();
         assert!(result.success);
-        assert_eq!(result.output.trim(), "Hello, RavenClaw!");
+        assert_eq!(result.output.trim(), "Hello, RavenClaws!");
 
         // Cleanup
         let _ = tokio::fs::remove_file(&path).await;
@@ -1739,7 +1739,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_write_file_append() {
-        let dir = std::env::temp_dir().join(format!("ravenclaw_test_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("ravenclaws_test_{}", std::process::id()));
         let path = dir.join("test_append.txt");
         let path_str = path.to_string_lossy().to_string();
 

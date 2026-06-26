@@ -1,7 +1,7 @@
-//! HTTP server mode for RavenClaw
+//! RavenClaws
 //!
 //! Provides a long-running HTTP server with health, readiness, and metrics endpoints.
-//! This enables RavenClaw to run as a stable workload in Kubernetes and other
+//! RavenClaws to run as a stable workload in Kubernetes and other
 //! container orchestration platforms, fixing the CrashLoopBackOff issue.
 //!
 //! # Endpoints
@@ -144,33 +144,33 @@ fn ready_response(state: &ServerState) -> (Vec<u8>, &'static str) {
 fn metrics_response(state: &ServerState) -> Vec<u8> {
     let metrics = &state.metrics;
     format!(
-        "# HELP ravenclaw_requests_total Total HTTP requests served\n\
-         # TYPE ravenclaw_requests_total counter\n\
-         ravenclaw_requests_total {}\n\
+        "# HELP ravenclaws_requests_total Total HTTP requests served\n\
+         # TYPE ravenclaws_requests_total counter\n\
+         ravenclaws_requests_total {}\n\
          \n\
-         # HELP ravenclaw_llm_requests_total Total LLM requests made\n\
-         # TYPE ravenclaw_llm_requests_total counter\n\
-         ravenclaw_llm_requests_total {}\n\
+         # HELP ravenclaws_llm_requests_total Total LLM requests made\n\
+         # TYPE ravenclaws_llm_requests_total counter\n\
+         ravenclaws_llm_requests_total {}\n\
          \n\
-         # HELP ravenclaw_tool_calls_total Total tool calls executed\n\
-         # TYPE ravenclaw_tool_calls_total counter\n\
-         ravenclaw_tool_calls_total {}\n\
+         # HELP ravenclaws_tool_calls_total Total tool calls executed\n\
+         # TYPE ravenclaws_tool_calls_total counter\n\
+         ravenclaws_tool_calls_total {}\n\
          \n\
-         # HELP ravenclaw_errors_total Total errors encountered\n\
-         # TYPE ravenclaw_errors_total counter\n\
-         ravenclaw_errors_total {}\n\
+         # HELP ravenclaws_errors_total Total errors encountered\n\
+         # TYPE ravenclaws_errors_total counter\n\
+         ravenclaws_errors_total {}\n\
          \n\
-         # HELP ravenclaw_tokens_total Total tokens consumed (estimated)\n\
-         # TYPE ravenclaw_tokens_total counter\n\
-         ravenclaw_tokens_total {}\n\
+         # HELP ravenclaws_tokens_total Total tokens consumed (estimated)\n\
+         # TYPE ravenclaws_tokens_total counter\n\
+         ravenclaws_tokens_total {}\n\
          \n\
-         # HELP ravenclaw_uptime_seconds Server uptime in seconds\n\
-         # TYPE ravenclaw_uptime_seconds gauge\n\
-         ravenclaw_uptime_seconds {}\n\
+         # HELP ravenclaws_uptime_seconds Server uptime in seconds\n\
+         # TYPE ravenclaws_uptime_seconds gauge\n\
+         ravenclaws_uptime_seconds {}\n\
          \n\
-         # HELP ravenclaw_start_time_seconds Server start time (Unix epoch)\n\
-         # TYPE ravenclaw_start_time_seconds gauge\n\
-         ravenclaw_start_time_seconds {}\n",
+         # HELP ravenclaws_start_time_seconds Server start time (Unix epoch)\n\
+         # TYPE ravenclaws_start_time_seconds gauge\n\
+         ravenclaws_start_time_seconds {}\n",
         metrics.requests_total.load(Ordering::Relaxed),
         metrics.llm_requests_total.load(Ordering::Relaxed),
         metrics.tool_calls_total.load(Ordering::Relaxed),
@@ -406,13 +406,13 @@ mod tests {
         let output = String::from_utf8_lossy(&body);
 
         // Check Prometheus format
-        assert!(output.contains("ravenclaw_requests_total"));
-        assert!(output.contains("ravenclaw_llm_requests_total"));
-        assert!(output.contains("ravenclaw_tool_calls_total"));
-        assert!(output.contains("ravenclaw_errors_total"));
-        assert!(output.contains("ravenclaw_tokens_total"));
-        assert!(output.contains("ravenclaw_uptime_seconds"));
-        assert!(output.contains("ravenclaw_start_time_seconds"));
+        assert!(output.contains("ravenclaws_requests_total"));
+        assert!(output.contains("ravenclaws_llm_requests_total"));
+        assert!(output.contains("ravenclaws_tool_calls_total"));
+        assert!(output.contains("ravenclaws_errors_total"));
+        assert!(output.contains("ravenclaws_tokens_total"));
+        assert!(output.contains("ravenclaws_uptime_seconds"));
+        assert!(output.contains("ravenclaws_start_time_seconds"));
         assert!(output.contains("# HELP"));
         assert!(output.contains("# TYPE"));
     }
@@ -530,7 +530,7 @@ mod tests {
         if let Ok(resp) = response {
             assert_eq!(resp.status(), 200);
             let body = resp.text().await.unwrap();
-            assert!(body.contains("ravenclaw_requests_total"));
+            assert!(body.contains("ravenclaws_requests_total"));
         }
     }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification Suite — Main Orchestrator
+# RavenClaws Verification Suite — Main Orchestrator
 # =============================================================================
 # Runs all verification modules across all deployment targets.
 #
@@ -23,7 +23,7 @@
 # Environment:
 #   VERBOSE=1          Show detailed output for each test
 #   SKIP_BUILD=1       Skip cargo build step
-#   RUST_LOG=info      Log level for RavenClaw itself
+#   RUST_LOG=info      Log level for RavenClaws itself
 # =============================================================================
 
 set -euo pipefail
@@ -90,7 +90,7 @@ run_module() {
 
 do_build() {
     log_step "Build: cargo build --release"
-    log_detail "Building RavenClaw for macOS (aarch64-apple-darwin)..."
+    log_detail "Building RavenClaws for macOS (aarch64-apple-darwin)..."
     if cargo build --release 2>&1; then
         log_ok "Build successful"
         local size

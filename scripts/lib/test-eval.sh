@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Eval Harness Tests
+# RavenClaws Verification — Eval Harness Tests
 # =============================================================================
 # Tests the --eval mode: running eval suites from TOML config files, checking
 # assertion results, and verifying report output (text and JSON formats).
 #
 # These tests require:
-#   - A release build of RavenClaw (cargo build --release)
+#   - A release build of RavenClaws (cargo build --release)
 #   - LiteLLM running at http://localhost:4000
 # =============================================================================
 

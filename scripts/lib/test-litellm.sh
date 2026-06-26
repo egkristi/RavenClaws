@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — LiteLLM Connectivity Tests
+# RavenClaws Verification — LiteLLM Connectivity Tests
 # =============================================================================
 # Tests that LiteLLM is running and accessible.
 # =============================================================================

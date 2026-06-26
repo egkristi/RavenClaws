@@ -1,7 +1,7 @@
-# RavenClaw K8s test configuration — points to LiteLLM in-cluster
+# RavenClaws K8s test configuration — points to LiteLLM in-cluster
 [llm]
 provider = "litellm"
-endpoint = "http://litellm.ravenclaw.svc:4000"
+endpoint = "http://litellm.ravenclaws.svc:4000"
 model = "best-coding"
 timeout_secs = 30
 

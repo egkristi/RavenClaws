@@ -1,6 +1,6 @@
 //! Autonomous heartbeat — persistent background agent loop
 //!
-//! RavenClaw's heartbeat mode enables truly autonomous operation: the agent
+//! RavenClaws's heartbeat mode enables truly autonomous operation: the agent
 //! runs in a persistent loop with a configurable tick interval, assessing
 //! progress, planning next steps, and executing them without human supervision.
 //!
@@ -27,12 +27,12 @@
 //!
 //! # Integration
 //!
-//! - CLI: `ravenclaw --heartbeat --goal "..." --tick-interval 300`
-//! - Config: `[heartbeat]` section in `ravenclaw.toml`
+//! - CLI: `ravenclaws --heartbeat --goal "..." --tick-interval 300`
+//! - Config: `[heartbeat]` section in `ravenclaws.toml`
 //! - Scheduler: heartbeat can be started via cron trigger
 
 use crate::agent::AgentLoopConfig;
-use crate::error::{RavenClawError, Result};
+use crate::error::{RavenClawsError, Result};
 use crate::llm::LLMProviderTrait;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -182,7 +182,7 @@ impl HeartbeatAgent {
 
         // Create workdir if it doesn't exist
         std::fs::create_dir_all(&workdir).map_err(|e| {
-            RavenClawError::CommandExecution(format!(
+            RavenClawsError::CommandExecution(format!(
                 "Failed to create heartbeat workdir '{}': {}",
                 workdir.display(),
                 e
@@ -471,7 +471,7 @@ impl HeartbeatAgent {
     /// Build the system prompt for the heartbeat agent
     fn build_system_prompt(&self) -> String {
         format!(
-            "You are RavenClaw Heartbeat — an autonomous agent operating in a persistent loop.\n\n\
+            "You are RavenClaws Heartbeat — an autonomous agent operating in a persistent loop.\n\n\
              Your overarching goal: {}\n\n\
              You operate in ticks. Each tick you:\n\
              1. ASSESS your progress toward the goal\n\
@@ -510,11 +510,11 @@ impl HeartbeatAgent {
     /// Persist the current state to disk
     fn persist_state(&self) -> Result<()> {
         let content = serde_json::to_string_pretty(&self.state).map_err(|e| {
-            RavenClawError::CommandExecution(format!("Failed to serialize heartbeat state: {}", e))
+            RavenClawsError::CommandExecution(format!("Failed to serialize heartbeat state: {}", e))
         })?;
 
         std::fs::write(&self.state_path, content).map_err(|e| {
-            RavenClawError::CommandExecution(format!(
+            RavenClawsError::CommandExecution(format!(
                 "Failed to write heartbeat state to '{}': {}",
                 self.state_path.display(),
                 e

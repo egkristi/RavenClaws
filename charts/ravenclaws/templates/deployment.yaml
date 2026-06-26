@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "ravenclaw.fullname" . }}
+  name: {{ include "ravenclaws.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    {{- include "ravenclaw.labels" . | nindent 4 }}
+    {{- include "ravenclaws.labels" . | nindent 4 }}
     app.kubernetes.io/component: agent
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
-      {{- include "ravenclaw.selectorLabels" . | nindent 6 }}
+      {{- include "ravenclaws.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -18,7 +18,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "ravenclaw.labels" . | nindent 8 }}
+        {{- include "ravenclaws.labels" . | nindent 8 }}
         app.kubernetes.io/component: agent
         {{- with .Values.podLabels }}
         {{- toYaml . | nindent 8 }}
@@ -28,7 +28,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "ravenclaw.serviceAccountName" . }}
+      serviceAccountName: {{ include "ravenclaws.serviceAccountName" . }}
       {{- with .Values.podSecurityContext }}
       securityContext:
         {{- toYaml . | nindent 8 }}
@@ -45,7 +45,7 @@ spec:
           args:
             - "--serve"
             - "--config"
-            - "/config/ravenclaw.toml"
+            - "/config/ravenclaws.toml"
             {{- with .Values.extraArgs }}
             {{- toYaml . | nindent 12 }}
             {{- end }}
@@ -55,7 +55,7 @@ spec:
             - name: {{ $key }}
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "ravenclaw.fullname" $ }}-secrets
+                  name: {{ include "ravenclaws.fullname" $ }}-secrets
                   key: {{ $key }}
             {{- end }}
           {{- with .Values.envFrom }}
@@ -99,11 +99,11 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: {{ include "ravenclaw.fullname" . }}-config
+            name: {{ include "ravenclaws.fullname" . }}-config
         - name: workspace
           {{- if .Values.workspace.storageClass }}
           persistentVolumeClaim:
-            claimName: {{ include "ravenclaw.fullname" . }}-workspace
+            claimName: {{ include "ravenclaws.fullname" . }}-workspace
           {{- else }}
           emptyDir:
             sizeLimit: {{ .Values.workspace.sizeLimit }}

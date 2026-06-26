@@ -1,5 +1,5 @@
 #!/bin/bash
-# RavenClaw Build Script
+# RavenClaws Build Script
 # Builds optimized release binaries for multiple architectures
 
 set -euo pipefail
@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_DIR"
 
-echo "🐦‍⬛ RavenClaw Build"
+echo "🐦‍⬛ RavenClaws Build"
 echo "==================="
 
 # Detect host architecture
@@ -18,11 +18,11 @@ echo "Host: $HOST_ARCH"
 # Define target architectures
 # Format: target_triple:output_name
 TARGETS=(
-    "aarch64-apple-darwin:ravenclaw-aarch64-apple-darwin"
-    "x86_64-apple-darwin:ravenclaw-x86_64-apple-darwin"
-    "aarch64-unknown-linux-gnu:ravenclaw-aarch64-unknown-linux-gnu"
-    "x86_64-unknown-linux-gnu:ravenclaw-x86_64-unknown-linux-gnu"
-    "x86_64-unknown-linux-musl:ravenclaw-x86_64-unknown-linux-musl"
+    "aarch64-apple-darwin:ravenclaws-aarch64-apple-darwin"
+    "x86_64-apple-darwin:ravenclaws-x86_64-apple-darwin"
+    "aarch64-unknown-linux-gnu:ravenclaws-aarch64-unknown-linux-gnu"
+    "x86_64-unknown-linux-gnu:ravenclaws-x86_64-unknown-linux-gnu"
+    "x86_64-unknown-linux-musl:ravenclaws-x86_64-unknown-linux-musl"
 )
 
 # Parse arguments
@@ -45,7 +45,7 @@ build_for_target() {
     echo "▶ Building for $target..."
     
     if cargo build --release --locked --target "$target" 2>&1; then
-        local src="target/$target/release/ravenclaw"
+        local src="target/$target/release/ravenclaws"
         local dst="target/release/$output_name"
         cp "$src" "$dst"
         local size=$(du -h "$dst" | cut -f1)
@@ -60,8 +60,8 @@ build_for_target() {
 echo ""
 echo "▶ Building for host ($HOST_ARCH)..."
 cargo build --release --locked
-HOST_SIZE=$(du -h target/release/ravenclaw | cut -f1)
-echo "  ✅ ravenclaw ($HOST_ARCH) — $HOST_SIZE"
+HOST_SIZE=$(du -h target/release/ravenclaws | cut -f1)
+echo "  ✅ ravenclaws ($HOST_ARCH) — $HOST_SIZE"
 
 # Build for specific target or all
 if [[ -n "$BUILD_TARGET" ]]; then
@@ -88,7 +88,7 @@ fi
 if [[ "${BUILD_DOCKER:-false}" == "true" ]]; then
     echo ""
     echo "▶ Building Docker image..."
-    docker build -t ravenclaw:latest .
+    docker build -t ravenclaws:latest .
     echo "  ✅ Docker image built"
 fi
 

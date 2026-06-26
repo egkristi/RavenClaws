@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Security & Binary Integrity Tests
+# RavenClaws Verification — Security & Binary Integrity Tests
 # =============================================================================
 # Tests binary integrity: no debug symbols, correct architecture,
 # no hardcoded secrets, reasonable size, static analysis.

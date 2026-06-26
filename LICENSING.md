@@ -1,13 +1,13 @@
-# RavenClaw — Licensing
+# RavenClaws — Licensing
 
-RavenClaw uses a **dual-license model**: open source for the community,
+RavenClaws uses a **dual-license model**: open source for the community,
 commercial for enterprise use.
 
 ---
 
 ## Open Source Core — AGPLv3
 
-The RavenClaw core is licensed under the
+The RavenClaws core is licensed under the
 [GNU Affero General Public License v3.0](LICENSES/AGPLv3.txt) (AGPLv3).
 
 This covers:
@@ -32,9 +32,9 @@ This covers:
 
 A commercial license is required if you:
 
-1. Use RavenClaw commercially with **>50 concurrent agents** and **>$5M revenue/year**
-2. Distribute RavenClaw inside a product **without** releasing your source under AGPLv3
-3. Offer RavenClaw as a **hosted/managed service** without releasing modifications
+1. Use RavenClaws commercially with **>50 concurrent agents** and **>$5M revenue/year**
+2. Distribute RavenClaws inside a product **without** releasing your source under AGPLv3
+3. Offer RavenClaws as a **hosted/managed service** without releasing modifications
 
 A commercial license grants:
 
@@ -73,7 +73,7 @@ See [LICENSES/COMMERCIAL.txt](LICENSES/COMMERCIAL.txt) for full terms.
 
 We chose AGPLv3 over MIT/Apache 2.0 deliberately:
 
-**The SaaS loophole:** MIT and Apache 2.0 allow cloud providers to offer RavenClaw
+**The SaaS loophole:** MIT and Apache 2.0 allow cloud providers to offer RavenClaws
 as a managed service, fork it, add proprietary features, and never contribute back.
 This happened to MongoDB (AWS DocumentDB), Elasticsearch (AWS OpenSearch), and
 Redis. AGPLv3 closes this loophole — if you run it as a service, your modifications
@@ -88,7 +88,7 @@ top may be commercial, but the foundation will not be.
 
 ## Contributor License Agreement (CLA)
 
-Contributors to RavenClaw must sign a Contributor License Agreement (CLA).
+Contributors to RavenClaws must sign a Contributor License Agreement (CLA).
 This allows us to offer the commercial license while accepting community contributions.
 
 The CLA grants us the right to:

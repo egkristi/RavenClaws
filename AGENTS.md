@@ -1,12 +1,12 @@
-# 🐦‍⬛ RavenClaw — AI Agent Instructions
+# 🐦‍⬛ RavenClaws — AI Agent Instructions
 
-This file contains structured instructions for AI coding agents working on the RavenClaw codebase. It defines the project's architecture, conventions, common tasks, and guardrails.
+This file contains structured instructions for AI coding agents working on the RavenClaws codebase. It defines the project's architecture, conventions, common tasks, and guardrails.
 
 ---
 
 ## Vision
 
-RavenClaw aims to be the **ultimate AI agentic assistant and worker** — and the **preferred alternative** to the field: Nemoclaw, Hermes Agent, TrustClaw, ZeroClaw, PicoClaw, NanoClaw, Claude Cowork, Manus, Perplexity Computer, Kimi Claw, and Vellum.
+RavenClaws aims to be the **ultimate AI agentic assistant and worker** — and the **preferred alternative** to the field: Nemoclaw, Hermes Agent, TrustClaw, ZeroClaw, PicoClaw, NanoClaw, Claude Cowork, Manus, Perplexity Computer, Kimi Claw, and Vellum.
 
 We don't aim to win by out-featuring them. We win by refusing to compromise on five pillars at once:
 
@@ -20,12 +20,13 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 
 ## Project Overview
 
-RavenClaw is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
+RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
 - **Version:** 0.9.2 (autonomous heartbeat + self-provisioning swarm + inter-agent communication + swarm health & telemetry)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaw
+- **Domain:** https://RavenClaws.io
 - **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
 
 ### Architecture (16 modules)
@@ -77,7 +78,7 @@ src/
 | Sandboxed execution | ✅ Working — workdir jail, path resolution, resource limits, timeouts |
 | Tamper-evident audit log | ✅ Working — HMAC-SHA256 chained, structured JSON, verification |
 | MCP client | ✅ Working — JSON-RPC 2.0 over stdio, tool discovery and registration |
-| MCP server | ✅ v0.7.0 — expose RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
+| MCP server | ✅ v0.7.0 — expose RavenClaws tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
 | HTTP server mode | ✅ v0.7.1 — long-running server with `/health`, `/ready`, `/metrics`; `--serve` flag; graceful shutdown |
 | OpenTelemetry tracing | ✅ v0.7.2 — opt-in distributed tracing with OTLP gRPC/stdout exporter; `#[instrument]` spans on agent loop, HTTP server, tools, LLM calls |
 | Helm chart | ✅ v0.7.3 — official Helm chart for K8s deployment with 11 configurable resources |
@@ -197,7 +198,7 @@ If a feature cannot be tested (e.g., hardware-dependent), document the reason in
 | `swarm.rs` | `SwarmOrchestrator`, `WorkerProfile`, `SwarmConfig`, `SwarmTopology`, recursive supervision, dynamic role assignment | Agent logic, LLM calls |
 | `llm.rs` | `LLMProviderTrait`, client implementations, `MultiModelManager` | Agent logic, config structs |
 | `config.rs` | `Config`, `LLMConfig`, validation, env loading | Agent logic, HTTP requests |
-| `error.rs` | `RavenClawError` enum, `Result<T>` alias | Everything else |
+| `error.rs` | `RavenClawsError` enum, `Result<T>` alias | Everything else |
 | `tools.rs` | `ToolImpl` trait, `ToolRegistry`, `ToolCall`, `ToolResult`, 4 built-in tools | Agent logic, LLM calls |
 | `policy.rs` | `PolicyEngine` with shell/path/network allow-lists | Tool execution, LLM calls |
 | `audit.rs` | `AuditLog` with HMAC-SHA256 chaining | Tool execution, policy decisions |
@@ -299,7 +300,7 @@ git push --no-verify
 - **macOS `file` command** — Doesn't say "stripped" for stripped binaries. Check for "Mach-O" instead.
 - **Distroless containers** — No shell, no `cat`, no `id`. Use `docker image inspect` for user checks.
 - **K8s `runAsNonRoot`** — Requires numeric UID. Use `runAsUser: 65532` instead.
-- **ConfigMap jsonpath** — Keys with dots (e.g., `ravenclaw.toml`) are unreliable. Use `go-template='{{index .data "key"}}'`.
+- **ConfigMap jsonpath** — Keys with dots (e.g., `ravenclaws.toml`) are unreliable. Use `go-template='{{index .data "key"}}'`.
 
 ---
 
@@ -307,11 +308,11 @@ git push --no-verify
 
 | Target | Binary Location | How to Build |
 |---|---|---|
-| macOS (aarch64) | `target/release/ravenclaw` | `cargo build --release` |
-| macOS (x86_64) | `target/x86_64-apple-darwin/release/ravenclaw` | `cargo build --release --target x86_64-apple-darwin` |
-| Linux ARM64 | `target/aarch64-unknown-linux-gnu/release/ravenclaw` | Cross-compile or Docker build |
-| Linux x86_64 | `target/x86_64-unknown-linux-gnu/release/ravenclaw` | Cross-compile or Docker build |
-| Docker | `ghcr.io/egkristi/ravenclaw:latest` | `docker build -t ravenclaw:latest .` |
+| macOS (aarch64) | `target/release/ravenclaws` | `cargo build --release` |
+| macOS (x86_64) | `target/x86_64-apple-darwin/release/ravenclaws` | `cargo build --release --target x86_64-apple-darwin` |
+| Linux ARM64 | `target/aarch64-unknown-linux-gnu/release/ravenclaws` | Cross-compile or Docker build |
+| Linux x86_64 | `target/x86_64-unknown-linux-gnu/release/ravenclaws` | Cross-compile or Docker build |
+| Docker | `ghcr.io/egkristi/ravenclaws:latest` | `docker build -t ravenclaws:latest .` |
 | Kubernetes | `k8s/deployment.yaml` | `kubectl apply -f k8s/deployment.yaml` |
 
 ### Docker
@@ -586,7 +587,7 @@ git add -A
 git commit -m "Release v0.1.0"
 
 # Tag the release (signed tag preferred)
-git tag -s v0.1.0 -m "RavenClaw v0.1.0"
+git tag -s v0.1.0 -m "RavenClaws v0.1.0"
 
 # Push everything (triggers CI/CD pipelines)
 git push --follow-tags
@@ -628,8 +629,8 @@ After all CI/CD pipelines pass, run a full battery of tests against the **newly 
 
 ```bash
 # ── 6a. Pull and verify the released container image ──────────
-docker pull ghcr.io/egkristi/ravenclaw:v0.1.0
-docker run --rm ghcr.io/egkristi/ravenclaw:v0.1.0 --version
+docker pull ghcr.io/egkristi/ravenclaws:v0.1.0
+docker run --rm ghcr.io/egkristi/ravenclaws:v0.1.0 --version
 
 # ── 6b. Run full verification suite against the release ───────
 # (This tests local binary, Docker container, K8s manifests, etc.)
@@ -638,34 +639,34 @@ docker run --rm ghcr.io/egkristi/ravenclaw:v0.1.0 --version
 # ── 6c. Verify binary integrity ───────────────────────────────
 # Download a released binary and check its SHA256
 # (Replace URL with actual release asset URL)
-curl -sL https://github.com/egkristi/RavenClaw/releases/download/v0.1.0/ravenclaw-x86_64-apple-darwin.tar.gz \
-  -o /tmp/ravenclaw-release.tar.gz
-tar xzf /tmp/ravenclaw-release.tar.gz -C /tmp/
+curl -sL https://github.com/egkristi/RavenClaw/releases/download/v0.1.0/ravenclaws-x86_64-apple-darwin.tar.gz \
+  -o /tmp/ravenclaws-release.tar.gz
+tar xzf /tmp/ravenclaws-release.tar.gz -C /tmp/
 ./scripts/verify.sh --security
 
 # ── 6d. Verify container security properties ──────────────────
-docker image inspect ghcr.io/egkristi/ravenclaw:v0.1.0 --format '{{.Config.User}}'
+docker image inspect ghcr.io/egkristi/ravenclaws:v0.1.0 --format '{{.Config.User}}'
 # Must output "65532" (nonroot user)
 
 # ── 6e. Verify multi-arch support ─────────────────────────────
-docker buildx imagetools inspect ghcr.io/egkristi/ravenclaw:v0.1.0
+docker buildx imagetools inspect ghcr.io/egkristi/ravenclaws:v0.1.0
 # Must show both linux/amd64 and linux/arm64 manifests
 
 # ── 6f. Verify container signature ────────────────────────────
-cosign verify ghcr.io/egkristi/ravenclaw:v0.1.0 \
+cosign verify ghcr.io/egkristi/ravenclaws:v0.1.0 \
   --certificate-identity-regexp "https://github.com/egkristi/RavenClaw" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 
 # ── 6g. Verify SBOM exists ────────────────────────────────────
 # Download SBOM from GitHub Release assets or regenerate:
-syft ghcr.io/egkristi/ravenclaw:v0.1.0 -o spdx-json=sbom-verify.spdx.json
+syft ghcr.io/egkristi/ravenclaws:v0.1.0 -o spdx-json=sbom-verify.spdx.json
 ```
 
 ### Phase 7: Final Validation
 
 ```bash
 # ── 7a. Verify crates.io package ──────────────────────────────
-cargo search ravenclaw
+cargo search ravenclaws
 # Should show the new version
 
 # ── 7b. Verify GitHub Release ─────────────────────────────────
@@ -677,9 +678,9 @@ cargo search ravenclaw
 #   - Container image signatures
 
 # ── 7c. Verify the binary works end-to-end ────────────────────
-/tmp/ravenclaw --version
-/tmp/ravenclaw --help
-echo "Hello" | /tmp/ravenclaw --exec "Say hello back" 2>&1 || true
+/tmp/ravenclaws --version
+/tmp/ravenclaws --help
+echo "Hello" | /tmp/ravenclaws --exec "Say hello back" 2>&1 || true
 ```
 
 ### Release Abort Criteria
@@ -758,4 +759,4 @@ Copy this into a new issue or comment when starting a release:
 
 ---
 
-*RavenClaw — Small. Sleek. Secure. Supreme.* 🐦‍⬛
+*RavenClaws — Small. Sleek. Secure. Supreme.* 🐦‍⬛

@@ -14,13 +14,13 @@
 //! # Usage
 //!
 //! ```ignore
-//! let mut manager = BackgroundTaskManager::new("/tmp/ravenclaw-tasks")?;
+//! let mut manager = BackgroundTaskManager::new("/tmp/ravenclaws-tasks")?;
 //! let task_id = manager.submit("Analyze this data", llm_client).await?;
 //! let status = manager.status(&task_id)?;
 //! ```
 
 use crate::config::RuntimeConfig;
-use crate::error::{RavenClawError, Result};
+use crate::error::{RavenClawsError, Result};
 use crate::llm::LLMProviderTrait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -123,7 +123,7 @@ impl BackgroundTaskManager {
 
         // Create the tasks directory if it doesn't exist
         std::fs::create_dir_all(&tasks_dir).map_err(|e| {
-            RavenClawError::CommandExecution(format!(
+            RavenClawsError::CommandExecution(format!(
                 "Failed to create tasks directory '{}': {}",
                 tasks_dir.display(),
                 e
@@ -198,11 +198,11 @@ impl BackgroundTaskManager {
     fn save_task(&self, task: &BackgroundTask) -> Result<()> {
         let path = self.tasks_dir.join(format!("{}.json", task.id));
         let content = serde_json::to_string_pretty(task).map_err(|e| {
-            RavenClawError::CommandExecution(format!("Failed to serialize task: {}", e))
+            RavenClawsError::CommandExecution(format!("Failed to serialize task: {}", e))
         })?;
 
         std::fs::write(&path, content).map_err(|e| {
-            RavenClawError::CommandExecution(format!(
+            RavenClawsError::CommandExecution(format!(
                 "Failed to write task file '{}': {}",
                 path.display(),
                 e
@@ -237,7 +237,7 @@ impl BackgroundTaskManager {
         {
             let mut tasks = self.tasks.write().await;
             let task = tasks.get_mut(task_id).ok_or_else(|| {
-                RavenClawError::CommandExecution(format!("Task '{}' not found", task_id))
+                RavenClawsError::CommandExecution(format!("Task '{}' not found", task_id))
             })?;
 
             task.status = TaskStatus::Running;
@@ -274,7 +274,7 @@ impl BackgroundTaskManager {
         // Update task with result
         let mut tasks = self.tasks.write().await;
         let task = tasks.get_mut(task_id).ok_or_else(|| {
-            RavenClawError::CommandExecution(format!("Task '{}' not found", task_id))
+            RavenClawsError::CommandExecution(format!("Task '{}' not found", task_id))
         })?;
 
         match result {
@@ -314,7 +314,7 @@ impl BackgroundTaskManager {
     pub async fn status(&self, task_id: &str) -> Result<TaskStatus> {
         let tasks = self.tasks.read().await;
         let task = tasks.get(task_id).ok_or_else(|| {
-            RavenClawError::CommandExecution(format!("Task '{}' not found", task_id))
+            RavenClawsError::CommandExecution(format!("Task '{}' not found", task_id))
         })?;
         Ok(task.status.clone())
     }
@@ -323,7 +323,7 @@ impl BackgroundTaskManager {
     pub async fn get_task(&self, task_id: &str) -> Result<BackgroundTask> {
         let tasks = self.tasks.read().await;
         tasks.get(task_id).cloned().ok_or_else(|| {
-            RavenClawError::CommandExecution(format!("Task '{}' not found", task_id))
+            RavenClawsError::CommandExecution(format!("Task '{}' not found", task_id))
         })
     }
 
@@ -340,7 +340,7 @@ impl BackgroundTaskManager {
     pub async fn cancel(&self, task_id: &str) -> Result<()> {
         let mut tasks = self.tasks.write().await;
         let task = tasks.get_mut(task_id).ok_or_else(|| {
-            RavenClawError::CommandExecution(format!("Task '{}' not found", task_id))
+            RavenClawsError::CommandExecution(format!("Task '{}' not found", task_id))
         })?;
 
         match task.status {
@@ -351,7 +351,7 @@ impl BackgroundTaskManager {
                 info!(task_id = %task_id, "Background task cancelled");
                 Ok(())
             }
-            _ => Err(RavenClawError::CommandExecution(format!(
+            _ => Err(RavenClawsError::CommandExecution(format!(
                 "Cannot cancel task '{}' in status '{}'",
                 task_id, task.status
             ))),
@@ -384,7 +384,7 @@ impl BackgroundTaskManager {
     async fn get_prompt(&self, task_id: &str) -> Result<String> {
         let tasks = self.tasks.read().await;
         let task = tasks.get(task_id).ok_or_else(|| {
-            RavenClawError::CommandExecution(format!("Task '{}' not found", task_id))
+            RavenClawsError::CommandExecution(format!("Task '{}' not found", task_id))
         })?;
         Ok(task.prompt.clone())
     }
@@ -393,7 +393,7 @@ impl BackgroundTaskManager {
     async fn get_system_prompt(&self, task_id: &str) -> Result<String> {
         let tasks = self.tasks.read().await;
         let task = tasks.get(task_id).ok_or_else(|| {
-            RavenClawError::CommandExecution(format!("Task '{}' not found", task_id))
+            RavenClawsError::CommandExecution(format!("Task '{}' not found", task_id))
         })?;
         Ok(task.system_prompt.clone())
     }
@@ -405,8 +405,11 @@ mod tests {
     use std::path::PathBuf;
 
     fn test_dir(name: &str) -> PathBuf {
-        let dir =
-            std::env::temp_dir().join(format!("ravenclaw-test-bg-{}-{}", name, std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "ravenclaws-test-bg-{}-{}",
+            name,
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&dir);
         dir
     }

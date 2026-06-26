@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw — Git Hooks Setup Script
+# RavenClaws — Git Hooks Setup Script
 # =============================================================================
 # Configures git to use the .githooks directory and makes hooks executable.
 #
@@ -29,7 +29,7 @@ fail()  { echo -e "  ${RED}✗${NC} $1"; }
 do_setup() {
     echo ""
     echo -e "${CYAN}╔══════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║     RavenClaw Git Hooks Setup                   ║${NC}"
+    echo -e "${CYAN}║     RavenClaws Git Hooks Setup                   ║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
     echo ""
 
@@ -42,7 +42,7 @@ do_setup() {
     ok "Git hooks path set to: $HOOKS_DIR"
 
     echo ""
-    echo -e "  ${GREEN}✓ RavenClaw git hooks are now active!${NC}"
+    echo -e "  ${GREEN}✓ RavenClaws git hooks are now active!${NC}"
     echo ""
     echo -e "  ${CYAN}Hooks installed:${NC}"
     echo -e "    pre-commit   — Runs on every commit: fmt, clippy, tests, binary size, secrets"
@@ -57,7 +57,7 @@ do_setup() {
 do_check() {
     echo ""
     echo -e "${CYAN}╔══════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║     RavenClaw Git Hooks — Status Check          ║${NC}"
+    echo -e "${CYAN}║     RavenClaws Git Hooks — Status Check          ║${NC}"
     echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
     echo ""
 
@@ -92,7 +92,7 @@ do_check() {
 do_remove() {
     echo ""
     echo -e "${YELLOW}╔══════════════════════════════════════════════════╗${NC}"
-    echo -e "${YELLOW}║     Removing RavenClaw Git Hooks               ║${NC}"
+    echo -e "${YELLOW}║     Removing RavenClaws Git Hooks               ║${NC}"
     echo -e "${YELLOW}╚══════════════════════════════════════════════════╝${NC}"
     echo ""
 
@@ -101,7 +101,7 @@ do_remove() {
     ok "Git hooks path restored to default (.git/hooks)"
 
     echo ""
-    echo -e "  ${GREEN}✓ RavenClaw git hooks removed.${NC}"
+    echo -e "  ${GREEN}✓ RavenClaws git hooks removed.${NC}"
     echo -e "  ${YELLOW}  The .githooks/ directory still exists — delete it manually if desired.${NC}"
     echo ""
 }

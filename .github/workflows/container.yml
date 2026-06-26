@@ -81,7 +81,7 @@ jobs:
             type=sha,prefix=,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
           labels: |
-            org.opencontainers.image.title=RavenClaw
+            org.opencontainers.image.title=RavenClaws
             org.opencontainers.image.description=Lightweight, secure Rust agent framework
             org.opencontainers.image.vendor=Erling G M Kristiansen
             org.opencontainers.image.version=${{ github.ref_name }}

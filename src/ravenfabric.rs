@@ -1,7 +1,7 @@
-//! RavenFabric integration for RavenClaw
+//! RavenClaws
 //!
 //! Provides a client for communicating with RavenFabric — a secure E2E-encrypted
-//! remote execution and mesh coordination service. RavenFabric enables RavenClaw
+//! RavenClaws
 //! to dispatch tasks to remote agents, coordinate across a fleet, and execute
 //! commands on remote hosts.
 //!
@@ -93,7 +93,7 @@ impl RavenFabricClient {
 
         let http_client = reqwest::Client::builder()
             .timeout(std::time::Duration::from_secs(30))
-            .user_agent("RavenClaw/0.6.1")
+            .user_agent("RavenClaws/0.9.2")
             .build()
             .ok()?;
 
@@ -194,7 +194,7 @@ impl RavenFabricClient {
                 .config
                 .agent_id
                 .clone()
-                .unwrap_or_else(|| "ravenclaw-default".to_string()),
+                .unwrap_or_else(|| "ravenclaws-default".to_string()),
         };
 
         info!(
@@ -416,12 +416,12 @@ mod tests {
             command: "echo hello".to_string(),
             target_host: Some("agent-1".to_string()),
             timeout_secs: 30,
-            agent_id: "ravenclaw-test".to_string(),
+            agent_id: "ravenclaws-test".to_string(),
         };
         let json = serde_json::to_string(&request).unwrap();
         assert!(json.contains("echo hello"));
         assert!(json.contains("agent-1"));
-        assert!(json.contains("ravenclaw-test"));
+        assert!(json.contains("ravenclaws-test"));
         assert!(json.contains("30"));
     }
 

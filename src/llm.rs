@@ -483,7 +483,7 @@ impl OpenAICompatibleClient {
         if self.provider.requires_custom_headers() {
             req = req
                 .header("HTTP-Referer", "https://github.com/egkristi/RavenClaw")
-                .header("X-Title", "RavenClaw");
+                .header("X-Title", "RavenClaws");
         }
 
         req
@@ -1467,7 +1467,7 @@ mod tests {
             let mock = server
                 .mock("POST", "/v1/chat/completions")
                 .match_header("HTTP-Referer", "https://github.com/egkristi/RavenClaw")
-                .match_header("X-Title", "RavenClaw")
+                .match_header("X-Title", "RavenClaws")
                 .with_status(200)
                 .with_body(sample_chat_response_json("claude-sonnet-4"))
                 .create();

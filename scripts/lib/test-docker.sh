@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Docker Container Tests
+# RavenClaws Verification — Docker Container Tests
 # =============================================================================
 # Tests the Docker image: build, basic operation, LLM connectivity,
 # Docker Compose validation, multi-model via Docker.

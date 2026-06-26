@@ -1,6 +1,6 @@
 # Known Issues
 
-This document tracks known problems in RavenClaw that are not yet resolved.
+This document tracks known problems in RavenClaws that are not yet resolved.
 Items are ordered by severity/impact.
 
 ---
@@ -16,7 +16,7 @@ Items are ordered by severity/impact.
 | Worker personality & capability profiles | ✅ | 5 built-in profiles: researcher, creative, executor, reviewer, supervisor — each with persona, tools, provider/model overrides, resource limits |
 | Dynamic role assignment | ✅ | LLM-based task analysis assigns roles based on capability profiles and current load |
 | CLI flags | ✅ | `--swarm-topology`, `--swarm-max-depth`, `--swarm-max-workers`, `--swarm-dynamic-roles`, `--swarm-profiles` |
-| Config section | ✅ | `[swarm]` in `ravenclaw.toml` with serde defaults |
+| Config section | ✅ | `[swarm]` in `ravenclaws.toml` with serde defaults |
 | Unit tests | ✅ | 17 swarm tests (416 total) |
 
 **CI Status:** Build & Release #129 ✅ · Container Build #129 ✅ · Security Scan #104 ✅
@@ -36,7 +36,7 @@ Items are ordered by severity/impact.
 | Long-horizon task persistence | ✅ | BackgroundTaskManager persists tasks as JSON files; `--task-resume` re-executes incomplete tasks |
 | `token_lifetime_secs` enforcement | ✅ | Agent sessions auto-terminate after configured duration |
 | CLI flags | ✅ | `--heartbeat`, `--heartbeat-goal`, `--heartbeat-tick-interval`, `--heartbeat-max-ticks`, `--heartbeat-session` |
-| Config section | ✅ | `[heartbeat]` in `ravenclaw.toml` |
+| Config section | ✅ | `[heartbeat]` in `ravenclaws.toml` |
 | Unit tests | ✅ | 8 heartbeat tests + token_lifetime_secs enforcement (401 total) |
 
 **CI Status:** Build & Release #125 ✅ · Container Build #125 ✅ · Security Scan #102 ⚠️ (Cargo Audit: RUSTSEC-2026-0185 quinn-proto — fixed locally, pending commit)
@@ -54,7 +54,7 @@ Items are ordered by severity/impact.
 | RavenFabric HTTP Client | ✅ | Built-in client with health, list_agents, execute, broadcast |
 | RavenFabric wired to all modes | ✅ | Single, swarm, supervisor, REPL all pass `Option<RavenFabricClient>` |
 | RavenFabric config integration | ✅ | `endpoint`, `agent_id`, `remote_exec`, `allowed_hosts` from config |
-| Error handling | ✅ | `RavenClawError::RavenFabric` variant with display |
+| Error handling | ✅ | `RavenClawsError::RavenFabric` variant with display |
 | Unit tests | ✅ | 12 tests covering config, serialization, connection errors |
 
 **Totals:** 10 modules, ~9,700 LOC (+300 for v0.6.1), 291 tests, 5 LLM providers.
@@ -114,7 +114,7 @@ Items are ordered by severity/impact.
 
 | Feature | Status | Details |
 |---|---|---|
-| MCP Server | ✅ | Expose RavenClaw tools over stdio via MCP protocol |
+| MCP Server | ✅ | Expose RavenClaws tools over stdio via MCP protocol |
 | `--mcp-server` flag | ✅ | CLI flag to run in MCP server mode |
 | Policy-checked and audited | ✅ | All tool calls validated via PolicyEngine and logged to AuditLog |
 | Unit tests | ✅ | 7 new tests |
@@ -182,7 +182,7 @@ Items are ordered by severity/impact.
 
 | Feature | Status | Details |
 |---|---|---|
-| MCP Server | ✅ | Expose RavenClaw tools over stdio via MCP protocol |
+| MCP Server | ✅ | Expose RavenClaws tools over stdio via MCP protocol |
 | HTTP Server Mode | ✅ | Long-running server with `/health`, `/ready`, `/metrics` endpoints |
 | k8s CrashLoopBackOff fixed | ✅ | `--serve` mode with HTTP probes replaces `--version` exec probes |
 | Graceful shutdown | ✅ | SIGTERM/SIGINT handled in server mode |
@@ -551,9 +551,9 @@ consumed:
 **Status:** ⚠️ Low priority — these are API surfaces for future use. Clean up when features are implemented.
 
 **Recently resolved:**
-- `RavenClawError::RavenFabric` — ✅ Now constructed and handled in `ravenfabric.rs`
+- `RavenClawsError::RavenFabric` — ✅ Now constructed and handled in `ravenfabric.rs`
 - `RavenFabricConfig` fields (`agent_id`, `remote_exec`, `allowed_hosts`) — ✅ Now consumed by `RavenFabricClient`
-- `RavenClawError::SecurityViolation` — ✅ Now constructed in `agent.rs` when prompt-injection is detected
+- `RavenClawsError::SecurityViolation` — ✅ Now constructed in `agent.rs` when prompt-injection is detected
 - `SecurityConfig.prompt_injection_protection` — ✅ Now consumed by agent loop
 
 ---
@@ -590,4 +590,4 @@ Ctrl+C will abort immediately without cleanup.
 
 ### No configuration hot-reload
 
-Changes to `ravenclaw.toml` require a restart. No file-watch mechanism exists.
+Changes to `ravenclaws.toml` require a restart. No file-watch mechanism exists.

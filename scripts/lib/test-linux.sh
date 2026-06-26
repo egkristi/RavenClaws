@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Linux Binary Tests (via Orbstack Docker)
+# RavenClaws Verification — Linux Binary Tests (via Orbstack Docker)
 # =============================================================================
 # Tests cross-compiled Linux binaries (aarch64 and x86_64) using
 # Orbstack Docker containers with Debian slim images.
@@ -43,19 +43,19 @@ test_linux_binary() {
 
         # Basic checks
         run_test "Linux ${arch} binary --version" \
-            docker run --rm -v "${bin}:/ravenclaw:ro" debian:bookworm-slim /ravenclaw --version
+            docker run --rm -v "${bin}:/ravenclaws:ro" debian:bookworm-slim /ravenclaws --version
         run_test "Linux ${arch} binary --help" \
-            docker run --rm -v "${bin}:/ravenclaw:ro" debian:bookworm-slim /ravenclaw --help
+            docker run --rm -v "${bin}:/ravenclaws:ro" debian:bookworm-slim /ravenclaws --help
 
         # LLM connectivity (via host network)
         if check_litellm; then
             log_detail "Testing LLM connectivity (${arch})..."
             if timeout 45 docker run --rm --network host \
-                -v "${bin}:/ravenclaw:ro" \
+                -v "${bin}:/ravenclaws:ro" \
                 -e RAVENCLAW__LLM__ENDPOINT="http://localhost:4000" \
                 -e RAVENCLAW__LLM__MODEL="best-coding" \
                 -e RAVENCLAW__SECURITY__REQUIRE_TLS=false \
-                debian:bookworm-slim /ravenclaw --mode single \
+                debian:bookworm-slim /ravenclaws --mode single \
                 > "$RESULTS_DIR/${TIMESTAMP}-linux-${arch}-llm.log" 2>&1; then
                 check_llm_response_quality "$RESULTS_DIR/${TIMESTAMP}-linux-${arch}-llm.log" "best-coding (Linux ${arch})"
             else
@@ -66,10 +66,10 @@ test_linux_binary() {
             # Multi-model on Linux
             log_detail "Testing multi-model (${arch})..."
             if timeout 90 docker run --rm --network host \
-                -v "${bin}:/ravenclaw:ro" \
+                -v "${bin}:/ravenclaws:ro" \
                 -v "$MULTI_CONFIG:/config/multi.toml:ro" \
                 -e RAVENCLAW__SECURITY__REQUIRE_TLS=false \
-                debian:bookworm-slim /ravenclaw --config /config/multi.toml --mode single \
+                debian:bookworm-slim /ravenclaws --config /config/multi.toml --mode single \
                 > "$RESULTS_DIR/${TIMESTAMP}-linux-${arch}-multi.log" 2>&1; then
                 log_ok "Linux ${arch} multi-model — all providers responded"
             else

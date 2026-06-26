@@ -1,7 +1,7 @@
-# RavenClaw Makefile
+# RavenClaws Makefile
 # Container build helpers
 
-IMAGE_NAME ?= ravenclaw
+IMAGE_NAME ?= ravenclaws
 REGISTRY   ?= ghcr.io/egkristi
 VERSION    ?= $(shell cargo metadata --format-version 1 --no-deps | \
               python3 -c "import sys,json; print(json.load(sys.stdin)['packages'][0]['version'])" 2>/dev/null || echo "dev")

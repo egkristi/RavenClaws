@@ -1,7 +1,7 @@
-//! OpenTelemetry tracing integration for RavenClaw
+//! RavenClaws
 //!
 //! Provides opt-in distributed tracing via OpenTelemetry. When configured,
-//! RavenClaw exports traces to an OTLP-compatible collector (e.g., Jaeger,
+//! RavenClaws exports traces to an OTLP-compatible collector (e.g., Jaeger,
 //! Grafana Tempo, SigNoz, or a self-hosted OpenTelemetry Collector).
 //!
 //! # Configuration
@@ -9,7 +9,7 @@
 //! | Env var | CLI flag | Default | Description |
 //! |---|---|---|---|
 //! | `RAVENCLAW_OTEL_ENDPOINT` | `--otel-endpoint` | `http://localhost:4317` | OTLP gRPC endpoint |
-//! | `RAVENCLAW_OTEL_SERVICE_NAME` | `--otel-service-name` | `ravenclaw` | Service name for traces |
+//! | `RAVENCLAWS_OTEL_SERVICE_NAME` | `--otel-service-name` | `ravenclaws` | Service name for traces |
 //! | `RAVENCLAW_OTEL_DISABLED` | `--otel-disabled` | `false` | Disable OpenTelemetry entirely |
 //!
 //! # Usage
@@ -69,7 +69,7 @@ pub fn init_tracing(config: &TelemetryConfig) -> anyhow::Result<TelemetryGuard> 
     let service_name = config
         .otel_service_name
         .clone()
-        .unwrap_or_else(|| "ravenclaw".to_string());
+        .unwrap_or_else(|| "ravenclaws".to_string());
 
     let endpoint = config
         .otel_endpoint
@@ -123,14 +123,14 @@ pub fn init_tracing(config: &TelemetryConfig) -> anyhow::Result<TelemetryGuard> 
         }
     };
 
-    let tracer = tracer_provider.tracer("ravenclaw");
+    let tracer = tracer_provider.tracer("ravenclaws");
     let telemetry_layer = OpenTelemetryLayer::new(tracer);
 
     // Register the OTel layer on top of the existing subscriber.
     // We use a try_init approach since the subscriber may already be registered
     // (e.g., from main.rs). If it fails, we log a warning and continue.
     let registry = tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "ravenclaw=info".into()))
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "ravenclaws=info".into()))
         .with(tracing_subscriber::fmt::layer().json())
         .with(telemetry_layer);
 
@@ -186,10 +186,10 @@ mod tests {
     fn test_telemetry_config_custom() {
         let config = TelemetryConfig {
             otel_endpoint: Some("http://jaeger:4317".to_string()),
-            otel_service_name: Some("my-ravenclaw".to_string()),
+            otel_service_name: Some("my-ravenclaws".to_string()),
             otel_disabled: false,
         };
         assert_eq!(config.otel_endpoint.as_deref(), Some("http://jaeger:4317"));
-        assert_eq!(config.otel_service_name.as_deref(), Some("my-ravenclaw"));
+        assert_eq!(config.otel_service_name.as_deref(), Some("my-ravenclaws"));
     }
 }

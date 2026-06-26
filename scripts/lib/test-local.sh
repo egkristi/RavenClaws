@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Local macOS Binary Tests
+# RavenClaws Verification — Local macOS Binary Tests
 # =============================================================================
 # Tests the native macOS binary: basic operation, config loading,
 # single-agent LLM chat, multi-model mode, CLI overrides, error handling.

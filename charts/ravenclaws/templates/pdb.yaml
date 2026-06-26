@@ -2,14 +2,14 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: {{ include "ravenclaw.fullname" . }}
+  name: {{ include "ravenclaws.fullname" . }}
   namespace: {{ .Release.Namespace | quote }}
   labels:
-    {{- include "ravenclaw.labels" . | nindent 4 }}
+    {{- include "ravenclaws.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
-      {{- include "ravenclaw.selectorLabels" . | nindent 6 }}
+      {{- include "ravenclaws.selectorLabels" . | nindent 6 }}
   {{- with .Values.podDisruptionBudget.minAvailable }}
   minAvailable: {{ . }}
   {{- end }}

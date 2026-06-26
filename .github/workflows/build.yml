@@ -39,23 +39,23 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
-            output: ravenclaw-x86_64-unknown-linux-gnu
+            output: ravenclaws-x86_64-unknown-linux-gnu
             archive: tar.gz
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm
-            output: ravenclaw-aarch64-unknown-linux-gnu
+            output: ravenclaws-aarch64-unknown-linux-gnu
             archive: tar.gz
           - target: x86_64-unknown-linux-musl
             os: ubuntu-latest
-            output: ravenclaw-x86_64-unknown-linux-musl
+            output: ravenclaws-x86_64-unknown-linux-musl
             archive: tar.gz
           - target: x86_64-apple-darwin
             os: macos-latest
-            output: ravenclaw-x86_64-apple-darwin
+            output: ravenclaws-x86_64-apple-darwin
             archive: tar.gz
           - target: aarch64-apple-darwin
             os: macos-latest
-            output: ravenclaw-aarch64-apple-darwin
+            output: ravenclaws-aarch64-apple-darwin
             archive: tar.gz
 
     runs-on: ${{ matrix.os }}
@@ -106,7 +106,7 @@ jobs:
       - name: Package binary
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/ravenclaw dist/${{ matrix.output }}
+          cp target/${{ matrix.target }}/release/ravenclaws dist/${{ matrix.output }}
           cd dist
           if [[ "${{ matrix.archive }}" == "zip" ]]; then
             zip ${{ matrix.output }}.zip ${{ matrix.output }}
@@ -176,7 +176,7 @@ jobs:
             type=sha,prefix=,format=short
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
           labels: |
-            org.opencontainers.image.title=RavenClaw
+            org.opencontainers.image.title=RavenClaws
             org.opencontainers.image.description=Lightweight, secure Rust agent framework
             org.opencontainers.image.vendor=Erling G M Kristiansen
             org.opencontainers.image.version=${{ github.ref_name }}
@@ -293,7 +293,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
-          pattern: ravenclaw-*
+          pattern: ravenclaws-*
           path: dist
           merge-multiple: true
       - name: Organize release assets
@@ -317,7 +317,7 @@ jobs:
         uses: softprops/action-gh-release@v3.0.1
         with:
           tag_name: ${{ steps.release_notes.outputs.tag }}
-          name: RavenClaw ${{ steps.release_notes.outputs.tag }}
+          name: RavenClaws ${{ steps.release_notes.outputs.tag }}
           body_path: changelog.txt
           files: release-assets/*
           generate_release_notes: true

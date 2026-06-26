@@ -1,6 +1,6 @@
-# RavenClaw — Multi-stage build for minimal production image
+# RavenClaws — Multi-stage build for minimal production image
 # Supports: linux/amd64, linux/arm64
-# Usage: docker buildx build --platform linux/amd64,linux/arm64 -t ravenclaw:latest .
+# Usage: docker buildx build --platform linux/amd64,linux/arm64 -t ravenclaws:latest .
 # syntax=docker/dockerfile:1
 
 # Stage 1: Builder
@@ -75,15 +75,15 @@ COPY src/ ./src/
 RUN TARGET=$(cat /tmp/rust_target.txt) && \
     rustup target add "$TARGET" && \
     cargo build --release --locked --target "$TARGET" && \
-    cp "target/$TARGET/release/ravenclaw" /app/ravenclaw
+    cp "target/$TARGET/release/ravenclaws" /app/ravenclaws
 
 # Stage 2: Runtime (minimal)
 FROM gcr.io/distroless/cc-debian12:nonroot
 
 WORKDIR /app
 
-# Copy RavenClaw binary
-COPY --from=builder /app/ravenclaw /app/ravenclaw
+# Copy RavenClaws binary
+COPY --from=builder /app/ravenclaws /app/ravenclaws
 
 # Copy RavenFabric agent binary (optional — for swarm/supervisor modes)
 COPY --from=builder /app/ravenfabric-agent /app/ravenfabric-agent
@@ -92,12 +92,12 @@ COPY --from=builder /app/ravenfabric-agent /app/ravenfabric-agent
 USER nonroot
 
 # Environment variables (set via K8s/Docker)
-ENV RAVENCLAW_CONFIG=/config/ravenclaw.toml
+ENV RAVENCLAW_CONFIG=/config/ravenclaws.toml
 ENV RUST_LOG=info
 
 # Health check (HTTP endpoint requires --serve mode)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD ["/app/ravenclaw", "--version"]
+    CMD ["/app/ravenclaws", "--version"]
 
-ENTRYPOINT ["/app/ravenclaw"]
+ENTRYPOINT ["/app/ravenclaws"]
 CMD ["--mode", "single"]

@@ -10,7 +10,7 @@ keywords = ["agent", "ai", "llm", "liteLLM", "ravenfabric"]
 categories = ["command-line-utilities", "development-tools"]
 
 [[bin]]
-name = "ravenclaw"
+name = "ravenclaws"
 path = "src/main.rs"
 
 [features]

@@ -1,22 +1,22 @@
-# 🐦‍⬛ RavenClaw Roadmap
+# 🐦‍⬛ RavenClaws Roadmap
 
 **Date:** 2026-06-23  
 **Version:** v0.9.2 — Swarm Health & Telemetry ✅  
 **Previous Release:** v0.9.1 (2026-06-22) — Inter-agent communication bus ✅  
-**Current Commit:** `a5ec589` — Crate renamed to RavenClaws (crates.io publish fix)
+**Current Commit:** `a5ec589` — Crate renamed to RavenClawss (crates.io publish fix)
 **CI Status:** Build & Release #163 ⚠️ (crates.io publish failed — name taken, fixed) · Container Build #163 ⚠️ (cosign signing, non-fatal) · Security Scan #163 ✅
 
-**Vision:** RavenClaw shall become the ultimate AI agentic assistant and worker —
+**Vision:** RavenClaws shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
 
-RavenClaw operates **autonomously** — with a heartbeat, working on tasks over long
+RavenClaws operates **autonomously** — with a heartbeat, working on tasks over long
 periods independently, without requiring constant human supervision. It plans,
 executes, reflects, and adapts across hours, days, or weeks.
 
-RavenClaw orchestrates **swarms at any scale** — from a handful of specialized
+RavenClaws orchestrates **swarms at any scale** — from a handful of specialized
 collaborators to **thousands of workers**, each with unique traits, capabilities, and
 personalities. A swarm is TRULY a swarm: unbounded, self-organizing, and emergent.
-RavenClaw provisions, configures, and manages its own sub-agents and worker
+RavenClaws provisions, configures, and manages its own sub-agents and worker
 instances dynamically based on task requirements — no fixed limit, no artificial
 cap. The swarm grows and shrinks organically as work demands.
 
@@ -37,8 +37,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ### Non-goals
 
-- Not a heavyweight orchestration platform — RavenClaw stays a small worker; large-scale mesh coordination is delegated to **RavenFabric**.
-- Not a UI/IDE — RavenClaw is a headless binary + library; frontends consume it.
+- Not a heavyweight orchestration platform — RavenClaws stays a small worker; large-scale mesh coordination is delegated to **RavenFabric**.
+- Not a UI/IDE — RavenClaws is a headless binary + library; frontends consume it.
 - No telemetry phone-home, ever. Observability is opt-in and self-hosted.
 
 ---
@@ -46,7 +46,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.9.2 (2026-06-23) — Swarm Health & Telemetry  
-**Stats:** 16 source modules, ~15,200 LOC, 5 LLM providers, 5 built-in tools (+web_search), 452 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, published on crates.io as `RavenClaws`.
+**Stats:** 16 source modules, ~15,200 LOC, 5 LLM providers, 5 built-in tools (+web_search), 452 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, published on crates.io as `RavenClawss`.
 
 | Component | Status | Details |
 |---|---|---|
@@ -78,7 +78,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Interactive REPL | ✅ Working | `--repl` flag with stdin loop, streaming output, `/exit` `/reset` commands |
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt` field, CLI `--system-prompt`, env var override |
 | MCP client | ✅ Working | JSON-RPC 2.0 over stdio, tool discovery from external servers (v0.5.2) |
-| **MCP server** | ✅ **v0.7** | Exposes RavenClaw tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
+| **MCP server** | ✅ **v0.7** | Exposes RavenClaws tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited |
 | **HTTP server mode** | ✅ **v0.7.1** | Long-running server with `/health`, `/ready`, `/metrics` endpoints; `--serve` flag; fixes k8s CrashLoopBackOff |
 | **OpenTelemetry tracing** | ✅ **v0.7.2** | Opt-in distributed tracing with OTLP gRPC/stdout exporter; `#[instrument]` spans on agent loop, HTTP server, tools, LLM calls |
 | Native Anthropic provider | ✅ Working | Direct Claude API with tool use, token tracking (v0.5.3) |
@@ -189,27 +189,27 @@ These must be resolved before v0.5 can ship:
 
 ## Competitive Positioning
 
-RavenClaw aims to be the **preferred alternative** to the current field — including
+RavenClaws aims to be the **preferred alternative** to the current field — including
 Cognition (Claude), Manus, Perplexity Comet, Kimi, Open Interpreter, and Vellum.
 
 We don't win by out-featuring them. We win by refusing to compromise on all five
 pillars at once. By category:
 
-- **vs. cloud / hosted assistants** (Claude Cowork, Manus, Perplexity Computer, Kimi): RavenClaw is **self-hostable, offline-capable, and source-available** under AGPLv3. Your data and tool calls never leave infrastructure you control — no phone-home.
-- **vs. minimal agent runtimes** (Open Interpreter, ZeroClaw, PicoClaw): RavenClaw matches their footprint while adding a real **security model** (deny-by-default tool policy, audit log, sandboxing) and **multi-provider** routing with fallback.
-- **vs. SDK / platform plays** (Vellum, Hermes Agent): RavenClaw is a **single dependency-light binary**, not a service you rent or a framework you marry. Embed it, ship it, forget it.
+- **vs. cloud / hosted assistants** (Claude Cowork, Manus, Perplexity Computer, Kimi): RavenClaws is **self-hostable, offline-capable, and source-available** under AGPLv3. Your data and tool calls never leave infrastructure you control — no phone-home.
+- **vs. minimal agent runtimes** (Open Interpreter, ZeroClaw, PicoClaw): RavenClaws matches their footprint while adding a real **security model** (deny-by-default tool policy, audit log, sandboxing) and **multi-provider** routing with fallback.
+- **vs. SDK / platform plays** (Vellum, Hermes Agent): RavenClaws is a **single dependency-light binary**, not a service you rent or a framework you marry. Embed it, ship it, forget it.
 
-The bar: anything the field can do, RavenClaw should do **smaller, safer, and
+The bar: anything the field can do, RavenClaws should do **smaller, safer, and
 simpler** — or deliberately not at all.
 
-> **Where RavenClaw must lead, measurably (v1.0):** memory-safe core with zero
+> **Where RavenClaws must lead, measurably (v1.0):** memory-safe core with zero
 > known CVEs, sub-15 MB binary, sub-50 ms cold start, fully self-hostable and
 > air-gappable, signed + SBOM-attested supply chain. These are claims we will
 > benchmark and publish — not marketing.
 
-### RavenClaw vs. Field (v0.9 achieved)
+### RavenClaws vs. Field (v0.9 achieved)
 
-| Capability | RavenClaw v0.9 | Cognition (Claude) | Manus | Open Interpreter |
+| Capability | RavenClaws v0.9 | Cognition (Claude) | Manus | Open Interpreter |
 |---|:---:|:---:|:---:|:---:|
 | Agent loop | ✅ | ✅ | ✅ | ✅ |
 | Tool calling | ✅ (structured) | ✅ (structured) | ✅ | ✅ |
@@ -225,7 +225,7 @@ simpler** — or deliberately not at all.
 | **Scalable swarm (1000+ workers)** | ✅ **v0.9** | ❌ | ❌ | ❌ |
 | **Self-provisioning sub-agents** | ✅ **v0.9** | ❌ | ❌ | ❌ |
 | **Swarm health & telemetry** | ✅ **v0.9.2** | ❌ | ❌ | ❌ |
-| **Crate on crates.io** | ✅ **RavenClaws** | ❌ | ❌ | ❌ |
+| **Crate on crates.io** | ✅ **RavenClawss** | ❌ | ❌ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ✅ | ✅ | ⚠️ |
 | Web search | ✅ (SearXNG + DuckDuckGo) | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ✅ | ✅ | ⚠️ Plugins |
@@ -234,7 +234,7 @@ simpler** — or deliberately not at all.
 | Sub-agents / swarm | ✅ (v0.6) | ✅ | ✅ | ❌ |
 | OAuth connectors | ❌ | ✅ | ✅ | ⚠️ Plugins |
 
-**RavenClaw's Wedge:**
+**RavenClaws's Wedge:**
 1. **Trust as a feature** — deny-by-default security, no telemetry, verifiable end-to-end
 2. **Edge-deployable** — ~3.4 MB binary, runs on Raspberry Pi, air-gapped capable
 3. **RavenFabric mesh** — E2E-encrypted remote execution across fleet (unique)
@@ -251,7 +251,7 @@ the cloud incumbents structurally can't follow.
 
 ### Part 1 — Table stakes (reach parity)
 
-| Capability | Why it's table stakes | In RavenClaw | Target |
+| Capability | Why it's table stakes | In RavenClaws | Target |
 |---|---|:--:|:--:|
 | Agent loop (plan → act → observe) | Without it there is no "agent" | ✅ | v0.3 |
 | Tool / function calling | The substrate for every action | ✅ (primitive) | v0.4 |
@@ -273,11 +273,11 @@ the cloud incumbents structurally can't follow.
 | Retries / provider fallback | Vellum: retry, fall back, fail early | ⚠️ (partial) | v0.5 |
 | Human-in-the-loop approvals | Enterprises require guardrails + audit + HITL | ✅ **v0.8** | **v0.4** |
 
-### Part 2 — Where RavenClaw wins (the "preferred" wedge)
+### Part 2 — Where RavenClaws wins (the "preferred" wedge)
 
 | Differentiator | Why it beats the field | Pillars | Phase |
 |---|---|:--:|:--:|
-| **Local-first / self-hosted / air-gapped** | Manus is cloud-only; Comet's "Local" is a browser, not a worker. RavenClaw runs fully offline with Ollama. | Secure · Simple | ✅ core |
+| **Local-first / self-hosted / air-gapped** | Manus is cloud-only; Comet's "Local" is a browser, not a worker. RavenClaws runs fully offline with Ollama. | Secure · Simple | ✅ core |
 | **Security model: deny-by-default + sandbox + audit** | Field bolts security on; we ship it in core. | Secure | ⚠️ v0.4 (wire it) |
 | **~3.4 MB single binary, edge/embeddable** | No cloud agent runs on a Raspberry Pi. | Small · Efficient | ✅ |
 | **Provider-agnostic + cost-aware routing** | Not locked to one model vendor. | Efficient · Robust | v0.5 |
@@ -290,7 +290,7 @@ the cloud incumbents structurally can't follow.
 1. **MCP client + server (v0.7)** — instant access to entire tool ecosystem. ✅ **Both client and server now implemented.**
 2. **Wire security model (v0.4)** — PolicyEngine + Sandbox + AuditLog invoked on every tool call. Core value proposition.
 3. **Local-first privacy + security** — the wedge no cloud agent can copy.
-4. **Autonomous heartbeat + self-orchestration (v0.9)** — RavenClaw operates independently for days, dynamically spawning and managing swarms of any size. No competitor offers this in a self-hosted, secure package. ✅ **Heartbeat implemented.**
+4. **Autonomous heartbeat + self-orchestration (v0.9)** — RavenClaws operates independently for days, dynamically spawning and managing swarms of any size. No competitor offers this in a self-hosted, secure package. ✅ **Heartbeat implemented.**
 5. **Scalable swarm (1000+ workers) (v0.9)** — from a handful of collaborators to thousands of workers, each with unique profiles. Self-provisioning, self-healing, and policy-governed. No artificial caps — the swarm is a true swarm.
 
 ---
@@ -323,7 +323,7 @@ Versions are capability milestones, not dates. Each must keep all five pillars g
 - [x] **System-prompt / persona** configuration.
 - [x] **Robust errors** — typed retries, timeouts, graceful provider failure. All error paths covered with `thiserror` + `anyhow`; 26 error tests across 7 variants.
 
-**Exit criteria:** `ravenclaw --exec "summarize this repo"` performs a real multi-step task and returns a result.
+**Exit criteria:** `ravenclaws --exec "summarize this repo"` performs a real multi-step task and returns a result.
 
 ### v0.4 — Tools and safety 🧰🔒 **(COMPLETE)**
 
@@ -338,7 +338,7 @@ Agency with guardrails — the security differentiator.
 - [x] **Wire security to agent loop** — `PolicyEngine` validates all tool calls; `Sandbox` executes `shell_exec`; `AuditLog` emits events. **COMMIT: 51e42b0**
 - [x] **Structured function calling** — OpenAI Tools format for OpenAI/LiteLLM/OpenRouter; native JSON instead of pattern-matching. ✅ v0.4
 - [x] **MCP — client** — consume any Model Context Protocol tool/server via stdio transport. ✅ v0.5.2
-- [x] **MCP — server** — expose RavenClaw itself as an MCP server over stdio. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
+- [x] **MCP — server** — expose RavenClaws itself as an MCP server over stdio. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
 - [x] **Human-in-the-loop approvals** — configurable approval gates for sensitive tool calls (allow / deny / ask). `--require-approval` flag, `RAVENCLAW_REQUIRE_APPROVAL` env var, prompts via stdin, audited. ✅ **v0.8**
 - [x] **Web search + content extraction tool** — SearXNG JSON API + DuckDuckGo HTML backends, HTML-to-text extraction, configurable via `WebSearchConfig`. ✅ **v0.8**
 - [x] **Wire `zeroize`** for secret material — API keys in `LLMConfig` and HMAC secret key in `AuditLog` zeroized on drop. ✅ **v0.8**
@@ -361,7 +361,7 @@ Agency with guardrails — the security differentiator.
   - Exponential backoff with jitter (base 100ms, max 10s, 3 retries)
   - Fallback chain: primary → secondary → tertiary (configurable order)
   - Circuit breaker: open after 5 consecutive failures, half-open after 30s
-  - **Exit criteria:** `ravenclaw --exec "task"` with fallback to Ollama when cloud providers fail
+  - **Exit criteria:** `ravenclaws --exec "task"` with fallback to Ollama when cloud providers fail
 
 - [x] **Token Budget & Cost Tracking** ✅ v0.5.1
   - `--token-budget <N>` CLI flag and `RAVENCLAW_TOKEN_BUDGET` env var
@@ -420,12 +420,12 @@ Agency with guardrails — the security differentiator.
 
 ### v0.7 — Observability and ops 📈 **(COMPLETE)**
 
-- [x] **MCP Server** — expose RavenClaw tools over stdio via MCP protocol. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
+- [x] **MCP Server** — expose RavenClaws tools over stdio via MCP protocol. `--mcp-server` flag, policy-checked and audited. ✅ **v0.7.0**
 - [x] **Long-running server mode** with HTTP `/health` `/ready` `/metrics` endpoints (fixes the k8s CrashLoop). ✅ **v0.7.1**
 - [x] **Prometheus-style metrics** (requests, tokens, tool calls, errors, uptime). ✅ **v0.7.1**
 - [x] **Graceful shutdown**, signal handling. ✅ **v0.7.1** — SIGTERM/SIGINT handled in server mode
 - [x] **OpenTelemetry tracing** (opt-in, self-hosted collector, correlation IDs). ✅ **v0.7.2**
-- [x] **Helm chart** (`charts/ravenclaw/`) — 11 Kubernetes resources, full values.yaml, validated with `helm lint`. ✅ **v0.7.3**
+- [x] **Helm chart** (`charts/ravenclaws/`) — 11 Kubernetes resources, full values.yaml, validated with `helm lint`. ✅ **v0.7.3**
 - [x] **Eval harness + run inspection** — golden-task evals, assertions on intermediate steps, and replayable run traces. ✅ **v0.7.4**
 - [x] **Async / long-horizon background runs** — assign-and-walk-away background execution, resumable across restarts (matches Manus's headline UX). ✅ **v0.8**
 - [x] **Scheduling & triggers** — cron, webhook, and file-watch activation for proactive 24/7 agents. ✅ **v0.8**
@@ -436,7 +436,7 @@ Agency with guardrails — the security differentiator.
   - 24 Rust unit tests + 20 verification tests
   - Sample eval configs in `tests/eval/` (basic-suite.toml, security-suite.toml)
 
-**Exit criteria:** ✅ RavenClaw runs as a stable long-lived workload with green probes, exported metrics, opt-in distributed tracing, and Helm-based deployment.
+**Exit criteria:** ✅ RavenClaws runs as a stable long-lived workload with green probes, exported metrics, opt-in distributed tracing, and Helm-based deployment.
 
 ### v0.8 — Enterprise and compliance 🏢 *(commercial-licensed)*
 
@@ -452,10 +452,10 @@ Maps to the commercial tier in [LICENSING.md](LICENSING.md).
 
 ### ✅ v0.9 — Autonomous heartbeat & self-orchestration 💓 (v0.9.2 released)
 
-RavenClaw becomes a truly autonomous agent that can operate independently over
+RavenClaws becomes a truly autonomous agent that can operate independently over
 long time horizons, and dynamically orchestrate swarms of any size.
 
-**Released versions:** [v0.9.0](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.0) (heartbeat + persistence) · [v0.9.1](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.1) (swarm orchestration + inter-agent communication) · [v0.9.2](https://github.com/egkristi/RavenClaw/releases/tag/v0.9.2) (swarm health & telemetry)
+**Released versions:** [v0.9.0](https://github.com/egkristi/RavenClaws/releases/tag/v0.9.0) (heartbeat + persistence) · [v0.9.1](https://github.com/egkristi/RavenClaws/releases/tag/v0.9.1) (swarm orchestration + inter-agent communication) · [v0.9.2](https://github.com/egkristi/RavenClaws/releases/tag/v0.9.2) (swarm health & telemetry)
 
 - [x] **Autonomous heartbeat** — persistent background loop with configurable tick interval; agent wakes, assesses progress, plans next steps, executes, and sleeps. No human-in-the-loop required for routine operation. ✅ **v0.9.0**
 - [x] **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context. Heartbeat continues across binary restarts. ✅ **v0.9.0**
@@ -464,7 +464,7 @@ long time horizons, and dynamically orchestrate swarms of any size.
   - `BackgroundTaskManager` persists all tasks as individual JSON files in `<workdir>/tasks/`
   - `--task-resume` flag re-executes incomplete tasks on startup
   - 401 total unit tests (0 regressions)
-- [x] **Self-provisioning of sub-agents** — RavenClaw dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors. ✅ **v0.9.1**
+- [x] **Self-provisioning of sub-agents** — RavenClaws dynamically spawns new agent instances (local or remote via RavenFabric) based on task decomposition. Supervisor mode becomes recursive: supervisors spawn supervisors. ✅ **v0.9.1**
 - [x] **Scalable swarm orchestration** — support for 10s to **1000s** of workers. No fixed limit — the swarm scales organically to the task. Configurable topologies: star (single coordinator), mesh (peer-to-peer), hierarchical (tree of supervisors), and hybrid. ✅ **v0.9.1**
 - [x] **Worker personality & capability profiles** — each swarm member has a declarative profile (persona, tools, provider, model, resource limits). Profiles are composable and inheritable. ✅ **v0.9.1**
 - [x] **Dynamic role assignment** — agent analyzes task requirements and assigns roles (researcher, coder, reviewer, executor) to swarm members based on capability profiles and current load. ✅ **v0.9.1**
@@ -494,10 +494,10 @@ long time horizons, and dynamically orchestrate swarms of any size.
 
 ### v1.0 — Simply the best 🏆
 
-The stable release. RavenClaw is production-ready, benchmarked, documented, and
+The stable release. RavenClaws is production-ready, benchmarked, documented, and
 trusted. All five pillars are verified by independent measurement.
 
-- [ ] **Autonomous operation validated** — RavenClaw runs unattended for 7+ days, completing tasks via heartbeat loop, recovering from failures, and scaling swarm up/down as needed.
+- [ ] **Autonomous operation validated** — RavenClaws runs unattended for 7+ days, completing tasks via heartbeat loop, recovering from failures, and scaling swarm up/down as needed.
 - [ ] **Swarm scale validated** — 1000+ worker agents operating in mesh topology, with < 5% overhead per additional agent. Swarm grows and shrinks organically — no fixed limit, no artificial cap.
 - [ ] **API stability** guarantees + semver discipline. All public types and traits reviewed for v1.0 API surface.
 - [ ] **All performance targets met** and benchmarked against the field (published):
@@ -562,7 +562,7 @@ trusted. All five pillars are verified by independent measurement.
 - **Rust, `unsafe` forbidden** — memory safety and small static binaries are foundational to "secure + small."
 - **OpenAI-compatible core** — most providers speak it; one client shape covers LiteLLM/OpenAI/OpenRouter, with Ollama as the documented exception.
 - **AGPLv3 + Commercial dual license** — keeps the core open, closes the SaaS loophole, funds development. See [LICENSING.md](LICENSING.md).
-- **Delegate heavy orchestration to RavenFabric** — RavenClaw stays a small worker; the mesh/remote-exec substrate is a separate, specialized system.
+- **Delegate heavy orchestration to RavenFabric** — RavenClaws stays a small worker; the mesh/remote-exec substrate is a separate, specialized system.
 - **No phone-home** — observability is opt-in and self-hosted; trust is a feature.
 
 ---

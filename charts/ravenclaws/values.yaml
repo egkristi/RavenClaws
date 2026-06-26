@@ -1,4 +1,4 @@
-# Default values for ravenclaw Helm chart.
+# Default values for ravenclaws Helm chart.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -7,7 +7,7 @@ replicaCount: 1
 
 # -- Image configuration
 image:
-  repository: ghcr.io/egkristi/ravenclaw
+  repository: ghcr.io/egkristi/ravenclaws
   pullPolicy: Always
   # -- Overrides the image tag whose default is the chart appVersion
   tag: ""
@@ -61,7 +61,7 @@ containerSecurityContext:
     drop:
       - ALL
 
-# -- RavenClaw service configuration
+# -- RavenClaws service configuration
 service:
   # -- Service type
   type: ClusterIP
@@ -82,15 +82,15 @@ ingress:
     # kubernetes.io/tls-acme: "true"
   # -- Ingress hosts
   hosts:
-    - host: ravenclaw.local
+    - host: ravenclaws.local
       paths:
         - path: /
           pathType: Prefix
   # -- TLS configuration
   tls: []
-  #  - secretName: ravenclaw-tls
+  #  - secretName: ravenclaws-tls
   #    hosts:
-  #      - ravenclaw.local
+  #      - ravenclaws.local
 
 # -- Resource limits and requests
 resources:
@@ -126,7 +126,7 @@ startupProbe: {}
   # initialDelaySeconds: 5
   # periodSeconds: 5
 
-# -- Additional CLI arguments passed to ravenclaw
+# -- Additional CLI arguments passed to ravenclaws
 extraArgs: []
 
 # -- Environment variables
@@ -137,11 +137,11 @@ env:
 # -- Environment variables from secrets or configmaps
 envFrom: []
 
-# -- RavenClaw configuration (rendered as ConfigMap)
+# -- RavenClaws configuration (rendered as ConfigMap)
 config:
   # -- The LLM provider configuration
   llm:
-    endpoint: "http://litellm.ravenclaw.svc:4000"
+    endpoint: "http://litellm.ravenclaws.svc:4000"
     model: "gpt-4o-mini"
     timeout_secs: 30
   # -- Security configuration
@@ -156,19 +156,19 @@ config:
     health_interval_secs: 60
   # -- RavenFabric configuration (optional)
   ravenfabric: {}
-    # endpoint: "http://ravenfabric.ravenclaw.svc:8080"
+    # endpoint: "http://ravenfabric.ravenclaws.svc:8080"
     # remote_exec: true
-    # allowed_hosts: ["litellm.ravenclaw.svc", "ravenfabric.ravenclaw.svc"]
+    # allowed_hosts: ["litellm.ravenclaws.svc", "ravenfabric.ravenclaws.svc"]
   # -- OpenTelemetry configuration (optional)
   telemetry: {}
     # otel_endpoint: "http://otel-collector.observability.svc:4317"
-    # otel_service_name: "ravenclaw"
+    # otel_service_name: "ravenclaws"
     # otel_disabled: false
 
 # -- Existing secrets to mount (will not be created by the chart)
 existingSecrets: []
-  # - name: ravenclaw-secrets
-  #   mountPath: /etc/secrets/ravenclaw
+  # - name: ravenclaws-secrets
+  #   mountPath: /etc/secrets/ravenclaws
   #   readOnly: true
 
 # -- Secret values (created as Kubernetes Secret resource)

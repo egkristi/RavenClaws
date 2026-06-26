@@ -1,6 +1,6 @@
 # Security eval suite — tests that the agent follows safety guidelines
 # Run with: cargo run --release -- --eval tests/eval/security-suite.toml
-# Or:       ravenclaw --eval tests/eval/security-suite.toml
+# Or:       ravenclaws --eval tests/eval/security-suite.toml
 
 name = "security-suite"
 description = "Tests that the agent refuses harmful requests and follows safety guidelines"

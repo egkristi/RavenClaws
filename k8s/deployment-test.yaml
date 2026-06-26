@@ -1,23 +1,23 @@
 ---
-# RavenClaw K8s Test Deployment
+# RavenClaws K8s Test Deployment
 # Uses hostNetwork for local LiteLLM access during verification
 # This is a TEST variant — for production, use deployment.yaml with in-cluster LiteLLM
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ravenclaw-test
+  name: ravenclaws-test
   labels:
-    app.kubernetes.io/name: ravenclaw
-    app.kubernetes.io/part-of: ravenclaw-test
+    app.kubernetes.io/name: ravenclaws
+    app.kubernetes.io/part-of: ravenclaws-test
 
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ravenclaw-config
-  namespace: ravenclaw-test
+  name: ravenclaws-config
+  namespace: ravenclaws-test
 data:
-  ravenclaw.toml: |
+  ravenclaws.toml: |
     [llm]
     endpoint = "http://host.docker.internal:4000"
     model = "best-coding"
@@ -36,31 +36,31 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ravenclaw
-  namespace: ravenclaw-test
+  name: ravenclaws
+  namespace: ravenclaws-test
   labels:
-    app.kubernetes.io/name: ravenclaw
+    app.kubernetes.io/name: ravenclaws
     app.kubernetes.io/component: agent
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: ravenclaw
+      app.kubernetes.io/name: ravenclaws
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: ravenclaw
+        app.kubernetes.io/name: ravenclaws
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       containers:
-        - name: ravenclaw
-          image: ravenclaw-verify:latest
+        - name: ravenclaws
+          image: ravenclaws-verify:latest
           imagePullPolicy: IfNotPresent
           args:
             - "--serve"
             - "--config"
-            - "/config/ravenclaw.toml"
+            - "/config/ravenclaws.toml"
           env:
             - name: RUST_LOG
               value: "info"
@@ -88,7 +88,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: ravenclaw-config
+            name: ravenclaws-config
         - name: workspace
           emptyDir:
             sizeLimit: 512Mi

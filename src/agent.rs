@@ -1,4 +1,4 @@
-//! Agent implementations for RavenClaw
+//! RavenClaws
 //!
 //! Supports single-provider and multi-model (multi-provider) modes.
 //! Security-integrated: PolicyEngine, Sandbox, and AuditLog wired to agent loop.
@@ -128,7 +128,7 @@ pub async fn run_agent_loop(
     let policy_engine = PolicyEngine::default_secure();
     let mut sandbox = Sandbox::default();
     sandbox.init().await.map_err(|e| {
-        crate::error::RavenClawError::CommandExecution(format!("Sandbox init failed: {}", e))
+        crate::error::RavenClawsError::CommandExecution(format!("Sandbox init failed: {}", e))
     })?;
     let audit_log = AuditLog::new(format!("agent-{}", std::process::id()));
 
@@ -203,7 +203,7 @@ pub async fn run_agent_loop(
                         "iteration": iteration,
                     })),
                 );
-                return Err(crate::error::RavenClawError::SecurityViolation(format!(
+                return Err(crate::error::RavenClawsError::SecurityViolation(format!(
                     "Session token expired after {} seconds (limit: {}s)",
                     elapsed, config.token_lifetime_secs
                 )));
@@ -221,7 +221,7 @@ pub async fn run_agent_loop(
                     &format!("LLM request failed: {}", e),
                     None,
                 );
-                return Err(crate::error::RavenClawError::Llm(e));
+                return Err(crate::error::RavenClawsError::Llm(e));
             }
         };
 
@@ -249,7 +249,7 @@ pub async fn run_agent_loop(
                             "content_preview": &content[..content.len().min(200)],
                         })),
                     );
-                    return Err(crate::error::RavenClawError::SecurityViolation(format!(
+                    return Err(crate::error::RavenClawsError::SecurityViolation(format!(
                         "LLM response blocked: potential prompt injection ({})",
                         reason
                     )));
@@ -387,7 +387,7 @@ pub async fn run_agent_loop(
         }
     }
 
-    Err(crate::error::RavenClawError::CommandExecution(
+    Err(crate::error::RavenClawsError::CommandExecution(
         "Agent loop reached max iterations without completing the task".to_string(),
     ))
 }
@@ -409,7 +409,7 @@ pub async fn run_agent_loop_with_mcp(
     let policy_engine = PolicyEngine::default_secure();
     let mut sandbox = Sandbox::default();
     sandbox.init().await.map_err(|e| {
-        crate::error::RavenClawError::CommandExecution(format!("Sandbox init failed: {}", e))
+        crate::error::RavenClawsError::CommandExecution(format!("Sandbox init failed: {}", e))
     })?;
     let audit_log = AuditLog::new(format!("agent-{}", std::process::id()));
 
@@ -499,7 +499,7 @@ pub async fn run_agent_loop_with_mcp(
                         "iteration": iteration,
                     })),
                 );
-                return Err(crate::error::RavenClawError::SecurityViolation(format!(
+                return Err(crate::error::RavenClawsError::SecurityViolation(format!(
                     "Session token expired after {} seconds (limit: {}s)",
                     elapsed, config.token_lifetime_secs
                 )));
@@ -517,7 +517,7 @@ pub async fn run_agent_loop_with_mcp(
                     &format!("LLM request failed: {}", e),
                     None,
                 );
-                return Err(crate::error::RavenClawError::Llm(e));
+                return Err(crate::error::RavenClawsError::Llm(e));
             }
         };
 
@@ -545,7 +545,7 @@ pub async fn run_agent_loop_with_mcp(
                             "content_preview": &content[..content.len().min(200)],
                         })),
                     );
-                    return Err(crate::error::RavenClawError::SecurityViolation(format!(
+                    return Err(crate::error::RavenClawsError::SecurityViolation(format!(
                         "LLM response blocked: potential prompt injection ({})",
                         reason
                     )));
@@ -683,7 +683,7 @@ pub async fn run_agent_loop_with_mcp(
         }
     }
 
-    Err(crate::error::RavenClawError::CommandExecution(
+    Err(crate::error::RavenClawsError::CommandExecution(
         "Agent loop reached max iterations without completing the task".to_string(),
     ))
 }
@@ -1010,7 +1010,7 @@ pub async fn run_exec_stream(
         }
         Err(e) => {
             warn!(error = %e, "Failed to start stream");
-            return Err(crate::error::RavenClawError::Llm(e));
+            return Err(crate::error::RavenClawsError::Llm(e));
         }
     }
 
@@ -1166,7 +1166,7 @@ pub async fn run_supervisor(
     let policy_engine = PolicyEngine::default_secure();
     let mut sandbox = Sandbox::default();
     sandbox.init().await.map_err(|e| {
-        crate::error::RavenClawError::CommandExecution(format!("Sandbox init failed: {}", e))
+        crate::error::RavenClawsError::CommandExecution(format!("Sandbox init failed: {}", e))
     })?;
     let audit_log = AuditLog::new(format!("supervisor-{}", std::process::id()));
     let registry = ToolRegistry::with_default_tools();
@@ -1300,7 +1300,7 @@ pub async fn run_supervisor(
         return Ok(());
     }
 
-    Err(crate::error::RavenClawError::CommandExecution(
+    Err(crate::error::RavenClawsError::CommandExecution(
         "Supervisor mode completed without results".to_string(),
     ))
 }
@@ -1536,7 +1536,7 @@ pub async fn run_supervisor_multi(
     let policy_engine = PolicyEngine::default_secure();
     let mut sandbox = Sandbox::default();
     sandbox.init().await.map_err(|e| {
-        crate::error::RavenClawError::CommandExecution(format!("Sandbox init failed: {}", e))
+        crate::error::RavenClawsError::CommandExecution(format!("Sandbox init failed: {}", e))
     })?;
     let audit_log = AuditLog::new(format!("supervisor-multi-{}", std::process::id()));
     let registry = ToolRegistry::with_default_tools();
@@ -1706,7 +1706,7 @@ pub async fn run_supervisor_multi(
         return Ok(());
     }
 
-    Err(crate::error::RavenClawError::CommandExecution(
+    Err(crate::error::RavenClawsError::CommandExecution(
         "Supervisor mode completed without results".to_string(),
     ))
 }
@@ -1723,7 +1723,7 @@ pub async fn run_repl(llm: Arc<dyn LLMProviderTrait>, config: Config) -> Result<
     let stdin = BufReader::new(tokio::io::stdin());
     let mut lines = stdin.lines();
 
-    println!("RavenClaw REPL — type /exit to quit, /reset to clear history");
+    println!("RavenClaws REPL — type /exit to quit, /reset to clear history");
 
     loop {
         print!("\n> ");

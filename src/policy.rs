@@ -1,4 +1,4 @@
-//! Deny-by-default security policy for RavenClaw
+//! RavenClaws
 //!
 //! Every tool call is checked against the policy before execution.
 //! The policy defines allow-lists for commands, paths, hosts, and

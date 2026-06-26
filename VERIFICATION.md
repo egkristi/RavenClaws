@@ -1,6 +1,6 @@
-# RavenClaw Verification
+# RavenClaws Verification
 
-This document describes how RavenClaw is verified across all deployment targets, what each test covers, and how to run the verification suite.
+This document describes how RavenClaws is verified across all deployment targets, what each test covers, and how to run the verification suite.
 
 ## Quick Start
 
@@ -78,13 +78,13 @@ cargo test                             # Run 311 Rust unit tests
 - **Model count**: Reports total available models (currently 32)
 
 #### 2. Local macOS Binary (12 tests)
-- **Binary exists**: Checks the release binary is present at `target/release/ravenclaw`
+- **Binary exists**: Checks the release binary is present at `target/release/ravenclaws`
 - **--version**: Binary prints version string
 - **--help**: Binary prints help text
-- **Config loading (TOML)**: Loads `tests/config/ravenclaw-test.toml` successfully
+- **Config loading (TOML)**: Loads `tests/config/ravenclaws-test.toml` successfully
 - **Config loading (env vars)**: Loads config from `RAVENCLAW__*` environment variables
 - **Single agent LLM chat**: Sends a chat request via LiteLLM and receives a response
-- **Multi-model mode**: Tests all configured providers respond (uses `tests/config/ravenclaw-multi-test.toml`)
+- **Multi-model mode**: Tests all configured providers respond (uses `tests/config/ravenclaws-multi-test.toml`)
 - **CLI provider override**: `--provider`, `--endpoint`, `--model` flags override config
 - **Verbose logging**: `--verbose` flag enables debug output
 - **Error handling (missing config)**: Running without config produces a non-zero exit code
@@ -116,7 +116,7 @@ cargo test                             # Run 311 Rust unit tests
 - **Node ready**: K8s node is in Ready state
 - **Manifest application**: `k8s/deployment-test.yaml` applies without errors
 - **Pod startup**: Pod reaches Running state within 60s
-- **Startup logs**: Pod logs show "RavenClaw starting"
+- **Startup logs**: Pod logs show "RavenClaws starting"
 - **Config loading**: Pod logs show "Configuration loaded" (ConfigMap works)
 - **LLM client init**: Pod logs show "LLM client initialized"
 - **Provider ready**: Pod logs show "Provider ready"
@@ -173,7 +173,7 @@ cargo test                             # Run 311 Rust unit tests
 
 ## Test Configurations
 
-### Single-provider config (`tests/config/ravenclaw-test.toml`)
+### Single-provider config (`tests/config/ravenclaws-test.toml`)
 ```toml
 [llm]
 provider = "litellm"
@@ -186,12 +186,12 @@ require_tls = false
 audit_log = false
 
 [runtime]
-workdir = "/tmp/ravenclaw-test"
+workdir = "/tmp/ravenclaws-test"
 max_agents = 5
 health_interval_secs = 10
 ```
 
-### Multi-model config (`tests/config/ravenclaw-multi-test.toml`)
+### Multi-model config (`tests/config/ravenclaws-multi-test.toml`)
 ```toml
 [llm]
 provider = "litellm"
@@ -221,7 +221,7 @@ timeout_secs = 60
 require_tls = false
 ```
 
-### K8s test config (`tests/config/ravenclaw-k8s-test.toml`)
+### K8s test config (`tests/config/ravenclaws-k8s-test.toml`)
 ```toml
 [llm]
 endpoint = "http://host.docker.internal:4000"
@@ -255,8 +255,8 @@ health_interval_secs = 10
 | LiteLLM on localhost:4000 | All LLM tests | `curl http://localhost:4000/health/readiness` |
 | Docker (Orbstack) | Docker + Linux + K8s tests | `docker info` |
 | kubectl | K8s tests | `kubectl cluster-info` |
-| Rust release binary | Local tests | `target/release/ravenclaw` |
-| Cross-compiled Linux binary | Linux tests | `target/aarch64-unknown-linux-gnu/release/ravenclaw` |
+| Rust release binary | Local tests | `target/release/ravenclaws` |
+| Cross-compiled Linux binary | Linux tests | `target/aarch64-unknown-linux-gnu/release/ravenclaws` |
 
 ## CI/CD Pipeline
 

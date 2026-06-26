@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — LLM Response Quality Tests
+# RavenClaws Verification — LLM Response Quality Tests
 # =============================================================================
 # Tests each available LiteLLM model with a prompt and verifies
 # non-empty, meaningful responses. Tests single and multi-model modes.

@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to RavenClaw are documented in this file.
+All notable changes to RavenClaws are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- **Crate renamed to `RavenClaws`** — `ravenclaw` name was taken on crates.io. Binary name stays `ravenclaw` via `[[bin]]` section in `Cargo.toml`. Updated `deny.toml` exception name accordingly.
+- **Crate renamed to `RavenClawss`** — `ravenclaws` name was taken on crates.io. Binary name stays `ravenclaws` via `[[bin]]` section in `Cargo.toml`. Updated `deny.toml` exception name accordingly.
 - **Container Build cosign signing** — added `continue-on-error: true` and `contents: read` permission to the Sign Container job in `container.yml` to match Build & Release workflow behavior.
 
 ### Changed
@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.9.1] — 2026-06-23
 
 ### Added
-- **Self-provisioning of sub-agents** (`src/swarm.rs`) — RavenClaw dynamically spawns new agent instances based on task decomposition. Supervisor mode becomes recursive: supervisors spawn sub-supervisors, creating task decomposition trees of arbitrary depth.
+- **Self-provisioning of sub-agents** (`src/swarm.rs`) — RavenClaws dynamically spawns new agent instances based on task decomposition. Supervisor mode becomes recursive: supervisors spawn sub-supervisors, creating task decomposition trees of arbitrary depth.
   - `SwarmOrchestrator` — core orchestrator with recursive supervision, task analysis, role assignment, and result aggregation
   - `WorkerProfile` — declarative profile with persona, allowed_tools, provider/model overrides, resource limits, and delegation capability
   - `SwarmTopology` — four topologies: Star, Mesh, Hierarchical, Hybrid
@@ -52,7 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Recursive supervision via `Box::pin` to avoid Rust's recursive async fn limitation
   - LLM-based dynamic role assignment (`analyze_task_roles`) with fallback to default roles
   - CLI flags: `--swarm-topology`, `--swarm-max-depth`, `--swarm-max-workers`, `--swarm-dynamic-roles`, `--swarm-profiles`
-  - Config section: `[swarm]` in `ravenclaw.toml`
+  - Config section: `[swarm]` in `ravenclaws.toml`
   - Mode dispatch: `--mode orchestrate` for both single-provider and multi-model paths
   - `MultiModelManager` made `Clone` for sub-orchestrator spawning
   - 17 unit tests covering all profiles, config serde, orchestrator construction, depth limits, task analysis fallback
@@ -65,7 +65,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `AgentLoopConfig.token_lifetime_secs` — new field (default: 0 = unlimited)
   - Wired into both `run_agent_loop` and `run_agent_loop_with_mcp` — checked before each iteration
   - Session start time tracked via `std::time::Instant`
-  - On expiry: returns `RavenClawError::SecurityViolation` with elapsed time details
+  - On expiry: returns `RavenClawsError::SecurityViolation` with elapsed time details
   - Audit log records `SecurityViolation` event with elapsed time, limit, and iteration
   - Removed `#[allow(dead_code)]` from `config.rs` `SecurityConfig.token_lifetime_secs`
   - 393 total unit tests (0 regressions)
@@ -77,7 +77,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - LLM-driven goal completion detection (responds to `GOAL_COMPLETE` / `[DONE]` markers)
   - Agent loop integration for tool execution during each tick
   - CLI flags: `--heartbeat`, `--heartbeat-goal`, `--heartbeat-tick-interval`, `--heartbeat-max-ticks`, `--heartbeat-session`
-  - Config section: `[heartbeat]` in `ravenclaw.toml`
+  - Config section: `[heartbeat]` in `ravenclaws.toml`
   - 8 unit tests covering config defaults, state lifecycle, serialization, and prompt building
   - 401 total unit tests (0 regressions)
 - **Long-horizon task persistence** — task state survives restarts; agent resumes from last checkpoint with full context.
@@ -149,7 +149,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Tasks stored as individual JSON files in `<workdir>/tasks/` directory
   - 8 new unit tests covering creation, submission, status transitions, cancellation, listing, persistence across restarts, and error handling
   - 319 total unit tests (+8, 0 regressions)
-- **Helm chart** (`charts/ravenclaw/`) — official Helm chart for deploying RavenClaw on Kubernetes
+- **Helm chart** (`charts/ravenclaws/`) — official Helm chart for deploying RavenClaws on Kubernetes
   - 11 configurable Kubernetes resources: ServiceAccount, ConfigMap, Secret, Deployment, Service, Ingress, RBAC (Role + RoleBinding), PersistentVolumeClaim, NetworkPolicy, PodDisruptionBudget, ServiceMonitor
   - Full values.yaml with sensible defaults matching existing `k8s/deployment.yaml`
   - Optional OpenTelemetry and RavenFabric configuration in ConfigMap
@@ -193,7 +193,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.7.0] — 2026-02-05
 
 ### Added
-- **MCP Server** (`src/mcp.rs`) — expose RavenClaw's built-in tools over stdio via the Model Context Protocol
+- **MCP Server** (`src/mcp.rs`) — expose RavenClaws's built-in tools over stdio via the Model Context Protocol
   - `McpServer` struct with `run()`, `handle_request()`, `handle_initialize()`, `handle_tools_list()`, `handle_tools_call()`
   - Supports `initialize`, `notifications/initialized`, `tools/list`, `tools/call` MCP methods
   - All tool calls policy-checked via `PolicyEngine` and logged to `AuditLog`
@@ -366,18 +366,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/egkristi/RavenClaw/compare/v0.8.0...HEAD
-[0.8.0]: https://github.com/egkristi/RavenClaw/compare/v0.7.2...v0.8.0
-[0.7.2]: https://github.com/egkristi/RavenClaw/compare/v0.7.1...v0.7.2
-[0.7.1]: https://github.com/egkristi/RavenClaw/compare/v0.7.0...v0.7.1
-[0.7.0]: https://github.com/egkristi/RavenClaw/compare/v0.6.1...v0.7.0
-[0.6.1]: https://github.com/egkristi/RavenClaw/compare/v0.6.0...v0.6.1
-[0.6.0]: https://github.com/egkristi/RavenClaw/compare/v0.5.3...v0.6.0
-[0.5.3]: https://github.com/egkristi/RavenClaw/compare/v0.5.2...v0.5.3
-[0.5.2]: https://github.com/egkristi/RavenClaw/compare/v0.5.1...v0.5.2
-[0.5.1]: https://github.com/egkristi/RavenClaw/compare/v0.5.0...v0.5.1
-[0.5.0]: https://github.com/egkristi/RavenClaw/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/egkristi/RavenClaw/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/egkristi/RavenClaw/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/egkristi/RavenClaw/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/egkristi/RavenClaw/releases/tag/v0.1.0
+[Unreleased]: https://github.com/egkristi/RavenClaws/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/egkristi/RavenClaws/compare/v0.7.2...v0.8.0
+[0.7.2]: https://github.com/egkristi/RavenClaws/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/egkristi/RavenClaws/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/egkristi/RavenClaws/compare/v0.6.1...v0.7.0
+[0.6.1]: https://github.com/egkristi/RavenClaws/compare/v0.6.0...v0.6.1
+[0.6.0]: https://github.com/egkristi/RavenClaws/compare/v0.5.3...v0.6.0
+[0.5.3]: https://github.com/egkristi/RavenClaws/compare/v0.5.2...v0.5.3
+[0.5.2]: https://github.com/egkristi/RavenClaws/compare/v0.5.1...v0.5.2
+[0.5.1]: https://github.com/egkristi/RavenClaws/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/egkristi/RavenClaws/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/egkristi/RavenClaws/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/egkristi/RavenClaws/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/egkristi/RavenClaws/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/egkristi/RavenClaws/releases/tag/v0.1.0

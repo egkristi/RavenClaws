@@ -1,6 +1,6 @@
 //! Swarm orchestration — self-provisioning sub-agents with recursive supervision
 //!
-//! RavenClaw's swarm orchestrator enables truly autonomous multi-agent coordination:
+//! RavenClaws's swarm orchestrator enables truly autonomous multi-agent coordination:
 //! supervisors can spawn sub-supervisors, creating recursive task decomposition
 //! trees of arbitrary depth. Each worker has a declarative profile specifying its
 //! persona, tools, provider, model, and resource limits.
@@ -32,12 +32,12 @@
 //! # Integration
 //!
 //! - CLI: `--swarm-topology <star|mesh|hierarchical|hybrid> --max-workers <N>`
-//! - Config: `[swarm]` section in `ravenclaw.toml`
+//! - Config: `[swarm]` section in `ravenclaws.toml`
 //! - Supervisor mode: automatically uses orchestrator when `max_depth > 0`
 
 use crate::agent::ConversationMemory;
 use crate::audit::{AuditEventType, AuditLog};
-use crate::error::{RavenClawError, Result};
+use crate::error::{RavenClawsError, Result};
 use crate::llm::{ChatMessage, LLMProviderTrait, MultiModelManager};
 use crate::policy::PolicyEngine;
 use crate::ravenfabric::RavenFabricClient;
@@ -1120,7 +1120,7 @@ impl SwarmOrchestrator {
     /// Initialize the sandbox for this orchestrator.
     pub async fn init(&mut self) -> Result<()> {
         self.sandbox.init().await.map_err(|e| {
-            RavenClawError::CommandExecution(format!("Swarm sandbox init failed: {}", e))
+            RavenClawsError::CommandExecution(format!("Swarm sandbox init failed: {}", e))
         })?;
         Ok(())
     }
@@ -1312,7 +1312,7 @@ impl SwarmOrchestrator {
         }
 
         let llm = self.llm.as_ref().ok_or_else(|| {
-            RavenClawError::CommandExecution("No LLM provider available for worker".to_string())
+            RavenClawsError::CommandExecution("No LLM provider available for worker".to_string())
         })?;
 
         let mut memory = ConversationMemory::new(&profile.persona, profile.max_memory_messages);
@@ -1339,7 +1339,7 @@ impl SwarmOrchestrator {
                     hm_guard.task_failed(role);
                 }
             }
-            RavenClawError::CommandExecution(format!("Worker {} failed: {}", role, e))
+            RavenClawsError::CommandExecution(format!("Worker {} failed: {}", role, e))
         })?;
 
         let content = response
@@ -1413,7 +1413,9 @@ impl SwarmOrchestrator {
     /// Recursive supervision implementation (boxed to avoid infinite future size).
     async fn recursive_supervise_impl(&self, task: &str, roles: &[String]) -> Result<String> {
         let llm = self.llm.as_ref().ok_or_else(|| {
-            RavenClawError::CommandExecution("No LLM provider available for supervisor".to_string())
+            RavenClawsError::CommandExecution(
+                "No LLM provider available for supervisor".to_string(),
+            )
         })?;
 
         // Register supervisor with health monitor
@@ -1661,7 +1663,7 @@ impl SwarmOrchestrator {
             return Ok(aggregated);
         }
 
-        Err(RavenClawError::CommandExecution(
+        Err(RavenClawsError::CommandExecution(
             "Supervisor completed without results".to_string(),
         ))
     }

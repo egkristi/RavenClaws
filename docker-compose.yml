@@ -1,12 +1,12 @@
-# RavenClaw Development Environment
+# RavenClaws Development Environment
 # Includes LiteLLM proxy for local testing
 
 services:
-  ravenclaw:
+  ravenclaws:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ravenclaw-dev
+    container_name: ravenclaws-dev
     environment:
       - RUST_LOG=debug
       - RAVENCLAW__LLM__ENDPOINT=http://litellm:4000
@@ -19,7 +19,7 @@ services:
     depends_on:
       - litellm
     networks:
-      - ravenclaw-net
+      - ravenclaws-net
     security_opt:
       - no-new-privileges:true
     read_only: true
@@ -38,13 +38,13 @@ services:
     ports:
       - "4000:4000"
     networks:
-      - ravenclaw-net
+      - ravenclaws-net
     security_opt:
       - no-new-privileges:true
 
   # Optional: RavenFabric for swarm/supervisor coordination
   # Uncomment to enable multi-agent orchestration.
-  # RavenFabric agent binary is included in the RavenClaw container image.
+  # RavenFabric agent binary is included in the RavenClaws container image.
   # ravenfabric:
   #   image: ravenfabric/ravenfabric:latest
   #   container_name: ravenfabric-dev
@@ -53,14 +53,14 @@ services:
   #   ports:
   #     - "8080:8080"
   #   networks:
-  #     - ravenclaw-net
+  #     - ravenclaws-net
 
 volumes:
   workspace:
   litellm-data:
 
 networks:
-  ravenclaw-net:
+  ravenclaws-net:
     driver: bridge
     ipam:
       config:

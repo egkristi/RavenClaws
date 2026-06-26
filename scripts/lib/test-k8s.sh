@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# RavenClaw Verification — Kubernetes Tests (Orbstack K8s)
+# RavenClaws Verification — Kubernetes Tests (Orbstack K8s)
 # =============================================================================
 # Tests K8s deployment: cluster connectivity, manifest application,
 # pod startup, config loading, LLM connectivity, resource limits,
@@ -12,7 +12,7 @@ test_kubernetes() {
 
     if ! check_prereq kubectl; then return; fi
 
-    local K8S_NAMESPACE="ravenclaw-test"
+    local K8S_NAMESPACE="ravenclaws-test"
     local K8S_DEPLOY="$PROJECT_DIR/k8s/deployment-test.yaml"
 
     # ── Cluster connectivity ───────────────────────────────────────────────
@@ -43,7 +43,7 @@ test_kubernetes() {
     log_detail "Waiting for pod to be scheduled..."
     local pod_name=""
     for i in $(seq 1 15); do
-        pod_name=$(kubectl -n "$K8S_NAMESPACE" get pods -l app.kubernetes.io/name=ravenclaw -o name 2>/dev/null | head -1)
+        pod_name=$(kubectl -n "$K8S_NAMESPACE" get pods -l app.kubernetes.io/name=ravenclaws -o name 2>/dev/null | head -1)
         if [[ -n "$pod_name" ]]; then
             log_detail "Pod scheduled after ${i}s"
             break
@@ -94,8 +94,8 @@ test_kubernetes() {
         return
     fi
 
-    run_test "K8s pod logs: RavenClaw starting" \
-        bash -c "grep -q 'RavenClaw starting' \"$pod_logs_file\""
+    run_test "K8s pod logs: RavenClaws starting" \
+        bash -c "grep -q 'RavenClaws starting' \"$pod_logs_file\""
     run_test "K8s pod logs: Configuration loaded" \
         bash -c "grep -q 'Configuration loaded' \"$pod_logs_file\""
     run_test "K8s pod logs: LLM client initialized" \
@@ -115,23 +115,23 @@ test_kubernetes() {
     # ── Resource limits ────────────────────────────────────────────────────
     log_sub "Resource configuration"
     run_test "K8s resource limits configured" \
-        bash -c "kubectl -n $K8S_NAMESPACE get pods -l app.kubernetes.io/name=ravenclaw -o jsonpath='{.items[0].spec.containers[0].resources.limits}' 2>&1 | grep -q '.'"
+        bash -c "kubectl -n $K8S_NAMESPACE get pods -l app.kubernetes.io/name=ravenclaws -o jsonpath='{.items[0].spec.containers[0].resources.limits}' 2>&1 | grep -q '.'"
 
     # ── Security context ───────────────────────────────────────────────────
     log_sub "Security context"
     run_test "K8s container runs as non-root user" \
-        bash -c "kubectl -n $K8S_NAMESPACE get pods -l app.kubernetes.io/name=ravenclaw -o jsonpath='{.items[0].spec.containers[0].securityContext.runAsUser}' 2>&1 | grep -q '65532'"
+        bash -c "kubectl -n $K8S_NAMESPACE get pods -l app.kubernetes.io/name=ravenclaws -o jsonpath='{.items[0].spec.containers[0].securityContext.runAsUser}' 2>&1 | grep -q '65532'"
     run_test "K8s read-only root filesystem" \
-        bash -c "kubectl -n $K8S_NAMESPACE get pods -l app.kubernetes.io/name=ravenclaw -o jsonpath='{.items[0].spec.containers[0].securityContext.readOnlyRootFilesystem}' 2>&1 | grep -q 'true'"
+        bash -c "kubectl -n $K8S_NAMESPACE get pods -l app.kubernetes.io/name=ravenclaws -o jsonpath='{.items[0].spec.containers[0].securityContext.readOnlyRootFilesystem}' 2>&1 | grep -q 'true'"
     run_test "K8s all capabilities dropped" \
-        bash -c "kubectl -n $K8S_NAMESPACE get pods -l app.kubernetes.io/name=ravenclaw -o jsonpath='{.items[0].spec.containers[0].securityContext.capabilities.drop}' 2>&1 | grep -q 'ALL'"
+        bash -c "kubectl -n $K8S_NAMESPACE get pods -l app.kubernetes.io/name=ravenclaws -o jsonpath='{.items[0].spec.containers[0].securityContext.capabilities.drop}' 2>&1 | grep -q 'ALL'"
 
     # ── ConfigMap ──────────────────────────────────────────────────────────
     log_sub "ConfigMap verification"
     run_test "K8s ConfigMap exists" \
-        kubectl -n "$K8S_NAMESPACE" get configmap ravenclaw-config
+        kubectl -n "$K8S_NAMESPACE" get configmap ravenclaws-config
     run_test "K8s ConfigMap has valid config" \
-        bash -c "kubectl -n $K8S_NAMESPACE get configmap ravenclaw-config -o go-template='{{index .data \"ravenclaw.toml\"}}' 2>&1 | grep -q 'endpoint'"
+        bash -c "kubectl -n $K8S_NAMESPACE get configmap ravenclaws-config -o go-template='{{index .data \"ravenclaws.toml\"}}' 2>&1 | grep -q 'endpoint'"
 
     # ── Cleanup ────────────────────────────────────────────────────────────
     log_sub "Cleanup"

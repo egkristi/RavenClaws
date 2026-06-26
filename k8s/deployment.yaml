@@ -2,17 +2,17 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ravenclaw
+  name: ravenclaws
   labels:
-    app.kubernetes.io/name: ravenclaw
-    app.kubernetes.io/part-of: ravenclaw
+    app.kubernetes.io/name: ravenclaws
+    app.kubernetes.io/part-of: ravenclaws
 
 ---
 apiVersion: v1
 kind: Secret
 metadata:
-  name: ravenclaw-secrets
-  namespace: ravenclaw
+  name: ravenclaws-secrets
+  namespace: ravenclaws
 type: Opaque
 stringData:
   LITELLM_API_KEY: "changeme"
@@ -21,20 +21,20 @@ stringData:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: ravenclaw-config
-  namespace: ravenclaw
+  name: ravenclaws-config
+  namespace: ravenclaws
 data:
-  ravenclaw.toml: |
+  ravenclaws.toml: |
     [llm]
-    endpoint = "http://litellm.ravenclaw.svc:4000"
+    endpoint = "http://litellm.ravenclaws.svc:4000"
     model = "gpt-4o-mini"
     timeout_secs = 30
 
     # Optional: RavenFabric for swarm/supervisor coordination
     # [ravenfabric]
-    # endpoint = "http://ravenfabric.ravenclaw.svc:8080"
+    # endpoint = "http://ravenfabric.ravenclaws.svc:8080"
     # remote_exec = true
-    # allowed_hosts = ["litellm.ravenclaw.svc", "ravenfabric.ravenclaw.svc"]
+    # allowed_hosts = ["litellm.ravenclaws.svc", "ravenfabric.ravenclaws.svc"]
 
     [security]
     require_tls = false
@@ -50,22 +50,22 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ravenclaw
-  namespace: ravenclaw
+  name: ravenclaws
+  namespace: ravenclaws
   labels:
-    app.kubernetes.io/name: ravenclaw
+    app.kubernetes.io/name: ravenclaws
     app.kubernetes.io/component: agent
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: ravenclaw
+      app.kubernetes.io/name: ravenclaws
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: ravenclaw
+        app.kubernetes.io/name: ravenclaws
     spec:
-      serviceAccountName: ravenclaw
+      serviceAccountName: ravenclaws
       securityContext:
         runAsNonRoot: true
         runAsUser: 65532
@@ -74,20 +74,20 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       containers:
-        - name: ravenclaw
-          image: ghcr.io/egkristi/ravenclaw:latest
+        - name: ravenclaws
+          image: ghcr.io/egkristi/ravenclaws:latest
           imagePullPolicy: Always
           args:
             - "--serve"
             - "--config"
-            - "/config/ravenclaw.toml"
+            - "/config/ravenclaws.toml"
           env:
             - name: RUST_LOG
               value: "info"
             - name: LITELLM_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: ravenclaw-secrets
+                  name: ravenclaws-secrets
                   key: LITELLM_API_KEY
           volumeMounts:
             - name: config
@@ -124,7 +124,7 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: ravenclaw-config
+            name: ravenclaws-config
         - name: workspace
           emptyDir:
             sizeLimit: 1Gi
@@ -134,15 +134,15 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: ravenclaw
-  namespace: ravenclaw
+  name: ravenclaws
+  namespace: ravenclaws
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: ravenclaw
-  namespace: ravenclaw
+  name: ravenclaws
+  namespace: ravenclaws
 rules:
   - apiGroups: [""]
     resources: ["configmaps", "secrets"]
@@ -152,13 +152,13 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: ravenclaw
-  namespace: ravenclaw
+  name: ravenclaws
+  namespace: ravenclaws
 subjects:
   - kind: ServiceAccount
-    name: ravenclaw
-    namespace: ravenclaw
+    name: ravenclaws
+    namespace: ravenclaws
 roleRef:
   kind: Role
-  name: ravenclaw
+  name: ravenclaws
   apiGroup: rbac.authorization.k8s.io

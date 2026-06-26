@@ -1,4 +1,4 @@
-//! Configuration management for RavenClaw
+//! RavenClaws
 //!
 //! Secure by default: no credentials in config files, use environment variables.
 //! Supports multiple LLM providers: LiteLLM, OpenRouter, Ollama, OpenAI.
@@ -196,7 +196,7 @@ pub fn default_retry_max_delay() -> u64 {
 }
 
 pub fn default_system_prompt() -> String {
-    "You are RavenClaw, a lightweight autonomous agent. \
+    "You are RavenClaws, a lightweight autonomous agent. \
         Be concise, efficient, and secure. Always validate inputs and outputs."
         .to_string()
 }
@@ -381,12 +381,12 @@ impl Config {
         }
 
         // Load from environment (RAVENCLAW_* prefix)
-        // Save and remove RAVENCLAW__LLMS before serde deserialization because
+        // Save and remove RAVENCLAWS__LLMS before serde deserialization because
         // config::Environment passes it as a raw string, which serde can't
         // deserialize into Vec<LLMConfig>. We restore and parse it manually below.
-        let ravenclaw_llms = std::env::var("RAVENCLAW__LLMS").ok();
-        if ravenclaw_llms.is_some() {
-            std::env::remove_var("RAVENCLAW__LLMS");
+        let ravenclaws_llms = std::env::var("RAVENCLAWS__LLMS").ok();
+        if ravenclaws_llms.is_some() {
+            std::env::remove_var("RAVENCLAWS__LLMS");
         }
 
         config_builder = config_builder
@@ -400,9 +400,9 @@ impl Config {
             .try_deserialize()
             .map_err(|e| ConfigError::LoadError(e.to_string()))?;
 
-        // Restore RAVENCLAW__LLMS if it was set
-        if let Some(ref val) = ravenclaw_llms {
-            std::env::set_var("RAVENCLAW__LLMS", val);
+        // Restore RAVENCLAWS__LLMS if it was set
+        if let Some(ref val) = ravenclaws_llms {
+            std::env::set_var("RAVENCLAWS__LLMS", val);
         }
 
         // Override sensitive values from environment
@@ -410,7 +410,7 @@ impl Config {
         if let Ok(key) = std::env::var("LITELLM_API_KEY") {
             cfg.llm.api_key = Some(key);
         }
-        if let Ok(provider) = std::env::var("RAVENCLAW__LLM__PROVIDER") {
+        if let Ok(provider) = std::env::var("RAVENCLAWS__LLM__PROVIDER") {
             cfg.llm.provider = match provider.to_lowercase().as_str() {
                 "openrouter" => LLMProvider::OpenRouter,
                 "ollama" => LLMProvider::Ollama,
@@ -419,17 +419,17 @@ impl Config {
                 _ => LLMProvider::LiteLLM,
             };
         }
-        if let Ok(endpoint) = std::env::var("RAVENCLAW__LLM__ENDPOINT") {
+        if let Ok(endpoint) = std::env::var("RAVENCLAWS__LLM__ENDPOINT") {
             cfg.llm.endpoint = endpoint;
         }
-        if let Ok(model) = std::env::var("RAVENCLAW__LLM__MODEL") {
+        if let Ok(model) = std::env::var("RAVENCLAWS__LLM__MODEL") {
             cfg.llm.model = model;
         }
 
         // Multi-provider mode
-        // Note: RAVENCLAW__LLMS is handled manually (not via config::Environment)
+        // Note: RAVENCLAWS__LLMS is handled manually (not via config::Environment)
         // because it's a JSON string that serde can't deserialize into Vec<LLMConfig>.
-        if let Ok(keys) = std::env::var("RAVENCLAW__LLMS") {
+        if let Ok(keys) = std::env::var("RAVENCLAWS__LLMS") {
             // Parse JSON array of LLM configs from env
             if let Ok(llms) = serde_json::from_str::<Vec<LLMConfig>>(&keys) {
                 cfg.llms = llms;
@@ -506,7 +506,7 @@ mod tests {
     #[serial(env_test)]
     fn test_default_config() {
         std::env::set_var("LITELLM_API_KEY", "test-key");
-        std::env::set_var("RAVENCLAW__LLM__ENDPOINT", "http://localhost:4000");
+        std::env::set_var("RAVENCLAWS__LLM__ENDPOINT", "http://localhost:4000");
 
         let config = Config::load(None).unwrap();
         assert_eq!(config.llm.model, "gpt-4o-mini");
@@ -518,7 +518,7 @@ mod tests {
 
         // Clean up env vars set by this test
         std::env::remove_var("LITELLM_API_KEY");
-        std::env::remove_var("RAVENCLAW__LLM__ENDPOINT");
+        std::env::remove_var("RAVENCLAWS__LLM__ENDPOINT");
     }
 
     #[test]
@@ -553,7 +553,7 @@ mod tests {
         assert_eq!(config.timeout_secs, 30);
         assert!(config.api_key.is_none());
         assert!(config.endpoint.is_empty());
-        assert!(config.system_prompt.contains("RavenClaw"));
+        assert!(config.system_prompt.contains("RavenClaws"));
     }
 
     #[test]
@@ -1093,8 +1093,8 @@ mod tests {
     #[serial(env_test)]
     fn test_config_load_with_env_overrides() {
         // Set up env vars for single-provider mode
-        std::env::set_var("RAVENCLAW__LLM__ENDPOINT", "http://localhost:4000");
-        std::env::set_var("RAVENCLAW__LLM__MODEL", "gpt-4o");
+        std::env::set_var("RAVENCLAWS__LLM__ENDPOINT", "http://localhost:4000");
+        std::env::set_var("RAVENCLAWS__LLM__MODEL", "gpt-4o");
         std::env::set_var("LITELLM_API_KEY", "env-key");
 
         let config = Config::load(None).unwrap();
@@ -1103,8 +1103,8 @@ mod tests {
         assert_eq!(config.llm.api_key.clone().unwrap(), "env-key");
 
         // Clean up env vars set by this test
-        std::env::remove_var("RAVENCLAW__LLM__ENDPOINT");
-        std::env::remove_var("RAVENCLAW__LLM__MODEL");
+        std::env::remove_var("RAVENCLAWS__LLM__ENDPOINT");
+        std::env::remove_var("RAVENCLAWS__LLM__MODEL");
         std::env::remove_var("LITELLM_API_KEY");
     }
 
@@ -1112,9 +1112,9 @@ mod tests {
     #[serial(env_test)]
     fn test_config_load_with_llms_json_env() {
         let llms_json = r#"[{"provider":"ollama","endpoint":"http://localhost:11434","model":"llama3.1","timeout_secs":60}]"#;
-        std::env::set_var("RAVENCLAW__LLMS", llms_json);
+        std::env::set_var("RAVENCLAWS__LLMS", llms_json);
         std::env::set_var("LITELLM_API_KEY", "dummy");
-        std::env::set_var("RAVENCLAW__LLM__ENDPOINT", "http://localhost:4000");
+        std::env::set_var("RAVENCLAWS__LLM__ENDPOINT", "http://localhost:4000");
 
         let config = Config::load(None).unwrap();
         assert_eq!(config.llms.len(), 1);
@@ -1124,9 +1124,9 @@ mod tests {
         assert_eq!(config.llms[0].timeout_secs, 60);
 
         // Clean up env vars set by this test
-        std::env::remove_var("RAVENCLAW__LLMS");
+        std::env::remove_var("RAVENCLAWS__LLMS");
         std::env::remove_var("LITELLM_API_KEY");
-        std::env::remove_var("RAVENCLAW__LLM__ENDPOINT");
+        std::env::remove_var("RAVENCLAWS__LLM__ENDPOINT");
     }
 
     #[test]
@@ -1134,7 +1134,7 @@ mod tests {
     fn test_config_load_with_ravenfabric_env() {
         std::env::set_var("RAVENFABRIC_ENDPOINT", "https://fabric.example.com:8443");
         std::env::set_var("LITELLM_API_KEY", "dummy");
-        std::env::set_var("RAVENCLAW__LLM__ENDPOINT", "http://localhost:4000");
+        std::env::set_var("RAVENCLAWS__LLM__ENDPOINT", "http://localhost:4000");
 
         let config = Config::load(None).unwrap();
         assert_eq!(
@@ -1145,23 +1145,23 @@ mod tests {
         // Clean up env vars set by this test
         std::env::remove_var("RAVENFABRIC_ENDPOINT");
         std::env::remove_var("LITELLM_API_KEY");
-        std::env::remove_var("RAVENCLAW__LLM__ENDPOINT");
+        std::env::remove_var("RAVENCLAWS__LLM__ENDPOINT");
     }
 
     #[test]
     #[serial(env_test)]
     fn test_config_load_with_provider_env() {
         // Test provider override via env var — use a valid serde value
-        std::env::set_var("RAVENCLAW__LLM__PROVIDER", "openai");
-        std::env::set_var("RAVENCLAW__LLM__ENDPOINT", "https://api.openai.com");
+        std::env::set_var("RAVENCLAWS__LLM__PROVIDER", "openai");
+        std::env::set_var("RAVENCLAWS__LLM__ENDPOINT", "https://api.openai.com");
         std::env::set_var("LITELLM_API_KEY", "dummy");
 
         let config = Config::load(None).unwrap();
         assert_eq!(config.llm.provider, LLMProvider::OpenAI);
 
         // Clean up env vars set by this test
-        std::env::remove_var("RAVENCLAW__LLM__PROVIDER");
-        std::env::remove_var("RAVENCLAW__LLM__ENDPOINT");
+        std::env::remove_var("RAVENCLAWS__LLM__PROVIDER");
+        std::env::remove_var("RAVENCLAWS__LLM__ENDPOINT");
         std::env::remove_var("LITELLM_API_KEY");
     }
 
@@ -1298,13 +1298,13 @@ mod tests {
         // Loading with a non-existent file path should still succeed
         // (the File source is created with required(false))
         std::env::set_var("LITELLM_API_KEY", "test-key");
-        std::env::set_var("RAVENCLAW__LLM__ENDPOINT", "http://localhost:4000");
+        std::env::set_var("RAVENCLAWS__LLM__ENDPOINT", "http://localhost:4000");
 
-        let result = Config::load(Some("/tmp/nonexistent/ravenclaw.toml"));
+        let result = Config::load(Some("/tmp/nonexistent/ravenclaws.toml"));
         assert!(result.is_ok());
 
         std::env::remove_var("LITELLM_API_KEY");
-        std::env::remove_var("RAVENCLAW__LLM__ENDPOINT");
+        std::env::remove_var("RAVENCLAWS__LLM__ENDPOINT");
     }
 
     #[test]
