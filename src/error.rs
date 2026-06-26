@@ -2,7 +2,13 @@
 
 use thiserror::Error;
 
+/// Unified error type for RavenClaws.
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
+/// Match with a wildcard arm to handle future variants.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum RavenClawsError {
     #[error("LLM error: {0}")]
     Llm(#[from] crate::llm::LLMError),

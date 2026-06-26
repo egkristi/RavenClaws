@@ -7,7 +7,12 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use zeroize::Zeroize;
 
+/// Configuration error type.
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum ConfigError {
     #[error("Failed to load config: {0}")]
     LoadError(String),
@@ -19,8 +24,13 @@ pub enum ConfigError {
 }
 
 /// LLM Provider type — determines which backend to use
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
+/// Match with a wildcard arm to handle future variants.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 #[serde(rename_all = "lowercase")]
+#[non_exhaustive]
 pub enum LLMProvider {
     #[default]
     LiteLLM,
@@ -30,7 +40,13 @@ pub enum LLMProvider {
     Anthropic,
 }
 
+/// Top-level configuration for RavenClaws.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+/// Construct using `Config::load()` or use `..Default::default()` for updates.
 #[derive(Debug, Clone, Deserialize, Default)]
+#[non_exhaustive]
 pub struct Config {
     /// LiteLLM configuration (single provider mode)
     #[serde(default)]
@@ -75,8 +91,12 @@ pub struct Config {
 }
 
 /// Web search configuration (v0.8)
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
+#[non_exhaustive]
 pub struct WebSearchConfig {
     /// Search API endpoint (SearXNG or compatible)
     #[serde(default = "default_search_endpoint")]
@@ -119,7 +139,11 @@ fn default_search_max_results() -> usize {
 }
 
 /// Scheduler / triggers configuration (v0.8)
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize, Default)]
+#[non_exhaustive]
 pub struct SchedulerConfig {
     /// List of trigger configurations
     #[serde(default)]
@@ -127,7 +151,11 @@ pub struct SchedulerConfig {
 }
 
 /// Telemetry / OpenTelemetry configuration (v0.7.2)
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize, Default)]
+#[non_exhaustive]
 pub struct TelemetryConfig {
     /// OTLP gRPC endpoint for OpenTelemetry (e.g., "http://jaeger:4317")
     #[serde(default)]
@@ -142,7 +170,13 @@ pub struct TelemetryConfig {
     pub otel_disabled: bool,
 }
 
+/// LLM provider configuration.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+/// Construct using `LLMConfig::default()` or use `..Default::default()` for updates.
 #[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
 pub struct LLMConfig {
     /// Provider type: litellm, openrouter, ollama, openai
     #[serde(default)]
@@ -201,7 +235,12 @@ pub fn default_system_prompt() -> String {
         .to_string()
 }
 
+/// RavenFabric mesh client configuration.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
 pub struct RavenFabricConfig {
     /// RavenFabric endpoint
     #[serde(default)]
@@ -234,7 +273,12 @@ impl Default for RavenFabricConfig {
     }
 }
 
+/// Security configuration.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
 pub struct SecurityConfig {
     /// Require TLS for all connections
     #[serde(default = "default_true")]
@@ -270,7 +314,12 @@ impl Default for SecurityConfig {
     }
 }
 
+/// Runtime configuration.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
 pub struct RuntimeConfig {
     /// Working directory
     #[serde(default = "default_workdir")]

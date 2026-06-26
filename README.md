@@ -4,25 +4,27 @@
 
 [![License](https://img.shields.io/badge/license-AGPLv3%20%2B%20Commercial-blue.svg)](LICENSING.md)
 [![CI](https://github.com/egkristi/RavenClaws/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
-[![Verification](https://img.shields.io/badge/verification-94%20checks-brightgreen)](VERIFICATION.md)
+[![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](VERIFICATION.md)
 [![Binary](https://img.shields.io/badge/binary-~5.2MB-blue)]()
-[![Status](https://img.shields.io/badge/status-v0.9.0-brightgreen)](ROADMAP.md)
+[![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
+[![Status](https://img.shields.io/badge/status-v0.9.2-brightgreen)](ROADMAP.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.9.2 (2026-06-25).** The provider layer (5 providers), one-shot execution (`--exec`),
+> **Status: v0.9.2 (2026-06-26).** The provider layer (5 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
 > retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, **supervisor mode**,
 > **RavenFabric mesh client**, **MCP server**, **HTTP server mode**, **autonomous heartbeat agent**,
 > **long-horizon task persistence**, **scheduling/triggers**, **inter-agent communication bus**,
-> **swarm health & telemetry**, and **library crate** all work today.
+> **swarm health & telemetry**, **library crate** (on crates.io), and **eval harness** all work today.
 > This README marks ✅ built vs. 📋 planned — honestly. Trust is a feature; we don't inflate it.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
 | **~5.2 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
 | **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **452 unit tests + 114 verification checks** |
+| **Library crate** | **18 modules** | **crates.io** | **AGPLv3 + Commercial** |
 
 ---
 
@@ -75,9 +77,9 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ### Verified across every target
 
-- **307 Rust unit tests** (incl. `mockito`-backed provider request/response/error paths for all 5 providers, plus 12 RavenFabric client tests), runnable anywhere via `cargo test`.
-- Plus a **94-check verification suite** (`scripts/verify.sh`) spanning **9 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security and performance checks.
-- *Note:* the 94 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
+- **452 Rust unit tests** across **18 modules** (incl. `mockito`-backed provider request/response/error paths for all 5 providers, plus RavenFabric, swarm, heartbeat, eval, and scheduler tests), runnable anywhere via `cargo test`.
+- Plus a **114-check verification suite** (`scripts/verify.sh`) spanning **10 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security, performance, LLM quality, swarm, and eval checks.
+- *Note:* the 114 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
 
 ---
 
@@ -101,6 +103,65 @@ export RAVENCLAW__LLM__ENDPOINT="http://localhost:4000"
 ```
 
 > **Note:** Pre-built binaries publish automatically on tagged releases. See the [GitHub Releases](https://github.com/egkristi/RavenClaws/releases) page for downloads.
+
+### Use as a library
+
+RavenClaws is published on [crates.io](https://crates.io/crates/ravenclaws) as both a binary and library crate.
+Add it to your `Cargo.toml`:
+
+```toml
+[dependencies]
+ravenclaws = "0.9"
+```
+
+Then use the library API in your Rust project:
+
+```rust,no_run
+use ravenclaws::config::Config;
+use ravenclaws::llm::{create_client, LLMProviderTrait, ChatMessage};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Load configuration from file/env
+    let config = Config::load(None)?;
+
+    // Create an LLM client
+    let llm = create_client(&config.llm)?;
+
+    // Send a chat request
+    let response = llm.chat(vec![
+        ChatMessage {
+            role: "user".to_string(),
+            content: "Hello! What can you do?".to_string(),
+        },
+    ]).await?;
+
+    println!("{}", response.choices[0].message.content);
+    Ok(())
+}
+```
+
+The library exposes all 18 modules with a stable public API:
+
+| Module | Purpose |
+|---|---|
+| `ravenclaws::agent` | Agent implementations, agent loop, conversation memory |
+| `ravenclaws::llm` | LLM provider abstraction + 5 client implementations |
+| `ravenclaws::config` | Configuration structs, TOML/env loading, validation |
+| `ravenclaws::tools` | Tool abstraction, registry, 5 built-in tools |
+| `ravenclaws::policy` | Deny-by-default policy engine |
+| `ravenclaws::sandbox` | Sandboxed execution (workdir jail, resource limits) |
+| `ravenclaws::audit` | Tamper-evident audit log (HMAC-SHA256 chained) |
+| `ravenclaws::mcp` | MCP client + server (JSON-RPC 2.0 over stdio) |
+| `ravenclaws::swarm` | Swarm orchestration, worker profiles, health monitoring |
+| `ravenclaws::heartbeat` | Autonomous heartbeat agent |
+| `ravenclaws::background` | Background task manager with disk persistence |
+| `ravenclaws::scheduler` | Scheduling & triggers (cron, webhook, file-watch) |
+| `ravenclaws::server` | HTTP server mode (health, readiness, metrics) |
+| `ravenclaws::telemetry` | OpenTelemetry tracing (OTLP gRPC/stdout) |
+| `ravenclaws::ravenfabric` | RavenFabric mesh client |
+| `ravenclaws::eval` | Eval harness with assertions and run traces |
+| `ravenclaws::error` | Unified error types |
 
 ### Docker
 
@@ -396,8 +457,8 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Container & K8s security | ✅ Working | Distroless, non-root, read-only FS, dropped caps, seccomp, RBAC |
 | CI/CD pipeline | ✅ Implemented | fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard |
-| Verification suite | ✅ Working | 94 system/integration checks · 9 modules · 4 targets (`scripts/verify.sh`) |
-| Rust unit tests | ✅ Working | 307 tests across 11 modules, incl. `mockito`-backed provider request/response/error paths + 12 RavenFabric client tests |
+| Verification suite | ✅ Working | 114 system/integration checks · 10 modules · 4 targets (`scripts/verify.sh`)
+| Rust unit tests | ✅ Working | 452 tests across 18 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler |
 | Reproducible builds | ✅ Working | `Cargo.lock` committed (`--locked`), multi-arch Docker cross-linker, RavenFabric agent checksum-verified |
 | `--exec` one-shot mode | ✅ Working | Run a single task, then exit |
 | Interactive REPL | ✅ Working | `--repl` with `/exit`, `/reset` commands |

@@ -27,7 +27,12 @@ use crate::sandbox::Sandbox;
 
 // ── Error types ────────────────────────────────────────────────────────────
 
+/// Tool execution error type.
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum ToolError {
     #[error("Tool '{0}' not found")]
     NotFound(String),
@@ -144,7 +149,11 @@ impl ToolDefinition {
 }
 
 /// Tool categories for grouping and policy
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+#[non_exhaustive]
 pub enum ToolCategory {
     #[default]
     General,

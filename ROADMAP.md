@@ -1,11 +1,11 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
-**Date:** 2026-06-23  
+**Date:** 2026-06-26  
 **Version:** v0.9.2 — Swarm Health & Telemetry ✅  
 **Previous Release:** v0.9.1 (2026-06-22) — Inter-agent communication bus ✅  
-**Current Commit:** `a284fbd` — All GitHub URL references updated to egkristi/RavenClaws
-**CI Status:** Build & Release #166 ✅ · Container Build #166 ✅ · Security Scan #124 ✅
-**v1.0 Hardening Progress:** 4/15 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified)
+**Current Commit:** `d63251c` — v1.0 hardening: fix clippy warnings, update docs for v0.9.2 status
+**CI Status:** Build & Release #167 ✅ · Container Build #167 ✅ · Security Scan #125 ✅
+**v1.0 Hardening Progress:** 6/15 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified, zero CVEs, API stability)
 
 **Vision:** RavenClaws shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -509,10 +509,10 @@ features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
 - [x] **Library API established** — `[lib]` section in `Cargo.toml`, `src/lib.rs` with re-exports of stable public API for all 18 modules.
 - [x] **Performance targets verified** — 5.2 MB stripped binary (< 15 MB target ✅), 5.2 ms cold start (< 50 ms target ✅). Both well under v1.0 targets.
 - [x] **Zero known CVEs** — cargo-audit confirms 0 CVEs in dependency tree. 1 advisory (unmaintained `instant` transitive dep through `notify`) — informational only, no fix available.
+- [x] **API stability** guarantees + semver discipline. All public enums and structs reviewed: `#[non_exhaustive]` added to `RavenClawsError`, `ConfigError`, `LLMError`, `ToolError`, `LLMProvider`, `OpenAICompatibleProvider`, `CircuitState`, `ToolCategory`, `Config`, `LLMConfig`, `SecurityConfig`, `RuntimeConfig`, `RavenFabricConfig`, `TelemetryConfig`, `SchedulerConfig`, `WebSearchConfig`. Doc comments added to all public types.
 - [ ] **Autonomous operation validated** — RavenClaws runs unattended for 7+ days, completing tasks via heartbeat loop, recovering from failures, and scaling swarm up/down as needed.
 - [ ] **Swarm scale validated** — 1000+ worker agents operating in mesh topology, with < 5% overhead per additional agent. Swarm grows and shrinks organically — no fixed limit, no artificial cap.
-- [ ] **API stability** guarantees + semver discipline. All public types and traits reviewed for v1.0 API surface.
-- [ ] **Complete docs**, examples, migration guides. README includes quickstart, configuration reference, and architecture overview.
+- [ ] **Complete docs**, examples, migration guides. README includes quickstart, library usage guide, configuration reference, and architecture overview.
 - [ ] **All verification tests passing** across all 4 deployment targets (macOS, Linux, Docker, K8s).
 - [ ] **Release automation complete** — signed tags, multi-arch containers, SBOM, provenance, crates.io publish all green.
 - [ ] **Reproducible builds.**

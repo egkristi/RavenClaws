@@ -29,7 +29,11 @@ pub type StreamResult = Pin<Box<dyn Stream<Item = Result<StreamChunk, LLMError>>
 use crate::config::{LLMConfig, LLMProvider};
 
 /// Provider type for OpenAI-compatible APIs (v0.5 unified client)
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum OpenAICompatibleProvider {
     LiteLLM,
     OpenAI,
@@ -61,7 +65,13 @@ impl OpenAICompatibleProvider {
     }
 }
 
+/// LLM provider error type.
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
+/// Match with a wildcard arm to handle future variants.
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum LLMError {
     #[error("Request failed: {0}")]
     RequestFailed(String),
@@ -129,7 +139,11 @@ impl RetryConfig {
 }
 
 /// Circuit breaker state (v0.5)
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum CircuitState {
     Closed,
     Open,
