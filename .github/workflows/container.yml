@@ -171,14 +171,10 @@ jobs:
       - uses: sigstore/cosign-installer@v4.1.2
 
       - name: Sign container image
-        env:
-          COSIGN_EXPERIMENTAL: 1
-          COSIGN_DEBUG: 1
         run: |
-          echo "=== Checking cosign version ==="
-          cosign version
-          echo "=== Checking Docker credentials ==="
-          cat ~/.docker/config.json | head -5 || echo "No docker config"
-          echo "=== Running cosign sign ==="
           cosign sign --yes \
+            --oidc-provider github-actions \
+            --bundle cosign-bundle.sigstore.json \
+            --fulcio-url https://fulcio.sigstore.dev \
+            --rekor-url https://rekor.sigstore.dev \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"
