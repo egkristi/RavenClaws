@@ -25,7 +25,7 @@ RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider
 - **Language:** Rust (edition 2021)
 - **Version:** 0.9.2 (autonomous heartbeat + self-provisioning swarm + inter-agent communication + swarm health & telemetry)
 - **License:** AGPL-3.0-or-later + Commercial
-- **Repository:** https://github.com/egkristi/RavenClaw
+- **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io
 - **Build:** `cargo build --release` (~3.4MB stripped binary, ~7ms startup)
 
@@ -362,7 +362,7 @@ This is the **standard operating procedure** for every maintenance cycle. Follow
 ### Phase 1: Check CI Status
 
 ```bash
-curl -s "https://api.github.com/repos/egkristi/RavenClaw/actions/runs?per_page=6&branch=master&event=push" | python3 -c "
+curl -s "https://api.github.com/repos/egkristi/RavenClaws/actions/runs?per_page=6&branch=master&event=push" | python3 -c "
 import json,sys
 data=json.load(sys.stdin)
 for r in data.get('workflow_runs',[])[:6]:
@@ -443,7 +443,7 @@ After pushing, **monitor all 3 GitHub Actions workflows to completion**:
 
 ```bash
 # Poll until all complete
-curl -s "https://api.github.com/repos/egkristi/RavenClaw/actions/runs?per_page=6&branch=master&event=push" | python3 -c "
+curl -s "https://api.github.com/repos/egkristi/RavenClaws/actions/runs?per_page=6&branch=master&event=push" | python3 -c "
 import json,sys
 data=json.load(sys.stdin)
 for r in data.get('workflow_runs',[])[:6]:
@@ -605,7 +605,7 @@ Pushing the tag triggers the following GitHub Actions workflows:
 
 After pushing the tag, **monitor all GitHub Actions workflows to completion**:
 
-1. Go to https://github.com/egkristi/RavenClaw/actions
+1. Go to https://github.com/egkristi/RavenClaws/actions
 2. Verify the `check` job passes (fmt + clippy + test)
 3. Verify all 5 `build-binaries` matrix jobs succeed:
    - `x86_64-unknown-linux-gnu`
@@ -639,7 +639,7 @@ docker run --rm ghcr.io/egkristi/ravenclaws:v0.1.0 --version
 # ── 6c. Verify binary integrity ───────────────────────────────
 # Download a released binary and check its SHA256
 # (Replace URL with actual release asset URL)
-curl -sL https://github.com/egkristi/RavenClaw/releases/download/v0.1.0/ravenclaws-x86_64-apple-darwin.tar.gz \
+curl -sL https://github.com/egkristi/RavenClaws/releases/download/v0.1.0/ravenclaws-x86_64-apple-darwin.tar.gz \
   -o /tmp/ravenclaws-release.tar.gz
 tar xzf /tmp/ravenclaws-release.tar.gz -C /tmp/
 ./scripts/verify.sh --security
@@ -654,7 +654,7 @@ docker buildx imagetools inspect ghcr.io/egkristi/ravenclaws:v0.1.0
 
 # ── 6f. Verify container signature ────────────────────────────
 cosign verify ghcr.io/egkristi/ravenclaws:v0.1.0 \
-  --certificate-identity-regexp "https://github.com/egkristi/RavenClaw" \
+  --certificate-identity-regexp "https://github.com/egkristi/RavenClaws" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
 
 # ── 6g. Verify SBOM exists ────────────────────────────────────
@@ -670,7 +670,7 @@ cargo search ravenclaws
 # Should show the new version
 
 # ── 7b. Verify GitHub Release ─────────────────────────────────
-# Check https://github.com/egkristi/RavenClaw/releases
+# Check https://github.com/egkristi/RavenClaws/releases
 # Must have:
 #   - Release notes (auto-generated from changelog)
 #   - 5 binary archives (.tar.gz/.zip) with SHA256 checksums

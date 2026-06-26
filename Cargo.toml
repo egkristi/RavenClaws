@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Erling G M Kristiansen <egkristi@gmail.com>"]
 description = "Lightweight, secure Rust agent framework with multi-provider LLM support"
 license = "AGPL-3.0-or-later"
-repository = "https://github.com/egkristi/RavenClaw"
+repository = "https://github.com/egkristi/RavenClaws"
 keywords = ["agent", "ai", "llm", "liteLLM", "ravenfabric"]
 categories = ["command-line-utilities", "development-tools"]
 

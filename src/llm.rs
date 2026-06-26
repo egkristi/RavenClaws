@@ -482,7 +482,7 @@ impl OpenAICompatibleClient {
         // OpenRouter-specific headers
         if self.provider.requires_custom_headers() {
             req = req
-                .header("HTTP-Referer", "https://github.com/egkristi/RavenClaw")
+                .header("HTTP-Referer", "https://github.com/egkristi/RavenClaws")
                 .header("X-Title", "RavenClaws");
         }
 
@@ -1466,7 +1466,7 @@ mod tests {
         with_mockito(|mut server| async move {
             let mock = server
                 .mock("POST", "/v1/chat/completions")
-                .match_header("HTTP-Referer", "https://github.com/egkristi/RavenClaw")
+                .match_header("HTTP-Referer", "https://github.com/egkristi/RavenClaws")
                 .match_header("X-Title", "RavenClaws")
                 .with_status(200)
                 .with_body(sample_chat_response_json("claude-sonnet-4"))

@@ -936,7 +936,7 @@ mod tests {
     #[test]
     fn test_network_allowed_host() {
         let engine = PolicyEngine::default_secure();
-        let args = serde_json::json!({"url": "https://github.com/egkristi/RavenClaw"});
+        let args = serde_json::json!({"url": "https://github.com/egkristi/RavenClaws"});
         let decision = engine.check_network_request(&args);
         assert!(decision.is_allowed());
     }
