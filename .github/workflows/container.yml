@@ -171,11 +171,8 @@ jobs:
       - uses: sigstore/cosign-installer@v4.1.2
 
       - name: Sign container image
+        env:
+          COSIGN_EXPERIMENTAL: 1
         run: |
           cosign sign --yes \
-            --oidc-provider github-actions \
-            --bundle cosign-bundle.sigstore.json \
-            --fulcio-url https://fulcio.sigstore.dev \
-            --rekor-url https://rekor.sigstore.dev \
-            --timestamp-authority-url https://tsa.sigstore.dev \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ needs.build.outputs.digest }}"

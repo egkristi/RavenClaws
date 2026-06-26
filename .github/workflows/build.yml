@@ -206,13 +206,10 @@ jobs:
 
       - name: Run Cosign sign
         if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          COSIGN_EXPERIMENTAL: 1
         run: |
           cosign sign --yes \
-            --oidc-provider github-actions \
-            --bundle cosign-bundle.sigstore.json \
-            --fulcio-url https://fulcio.sigstore.dev \
-            --rekor-url https://rekor.sigstore.dev \
-            --timestamp-authority-url https://tsa.sigstore.dev \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
 
       # ── Attestation (tagged releases only) ────────────────────
