@@ -209,7 +209,7 @@ jobs:
         run: |
           cosign sign --yes \
             --use-signing-config=false \
-            --new-bundle-format=false \
+            --timestamp-server-url https://tsa.sigstore.dev/api/v1/timestamp \
             "${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}"
 
       # ── Attestation (tagged releases only) ────────────────────
