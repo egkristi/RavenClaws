@@ -94,7 +94,6 @@ pub enum LLMError {
     ProviderNotSupported(String),
 
     #[error("Token budget exceeded")]
-    #[allow(dead_code)]
     TokenBudgetExceeded,
 
     #[error("All providers failed after retries")]
@@ -205,7 +204,6 @@ impl CircuitBreaker {
 
 /// Token budget tracker (v0.5)
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct TokenBudget {
     /// Maximum tokens allowed
     pub max_tokens: u32,
@@ -988,13 +986,13 @@ impl MultiModelManager {
 }
 
 /// Provider fallback chain (v0.5) — tries providers in order until one succeeds
-#[allow(dead_code)]
+#[derive(Debug)]
 pub struct ProviderFallbackChain {
-    configs: Vec<LLMConfig>,
+    /// Provider configurations in fallback order
+    pub configs: Vec<LLMConfig>,
     token_budget: Option<TokenBudget>,
 }
 
-#[allow(dead_code)]
 impl ProviderFallbackChain {
     pub fn new(configs: Vec<LLMConfig>) -> Self {
         Self {
@@ -1060,6 +1058,7 @@ impl ProviderFallbackChain {
     }
 
     /// Get provider names in chain
+    #[allow(dead_code)]
     pub fn provider_names(&self) -> Vec<String> {
         self.configs
             .iter()

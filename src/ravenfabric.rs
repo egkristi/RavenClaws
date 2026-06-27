@@ -23,7 +23,6 @@ use tracing::{info, warn};
 /// Methods are currently wired for initialization and logging only.
 /// Full remote execution dispatch will be integrated in a follow-up.
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
 pub struct RavenFabricClient {
     /// Configuration
     config: RavenFabricConfig,
@@ -83,7 +82,6 @@ pub struct RemoteAgent {
     pub capabilities: Vec<String>,
 }
 
-#[allow(dead_code)]
 impl RavenFabricClient {
     /// Create a new RavenFabric client
     ///

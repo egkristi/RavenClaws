@@ -26,6 +26,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         prompt_injection_protection: true,
         token_lifetime_secs: 0,
         no_final_required: false,
+        fallback_chain: None,
+        token_budget: None,
+        ravenfabric: None,
     };
 
     // Run the agent loop

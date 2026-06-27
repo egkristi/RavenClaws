@@ -536,6 +536,9 @@ async fn handle_chat(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>
         prompt_injection_protection: state.config.security.prompt_injection_protection,
         token_lifetime_secs: state.config.security.token_lifetime_secs,
         no_final_required: true,
+        fallback_chain: None,
+        token_budget: None,
+        ravenfabric: None,
     };
 
     let tool_registry = state.tool_registry.clone();

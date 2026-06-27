@@ -29,6 +29,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **ProviderFallbackChain wired into agent loop** — Both `run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry` now use `ProviderFallbackChain` on primary LLM failure. Configs are cloned out of mutex to avoid holding `MutexGuard` across `.await`. Token usage recorded from fallback responses.
+- **TokenBudget wired into agent loop** — Checked before every LLM call in both agent loop variants. If remaining tokens < 100, returns `SecurityViolation` error with audit log entry. Token usage recorded after each response.
+- **RavenFabricClient wired into agent loop** — `health()` called after each LLM response in both agent loop variants. Wired into all `run_single`, `run_swarm`, `run_supervisor` variants (both single and multi-model).
+- **AgentMessageBus wired into swarm** — Created and shared across sub-orchestrators. `send()` and `format_for_prompt()` used in swarm execution.
+- **SwarmHealthMonitor wired into swarm** — `check_health()` called during swarm execution. Dead agents detected and logged.
+
+### Changed
+- **`#[allow(dead_code)]` removed from wired components** — `TokenBudget` struct + impl, `TokenBudgetExceeded` variant, `RavenFabricClient` struct + impl, `ExecuteResponse`, `RemoteAgent`, `RavenFabricConfig` fields (`agent_id`, `remote_exec`), `RavenClawsError::RavenFabric` variant. `ProviderFallbackChain` gets `#[derive(Debug)]` and `pub configs` field.
+- **`AgentLoopConfig` extended** — 3 new optional fields: `fallback_chain`, `token_budget`, `ravenfabric`. All initializers across `agent.rs`, `background.rs`, `server.rs`, `heartbeat.rs`, and `examples/agent_loop.rs` updated.
+- **`main.rs` updated** — RavenFabricClient init moved before `--exec` block. Fallback chain and token budget created from config in `--exec` mode.
+
+### Added
 *(none)*
 
 ### Fixed

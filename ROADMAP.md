@@ -1,11 +1,11 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
-**Date:** 2026-06-02  
-**Version:** v0.9.7 — Multi-MCP-Client + Readiness LLM Check ✅  
-**Previous Release:** v0.9.6 (2026-06-02) — Server Mode: Full Agent Execution API + MCP Config ✅  
-**Current Commit:** (tagged `v0.9.7`)
+**Date:** 2026-06-27  
+**Version:** v0.9.8 — All 5 Infrastructure Components Wired ✅  
+**Previous Release:** v0.9.7 (2026-06-02) — Multi-MCP-Client + Readiness LLM Check ✅  
+**Current Commit:** (current)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
-**v1.0 Hardening Progress:** 26/145 items completed. **v0.9.6–v0.9.9 series planned** to close all gaps identified in rpi5 deployment feedback — making RavenClaws a fully functional primary agent that can replace OpenClaw, Manus, and other cloud agents.
+**v1.0 Hardening Progress:** 31/145 items completed. **v0.9.6–v0.9.9 series planned** to close all gaps identified in rpi5 deployment feedback — making RavenClaws a fully functional primary agent that can replace OpenClaw, Manus, and other cloud agents.
 
 **Vision:** RavenClaws is the **ultimate AI agentic assistant and worker** — the preferred alternative to OpenClaw, Manus, Perplexity Comet, Kimi, Claude Cowork, and every other agent in the field. Not by out-featuring them, but by being **fully functional as a primary agent** while also being smaller, more secure, and more efficient than anything else.
 
@@ -123,8 +123,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.9.7 (2026-06-02) — Multi-MCP-Client + Readiness LLM Check ✅  
-**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~16,700 LOC, 6 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **472 unit tests**, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, published on crates.io as `ravenclaws` (binary + library crate).
+**Version:** 0.9.8 (2026-06-27) — All 5 Infrastructure Components Wired ✅  
+**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~16,700 LOC, 6 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **472 unit tests**, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, published on crates.io as `ravenclaws` (binary + library crate).
 
 **rpi5 Deployment Verdict (v0.9.5):** All 13 resolved issues from feedback confirmed working. 10 critical bugs fixed. 4 documentation gaps closed. 4 feature requests documented for future versions. RavenClaws runs successfully on Raspberry Pi 5 (aarch64, 8GB RAM, K3s) with ~3 MiB RSS idle memory, ~1m CPU idle, <1s startup, and 15.8 MB container image — **265x less memory and 228x less CPU than OpenClaw**.
 
@@ -164,11 +164,11 @@ can't be added without breaking one, it doesn't ship in core.
 | Native Anthropic provider | ✅ Working | Direct Claude API with tool use, token tracking (v0.5.3) |
 | Retry / fallback / circuit breaker | ✅ Working | Exponential backoff, token budgets, provider fallback chain (v0.5.1) |
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
-| `RavenFabricClient` wired to agent loop | ❌ → 🎯 **v0.9.8** | Client created but `health()`, `execute()`, `broadcast()` never called |
-| `ProviderFallbackChain` wired to agent loop | ❌ → 🎯 **v0.9.8** | Fallback chain struct exists but never used by agent loop |
-| `TokenBudget` wired to agent loop | ❌ → 🎯 **v0.9.8** | Token budget struct exists but never checked during execution |
-| `AgentMessageBus` wired to swarm | ❌ → 🎯 **v0.9.8** | Message bus created but never used in orchestration |
-| `SwarmHealthMonitor` wired to swarm | ❌ → 🎯 **v0.9.8** | Health monitoring initialized but never checked |
+| `RavenFabricClient` wired to agent loop | ✅ **v0.9.8** | `health()` called after each LLM response; wired to all run_single/swarm/supervisor variants |
+| `ProviderFallbackChain` wired to agent loop | ✅ **v0.9.8** | Used on primary LLM failure in both agent loop variants; configs cloned out of mutex for async safety |
+| `TokenBudget` wired to agent loop | ✅ **v0.9.8** | Checked before every LLM call; returns SecurityViolation if < 100 tokens remaining |
+| `AgentMessageBus` wired to swarm | ✅ **v0.9.8** | Created and shared across sub-orchestrators; `send()` and `format_for_prompt()` used in swarm execution |
+| `SwarmHealthMonitor` wired to swarm | ✅ **v0.9.8** | `check_health()` called during swarm execution; dead agents detected and logged |
 | `WebSearchConfig` wired to web search tool | ✅ **v0.9.5** | `ToolRegistry::with_config()` reads web search endpoint from config |
 | `--provider anthropic` CLI flag | ✅ **v0.9.3** | Now selects Anthropic provider correctly |
 | `--webhook-port` CLI flag | ✅ **v0.9.3** | Now configures the scheduler's webhook server |

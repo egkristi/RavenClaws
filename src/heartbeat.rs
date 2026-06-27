@@ -375,6 +375,9 @@ impl HeartbeatAgent {
                                     prompt_injection_protection: true,
                                     token_lifetime_secs: 0,
                                     no_final_required: false,
+                                    fallback_chain: None,
+                                    token_budget: None,
+                                    ravenfabric: None,
                                 };
 
                                 match crate::agent::run_agent_loop(

@@ -22,6 +22,7 @@ mod telemetry;
 mod tools;
 
 use clap::Parser;
+use std::sync::Arc;
 use tracing::{info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -358,10 +359,45 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
+    // Initialize RavenFabric client (v0.6.1) — must be before --exec mode
+    let ravenfabric = ravenfabric::RavenFabricClient::new(&config.ravenfabric);
+    if let Some(ref rf) = ravenfabric {
+        info!(
+            endpoint = %rf.endpoint().unwrap_or("unknown"),
+            agent_id = ?rf.agent_id(),
+            remote_exec = rf.is_enabled(),
+            "RavenFabric integration enabled"
+        );
+    } else {
+        info!("RavenFabric not configured — remote execution disabled");
+    }
+
     // Handle --exec one-shot mode (uses agent loop for multi-step reasoning with security)
     if let Some(exec_prompt) = args.exec {
         info!("Running in --exec mode with security-integrated agent loop");
         let system_prompt = &config.llm.system_prompt;
+
+        // Build fallback chain from multi-model configs (v0.9.8)
+        let fallback_chain = if config.llms.len() > 1 {
+            let chain = llm::ProviderFallbackChain::new(config.llms.clone());
+            // Apply token budget if configured
+            let chain = if let Some(budget) = config.llm.token_budget {
+                chain.with_token_budget(llm::TokenBudget::new(budget, 0.0))
+            } else {
+                chain
+            };
+            Some(Arc::new(std::sync::Mutex::new(chain)))
+        } else {
+            None
+        };
+
+        // Build token budget from config (v0.9.8)
+        let token_budget = config.llm.token_budget.map(|max_tokens| {
+            Arc::new(std::sync::Mutex::new(llm::TokenBudget::new(
+                max_tokens, 0.0,
+            )))
+        });
+
         let loop_config = agent::AgentLoopConfig {
             max_iterations: args.max_iterations,
             enable_tools: true,
@@ -369,6 +405,9 @@ async fn main() -> anyhow::Result<()> {
             prompt_injection_protection: config.security.prompt_injection_protection,
             token_lifetime_secs: config.security.token_lifetime_secs,
             no_final_required: args.no_final_required,
+            fallback_chain,
+            token_budget,
+            ravenfabric: ravenfabric.clone(),
         };
 
         // Build a configured tool registry (respects web_search endpoint from config)
@@ -697,19 +736,6 @@ async fn main() -> anyhow::Result<()> {
                 );
             }
         }
-    }
-
-    // Initialize RavenFabric client (v0.6.1)
-    let ravenfabric = ravenfabric::RavenFabricClient::new(&config.ravenfabric);
-    if let Some(ref rf) = ravenfabric {
-        info!(
-            endpoint = %rf.endpoint().unwrap_or("unknown"),
-            agent_id = ?rf.agent_id(),
-            remote_exec = rf.is_enabled(),
-            "RavenFabric integration enabled"
-        );
-    } else {
-        info!("RavenFabric not configured — remote execution disabled");
     }
 
     // Determine if multi-model or single-provider mode

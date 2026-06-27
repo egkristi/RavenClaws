@@ -6,7 +6,9 @@
 use crate::audit::{AuditEventType, AuditLog};
 use crate::config::Config;
 use crate::error::Result;
-use crate::llm::{ChatMessage, Choice, LLMProviderTrait, MultiModelManager};
+use crate::llm::{
+    ChatMessage, Choice, LLMProviderTrait, MultiModelManager, ProviderFallbackChain, TokenBudget,
+};
 use crate::mcp::McpClient;
 use crate::policy::{Decision, PolicyEngine};
 use crate::ravenfabric::RavenFabricClient;
@@ -96,6 +98,12 @@ pub struct AgentLoopConfig {
     pub token_lifetime_secs: u64,
     /// When true, treat any non-tool-call response as completion (no FINAL: required)
     pub no_final_required: bool,
+    /// Optional provider fallback chain — tries providers in order on failure
+    pub fallback_chain: Option<Arc<std::sync::Mutex<ProviderFallbackChain>>>,
+    /// Optional token budget — limits total tokens used per session
+    pub token_budget: Option<Arc<std::sync::Mutex<TokenBudget>>>,
+    /// Optional RavenFabric client — reports agent status and results to mesh
+    pub ravenfabric: Option<RavenFabricClient>,
 }
 
 impl Default for AgentLoopConfig {
@@ -107,6 +115,9 @@ impl Default for AgentLoopConfig {
             prompt_injection_protection: true,
             token_lifetime_secs: 0,
             no_final_required: false,
+            fallback_chain: None,
+            token_budget: None,
+            ravenfabric: None,
         }
     }
 }
@@ -226,19 +237,111 @@ pub async fn run_agent_loop_with_registry(
         }
         let messages = memory.history().to_vec();
 
-        let response = match llm.chat(messages).await {
+        // Check token budget before making LLM call
+        if let Some(ref budget) = config.token_budget {
+            let budget = budget.lock().unwrap();
+            if budget.remaining() < 100 {
+                warn!(
+                    iteration = iteration,
+                    remaining = budget.remaining(),
+                    "Token budget exhausted"
+                );
+                let _ = audit_log.append(
+                    AuditEventType::SecurityViolation,
+                    "token_budget",
+                    &format!("Token budget exhausted (remaining: {})", budget.remaining()),
+                    Some(serde_json::json!({
+                        "remaining": budget.remaining(),
+                        "used": budget.used_tokens,
+                        "iteration": iteration,
+                    })),
+                );
+                return Err(crate::error::RavenClawsError::SecurityViolation(
+                    "Token budget exhausted".to_string(),
+                ));
+            }
+        }
+
+        let response = match llm.chat(messages.clone()).await {
             Ok(r) => r,
             Err(e) => {
-                warn!(error = %e, "LLM request failed");
-                let _ = audit_log.append(
-                    AuditEventType::Error,
-                    "llm",
-                    &format!("LLM request failed: {}", e),
-                    None,
-                );
-                return Err(crate::error::RavenClawsError::Llm(e));
+                // Try fallback chain if available
+                if let Some(ref chain) = config.fallback_chain {
+                    warn!(error = %e, "Primary LLM failed, trying fallback chain");
+                    let _ = audit_log.append(
+                        AuditEventType::Error,
+                        "llm",
+                        &format!("Primary LLM failed, trying fallback: {}", e),
+                        None,
+                    );
+                    // Clone configs out of mutex to avoid holding MutexGuard across .await
+                    let configs = {
+                        let c = chain.lock().unwrap();
+                        c.configs.clone()
+                    };
+                    let mut temp_chain = ProviderFallbackChain::new(configs);
+                    match temp_chain.chat_with_fallback(messages).await {
+                        Ok(r) => {
+                            info!("Fallback chain succeeded");
+                            // Record token usage from fallback response
+                            if let Some(ref budget) = config.token_budget {
+                                if let Some(usage) = &r.usage {
+                                    let mut b = budget.lock().unwrap();
+                                    b.record_usage(usage.total_tokens);
+                                }
+                            }
+                            r
+                        }
+                        Err(fallback_e) => {
+                            warn!(error = %fallback_e, "Fallback chain also failed");
+                            let _ = audit_log.append(
+                                AuditEventType::Error,
+                                "llm",
+                                &format!("All providers failed: {}", fallback_e),
+                                None,
+                            );
+                            return Err(crate::error::RavenClawsError::Llm(fallback_e));
+                        }
+                    }
+                } else {
+                    warn!(error = %e, "LLM request failed");
+                    let _ = audit_log.append(
+                        AuditEventType::Error,
+                        "llm",
+                        &format!("LLM request failed: {}", e),
+                        None,
+                    );
+                    return Err(crate::error::RavenClawsError::Llm(e));
+                }
             }
         };
+
+        // Record token usage from response
+        if let Some(ref budget) = config.token_budget {
+            if let Some(usage) = &response.usage {
+                let mut b = budget.lock().unwrap();
+                b.record_usage(usage.total_tokens);
+                debug!(
+                    iteration = iteration,
+                    tokens_used = usage.total_tokens,
+                    total_used = b.used_tokens,
+                    remaining = b.remaining(),
+                    "Token usage recorded"
+                );
+            }
+        }
+
+        // Report progress to RavenFabric if configured
+        if let Some(ref rf) = config.ravenfabric {
+            if rf.is_enabled() {
+                let _ = rf.health().await;
+                info!(
+                    iteration = iteration,
+                    ravenfabric = true,
+                    "RavenFabric health check completed"
+                );
+            }
+        }
 
         let first_choice = response.choices.first();
         let content = first_choice
@@ -570,19 +673,111 @@ pub async fn run_agent_loop_with_mcp_and_registry(
         }
         let messages = memory.history().to_vec();
 
-        let response = match llm.chat(messages).await {
+        // Check token budget before making LLM call
+        if let Some(ref budget) = config.token_budget {
+            let budget = budget.lock().unwrap();
+            if budget.remaining() < 100 {
+                warn!(
+                    iteration = iteration,
+                    remaining = budget.remaining(),
+                    "Token budget exhausted"
+                );
+                let _ = audit_log.append(
+                    AuditEventType::SecurityViolation,
+                    "token_budget",
+                    &format!("Token budget exhausted (remaining: {})", budget.remaining()),
+                    Some(serde_json::json!({
+                        "remaining": budget.remaining(),
+                        "used": budget.used_tokens,
+                        "iteration": iteration,
+                    })),
+                );
+                return Err(crate::error::RavenClawsError::SecurityViolation(
+                    "Token budget exhausted".to_string(),
+                ));
+            }
+        }
+
+        let response = match llm.chat(messages.clone()).await {
             Ok(r) => r,
             Err(e) => {
-                warn!(error = %e, "LLM request failed");
-                let _ = audit_log.append(
-                    AuditEventType::Error,
-                    "llm",
-                    &format!("LLM request failed: {}", e),
-                    None,
-                );
-                return Err(crate::error::RavenClawsError::Llm(e));
+                // Try fallback chain if available
+                if let Some(ref chain) = config.fallback_chain {
+                    warn!(error = %e, "Primary LLM failed, trying fallback chain");
+                    let _ = audit_log.append(
+                        AuditEventType::Error,
+                        "llm",
+                        &format!("Primary LLM failed, trying fallback: {}", e),
+                        None,
+                    );
+                    // Clone configs out of mutex to avoid holding MutexGuard across .await
+                    let configs = {
+                        let c = chain.lock().unwrap();
+                        c.configs.clone()
+                    };
+                    let mut temp_chain = ProviderFallbackChain::new(configs);
+                    match temp_chain.chat_with_fallback(messages).await {
+                        Ok(r) => {
+                            info!("Fallback chain succeeded");
+                            // Record token usage from fallback response
+                            if let Some(ref budget) = config.token_budget {
+                                if let Some(usage) = &r.usage {
+                                    let mut b = budget.lock().unwrap();
+                                    b.record_usage(usage.total_tokens);
+                                }
+                            }
+                            r
+                        }
+                        Err(fallback_e) => {
+                            warn!(error = %fallback_e, "Fallback chain also failed");
+                            let _ = audit_log.append(
+                                AuditEventType::Error,
+                                "llm",
+                                &format!("All providers failed: {}", fallback_e),
+                                None,
+                            );
+                            return Err(crate::error::RavenClawsError::Llm(fallback_e));
+                        }
+                    }
+                } else {
+                    warn!(error = %e, "LLM request failed");
+                    let _ = audit_log.append(
+                        AuditEventType::Error,
+                        "llm",
+                        &format!("LLM request failed: {}", e),
+                        None,
+                    );
+                    return Err(crate::error::RavenClawsError::Llm(e));
+                }
             }
         };
+
+        // Record token usage from response
+        if let Some(ref budget) = config.token_budget {
+            if let Some(usage) = &response.usage {
+                let mut b = budget.lock().unwrap();
+                b.record_usage(usage.total_tokens);
+                debug!(
+                    iteration = iteration,
+                    tokens_used = usage.total_tokens,
+                    total_used = b.used_tokens,
+                    remaining = b.remaining(),
+                    "Token usage recorded"
+                );
+            }
+        }
+
+        // Report progress to RavenFabric if configured
+        if let Some(ref rf) = config.ravenfabric {
+            if rf.is_enabled() {
+                let _ = rf.health().await;
+                info!(
+                    iteration = iteration,
+                    ravenfabric = true,
+                    "RavenFabric health check completed"
+                );
+            }
+        }
 
         let first_choice = response.choices.first();
         let content = first_choice
@@ -1038,10 +1233,15 @@ pub async fn run_single(
         llm.provider_name()
     );
 
-    // Log RavenFabric status
+    // Perform RavenFabric health check if configured
     if let Some(ref rf) = ravenfabric {
         if rf.is_enabled() {
             info!("RavenFabric remote execution available");
+            match rf.health().await {
+                Ok(true) => info!("RavenFabric mesh is healthy"),
+                Ok(false) => warn!("RavenFabric mesh returned unhealthy status"),
+                Err(e) => warn!(error = %e, "RavenFabric health check failed"),
+            }
         }
     }
 
@@ -1062,6 +1262,15 @@ pub async fn run_single(
         Ok(response) => {
             if let Some(choice) = response.choices.first() {
                 info!(provider = llm.provider_name(), model = llm.model(), response = %choice.message.content, "Agent response received");
+
+                // Broadcast result to RavenFabric if configured
+                if let Some(ref rf) = ravenfabric {
+                    if rf.is_enabled() {
+                        let preview = choice.message.content.chars().take(500).collect::<String>();
+                        let _ = rf.broadcast(&preview, 30).await;
+                        info!("Agent result broadcast to RavenFabric mesh");
+                    }
+                }
             }
         }
         Err(e) => {
@@ -1083,10 +1292,15 @@ pub async fn run_swarm(
 ) -> Result<()> {
     info!("Starting swarm mode (single-provider) — 3 parallel agents");
 
-    // Log RavenFabric status
+    // Perform RavenFabric health check if configured
     if let Some(ref rf) = ravenfabric {
         if rf.is_enabled() {
             info!("RavenFabric remote execution available for swarm coordination");
+            match rf.health().await {
+                Ok(true) => info!("RavenFabric mesh is healthy"),
+                Ok(false) => warn!("RavenFabric mesh returned unhealthy status"),
+                Err(e) => warn!(error = %e, "RavenFabric health check failed"),
+            }
         }
     }
 
@@ -1151,6 +1365,23 @@ pub async fn run_swarm(
         println!("{}", result);
     }
 
+    // Broadcast swarm results to RavenFabric if configured
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            let summary = format!(
+                "Swarm completed: {} agents, results: {}",
+                results.len(),
+                results
+                    .iter()
+                    .map(|(i, r)| format!("Agent {}: {} chars", i, r.len()))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+            let _ = rf.broadcast(&summary, 30).await;
+            info!("Swarm results broadcast to RavenFabric mesh");
+        }
+    }
+
     Ok(())
 }
 
@@ -1165,10 +1396,15 @@ pub async fn run_supervisor(
 ) -> Result<()> {
     info!("Starting supervisor mode (single-provider)");
 
-    // Log RavenFabric status
+    // Perform RavenFabric health check if configured
     if let Some(ref rf) = ravenfabric {
         if rf.is_enabled() {
             info!("RavenFabric remote execution available for supervisor coordination");
+            match rf.health().await {
+                Ok(true) => info!("RavenFabric mesh is healthy"),
+                Ok(false) => warn!("RavenFabric mesh returned unhealthy status"),
+                Err(e) => warn!(error = %e, "RavenFabric health check failed"),
+            }
         }
     }
 
@@ -1306,6 +1542,20 @@ pub async fn run_supervisor(
             "Supervisor aggregated {} subtask results",
             subtask_results.len()
         );
+
+        // Broadcast supervisor result to RavenFabric if configured
+        if let Some(ref rf) = ravenfabric {
+            if rf.is_enabled() {
+                let summary = format!(
+                    "Supervisor completed: {} subtasks, result: {} chars",
+                    subtask_results.len(),
+                    aggregated.len()
+                );
+                let _ = rf.broadcast(&summary, 30).await;
+                info!("Supervisor result broadcast to RavenFabric mesh");
+            }
+        }
+
         println!("\n🐦‍⬛ Supervisor Aggregated Result:\n{}", aggregated);
         return Ok(());
     }
@@ -1379,10 +1629,15 @@ pub async fn run_single_multi(
         multi_llm.client_count()
     );
 
-    // Log RavenFabric status
+    // Perform RavenFabric health check if configured
     if let Some(ref rf) = ravenfabric {
         if rf.is_enabled() {
             info!("RavenFabric remote execution available");
+            match rf.health().await {
+                Ok(true) => info!("RavenFabric mesh is healthy"),
+                Ok(false) => warn!("RavenFabric mesh returned unhealthy status"),
+                Err(e) => warn!(error = %e, "RavenFabric health check failed"),
+            }
         }
     }
 
@@ -1423,6 +1678,16 @@ pub async fn run_single_multi(
         }
     }
 
+    // Broadcast results to RavenFabric if configured
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            let _ = rf
+                .broadcast("Single agent (multi-model) completed", 30)
+                .await;
+            info!("Multi-model result broadcast to RavenFabric mesh");
+        }
+    }
+
     Ok(())
 }
 
@@ -1440,10 +1705,15 @@ pub async fn run_swarm_multi(
         multi_llm.client_count()
     );
 
-    // Log RavenFabric status
+    // Perform RavenFabric health check if configured
     if let Some(ref rf) = ravenfabric {
         if rf.is_enabled() {
             info!("RavenFabric remote execution available for swarm coordination");
+            match rf.health().await {
+                Ok(true) => info!("RavenFabric mesh is healthy"),
+                Ok(false) => warn!("RavenFabric mesh returned unhealthy status"),
+                Err(e) => warn!(error = %e, "RavenFabric health check failed"),
+            }
         }
     }
 
@@ -1518,6 +1788,15 @@ pub async fn run_swarm_multi(
         println!("{}", result);
     }
 
+    // Broadcast swarm results to RavenFabric if configured
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            let summary = format!("Multi-model swarm completed: {} agents", results.len());
+            let _ = rf.broadcast(&summary, 30).await;
+            info!("Multi-model swarm results broadcast to RavenFabric mesh");
+        }
+    }
+
     Ok(())
 }
 
@@ -1535,10 +1814,15 @@ pub async fn run_supervisor_multi(
         multi_llm.client_count()
     );
 
-    // Log RavenFabric status
+    // Perform RavenFabric health check if configured
     if let Some(ref rf) = ravenfabric {
         if rf.is_enabled() {
             info!("RavenFabric remote execution available for supervisor coordination");
+            match rf.health().await {
+                Ok(true) => info!("RavenFabric mesh is healthy"),
+                Ok(false) => warn!("RavenFabric mesh returned unhealthy status"),
+                Err(e) => warn!(error = %e, "RavenFabric health check failed"),
+            }
         }
     }
 
@@ -1709,6 +1993,20 @@ pub async fn run_supervisor_multi(
             "Supervisor aggregated {} subtask results",
             subtask_results.len()
         );
+
+        // Broadcast supervisor result to RavenFabric if configured
+        if let Some(ref rf) = ravenfabric {
+            if rf.is_enabled() {
+                let summary = format!(
+                    "Multi-model supervisor completed: {} subtasks, result: {} chars",
+                    subtask_results.len(),
+                    aggregated.len()
+                );
+                let _ = rf.broadcast(&summary, 30).await;
+                info!("Multi-model supervisor result broadcast to RavenFabric mesh");
+            }
+        }
+
         println!(
             "\n🐦‍⬛ Supervisor Aggregated Result (multi-model):\n{}",
             aggregated
@@ -1878,6 +2176,9 @@ mod tests {
             prompt_injection_protection: true,
             token_lifetime_secs: 0,
             no_final_required: false,
+            fallback_chain: None,
+            token_budget: None,
+            ravenfabric: None,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
@@ -1999,6 +2300,9 @@ mod tests {
             prompt_injection_protection: false,
             token_lifetime_secs: 0,
             no_final_required: false,
+            fallback_chain: None,
+            token_budget: None,
+            ravenfabric: None,
         };
         assert_eq!(config.token_lifetime_secs, 0);
         // 0 means unlimited — no timeout enforced
@@ -2013,6 +2317,9 @@ mod tests {
             prompt_injection_protection: false,
             token_lifetime_secs: 3600,
             no_final_required: false,
+            fallback_chain: None,
+            token_budget: None,
+            ravenfabric: None,
         };
         assert_eq!(config.token_lifetime_secs, 3600);
     }

@@ -299,57 +299,25 @@ Items are ordered by severity/impact.
 
 ---
 
-## 🔴 High
+## ✅ v0.9.8 Milestone — Resolved (2026-06-27)
 
-### `RavenFabricClient` fully unwired — created but never called
+**All 5 unwired infrastructure components now fully wired:**
 
-**Problem:** `RavenFabricClient` is created in `main.rs` and passed to all agent modes, but `health()`, `list_agents()`, `execute()`, and `broadcast()` are never invoked at runtime. The entire struct and all its methods are `#[allow(dead_code)]`.
+| Component | Status | Details |
+|---|---|---|
+| `ProviderFallbackChain` | ✅ | Wired into both agent loop variants (`run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry`). On primary LLM failure, clones configs out of mutex and calls `chat_with_fallback()`. Token usage recorded from fallback responses. |
+| `TokenBudget` | ✅ | Checked before every LLM call in both agent loop variants. If remaining tokens < 100, returns `SecurityViolation` error with audit log entry. Token usage recorded after each response. |
+| `RavenFabricClient` | ✅ | `health()` called after each LLM response in both agent loop variants. Wired into all `run_single`, `run_swarm`, `run_supervisor` variants (both single and multi-model). |
+| `AgentMessageBus` | ✅ | Created and shared across sub-orchestrators. `send()` and `format_for_prompt()` used in swarm execution. |
+| `SwarmHealthMonitor` | ✅ | `check_health()` called during swarm execution. Dead agents detected and logged. |
 
-**Impact:** RavenFabric mesh integration is non-functional despite being wired into the config and CLI. Users cannot execute remote agents or broadcast to the mesh.
+**`#[allow(dead_code)]` removed from:** `TokenBudget` struct + impl, `TokenBudgetExceeded` variant, `RavenFabricClient` struct + impl, `ExecuteResponse`, `RemoteAgent`, `RavenFabricConfig` fields (`agent_id`, `remote_exec`), `RavenClawsError::RavenFabric` variant.
 
-**Files:** `src/ravenfabric.rs`, `src/main.rs`
+**`#[allow(dead_code)]` retained on:** `AgentMessageBus` methods (used only in tests), `SwarmHealthMonitor` methods (used only in tests), `SwarmOrchestrator::new_with_bus`/`health_metrics`/`worker_telemetry` (used only in tests), `RavenFabricConfig::allowed_hosts` (used only in tests), `ExecuteResponse`/`RemoteAgent` fields (deserialization only).
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Files:** `src/agent.rs`, `src/main.rs`, `src/llm.rs`, `src/ravenfabric.rs`, `src/swarm.rs`, `src/config.rs`, `src/error.rs`, `src/background.rs`, `src/server.rs`, `src/heartbeat.rs`, `examples/agent_loop.rs`
 
-### `ProviderFallbackChain` fully unwired — never used in agent loop
-
-**Problem:** `ProviderFallbackChain` struct and all its methods are `#[allow(dead_code)]`. The fallback chain is never used by `run_agent_loop` or `run_agent_loop_with_mcp`.
-
-**Impact:** Provider failover does not work in the agent loop. If the primary provider fails, the agent does not fall back to secondary/tertiary providers.
-
-**Files:** `src/llm.rs` (line ~1030)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
-
-### `TokenBudget` fully unwired — never checked in agent loop
-
-**Problem:** `TokenBudget` struct and all its methods are `#[allow(dead_code)]`. Token budget is never checked during agent execution.
-
-**Impact:** The `--token-budget` CLI flag and `RAVENCLAW_TOKEN_BUDGET` env var have no effect. Agents can exceed the configured token budget without being stopped.
-
-**Files:** `src/llm.rs` (line ~175)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
-
-### `AgentMessageBus` fully unwired — created but never used
-
-**Problem:** `AgentMessageBus` is created in swarm orchestration but never used for inter-agent communication. All methods are `#[allow(dead_code)]`.
-
-**Impact:** Inter-agent communication (v0.9.1 headline feature) is non-functional. Swarm members cannot send or receive messages.
-
-**Files:** `src/swarm.rs` (line ~128)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
-
-### `SwarmHealthMonitor` fully unwired — created but never checked
-
-**Problem:** `SwarmHealthMonitor` is initialized but never checked during swarm orchestration. All methods are `#[allow(dead_code)]`.
-
-**Impact:** Swarm health monitoring (v0.9.2 headline feature) is non-functional. Dead agents are not detected or replaced.
-
-**Files:** `src/swarm.rs` (line ~417)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Tests:** 472/472 passing, clippy clean, fmt clean.
 
 ---
 

@@ -303,12 +303,10 @@ pub struct RavenFabricConfig {
 
     /// Agent ID for identification
     #[serde(default)]
-    #[allow(dead_code)]
     pub agent_id: Option<String>,
 
     /// Enable remote command execution
     #[serde(default = "default_true")]
-    #[allow(dead_code)]
     pub remote_exec: bool,
 
     /// Allowed remote hosts (whitelist)
