@@ -35,7 +35,7 @@ export RAVENCLAWS__LLM__SYSTEM_PROMPT="You are a helpful assistant."
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `provider` | string | `"litellm"` | LLM provider: `litellm`, `openai`, `openrouter`, `ollama`, `anthropic` |
+| `provider` | string | `"litellm"` | LLM provider: `litellm`, `openai`, `openrouter`, `ollama`, `anthropic`, `openai-compatible` |
 | `endpoint` | string | — | API endpoint URL |
 | `api_key` | string | — | API key (prefer env var `RAVENCLAWS__LLM__API_KEY`) |
 | `model` | string | `"gpt-4o-mini"` | Model name |
@@ -180,10 +180,50 @@ reviewer = "You are a meticulous code reviewer."
 | Flag | Description |
 |------|-------------|
 | `--config <path>` | Config file path |
-| `--exec <prompt>` | One-shot execution mode |
-| `--repl` | Interactive REPL mode |
-| `--serve` | HTTP server mode |
-| `--mcp-server` | MCP server mode |
+| `-m, --mode <mode>` | Agent mode: `single`, `swarm`, or `supervisor` (default: `single`) |
+| `-e, --exec <prompt>` | One-shot execution mode |
+| `-R, --repl` | Interactive REPL mode |
+| `--serve` | HTTP server mode (long-running with `/health`, `/ready`, `/metrics`) |
+| `--mcp-server` | MCP server mode (expose tools over stdio via MCP protocol) |
+| `--mcp-command <cmd>` | MCP client command (stdio transport, e.g. `npx -y @modelcontextprotocol/server-filesystem`) |
+| `--mcp-args <args>` | MCP client arguments (space-separated) |
+| `--mcp-env <vars>` | MCP client environment variables (KEY=VALUE, comma-separated) |
+| `--heartbeat` | Autonomous heartbeat mode (persistent assess→plan→act→sleep loop) |
+| `--heartbeat-goal <text>` | Goal prompt for heartbeat mode |
+| `--heartbeat-tick-interval <secs>` | Tick interval in seconds (default: 300) |
+| `--heartbeat-max-ticks <N>` | Maximum ticks (0 = unlimited) |
+| `--heartbeat-session <id>` | Heartbeat session ID for resuming |
+| `--swarm-topology <type>` | Swarm topology: `star`, `mesh`, `hierarchical`, `hybrid` (default: `star`) |
+| `--swarm-max-depth <N>` | Maximum recursion depth for hierarchical swarm (default: 3) |
+| `--swarm-max-workers <N>` | Maximum workers in the swarm (default: 100) |
+| `--swarm-dynamic-roles` | Enable dynamic role assignment in swarm mode |
+| `--swarm-profiles <path>` | Worker profiles file path (JSON) |
+| `--swarm-communication` | Enable inter-agent communication in swarm mode |
+| `--swarm-health-monitoring` | Enable swarm health monitoring |
+| `--background` | Submit a background task and return immediately |
+| `--task-status <id>` | Check status of a background task |
+| `--task-list` | List all background tasks |
+| `--task-cancel <id>` | Cancel a background task |
+| `--task-resume` | Resume incomplete background tasks on startup |
+| `--scheduler` | Run the scheduler with configured triggers (cron, webhook, file-watch) |
+| `--eval <path>` | Run eval suite from config file |
+| `--eval-json` | Output eval results as JSON |
+| `--provider <name>` | Override LLM provider: `litellm`, `openai`, `openrouter`, `ollama`, `anthropic` |
+| `--endpoint <url>` | Override LLM endpoint URL |
+| `--model <name>` | Override model name |
 | `--system-prompt <text>` | Override system prompt |
-| `--version` | Print version and exit |
-| `--help` | Print help and exit |
+| `--require-approval` | Require human approval for sensitive tool calls (HITL) |
+| `--max-iterations <N>` | Maximum iterations for the agent loop (default: 10) |
+| `--token-budget <N>` | Token budget per run (stops when exceeded) |
+| `--retry-max <N>` | Retry max attempts (default: 3) |
+| `--retry-base-delay-ms <N>` | Retry base delay in ms (default: 100) |
+| `--fallback-chain <providers>` | Enable provider fallback chain (comma-separated) |
+| `--server-host <host>` | HTTP server host (overrides config) |
+| `--server-port <port>` | HTTP server port (overrides config) |
+| `--webhook-port <port>` | Webhook server port (default: 9090) |
+| `--otel-endpoint <url>` | OpenTelemetry OTLP gRPC endpoint |
+| `--otel-service-name <name>` | OpenTelemetry service name |
+| `--otel-disabled` | Disable OpenTelemetry tracing |
+| `-v, --verbose` | Enable verbose logging |
+| `-V, --version` | Print version and exit |
+| `-h, --help` | Print help and exit |

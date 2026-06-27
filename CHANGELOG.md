@@ -8,7 +8,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- (no unreleased changes yet)
+- **Generic `openai-compatible` provider** — New `LLMProvider::OpenAICompatible` variant unlocks vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, Fireworks, DeepInfra, and any custom OpenAI-compatible endpoint. Config: `provider = "openai-compatible"`, CLI: `--provider openai-compatible`. ~50 LOC in `config.rs` + `llm.rs` + `main.rs`.
+- **Missing library re-exports** — `HeartbeatAgent`, `SwarmOrchestrator`, `BackgroundTaskManager`, `Scheduler`, `McpClient`, `McpServer`, `EvalRunner`, `TelemetryGuard`, `RavenFabricClient`, and `run_server` are now re-exported from `src/lib.rs` for library users.
+- **Complete CLI flags documentation** — All 45+ CLI flags now documented in `docs/guides/configuration.md` and `website/public/docs/configuration.html` (was 8 flags).
+
+### Fixed
+- **`--provider anthropic` CLI flag** — Anthropic provider is now selectable via `--provider anthropic` (previously fell through to LiteLLM).
+- **`--webhook-port` CLI flag** — Scheduler now respects the `--webhook-port` value instead of hardcoding port 9090.
+- **Audit log mutex poisoning** — Replaced 7 `unwrap()` calls on `self.entries.lock()` with proper error handling via `lock_entries()` helper. Mutex poisoning no longer panics the audit log hot path.
+- **README env var prefix** — Fixed `RAVENCLAW__` → `RAVENCLAWS__` (missing final S) in Quick Start, Docker, and env var table sections.
+- **README `--mode single` reference** — Quick Start now uses `--exec` instead of `--mode single`.
+
+### Changed
+- **Provider count updated** — Landing page, docs, and metadata updated from 5 to 6 LLM providers.
+- **Provider Strategy section updated** — ROADMAP.md Provider Strategy updated to reflect implemented `openai-compatible` provider.
 
 ## [0.9.3] — 2026-06-27
 

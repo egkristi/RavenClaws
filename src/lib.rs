@@ -105,9 +105,18 @@ pub mod tools;
 
 pub use agent::{run_agent_loop, run_agent_loop_with_mcp, AgentLoopConfig, ConversationMemory};
 pub use audit::AuditLog;
+pub use background::BackgroundTaskManager;
 pub use config::{Config, LLMConfig, LLMProvider, RuntimeConfig, SecurityConfig};
 pub use error::RavenClawsError;
+pub use eval::EvalRunner;
+pub use heartbeat::HeartbeatAgent;
 pub use llm::{create_client, ChatMessage, ChatResponse, LLMProviderTrait, MultiModelManager};
+pub use mcp::{McpClient, McpServer};
 pub use policy::PolicyEngine;
+pub use ravenfabric::RavenFabricClient;
 pub use sandbox::Sandbox;
+pub use scheduler::Scheduler;
+pub use server::run_server;
+pub use swarm::SwarmOrchestrator;
+pub use telemetry::TelemetryGuard;
 pub use tools::{ToolCall, ToolImpl, ToolRegistry, ToolResult};

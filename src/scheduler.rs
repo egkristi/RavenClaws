@@ -96,6 +96,8 @@ pub struct Scheduler {
     triggers: Vec<TriggerConfig>,
     /// Whether the scheduler is running
     running: Arc<RwLock<bool>>,
+    /// Webhook server port (default: 9090)
+    webhook_port: u16,
 }
 
 impl Scheduler {
@@ -105,7 +107,13 @@ impl Scheduler {
             bg_manager,
             triggers: config.triggers.clone(),
             running: Arc::new(RwLock::new(false)),
+            webhook_port: 9090,
         }
+    }
+
+    /// Set the webhook server port
+    pub fn set_webhook_port(&mut self, port: u16) {
+        self.webhook_port = port;
     }
 
     /// Start all triggers and run until cancelled
@@ -221,8 +229,7 @@ impl Scheduler {
                 .collect();
 
             let bg = self.bg_manager.clone();
-            // Use a default webhook port — configurable in future
-            let port = 9090u16;
+            let port = self.webhook_port;
 
             tokio::spawn(async move {
                 run_webhook_server(port, webhook_triggers, bg).await;

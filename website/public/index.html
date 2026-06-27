@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RavenClaws — The Ultimate AI Agentic Worker · Secure Rust agent framework</title>
-<meta name="description" content="RavenClaws is a lightweight, secure Rust AI-agent framework. One static ~5.2 MB binary, zero runtime dependencies, 5 LLM providers, swarm & autonomous heartbeat modes, MCP client/server, and a verified supply chain. Self-hostable and air-gappable.">
+<meta name="description" content="RavenClaws is a lightweight, secure Rust AI-agent framework. One static ~5.2 MB binary, zero runtime dependencies, 6 LLM providers, swarm & autonomous heartbeat modes, MCP client/server, and a verified supply chain. Self-hostable and air-gappable.">
 <link rel="canonical" href="https://ravenclaws.io/">
 <meta name="theme-color" content="#070a10">
 
@@ -12,14 +12,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="RavenClaws">
 <meta property="og:title" content="RavenClaws — The Ultimate AI Agentic Worker">
-<meta property="og:description" content="Secure AI agents in a single ~5 MB Rust binary. Zero runtime deps, 5 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain. Self-hostable & air-gappable.">
+<meta property="og:description" content="Secure AI agents in a single ~5 MB Rust binary. Zero runtime deps, 6 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain. Self-hostable & air-gappable.">
 <meta property="og:url" content="https://ravenclaws.io/">
 <meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="RavenClaws — The Ultimate AI Agentic Worker">
-<meta name="twitter:description" content="Secure AI agents in a single ~5 MB Rust binary. Zero runtime deps, 5 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain.">
+<meta name="twitter:description" content="Secure AI agents in a single ~5 MB Rust binary. Zero runtime deps, 6 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain.">
 <meta name="twitter:image" content="https://ravenclaws.io/assets/og-image.png">
 
 <link rel="icon" href="/assets/favicon.ico" sizes="any">
@@ -109,7 +109,7 @@
         <div class="stat-row">
           <div class="stat"><b>~5.2<span class="u">MB</span></b><span>stripped binary</span></div>
           <div class="stat"><b>0</b><span>runtime deps</span></div>
-          <div class="stat"><b>5</b><span>LLM providers</span></div>
+          <div class="stat"><b>6</b><span>LLM providers</span></div>
           <div class="stat"><b>452</b><span>unit tests</span></div>
           <div class="stat"><b>18</b><span>modules</span></div>
         </div>
@@ -203,7 +203,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
         <h3>Multi-provider routing</h3>
-        <p>Five providers behind one trait, with round-robin, intelligent fallback chains, a circuit breaker, and token budgets.</p>
+        <p>Six providers behind one trait, with round-robin, intelligent fallback chains, a circuit breaker, and token budgets.</p>
       </div>
 
       <div class="card col-span-2 feature-media">
@@ -317,8 +317,8 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
   <div class="wrap">
     <div class="section-head center">
       <p class="eyebrow">Bring your own model</p>
-      <h2 class="section-title">Five providers, one unified API.</h2>
-      <p class="section-lead">Route across cloud and local models with a single trait — then fail over between them automatically. Run fully offline with Ollama.</p>
+      <h2 class="section-title">Six providers, one unified API.</h2>
+      <p class="section-lead">Route across cloud and local models with a single trait — then fail over between them automatically. Run fully offline with Ollama, or bring any OpenAI-compatible backend.</p>
     </div>
     <div class="providers">
       <div class="prov"><div class="badge">Li</div><b>LiteLLM</b><span>100+ models via proxy</span></div>
@@ -326,6 +326,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
       <div class="prov"><div class="badge">OR</div><b>OpenRouter</b><span>many hosted models</span></div>
       <div class="prov"><div class="badge">Ol</div><b>Ollama</b><span>local · air-gapped</span></div>
       <div class="prov"><div class="badge">An</div><b>Anthropic</b><span>native Claude tool use</span></div>
+      <div class="prov"><div class="badge">OC</div><b>OpenAI-Compat</b><span>vLLM, Groq, TGI, …</span></div>
     </div>
   </div>
 </section>
@@ -400,7 +401,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
         <h3>AGPLv3 — Open source</h3>
         <p class="price">Free for personal use, OSS projects, and commercial use up to 50 agents / $5M revenue.</p>
         <ul>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Full agent runtime &amp; all 5 providers</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Full agent runtime &amp; all 6 providers</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Tools, MCP, sandbox, audit log</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Docker &amp; Kubernetes manifests</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Library crate &amp; the full source</li>
@@ -429,7 +430,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
       <img src="/assets/raven-carved.webp" alt="A raven perched on a branch carved with RavenClaws.io" width="520" height="292" style="display:block;max-width:min(520px,86%);margin:0 auto 20px;filter:drop-shadow(0 24px 44px rgba(0,0,0,.55))" loading="lazy">
       <p class="eyebrow" style="justify-content:center">Secure · Small · Efficient · Robust · Simple</p>
       <h2>Ship an agent you can actually trust.</h2>
-      <p>One static binary. Five providers. Swarms that scale to thousands. Self-hostable, air-gappable, and verifiable end to end.</p>
+      <p>One static binary. Six providers. Swarms that scale to thousands. Self-hostable, air-gappable, and verifiable end to end.</p>
       <div class="btn-row" style="justify-content:center">
         <a class="btn btn--primary btn--lg" href="/docs/getting-started">Get started</a>
         <a class="btn btn--ghost btn--lg" href="https://github.com/egkristi/RavenClaws" rel="noopener">Star on GitHub</a>

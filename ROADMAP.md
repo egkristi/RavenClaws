@@ -536,19 +536,19 @@ Enterprise features (v0.8) and advanced capabilities (v0.10) are deferred to pos
 - [ ] **Wire `AgentMessageBus` into swarm orchestration** — message bus is created but never used in the orchestration flow. All methods are `#[allow(dead_code)]`.
 - [ ] **Wire `SwarmHealthMonitor` into swarm orchestration** — health monitoring is initialized but never checked during orchestration. All methods are `#[allow(dead_code)]`.
 - [ ] **Wire `WebSearchConfig` into web search tool** — web search tool uses hardcoded SearXNG endpoint (`https://searx.be`). The `Config.web_search` field and `WebSearchConfig` struct are `#[allow(dead_code)]`.
-- [ ] **Fix `--provider anthropic` CLI flag** — Anthropic provider is unreachable via CLI. The `--provider` flag maps `"openrouter"`, `"ollama"`, `"openai"` but `"anthropic"` falls through to default `LiteLLM`. The `Anthropic` variant exists in `LLMProvider` enum and `create_client()` supports it, but the CLI can't select it.
-- [ ] **Fix `--webhook-port` CLI flag** — `webhook_port` CLI flag is parsed in `main.rs` but never used. The scheduler's webhook server hardcodes port `9090` instead of using the parsed value.
-- [ ] **Replace `unwrap()` on audit log mutex** — 7+ `unwrap()` calls on `self.entries.lock()` in `audit.rs` (lines 181, 315, 320, 325, 330, 361, 367). If the mutex is poisoned, the entire audit log panics. This is a hot path — every tool call, policy decision, and approval goes through these locks.
-- [ ] **Fix README env var prefix** — README uses `RAVENCLAW__` (missing the final S) instead of `RAVENCLAWS__` in Quick Start, Docker, and env var table sections. This would cause config loading to fail for users following the README literally.
-- [ ] **Fix README `--mode single` reference** — Quick Start shows `./target/release/ravenclaws --mode single` which is not the recommended usage pattern. Should use `--exec` or `--repl`.
-- [ ] **Add missing CLI flags to configuration docs** — `--mcp-client`, `--swarm`, `--supervisor`, `--heartbeat` flags exist in the binary but are not listed in the CLI flags table in `docs/guides/configuration.md` or `website/public/docs/configuration.html`.
+- [x] **Fix `--provider anthropic` CLI flag** — Anthropic provider is unreachable via CLI. The `--provider` flag maps `"openrouter"`, `"ollama"`, `"openai"` but `"anthropic"` falls through to default `LiteLLM`. The `Anthropic` variant exists in `LLMProvider` enum and `create_client()` supports it, but the CLI can't select it.
+- [x] **Fix `--webhook-port` CLI flag** — `webhook_port` CLI flag is parsed in `main.rs` but never used. The scheduler's webhook server hardcodes port `9090` instead of using the parsed value.
+- [x] **Replace `unwrap()` on audit log mutex** — 7+ `unwrap()` calls on `self.entries.lock()` in `audit.rs` (lines 181, 315, 320, 325, 330, 361, 367). If the mutex is poisoned, the entire audit log panics. This is a hot path — every tool call, policy decision, and approval goes through these locks.
+- [x] **Fix README env var prefix** — README uses `RAVENCLAW__` (missing the final S) instead of `RAVENCLAWS__` in Quick Start, Docker, and env var table sections. This would cause config loading to fail for users following the README literally.
+- [x] **Fix README `--mode single` reference** — Quick Start shows `./target/release/ravenclaws --mode single` which is not the recommended usage pattern. Should use `--exec` or `--repl`.
+- [x] **Add missing CLI flags to configuration docs** — `--mcp-client`, `--swarm`, `--supervisor`, `--heartbeat` flags exist in the binary but are not listed in the CLI flags table in `docs/guides/configuration.md` or `website/public/docs/configuration.html`.
 - [ ] **Add v0.9.1 → v0.9.2 migration section to `docs/guides/migration.md`** — No documentation for the inter-agent communication bus (`AgentMessageBus`, `MessageType`) and swarm health monitoring (`SwarmHealthMonitor`, `WorkerHealthStatus`) additions.
 - [ ] **Add community health files** — Missing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `FUNDING.yml`, issue templates, and PR template. These are required for OSS project maturity and GitHub community profile.
 - [ ] **Reduce container image size** — Current ~50 MB vs < 30 MB target. Investigate multi-stage build optimization, smaller base image, or removing RavenFabric agent binary from production image.
 - [ ] **Add agent execution endpoints to HTTP server** — Server mode has `/health`, `/ready`, `/metrics` but no `/chat`, `/execute`, or `/tools` endpoints. The server can report status but cannot actually run agents.
 - [ ] **Implement SSE transport for MCP** — `McpTransportConfig::Sse` variant exists but returns `"SSE transport not yet implemented"`. This is the only `TODO` in the entire codebase.
-- [ ] **Add missing re-exports to library crate** — `heartbeat`, `swarm`, `background`, `scheduler`, `server`, `mcp`, `eval`, `telemetry`, `ravenfabric` modules are not re-exported from `src/lib.rs`. Library users cannot easily access `HeartbeatAgent`, `SwarmOrchestrator`, `BackgroundTaskManager`, `Scheduler`, `McpClient`, `McpServer`, `EvalRunner`, `TelemetryGuard`, or `RavenFabricClient` without deep path imports.
-- [ ] **Add generic `provider = "openai-compatible"` variant** — Unlocks vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, Fireworks, DeepInfra, and any custom OpenAI-compatible endpoint. ~160 LOC: enum variant in `config.rs`, CLI mapping in `main.rs`, 3-4 `mockito` tests.
+- [x] **Add missing re-exports to library crate** — `heartbeat`, `swarm`, `background`, `scheduler`, `server`, `mcp`, `eval`, `telemetry`, `ravenfabric` modules are not re-exported from `src/lib.rs`. Library users cannot easily access `HeartbeatAgent`, `SwarmOrchestrator`, `BackgroundTaskManager`, `Scheduler`, `McpClient`, `McpServer`, `EvalRunner`, `TelemetryGuard`, or `RavenFabricClient` without deep path imports.
+- [x] **Add generic `provider = "openai-compatible"` variant** — Unlocks vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, Fireworks, DeepInfra, and any custom OpenAI-compatible endpoint. ~160 LOC: enum variant in `config.rs`, CLI mapping in `main.rs`, 3-4 `mockito` tests.
 - [ ] **Ship vLLM docs + verification tests** — `docs/guides/vllm.md` with quick start, `scripts/lib/test-provider-vllm.sh` for integration testing, matching `website/public/docs/vllm.html` page.
 - [ ] **Ship llama.cpp docs + verification tests** — `docs/guides/llamacpp.md` with quick start, `scripts/lib/test-provider-llamacpp.sh` for integration testing, matching `website/public/docs/llamacpp.html` page.
 - [ ] **Add Azure OpenAI adapter** — `Azure` variant to `OpenAICompatibleProvider` with `api-key` header, deployment-based URLs, and `api-version` query parameter. ~240 LOC.
@@ -571,7 +571,7 @@ Enterprise features (v0.8) and advanced capabilities (v0.10) are deferred to pos
 
 ### Current Architecture
 
-RavenClaws has **5 native LLM providers** unified under `LLMProviderTrait`:
+RavenClaws has **6 LLM providers** unified under `LLMProviderTrait`:
 
 | Provider | Client | Status |
 |---|---|---|
@@ -580,11 +580,12 @@ RavenClaws has **5 native LLM providers** unified under `LLMProviderTrait`:
 | OpenRouter | `OpenAICompatibleClient` (variant: `OpenRouter`) | ✅ Working |
 | Ollama | `OpenAICompatibleClient` (variant: `Ollama`) | ✅ Working |
 | Anthropic | `AnthropicClient` (native, not OpenAI-compat) | ✅ Working |
+| OpenAI-Compatible | `OpenAICompatibleClient` (variant: `Generic`) | ✅ v0.9.3 |
 
-The `OpenAICompatibleClient` handles 4 of 5 providers via a shared `/v1/chat/completions`
+The `OpenAICompatibleClient` handles 5 of 6 providers via a shared `/v1/chat/completions`
 endpoint with provider-specific defaults (endpoint URL, headers, model names).
 
-### Recommendation: Add a Generic `openai-compatible` Provider
+### ✅ Generic `openai-compatible` Provider (Implemented v0.9.3)
 
 **Decision: ADD a generic `provider = "openai-compatible"` variant.** This is the
 single highest-leverage provider addition — it unlocks dozens of inference engines

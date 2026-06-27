@@ -38,6 +38,8 @@ pub enum OpenAICompatibleProvider {
     LiteLLM,
     OpenAI,
     OpenRouter,
+    /// Generic OpenAI-compatible endpoint (vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, etc.)
+    Generic,
 }
 
 impl OpenAICompatibleProvider {
@@ -47,6 +49,7 @@ impl OpenAICompatibleProvider {
             OpenAICompatibleProvider::LiteLLM => "http://localhost:4000",
             OpenAICompatibleProvider::OpenAI => "https://api.openai.com",
             OpenAICompatibleProvider::OpenRouter => "https://openrouter.ai",
+            OpenAICompatibleProvider::Generic => "http://localhost:8000",
         }
     }
 
@@ -56,6 +59,7 @@ impl OpenAICompatibleProvider {
             OpenAICompatibleProvider::LiteLLM => "litellm",
             OpenAICompatibleProvider::OpenAI => "openai",
             OpenAICompatibleProvider::OpenRouter => "openrouter",
+            OpenAICompatibleProvider::Generic => "openai-compatible",
         }
     }
 
@@ -946,6 +950,10 @@ pub fn create_client(config: &LLMConfig) -> Result<Arc<dyn LLMProviderTrait>, LL
             Ok(Arc::new(unified))
         }
         LLMProvider::Anthropic => Ok(Arc::new(AnthropicClient::new(config)?)),
+        LLMProvider::OpenAICompatible => {
+            let unified = OpenAICompatibleClient::new(config, OpenAICompatibleProvider::Generic)?;
+            Ok(Arc::new(unified))
+        }
     }
 }
 

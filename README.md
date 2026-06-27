@@ -108,8 +108,8 @@ cargo build --release
 
 # Run with any provider
 export LITELLM_API_KEY="your-key"
-export RAVENCLAW__LLM__ENDPOINT="http://localhost:4000"
-./target/release/ravenclaws --mode single
+export RAVENCLAWS__LLM__ENDPOINT="http://localhost:4000"
+./target/release/ravenclaws --exec "Summarize the latest release notes"
 
 # …or run a one-shot task and exit
 ./target/release/ravenclaws --exec "Summarize the latest release notes"
@@ -180,7 +180,7 @@ The library exposes all 18 modules with a stable public API:
 ```bash
 docker run --rm -it \
   -e LITELLM_API_KEY="your-key" \
-  -e RAVENCLAW__LLM__ENDPOINT="http://litellm:4000" \
+  -e RAVENCLAWS__LLM__ENDPOINT="http://litellm:4000" \
   ghcr.io/egkristi/ravenclaws:latest
 ```
 
@@ -200,7 +200,7 @@ kubectl -n ravenclaws logs -l app.kubernetes.io/name=ravenclaws
 ```
 
 > Single mode currently performs one request and exits. A long-running **server
-> mode** with `/health` `/ready` `/metrics` is on the roadmap (v0.7); until then,
+> mode** with `/health` `/ready` `/metrics` is available via `--serve`; until then,
 > prefer the `deployment-test.yaml`/Job-style manifest for k8s smoke tests.
 
 ## Configuration
@@ -209,14 +209,14 @@ kubectl -n ravenclaws logs -l app.kubernetes.io/name=ravenclaws
 
 | Variable | Description | Default |
 |---|---|---|
-| `RAVENCLAW__LLM__PROVIDER` | Provider: litellm, openrouter, ollama, openai | `litellm` |
-| `RAVENCLAW__LLM__ENDPOINT` | LLM endpoint URL | (provider-dependent) |
-| `RAVENCLAW__LLM__MODEL` | Default model | `gpt-4o-mini` |
+| `RAVENCLAWS__LLM__PROVIDER` | Provider: litellm, openrouter, ollama, openai, anthropic, openai-compatible | `litellm` |
+| `RAVENCLAWS__LLM__ENDPOINT` | LLM endpoint URL | (provider-dependent) |
+| `RAVENCLAWS__LLM__MODEL` | Default model | `gpt-4o-mini` |
 | `LITELLM_API_KEY` | API key for LiteLLM/OpenRouter/OpenAI | (required for cloud) |
-| `RAVENCLAW__LLMS` | JSON array for multi-model config | — |
-| `RAVENCLAW__RAVENFABRIC__ENDPOINT` | RavenFabric endpoint (optional) | — |
-| `RAVENCLAW__SECURITY__REQUIRE_TLS` | Enforce TLS | `true` |
-| `RAVENCLAW__RUNTIME__MAX_AGENTS` | Max concurrent agents | `10` |
+| `RAVENCLAWS__LLMS` | JSON array for multi-model config | — |
+| `RAVENCLAWS__RAVENFABRIC__ENDPOINT` | RavenFabric endpoint (optional) | — |
+| `RAVENCLAWS__SECURITY__REQUIRE_TLS` | Enforce TLS | `true` |
+| `RAVENCLAWS__RUNTIME__MAX_AGENTS` | Max concurrent agents | `10` |
 | `RUST_LOG` | Log level | `info` |
 
 ### Single provider mode
@@ -259,6 +259,16 @@ model = "claude-sonnet-4-20250514"
 [llm]
 provider = "openai"
 model = "gpt-4o"
+```
+
+**OpenAI-Compatible (vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, etc.):**
+```toml
+[llm]
+provider = "openai-compatible"
+endpoint = "http://localhost:8000/v1"
+model = "meta-llama/Llama-3.1-8B-Instruct"
+# No API key required for local inference; set via env var for cloud:
+# export RAVENCLAWS__LLM__API_KEY="your-key"
 ```
 
 ### Multi-model mode

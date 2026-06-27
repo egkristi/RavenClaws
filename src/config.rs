@@ -38,6 +38,9 @@ pub enum LLMProvider {
     Ollama,
     OpenAI,
     Anthropic,
+    /// Generic OpenAI-compatible provider (vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, etc.)
+    #[serde(rename = "openai-compatible")]
+    OpenAICompatible,
 }
 
 /// Top-level configuration for RavenClaws.

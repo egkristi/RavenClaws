@@ -89,7 +89,7 @@
       <table>
         <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>provider</code></td><td>string</td><td><code>"litellm"</code></td><td>Provider: <code>litellm</code>, <code>openai</code>, <code>openrouter</code>, <code>ollama</code>, <code>anthropic</code></td></tr>
+          <tr><td><code>provider</code></td><td>string</td><td><code>"litellm"</code></td><td>Provider: <code>litellm</code>, <code>openai</code>, <code>openrouter</code>, <code>ollama</code>, <code>anthropic</code>, <code>openai-compatible</code></td></tr>
           <tr><td><code>endpoint</code></td><td>string</td><td>—</td><td>API endpoint URL</td></tr>
           <tr><td><code>api_key</code></td><td>string</td><td>—</td><td>API key (prefer env var <code>RAVENCLAWS__LLM__API_KEY</code>)</td></tr>
           <tr><td><code>model</code></td><td>string</td><td><code>"gpt-4o-mini"</code></td><td>Model name</td></tr>
@@ -237,13 +237,53 @@ persona = <span class="tok-s">"You are a meticulous code reviewer."</span></code
         <thead><tr><th>Flag</th><th>Description</th></tr></thead>
         <tbody>
           <tr><td><code>--config &lt;path&gt;</code></td><td>Config file path</td></tr>
-          <tr><td><code>--exec &lt;prompt&gt;</code></td><td>One-shot execution mode</td></tr>
-          <tr><td><code>--repl</code></td><td>Interactive REPL mode</td></tr>
-          <tr><td><code>--serve</code></td><td>HTTP server mode</td></tr>
-          <tr><td><code>--mcp-server</code></td><td>MCP server mode</td></tr>
+          <tr><td><code>-m, --mode &lt;mode&gt;</code></td><td>Agent mode: <code>single</code>, <code>swarm</code>, or <code>supervisor</code> (default: <code>single</code>)</td></tr>
+          <tr><td><code>-e, --exec &lt;prompt&gt;</code></td><td>One-shot execution mode</td></tr>
+          <tr><td><code>-R, --repl</code></td><td>Interactive REPL mode</td></tr>
+          <tr><td><code>--serve</code></td><td>HTTP server mode (long-running with <code>/health</code>, <code>/ready</code>, <code>/metrics</code>)</td></tr>
+          <tr><td><code>--mcp-server</code></td><td>MCP server mode (expose tools over stdio via MCP protocol)</td></tr>
+          <tr><td><code>--mcp-command &lt;cmd&gt;</code></td><td>MCP client command (stdio transport)</td></tr>
+          <tr><td><code>--mcp-args &lt;args&gt;</code></td><td>MCP client arguments (space-separated)</td></tr>
+          <tr><td><code>--mcp-env &lt;vars&gt;</code></td><td>MCP client environment variables (KEY=VALUE, comma-separated)</td></tr>
+          <tr><td><code>--heartbeat</code></td><td>Autonomous heartbeat mode (persistent assess→plan→act→sleep loop)</td></tr>
+          <tr><td><code>--heartbeat-goal &lt;text&gt;</code></td><td>Goal prompt for heartbeat mode</td></tr>
+          <tr><td><code>--heartbeat-tick-interval &lt;secs&gt;</code></td><td>Tick interval in seconds (default: 300)</td></tr>
+          <tr><td><code>--heartbeat-max-ticks &lt;N&gt;</code></td><td>Maximum ticks (0 = unlimited)</td></tr>
+          <tr><td><code>--heartbeat-session &lt;id&gt;</code></td><td>Heartbeat session ID for resuming</td></tr>
+          <tr><td><code>--swarm-topology &lt;type&gt;</code></td><td>Swarm topology: <code>star</code>, <code>mesh</code>, <code>hierarchical</code>, <code>hybrid</code> (default: <code>star</code>)</td></tr>
+          <tr><td><code>--swarm-max-depth &lt;N&gt;</code></td><td>Maximum recursion depth for hierarchical swarm (default: 3)</td></tr>
+          <tr><td><code>--swarm-max-workers &lt;N&gt;</code></td><td>Maximum workers in the swarm (default: 100)</td></tr>
+          <tr><td><code>--swarm-dynamic-roles</code></td><td>Enable dynamic role assignment in swarm mode</td></tr>
+          <tr><td><code>--swarm-profiles &lt;path&gt;</code></td><td>Worker profiles file path (JSON)</td></tr>
+          <tr><td><code>--swarm-communication</code></td><td>Enable inter-agent communication in swarm mode</td></tr>
+          <tr><td><code>--swarm-health-monitoring</code></td><td>Enable swarm health monitoring</td></tr>
+          <tr><td><code>--background</code></td><td>Submit a background task and return immediately</td></tr>
+          <tr><td><code>--task-status &lt;id&gt;</code></td><td>Check status of a background task</td></tr>
+          <tr><td><code>--task-list</code></td><td>List all background tasks</td></tr>
+          <tr><td><code>--task-cancel &lt;id&gt;</code></td><td>Cancel a background task</td></tr>
+          <tr><td><code>--task-resume</code></td><td>Resume incomplete background tasks on startup</td></tr>
+          <tr><td><code>--scheduler</code></td><td>Run the scheduler with configured triggers (cron, webhook, file-watch)</td></tr>
+          <tr><td><code>--eval &lt;path&gt;</code></td><td>Run eval suite from config file</td></tr>
+          <tr><td><code>--eval-json</code></td><td>Output eval results as JSON</td></tr>
+          <tr><td><code>--provider &lt;name&gt;</code></td><td>Override LLM provider: <code>litellm</code>, <code>openai</code>, <code>openrouter</code>, <code>ollama</code>, <code>anthropic</code>, <code>openai-compatible</code></td></tr>
+          <tr><td><code>--endpoint &lt;url&gt;</code></td><td>Override LLM endpoint URL</td></tr>
+          <tr><td><code>--model &lt;name&gt;</code></td><td>Override model name</td></tr>
           <tr><td><code>--system-prompt &lt;text&gt;</code></td><td>Override system prompt</td></tr>
-          <tr><td><code>--version</code></td><td>Print version and exit</td></tr>
-          <tr><td><code>--help</code></td><td>Print help and exit</td></tr>
+          <tr><td><code>--require-approval</code></td><td>Require human approval for sensitive tool calls (HITL)</td></tr>
+          <tr><td><code>--max-iterations &lt;N&gt;</code></td><td>Maximum iterations for the agent loop (default: 10)</td></tr>
+          <tr><td><code>--token-budget &lt;N&gt;</code></td><td>Token budget per run (stops when exceeded)</td></tr>
+          <tr><td><code>--retry-max &lt;N&gt;</code></td><td>Retry max attempts (default: 3)</td></tr>
+          <tr><td><code>--retry-base-delay-ms &lt;N&gt;</code></td><td>Retry base delay in ms (default: 100)</td></tr>
+          <tr><td><code>--fallback-chain &lt;providers&gt;</code></td><td>Enable provider fallback chain (comma-separated)</td></tr>
+          <tr><td><code>--server-host &lt;host&gt;</code></td><td>HTTP server host (overrides config)</td></tr>
+          <tr><td><code>--server-port &lt;port&gt;</code></td><td>HTTP server port (overrides config)</td></tr>
+          <tr><td><code>--webhook-port &lt;port&gt;</code></td><td>Webhook server port (default: 9090)</td></tr>
+          <tr><td><code>--otel-endpoint &lt;url&gt;</code></td><td>OpenTelemetry OTLP gRPC endpoint</td></tr>
+          <tr><td><code>--otel-service-name &lt;name&gt;</code></td><td>OpenTelemetry service name</td></tr>
+          <tr><td><code>--otel-disabled</code></td><td>Disable OpenTelemetry tracing</td></tr>
+          <tr><td><code>-v, --verbose</code></td><td>Enable verbose logging</td></tr>
+          <tr><td><code>-V, --version</code></td><td>Print version and exit</td></tr>
+          <tr><td><code>-h, --help</code></td><td>Print help and exit</td></tr>
         </tbody>
       </table>
 

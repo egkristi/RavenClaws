@@ -259,6 +259,8 @@ async fn main() -> anyhow::Result<()> {
             "openrouter" => config::LLMProvider::OpenRouter,
             "ollama" => config::LLMProvider::Ollama,
             "openai" => config::LLMProvider::OpenAI,
+            "anthropic" => config::LLMProvider::Anthropic,
+            "openai-compatible" | "openai_compatible" => config::LLMProvider::OpenAICompatible,
             _ => config::LLMProvider::LiteLLM,
         };
     }
@@ -545,7 +547,8 @@ async fn main() -> anyhow::Result<()> {
     if args.scheduler {
         info!("Running in scheduler mode with configured triggers");
 
-        let scheduler = scheduler::Scheduler::new(bg_manager.clone(), &config.scheduler);
+        let mut scheduler = scheduler::Scheduler::new(bg_manager.clone(), &config.scheduler);
+        scheduler.set_webhook_port(args.webhook_port);
         scheduler.start().await?;
 
         info!(
@@ -743,6 +746,7 @@ async fn main() -> anyhow::Result<()> {
             config::LLMProvider::Ollama => "Ollama",
             config::LLMProvider::OpenAI => "OpenAI",
             config::LLMProvider::Anthropic => "Anthropic",
+            config::LLMProvider::OpenAICompatible => "OpenAI-Compatible",
         };
 
         info!(provider = provider_name, endpoint = %config.llm.endpoint, model = %config.llm.model, "LLM client initialized");

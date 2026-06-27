@@ -178,7 +178,7 @@ impl AuditLog {
         description: &str,
         metadata: Option<serde_json::Value>,
     ) -> Result<AuditEntry, AuditError> {
-        let mut entries = self.entries.lock().unwrap();
+        let mut entries = self.lock_entries()?;
 
         let index = entries.len() as u64;
         let timestamp = chrono::Utc::now().to_rfc3339();
@@ -311,23 +311,23 @@ impl AuditLog {
     }
 
     /// Get all entries
-    pub fn entries(&self) -> Vec<AuditEntry> {
-        self.entries.lock().unwrap().clone()
+    pub fn entries(&self) -> Result<Vec<AuditEntry>, AuditError> {
+        Ok(self.lock_entries()?.clone())
     }
 
     /// Get the number of entries
-    pub fn len(&self) -> usize {
-        self.entries.lock().unwrap().len()
+    pub fn len(&self) -> Result<usize, AuditError> {
+        Ok(self.lock_entries()?.len())
     }
 
     /// Check if the log is empty
-    pub fn is_empty(&self) -> bool {
-        self.entries.lock().unwrap().is_empty()
+    pub fn is_empty(&self) -> Result<bool, AuditError> {
+        Ok(self.lock_entries()?.is_empty())
     }
 
     /// Verify the integrity of the entire audit log
     pub fn verify(&self) -> Result<(), AuditError> {
-        let entries = self.entries.lock().unwrap();
+        let entries = self.lock_entries()?;
 
         if entries.is_empty() {
             return Err(AuditError::EmptyLog);
@@ -358,13 +358,13 @@ impl AuditLog {
 
     /// Export the audit log as JSON
     pub fn to_json(&self) -> Result<String, AuditError> {
-        let entries = self.entries.lock().unwrap();
+        let entries = self.lock_entries()?;
         Ok(serde_json::to_string_pretty(&*entries)?)
     }
 
     /// Export the audit log as JSON lines (one entry per line)
     pub fn to_json_lines(&self) -> Result<String, AuditError> {
-        let entries = self.entries.lock().unwrap();
+        let entries = self.lock_entries()?;
         let mut lines = String::new();
         for entry in entries.iter() {
             lines.push_str(&serde_json::to_string(entry)?);
@@ -374,6 +374,11 @@ impl AuditLog {
     }
 
     // ── Private helpers ────────────────────────────────────────────────
+
+    /// Lock the entries mutex, returning an error if poisoned
+    fn lock_entries(&self) -> Result<std::sync::MutexGuard<'_, Vec<AuditEntry>>, AuditError> {
+        self.entries.lock().map_err(|_| AuditError::NotInitialized)
+    }
 
     #[allow(clippy::too_many_arguments)]
     fn compute_hmac(
@@ -451,8 +456,8 @@ mod tests {
     #[test]
     fn test_audit_log_empty() {
         let log = create_test_log();
-        assert!(log.is_empty());
-        assert_eq!(log.len(), 0);
+        assert!(log.is_empty().unwrap());
+        assert_eq!(log.len().unwrap(), 0);
     }
 
     #[test]
@@ -466,7 +471,7 @@ mod tests {
         assert_eq!(entry.component, "agent");
         assert_eq!(entry.event_type, AuditEventType::AgentStart);
         assert!(!entry.hmac.is_empty());
-        assert_eq!(log.len(), 1);
+        assert_eq!(log.len().unwrap(), 1);
     }
 
     #[test]
@@ -484,7 +489,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(log.len(), 2);
+        assert_eq!(log.len().unwrap(), 2);
     }
 
     #[test]

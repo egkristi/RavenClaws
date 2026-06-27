@@ -277,33 +277,27 @@ Items are ordered by severity/impact.
 
 ### `--provider anthropic` CLI flag falls through to LiteLLM
 
-**Problem:** The `--provider` flag in `main.rs` maps `"openrouter"`, `"ollama"`, `"openai"` but `"anthropic"` falls through to the default `LiteLLM`. The `Anthropic` variant exists in `LLMProvider` enum and `create_client()` supports it, but the CLI can't select it.
+**Fix:** Added `"anthropic"` mapping to the `--provider` flag match block in `src/main.rs`.
 
-**Impact:** Users cannot select the Anthropic provider via CLI. Must use config file or env vars.
+**Files:** `src/main.rs`
 
-**Files:** `src/main.rs` (lines ~256-262)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ✅ Resolved — `--provider anthropic` now selects the Anthropic provider.
 
 ### `--webhook-port` CLI flag parsed but never used
 
-**Problem:** The `webhook_port` CLI flag is parsed in `main.rs` but never passed to the scheduler. The scheduler's webhook server hardcodes port `9090`.
+**Fix:** Added `webhook_port` field to `Scheduler` struct with `set_webhook_port()` method. Wired `args.webhook_port` from `main.rs` to the scheduler. Replaced hardcoded `9090` with `self.webhook_port`.
 
-**Impact:** Users cannot configure the webhook port via CLI. The `--webhook-port` flag is silently ignored.
+**Files:** `src/scheduler.rs`, `src/main.rs`
 
-**Files:** `src/main.rs` (lines ~909-910), `src/scheduler.rs` (line ~200)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ✅ Resolved — `--webhook-port` now configures the scheduler's webhook server.
 
 ### `unwrap()` on audit log mutex — 7+ calls on hot path
 
-**Problem:** 7+ `unwrap()` calls on `self.entries.lock()` in `audit.rs` (lines 181, 315, 320, 325, 330, 361, 367). If the mutex is poisoned (e.g., a panic in another thread), the entire audit log panics. This is a hot path — every tool call, policy decision, and approval goes through these locks.
-
-**Impact:** A single panic in any thread can bring down the entire agent by poisoning the audit log mutex.
+**Fix:** Added `lock_entries()` helper method that returns `Result<MutexGuard, AuditError>` instead of panicking. Replaced all 7 `self.entries.lock().unwrap()` calls with `self.lock_entries()?`. Updated `entries()`, `len()`, `is_empty()` return types to `Result`. Updated tests accordingly.
 
 **Files:** `src/audit.rs`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ✅ Resolved — mutex poisoning no longer panics the audit log hot path.
 
 ### MCP SSE transport not implemented
 
@@ -337,13 +331,11 @@ Items are ordered by severity/impact.
 
 ### README uses wrong env var prefix (`RAVENCLAW__` instead of `RAVENCLAWS__`)
 
-**Problem:** README uses `RAVENCLAW__` (missing the final S) instead of `RAVENCLAWS__` in Quick Start, Docker, and env var table sections. The codebase uses `RAVENCLAWS__` (with the S).
+**Fix:** Updated all `RAVENCLAW__` references to `RAVENCLAWS__` in Quick Start, Docker, and env var table sections.
 
-**Impact:** Users following the README literally will have config loading fail silently.
+**Files:** `README.md`
 
-**Files:** `README.md` (lines 111, 183, 212-219)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ✅ Resolved — all env var prefixes corrected.
 
 ### Missing community health files
 
@@ -369,19 +361,19 @@ Items are ordered by severity/impact.
 
 ### 9 modules not re-exported from library crate
 
-**Problem:** `heartbeat`, `swarm`, `background`, `scheduler`, `server`, `mcp`, `eval`, `telemetry`, `ravenfabric` modules are not re-exported from `src/lib.rs`. Library users cannot easily access key types without deep path imports.
+**Fix:** Added `pub use` re-exports for `HeartbeatAgent`, `SwarmOrchestrator`, `BackgroundTaskManager`, `Scheduler`, `McpClient`, `McpServer`, `EvalRunner`, `TelemetryGuard`, `RavenFabricClient`, and `run_server` in `src/lib.rs`.
 
-**Files:** `src/lib.rs` (lines 100-112)
+**Files:** `src/lib.rs`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ✅ Resolved — all 9 modules now re-exported.
 
 ### Missing CLI flags in configuration docs
 
-**Problem:** `--mcp-client`, `--swarm`, `--supervisor`, `--heartbeat` flags exist in the binary but are not listed in the CLI flags table in `docs/guides/configuration.md` or `website/public/docs/configuration.html`.
+**Fix:** Added complete CLI flags table (45+ flags) to both `docs/guides/configuration.md` and `website/public/docs/configuration.html`, covering all modes: single, swarm, supervisor, heartbeat, MCP, server, scheduler, eval, background tasks, provider overrides, and observability.
 
 **Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ✅ Resolved — all CLI flags documented.
 
 ### `[server]` docs document `enable_metrics` but field doesn't exist
 
