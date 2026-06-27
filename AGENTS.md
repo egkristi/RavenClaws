@@ -23,7 +23,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.9.6 (Server Mode: Full Agent Execution API + MCP Config)
+- **Version:** 0.9.7 (Multi-MCP-Client + Readiness LLM Check)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io
@@ -572,6 +572,33 @@ sed -i '' 's/^version = "0\.1\.0"/version = "1.0.0"/' Cargo.toml
 
 Update the version reference in `AGENTS.md` itself (Project Overview section) and any other docs that reference the version.
 
+### Phase 2b: Update Website
+
+Update the website to reflect the new version before committing:
+
+```bash
+# 1. Update version number in landing page JSON-LD
+sed -i '' 's/"softwareVersion": "0\.[0-9]*\.[0-9]*"/"softwareVersion": "vX.Y.Z"/' website/public/index.html
+
+# 2. Update stats on the landing page (hero section)
+#    - Binary size (~5.2 MB) — update if changed
+#    - Unit test count — update if tests were added/removed
+#    - Module count — update if modules were added/removed
+#    - LLM provider count — update if providers were added/removed
+#    Search for stat numbers in website/public/index.html and update them
+
+# 3. Update feature descriptions if new capabilities were added
+#    Check if any new features need to be reflected in the landing page
+
+# 4. Preview locally
+cd website && npm run dev
+
+# 5. Deploy to production
+cd website && npm run deploy
+```
+
+**When to skip:** If the release has no user-facing changes (e.g., internal refactoring only), the website deploy can be deferred. But version number and stats should still be updated.
+
 ### Phase 3: Update Changelog
 
 Move all `[Unreleased]` entries into a new `[vX.Y.Z]` section:
@@ -593,8 +620,14 @@ Then clear the `[Unreleased]` section headers (keep the structure, remove old en
 
 ### Phase 4: Commit & Tag
 
+> **Important:** The website must be deployed BEFORE committing, so the release tag
+> points to a state where the website already reflects the new version.
+
 ```bash
-# Commit the version bump and changelog update
+# 0. Deploy website first (reflects new version on ravenclaws.io)
+cd website && npm run deploy && cd ..
+
+# Commit the version bump, changelog update, and website changes
 git add -A
 git commit -m "Release v0.1.0"
 
@@ -693,6 +726,15 @@ cargo search ravenclaws
 /tmp/ravenclaws --version
 /tmp/ravenclaws --help
 echo "Hello" | /tmp/ravenclaws --exec "Say hello back" 2>&1 || true
+
+# ── 7d. Verify website reflects the new version ───────────────
+curl -s https://ravenclaws.io | grep -o '"softwareVersion": "[^"]*"'
+# Should show the new version number
+
+# ── 7e. Verify website docs are up to date ────────────────────
+# Check that any new docs pages or updated guides are live
+curl -s -o /dev/null -w '%{http_code}' https://ravenclaws.io/docs/getting-started
+# Should return 200
 ```
 
 ### Release Abort Criteria
@@ -709,6 +751,8 @@ If any of the following occur during the release process, **abort immediately** 
 8. Multi-arch manifest is missing either linux/amd64 or linux/arm64
 9. Binary SHA256 checksums do not match after download
 10. GitHub Release is missing required assets
+11. **Website deploy fails** — `npm run deploy` exits with non-zero status
+12. **Website version mismatch** — `ravenclaws.io` shows old version after deploy
 
 **If aborting:** Delete the tag locally and remotely, fix the issue, then restart from Phase 1:
 
@@ -735,11 +779,18 @@ Copy this into a new issue or comment when starting a release:
 - [ ] Version updated in `Cargo.toml`
 - [ ] Version references updated in docs
 
+### Phase 2b: Update Website
+- [ ] Version number updated in `website/public/index.html` (JSON-LD + hero stats)
+- [ ] Feature descriptions updated if new capabilities added
+- [ ] Website previewed locally: `cd website && npm run dev`
+- [ ] Website deployed: `cd website && npm run deploy`
+
 ### Phase 3: Changelog
 - [ ] `[Unreleased]` entries moved to `[vX.Y.Z]` section
 - [ ] Release date added
 
 ### Phase 4: Commit & Tag
+- [ ] Website deployed BEFORE committing (release tag points to state with live website)
 - [ ] Commit pushed: `git push`
 - [ ] Tag pushed: `git push --follow-tags`
 
@@ -767,6 +818,8 @@ Copy this into a new issue or comment when starting a release:
 - [ ] crates.io package published
 - [ ] GitHub Release has all assets
 - [ ] Binary works end-to-end
+- [ ] Website reflects new version: `curl -s https://ravenclaws.io | grep -o '"softwareVersion": "[^"]*"'`
+- [ ] Website docs pages return 200: `curl -s -o /dev/null -w '%{http_code}' https://ravenclaws.io/docs/getting-started`
 ```
 
 ---

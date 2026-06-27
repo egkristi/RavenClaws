@@ -372,7 +372,24 @@ async fn main() -> anyhow::Result<()> {
         };
 
         // Build a configured tool registry (respects web_search endpoint from config)
-        let tool_registry = Some(tools::ToolRegistry::with_config(&config));
+        let mut tool_registry = tools::ToolRegistry::with_config(&config);
+
+        // Register MCP tools from config-based servers (v0.9.6)
+        if !config.mcp.servers.is_empty() {
+            info!(
+                server_count = config.mcp.servers.len(),
+                "Initializing MCP clients from config for --exec mode"
+            );
+            let mcp_manager = mcp::McpClientManager::from_config(&config.mcp).await;
+            let registered = mcp_manager.register_all_tools(&mut tool_registry).await;
+            info!(
+                connected = mcp_manager.len(),
+                tools_registered = registered,
+                "MCP tools registered from config for --exec mode"
+            );
+        }
+
+        let tool_registry = Some(tool_registry);
 
         let response = if !config.llms.is_empty() {
             let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;

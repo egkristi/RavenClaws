@@ -116,7 +116,7 @@ pub use error::RavenClawsError;
 pub use eval::EvalRunner;
 pub use heartbeat::HeartbeatAgent;
 pub use llm::{create_client, ChatMessage, ChatResponse, LLMProviderTrait, MultiModelManager};
-pub use mcp::{McpClient, McpServer};
+pub use mcp::{McpClient, McpClientManager, McpServer};
 pub use policy::PolicyEngine;
 pub use ravenfabric::RavenFabricClient;
 pub use sandbox::Sandbox;

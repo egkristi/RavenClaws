@@ -93,7 +93,6 @@ pub struct Config {
 
     /// MCP server connections configuration (v0.9.6)
     #[serde(default)]
-    #[allow(dead_code)]
     pub mcp: McpConfig,
 }
 
@@ -116,7 +115,6 @@ pub struct Config {
 /// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize, Default)]
 #[non_exhaustive]
-#[allow(dead_code)]
 pub struct McpConfig {
     /// List of MCP servers to connect to
     #[serde(default)]
@@ -129,7 +127,6 @@ pub struct McpConfig {
 /// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)]
 pub struct McpServerConfig {
     /// Human-readable name for this MCP server (used in logs and tool namespacing)
     pub name: String,

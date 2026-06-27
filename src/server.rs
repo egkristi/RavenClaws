@@ -130,6 +130,8 @@ pub struct ServerState {
     pub tool_registry: Option<ToolRegistry>,
     /// Background task manager for async execution
     pub bg_manager: Option<BackgroundTaskManager>,
+    /// MCP client manager for multi-server MCP tool access
+    pub mcp_manager: Option<crate::mcp::McpClientManager>,
 }
 
 impl ServerState {
@@ -142,6 +144,7 @@ impl ServerState {
             llm: None,
             tool_registry: None,
             bg_manager: None,
+            mcp_manager: None,
         }
     }
 
@@ -158,11 +161,43 @@ fn health_response() -> Vec<u8> {
     b"OK".to_vec()
 }
 
-fn ready_response(state: &ServerState) -> (Vec<u8>, &'static str) {
-    if state.ready.load(Ordering::Relaxed) {
-        (b"READY".to_vec(), "200 OK")
+async fn ready_response(state: &ServerState) -> (Vec<u8>, &'static str) {
+    if !state.ready.load(Ordering::Relaxed) {
+        return (b"NOT READY".to_vec(), "503 Service Unavailable");
+    }
+
+    // If an LLM client is configured, verify connectivity for deep readiness
+    if let Some(ref llm) = state.llm {
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            llm.chat(vec![ChatMessage {
+                role: "user".to_string(),
+                content: "Respond with exactly one word: ready".to_string(),
+            }]),
+        )
+        .await
+        {
+            Ok(Ok(_)) => {
+                // LLM is reachable
+                (b"READY".to_vec(), "200 OK")
+            }
+            Ok(Err(e)) => {
+                warn!(error = %e, "Readiness check: LLM connectivity failed");
+                (
+                    b"NOT READY: LLM unreachable".to_vec(),
+                    "503 Service Unavailable",
+                )
+            }
+            Err(_) => {
+                warn!("Readiness check: LLM connectivity timed out");
+                (
+                    b"NOT READY: LLM timeout".to_vec(),
+                    "503 Service Unavailable",
+                )
+            }
+        }
     } else {
-        (b"NOT READY".to_vec(), "503 Service Unavailable")
+        (b"READY".to_vec(), "200 OK")
     }
 }
 
@@ -285,7 +320,7 @@ async fn handle_connection(mut stream: tokio::net::TcpStream, state: Arc<ServerS
     let (response_body, status_line, content_type) = match (*method, *path) {
         ("GET", "/health") => (health_response(), "200 OK", "text/plain"),
         ("GET", "/ready") => {
-            let (body, status) = ready_response(&state);
+            let (body, status) = ready_response(&state).await;
             (body, status, "text/plain")
         }
         ("GET", "/metrics") => (
@@ -753,6 +788,32 @@ pub async fn run_server(config: Config) -> anyhow::Result<()> {
     state.bg_manager = Some(bg_manager);
     info!("Background task manager initialized");
 
+    // Initialize MCP clients from config (v0.9.6)
+    if !state.config.mcp.servers.is_empty() {
+        info!(
+            server_count = state.config.mcp.servers.len(),
+            "Initializing MCP clients from config"
+        );
+        let mcp_manager = crate::mcp::McpClientManager::from_config(&state.config.mcp).await;
+        let registered = if !mcp_manager.is_empty() {
+            if let Some(ref mut registry) = state.tool_registry {
+                mcp_manager.register_all_tools(registry).await
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+        info!(
+            connected = mcp_manager.len(),
+            tools_registered = registered,
+            "MCP client initialization complete"
+        );
+        state.mcp_manager = Some(mcp_manager);
+    } else {
+        info!("No MCP servers configured, skipping MCP client initialization");
+    }
+
     let state = Arc::new(state);
     let listener = TcpListener::bind(&bind_addr).await.map_err(|e| {
         error!(address = %bind_addr, error = %e, "Failed to bind HTTP server");
@@ -846,7 +907,7 @@ mod tests {
         let config = test_config();
         let state = ServerState::new(config);
         state.mark_ready();
-        let (body, status) = ready_response(&state);
+        let (body, status) = ready_response(&state).await;
         assert_eq!(body, b"READY");
         assert_eq!(status, "200 OK");
     }
@@ -855,7 +916,7 @@ mod tests {
     async fn test_ready_response_when_not_ready() {
         let config = test_config();
         let state = ServerState::new(config);
-        let (body, status) = ready_response(&state);
+        let (body, status) = ready_response(&state).await;
         assert_eq!(body, b"NOT READY");
         assert_eq!(status, "503 Service Unavailable");
     }

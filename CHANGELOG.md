@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Config test initializers** — All 17 `Config` struct initializations in test code updated to include the new `mcp` field.
 - **Eval test calls updated** — All `check_single_assertion` test calls updated to pass the new `Option<&RunTrace>` parameter.
 
+## [v0.9.7] — 2026-06-02
+
+### Added
+- **Multi-MCP-client support** — New `McpClientManager` struct in `mcp.rs` that holds multiple `McpClient` instances. `from_config()` creates clients from TOML config `[mcp]` section. `register_all_tools()` registers tools from all connected servers into a `ToolRegistry`. Wired into both `--exec` mode and `--serve` (HTTP server) mode. `#[allow(dead_code)]` removed from `McpConfig` and `McpServerConfig`. Re-exported from `lib.rs`.
+- **Readiness LLM connectivity check** — `ready_response()` in `server.rs` now optionally verifies LLM connectivity before returning 200. When an LLM client is configured, sends a lightweight probe and returns `503 Service Unavailable` with descriptive message if the LLM is unreachable or times out (5s timeout). Falls back to simple boolean check when no LLM is configured.
+
 ## [Unreleased]
 
 ### Added

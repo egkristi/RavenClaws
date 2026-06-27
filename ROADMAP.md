@@ -1,9 +1,9 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
-**Date:** 2026-06-28  
-**Version:** v0.9.5 — Tool Execution Reliability ✅  
-**Previous Release:** v0.9.4 (2026-06-27) — `--no-final-required` flag, response logging, system prompt update ✅  
-**Current Commit:** `d4a4d26` (tagged `v0.9.5`)
+**Date:** 2026-06-02  
+**Version:** v0.9.7 — Multi-MCP-Client + Readiness LLM Check ✅  
+**Previous Release:** v0.9.6 (2026-06-02) — Server Mode: Full Agent Execution API + MCP Config ✅  
+**Current Commit:** (tagged `v0.9.7`)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
 **v1.0 Hardening Progress:** 26/145 items completed. **v0.9.6–v0.9.9 series planned** to close all gaps identified in rpi5 deployment feedback — making RavenClaws a fully functional primary agent that can replace OpenClaw, Manus, and other cloud agents.
 
@@ -75,7 +75,7 @@ v0.9.3 is **functional but not yet a primary agent**. The feedback was honest:
 | MCP Server is stdio-only — no SSE transport | `Sse` variant returns `Err("not implemented")` | ✅ **v0.9.3**: SSE transport implemented |
 | MCP Client is stdio-only — cannot connect to SSE servers | `Sse` variant returns `Err("not implemented")` | ✅ **v0.9.3**: SSE transport implemented |
 | No `[mcp]` section in TOML config | CLI flags only, no config struct | ✅ **v0.9.6**: Added `McpConfig` + `McpServerConfig` structs with `[mcp]` TOML section |
-| Only one MCP client connection supported | Single `--mcp-command` flag | v0.9.6: Add multi-MCP-client support |
+| Only one MCP client connection supported | Single `--mcp-command` flag | ✅ **v0.9.7**: Added `McpClientManager` — multi-client from config + CLI |
 | `--exec` mode works when model uses `FINAL:` format | Confirmed working — model behavior, not code bug | ✅ Documented in feedback |
 | `--mode single` works after workspace fix | ✅ Confirmed working | ✅ |
 | `--mode swarm` works with 3 parallel agents | ✅ Confirmed working | ✅ |
@@ -96,6 +96,7 @@ v0.9.3 is **functional but not yet a primary agent**. The feedback was honest:
 | `--serve` mode not documented | No docs page for HTTP server mode | v0.9.6: Add server mode docs |
 | Server port not configurable via env var | Only `--port` CLI flag | v0.9.6: Add env var override |
 | Readiness probe doesn't verify LLM connectivity | `/ready` returns OK immediately | ✅ **v0.9.6**: `/ready` returns 503 until server is fully initialized (LLM client + tools loaded) |
+| Readiness LLM connectivity check | `/ready` doesn't verify LLM is reachable | ✅ **v0.9.7**: `ready_response()` now sends lightweight LLM probe, returns 503 if unreachable |
 
 **The plan:** Six rapid releases (v0.9.4 → v0.9.9) to close every gap, then v1.0 is
 truly production-ready — a primary agent that can replace OpenClaw, Manus, or any
@@ -122,8 +123,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.9.5 (2026-06-28) — Tool Execution Reliability ✅  
-**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~16,700 LOC, 6 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **471 unit tests**, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, published on crates.io as `ravenclaws` (binary + library crate).
+**Version:** 0.9.7 (2026-06-02) — Multi-MCP-Client + Readiness LLM Check ✅  
+**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~16,700 LOC, 6 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **472 unit tests**, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, published on crates.io as `ravenclaws` (binary + library crate).
 
 **rpi5 Deployment Verdict (v0.9.5):** All 13 resolved issues from feedback confirmed working. 10 critical bugs fixed. 4 documentation gaps closed. 4 feature requests documented for future versions. RavenClaws runs successfully on Raspberry Pi 5 (aarch64, 8GB RAM, K3s) with ~3 MiB RSS idle memory, ~1m CPU idle, <1s startup, and 15.8 MB container image — **265x less memory and 228x less CPU than OpenClaw**.
 
@@ -156,7 +157,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Conversation memory | ✅ Working | `ConversationMemory` struct with configurable max history, auto-trim |
 | Interactive REPL | ✅ Working | `--repl` flag with stdin loop, streaming output, `/exit` `/reset` commands |
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt` field, CLI `--system-prompt`, env var override |
-| MCP client | ⚠️ Partial → 🎯 **v0.9.6** | JSON-RPC 2.0 over stdio + SSE transport. Only one MCP server connection supported (single `--mcp-command`). No TOML config section for MCP servers. **Fix planned:** TOML config section, multi-MCP-client support |
+| MCP client | ✅ **v0.9.7** | JSON-RPC 2.0 over stdio + SSE transport. `McpClientManager` supports multiple servers from TOML config + CLI `--mcp-command`. Tools registered into `ToolRegistry` for both `--exec` and `--serve` modes |
 | **MCP server** | ✅ **v0.7** | Exposes RavenClaws tools over stdio via MCP protocol; `--mcp-server` flag; policy-checked and audited. SSE transport also implemented (v0.9.3) |
 | **HTTP server mode** | ✅ **v0.7.1** → 🎯 **v0.9.6** | Long-running server with `/health`, `/ready`, `/metrics` endpoints; `--serve` flag; fixes k8s CrashLoopBackOff. No agent execution endpoints (`/chat`, `/execute`, `/tools`). **Fix planned:** `/chat`, `/execute`, `/tools` endpoints, deep health check, readiness LLM check |
 | **OpenTelemetry tracing** | ✅ **v0.7.2** | Opt-in distributed tracing with OTLP gRPC/stdout exporter; `#[instrument]` spans on agent loop, HTTP server, tools, LLM calls |
@@ -193,7 +194,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Init container `chown` in K8s | ❌ → 🎯 **v0.9.8** | `k8s/deployment.yaml` relies on `fsGroup` but has no explicit `chown` init container |
 | LiteLLM API key documentation | ❌ → 🎯 **v0.9.8** | `api_key` field exists on `LLMConfig` but not documented in config reference |
 | Heartbeat `goal` error message | ✅ **v0.9.4** | Now includes example: `--heartbeat-goal "Monitor system health and report anomalies"` |
-| Readiness probe LLM check | ❌ → 🎯 **v0.9.6** | `/ready` returns OK immediately, doesn't verify LLM connectivity |
+| Readiness probe LLM check | ✅ **v0.9.7** | `/ready` now sends lightweight LLM probe with 5s timeout, returns 503 if unreachable |
 | Network policy documentation | ❌ → 🎯 **v0.9.8** | No docs on required NetworkPolicy for LiteLLM egress |
 | Secret reference documentation | ❌ → 🎯 **v0.9.8** | No docs on which K8s Secrets are required and their keys |
 

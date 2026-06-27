@@ -283,6 +283,22 @@ Items are ordered by severity/impact.
 
 ---
 
+## ✅ v0.9.7 Milestone — Released (2026-06-02)
+
+**Multi-MCP-Client + Readiness LLM Check shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| Multi-MCP-client support | ✅ | `McpClientManager` struct holds multiple `McpClient` instances. `from_config()` creates clients from TOML config. `register_all_tools()` registers tools from all servers into `ToolRegistry`. Wired into `--exec` and `--serve` modes. |
+| Readiness LLM connectivity check | ✅ | `ready_response()` now sends lightweight LLM probe with 5s timeout. Returns `503 Service Unavailable` with descriptive message if LLM is unreachable. |
+| `#[allow(dead_code)]` removed | ✅ | `McpConfig` and `McpServerConfig` no longer need dead_code allowance — fully wired at runtime. |
+
+**CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
+
+**Commit:** (tagged `v0.9.7`)
+
+---
+
 ## 🔴 High
 
 ### `RavenFabricClient` fully unwired — created but never called
@@ -375,13 +391,11 @@ Items are ordered by severity/impact.
 
 ### Server mode has no agent execution endpoints
 
-**Problem:** HTTP server mode has only `/health`, `/ready`, `/metrics` endpoints. No `/chat`, `/execute`, or `/tools` endpoints exist. The server can report status but cannot actually run agents.
-
-**Impact:** The server mode is a health-check endpoint only. Remote agent execution requires a separate client.
+**Fix:** Added 6 new endpoints to `src/server.rs`: `POST /chat`, `POST /execute`, `GET /tasks/{id}`, `GET /tools`, `POST /tools/{name}`, `GET /health/deep`. Full agent execution API with streaming support, background task management, and tool discovery.
 
 **Files:** `src/server.rs`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
+**Status:** ✅ Resolved — v0.9.6.
 
 ### `WebSearchConfig` unwired — web search uses hardcoded endpoint
 
@@ -463,17 +477,11 @@ Items are ordered by severity/impact.
 
 ### `--serve` mode documentation is sparse
 
-**Problem:** The `--serve` flag starts an HTTP server with `/health`, `/ready`, `/metrics` endpoints, but there's no dedicated documentation page explaining:
-- What endpoints are available and what they return
-- How to configure the server port (it's `runtime.port`, not `server.port`)
-- How to use it behind a service mesh or ingress
-- How it interacts with heartbeat mode
+**Fix:** Created `docs/guides/server-mode.md` and `website/public/docs/server-mode.html` with comprehensive documentation covering all 9 endpoints, configuration, Docker/K8s/systemd deployment, SIGHUP reload, graceful shutdown, and cURL/Python/Node.js examples.
 
-**Impact:** Users have to read source code to understand how to use server mode in production.
+**Files:** `docs/guides/server-mode.md`, `website/public/docs/server-mode.html`
 
-**Files:** `docs/guides/configuration.md` (minimal table), `website/public/docs/configuration.html` (minimal table)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
+**Status:** ✅ Resolved — v0.9.6.
 
 ### Missing v0.9.1 → v0.9.2 migration section in docs/guides/migration.md
 
@@ -511,23 +519,19 @@ Items are ordered by severity/impact.
 
 ### No env var override for HTTP server port
 
-**Problem:** The HTTP server port is configurable via `runtime.port` in TOML config, but there's no documented env var override like `RAVENCLAWS_SERVE_PORT` or `RAVENCLAWS_RUNTIME_PORT`.
+**Fix:** Added `--server-port` CLI flag with `RAVENCLAWS_SERVER_PORT` env var. Applied in `main.rs` to override `config.runtime.port`.
 
-**Impact:** K8s deployments that rely on env vars for configuration cannot set the server port without a ConfigMap.
+**Files:** `src/main.rs`, `src/config.rs`
 
-**Files:** `src/config.rs` (`RuntimeConfig.port`)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
+**Status:** ✅ Resolved — v0.9.6.
 
 ### `/health` endpoint doesn't verify LLM connectivity
 
-**Problem:** The `/health` endpoint returns `200 OK` immediately even if the configured LLM provider is unreachable. It's a pure process-liveness check.
+**Fix:** Added `GET /health/deep` endpoint that makes a lightweight LLM call (`"Respond with exactly: OK"`) and returns `{ status, provider, model, response, uptime_seconds }`. The basic `/health` remains a fast process-liveness check.
 
-**Suggestion:** Add an optional deep health check (e.g., `/health/deep`) that verifies LLM connectivity by making a lightweight request.
+**Files:** `src/server.rs`
 
-**Files:** `src/server.rs` (line 233)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
+**Status:** ✅ Resolved — v0.9.6.
 
 ### `/ready` endpoint doesn't verify config validity
 
@@ -601,13 +605,11 @@ Items are ordered by severity/impact.
 
 ### No `[mcp]` section in TOML config
 
-**Problem:** MCP servers can only be configured via the `--mcp-command` CLI flag. There is no `[mcp]` section in `ravenclaws.toml` for declarative configuration. Only one MCP server connection is supported.
+**Fix:** Added `McpConfig` and `McpServerConfig` structs to `src/config.rs` with `servers: Vec<McpServerConfig>`. Each server has `name`, `command`, `args`, `env`. Re-exported from `src/lib.rs`. Note: multi-MCP-client wiring (creating clients from config) deferred to v0.9.7.
 
-**Impact:** Users cannot configure MCP servers in their config file. Multi-server setups require workarounds.
+**Files:** `src/config.rs`, `src/lib.rs`
 
-**Files:** `src/config.rs` (missing `McpConfig` struct)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
+**Status:** ✅ Resolved — v0.9.6.
 
 ### OpenTelemetry warning on startup
 

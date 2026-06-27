@@ -26,6 +26,11 @@
   //   Workers & Pages → ravenclaws → Settings → Domains & Routes → Add → Custom domain
   // See DEPLOY.md for the full walkthrough.
 
+  // Suppress warnings about workers.dev and preview URLs — this site uses a
+  // custom domain (ravenclaws.io), not the workers.dev subdomain.
+  "workers_dev": false,
+  "preview_urls": false,
+
   "observability": {
     "enabled": true
   }

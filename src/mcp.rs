@@ -780,6 +780,117 @@ impl McpClient {
     }
 }
 
+// ── MCP Client Manager ─────────────────────────────────────────────────────
+
+/// Manages multiple MCP client connections.
+///
+/// Creates and holds `McpClient` instances for each configured MCP server.
+/// Provides methods to register all tools from all connected servers into a
+/// `ToolRegistry`, and to access individual clients by name.
+pub struct McpClientManager {
+    /// Connected MCP clients, keyed by server name
+    clients: Vec<(String, Arc<RwLock<McpClient>>)>,
+}
+
+impl McpClientManager {
+    /// Create a new empty client manager
+    pub fn new() -> Self {
+        Self {
+            clients: Vec::new(),
+        }
+    }
+
+    /// Create and connect clients from config
+    pub async fn from_config(config: &crate::config::McpConfig) -> Self {
+        let mut manager = Self::new();
+        for server in &config.servers {
+            let transport_config = McpTransportConfig::Stdio {
+                command: server.command.clone(),
+                args: server.args.clone(),
+                env: server.env.clone(),
+            };
+            let mut client = McpClient::new(transport_config);
+            match client.connect().await {
+                Ok(()) => {
+                    info!(
+                        server = %server.name,
+                        server_info = ?client.server_info(),
+                        "MCP client connected from config"
+                    );
+                    manager
+                        .clients
+                        .push((server.name.clone(), Arc::new(RwLock::new(client))));
+                }
+                Err(e) => {
+                    warn!(
+                        server = %server.name,
+                        error = %e,
+                        "Failed to connect to MCP server from config, skipping"
+                    );
+                }
+            }
+        }
+        manager
+    }
+
+    /// Add a single client (e.g., from CLI --mcp-command)
+    #[allow(dead_code)]
+    pub fn add_client(&mut self, name: String, client: Arc<RwLock<McpClient>>) {
+        self.clients.push((name, client));
+    }
+
+    /// Get all clients
+    #[allow(dead_code)]
+    pub fn clients(&self) -> &[(String, Arc<RwLock<McpClient>>)] {
+        &self.clients
+    }
+
+    /// Get a client by name
+    #[allow(dead_code)]
+    pub fn get_client(&self, name: &str) -> Option<&Arc<RwLock<McpClient>>> {
+        self.clients.iter().find(|(n, _)| n == name).map(|(_, c)| c)
+    }
+
+    /// Register all tools from all connected MCP servers into a ToolRegistry
+    pub async fn register_all_tools(&self, registry: &mut crate::tools::ToolRegistry) -> usize {
+        let mut total = 0;
+        for (name, client) in &self.clients {
+            let mcp_client = client.read().await;
+            let mcp_tools = mcp_client.get_tools().await;
+            drop(mcp_client);
+
+            for mcp_tool in mcp_tools {
+                let wrapper = McpToolWrapper::new(client.clone(), mcp_tool);
+                registry.register(Arc::new(wrapper));
+                total += 1;
+            }
+            info!(
+                server = %name,
+                tools_registered = total,
+                "Registered MCP tools from server"
+            );
+        }
+        info!(total, "Total MCP tools registered from all servers");
+        total
+    }
+
+    /// Number of connected clients
+    pub fn len(&self) -> usize {
+        self.clients.len()
+    }
+
+    /// Whether there are any connected clients
+    pub fn is_empty(&self) -> bool {
+        self.clients.is_empty()
+    }
+}
+
+impl Default for McpClientManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ── MCP Tool Wrapper ───────────────────────────────────────────────────────
 
 /// Wrapper that adapts MCP tools to RavenClaws's ToolImpl trait
