@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Multi-MCP-client support** — New `McpClientManager` struct in `mcp.rs` that holds multiple `McpClient` instances. `from_config()` creates clients from TOML config `[mcp]` section. `register_all_tools()` registers tools from all connected servers into a `ToolRegistry`. Wired into both `--exec` mode and `--serve` (HTTP server) mode. `#[allow(dead_code)]` removed from `McpConfig` and `McpServerConfig`. Re-exported from `lib.rs`.
 - **Readiness LLM connectivity check** — `ready_response()` in `server.rs` now optionally verifies LLM connectivity before returning 200. When an LLM client is configured, sends a lightweight probe and returns `503 Service Unavailable` with descriptive message if the LLM is unreachable or times out (5s timeout). Falls back to simple boolean check when no LLM is configured.
 
-## [Unreleased]
+## [v0.9.9] — 2026-06-28
 
 ### Added
 - **ProviderFallbackChain wired into agent loop** — Both `run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry` now use `ProviderFallbackChain` on primary LLM failure. Configs are cloned out of mutex to avoid holding `MutexGuard` across `.await`. Token usage recorded from fallback responses.
@@ -39,9 +39,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`#[allow(dead_code)]` removed from wired components** — `TokenBudget` struct + impl, `TokenBudgetExceeded` variant, `RavenFabricClient` struct + impl, `ExecuteResponse`, `RemoteAgent`, `RavenFabricConfig` fields (`agent_id`, `remote_exec`), `RavenClawsError::RavenFabric` variant. `ProviderFallbackChain` gets `#[derive(Debug)]` and `pub configs` field.
 - **`AgentLoopConfig` extended** — 3 new optional fields: `fallback_chain`, `token_budget`, `ravenfabric`. All initializers across `agent.rs`, `background.rs`, `server.rs`, `heartbeat.rs`, and `examples/agent_loop.rs` updated.
 - **`main.rs` updated** — RavenFabricClient init moved before `--exec` block. Fallback chain and token budget created from config in `--exec` mode.
+- **ROADMAP.md updated** — v0.9.8 exit criteria corrected: 5/5 infra components wired ✅, 7 production hardening items deferred to v0.9.9. v0.9.9 scope expanded to include Tier 4 (production hardening). Strategic positioning refined.
 
 ### Fixed
 - **Default workdir changed from `/workspace` to `/tmp/ravenclaws-workdir`** — The previous default `/workspace` caused `Permission denied (os error 13)` on distroless containers without an explicit volume mount. The new default uses `/tmp` which is writable on distroless. K8s deployments that explicitly set `workdir = "/workspace"` with an `emptyDir` volume are unaffected. (#rpi5-feedback)
+
+### Removed
+*(none)*
+
+## [Unreleased]
+
+### Added
+*(none)*
+
+### Changed
+*(none)*
+
+### Fixed
+*(none)*
 
 ### Removed
 *(none)*
