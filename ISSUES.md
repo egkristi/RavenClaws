@@ -191,7 +191,7 @@ Items are ordered by severity/impact.
 
 ---
 
-## ✅ Resolved (2026-06-27) — rpi5 deployment feedback fixes
+## ✅ Resolved (2026-06-27/28) — rpi5 deployment feedback fixes
 
 ### SwarmTopology enum mismatch: docs say `"flat"`, code expects `"star"`
 
@@ -217,6 +217,70 @@ Items are ordered by severity/impact.
 
 **Status:** ✅ Resolved — all field names corrected, `goal` documented as required.
 
+### Tool execution fails with non-structured models (deepseek-v4-pro:cloud)
+
+**Fix:** Added `ToolCallDetector` with 5 regex patterns for text-based tool call detection fallback. Models that don't emit structured `tool_calls` can now use natural language tool descriptions. Added `--no-final-required` flag for models that don't use `FINAL:` convention.
+
+**Files:** `src/tools.rs` (ToolCallDetector), `src/agent.rs` (wiring), `src/main.rs` (`--no-final-required`)
+
+**Status:** ✅ Resolved — v0.9.4 + v0.9.5.
+
+### `--exec` produces no output for most models
+
+**Fix:** Added `--no-final-required` flag so any non-tool-call response completes the loop. Added agent loop response logging at debug level. Default system prompt now includes `FINAL:` usage instructions.
+
+**Files:** `src/main.rs`, `src/agent.rs`, `src/config.rs`
+
+**Status:** ✅ Resolved — v0.9.4.
+
+### Agent loop progress shows `<no thought>` instead of actual response
+
+**Fix:** Added `debug!`-level logging of LLM response content (first 500 chars) in both agent loops, regardless of `THOUGHT:` prefix matching.
+
+**Files:** `src/agent.rs`
+
+**Status:** ✅ Resolved — v0.9.4.
+
+### LLM response content not logged
+
+**Fix:** Added `debug!("LLM response: {:?}", ...)` log after each LLM response in both agent loops.
+
+**Files:** `src/agent.rs`
+
+**Status:** ✅ Resolved — v0.9.4.
+
+### Heartbeat `goal` error message unclear
+
+**Fix:** Improved error message to include example: `missing configuration field "heartbeat.goal" — set a goal string describing the agent's autonomous purpose (e.g., goal = "Monitor system health and report anomalies")`.
+
+**Files:** `src/heartbeat.rs`
+
+**Status:** ✅ Resolved — v0.9.4.
+
+### `agent_count` field not recognized in swarm config
+
+**Fix:** Added `#[serde(alias = "agent_count")]` to the `max_workers` field in `SwarmConfig`.
+
+**Files:** `src/swarm.rs`
+
+**Status:** ✅ Resolved — v0.9.4.
+
+### Web search uses hardcoded endpoint
+
+**Fix:** Removed `#[allow(dead_code)]` from `WebSearchConfig`. Added `ToolRegistry::with_config(&Config)` that reads `config.web_search.endpoint`. `main.rs` now uses `with_config()` for MCP server and `--exec` mode.
+
+**Files:** `src/tools.rs`, `src/config.rs`, `src/main.rs`
+
+**Status:** ✅ Resolved — v0.9.5.
+
+### Tool execution silently fails with non-structured models
+
+**Fix:** Added `ToolCallDetector` with 5 regex patterns for text-based tool call detection. Added `run_agent_loop_with_registry()` and `run_agent_loop_with_mcp_and_registry()` that accept optional `ToolRegistry`. 11 unit tests.
+
+**Files:** `src/tools.rs`, `src/agent.rs`, `src/lib.rs`
+
+**Status:** ✅ Resolved — v0.9.5.
+
 ---
 
 ## 🔴 High
@@ -229,7 +293,7 @@ Items are ordered by severity/impact.
 
 **Files:** `src/ravenfabric.rs`, `src/main.rs`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ### `ProviderFallbackChain` fully unwired — never used in agent loop
 
@@ -239,7 +303,7 @@ Items are ordered by severity/impact.
 
 **Files:** `src/llm.rs` (line ~1030)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ### `TokenBudget` fully unwired — never checked in agent loop
 
@@ -249,7 +313,7 @@ Items are ordered by severity/impact.
 
 **Files:** `src/llm.rs` (line ~175)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ### `AgentMessageBus` fully unwired — created but never used
 
@@ -259,7 +323,7 @@ Items are ordered by severity/impact.
 
 **Files:** `src/swarm.rs` (line ~128)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ### `SwarmHealthMonitor` fully unwired — created but never checked
 
@@ -269,7 +333,7 @@ Items are ordered by severity/impact.
 
 **Files:** `src/swarm.rs` (line ~417)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ---
 
@@ -317,17 +381,15 @@ Items are ordered by severity/impact.
 
 **Files:** `src/server.rs`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
 
 ### `WebSearchConfig` unwired — web search uses hardcoded endpoint
 
-**Problem:** The web search tool uses a hardcoded SearXNG endpoint (`https://searx.be`). The `Config.web_search` field and `WebSearchConfig` struct are `#[allow(dead_code)]`.
+**Fix:** Removed `#[allow(dead_code)]` from `WebSearchConfig`. Added `ToolRegistry::with_config(&Config)` that reads `config.web_search.endpoint`. `main.rs` now uses `with_config()` for MCP server and `--exec` mode.
 
-**Impact:** Users cannot configure the SearXNG endpoint via config file or env vars. The `with_config` constructor is never called.
+**Files:** `src/tools.rs`, `src/config.rs`, `src/main.rs`
 
-**Files:** `src/tools.rs` (lines ~700-900), `src/config.rs` (line ~98)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ✅ Resolved — v0.9.5.
 
 ### README uses wrong env var prefix (`RAVENCLAW__` instead of `RAVENCLAWS__`)
 
@@ -345,7 +407,7 @@ Items are ordered by severity/impact.
 
 **Files:** Root directory
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ---
 
@@ -357,7 +419,7 @@ Items are ordered by severity/impact.
 
 **Files:** `Dockerfile`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ### 9 modules not re-exported from library crate
 
@@ -411,7 +473,7 @@ Items are ordered by severity/impact.
 
 **Files:** `docs/guides/configuration.md` (minimal table), `website/public/docs/configuration.html` (minimal table)
 
-**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
 
 ### Missing v0.9.1 → v0.9.2 migration section in docs/guides/migration.md
 
@@ -419,7 +481,7 @@ Items are ordered by severity/impact.
 
 **Files:** `docs/guides/migration.md`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
 
 ### README uses `--mode single` instead of `--exec`/`--repl`
 
@@ -427,7 +489,7 @@ Items are ordered by severity/impact.
 
 **Files:** `README.md` (line 112)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
 
 ### No documented way to pass LiteLLM API key
 
@@ -437,17 +499,15 @@ Items are ordered by severity/impact.
 
 **Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`
 
-**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ### Heartbeat error message for missing `goal` is unclear
 
-**Problem:** When `heartbeat.goal` is missing from config, the error is `missing configuration field "heartbeat.goal"` with no explanation of what `goal` is or what format it expects.
+**Fix:** Improved error message to include example: `missing configuration field "heartbeat.goal" — set a goal string describing the agent's autonomous purpose (e.g., goal = "Monitor system health and report anomalies")`.
 
-**Suggestion:** Improve the error message to include an example: `missing configuration field "heartbeat.goal" — set a goal string describing the agent's autonomous purpose (e.g., goal = "Monitor system health and report anomalies")`.
+**Files:** `src/heartbeat.rs`
 
-**Files:** `src/heartbeat.rs` (serde deserialization error)
-
-**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+**Status:** ✅ Resolved — v0.9.4.
 
 ### No env var override for HTTP server port
 
@@ -457,7 +517,7 @@ Items are ordered by severity/impact.
 
 **Files:** `src/config.rs` (`RuntimeConfig.port`)
 
-**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
 
 ### `/health` endpoint doesn't verify LLM connectivity
 
@@ -467,7 +527,7 @@ Items are ordered by severity/impact.
 
 **Files:** `src/server.rs` (line 233)
 
-**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
 
 ### `/ready` endpoint doesn't verify config validity
 
@@ -477,7 +537,7 @@ Items are ordered by severity/impact.
 
 **Files:** `src/server.rs` (lines 236-239)
 
-**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ### Heartbeat state not saved on graceful shutdown
 
@@ -487,7 +547,77 @@ Items are ordered by severity/impact.
 
 **Files:** `src/heartbeat.rs` (no `Drop` impl, no shutdown hook)
 
-**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+
+### Sandbox breaks with read-only root filesystem
+
+**Problem:** The `Sandbox` default workdir is `/tmp/ravenclaws-sandbox`. When the container has `readOnlyRootFilesystem: true` (as configured in `k8s/deployment.yaml`), `/tmp` is not writable and sandbox creation fails. There is no fallback to `std::env::temp_dir()` or configurable workdir.
+
+**Impact:** Tool execution via `shell_exec` fails in K8s deployments with `readOnlyRootFilesystem: true`. The sandbox cannot create its workdir.
+
+**Files:** `src/sandbox.rs` (hardcoded `/tmp/ravenclaws-sandbox`)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+
+### Init container doesn't chown workspace
+
+**Problem:** The `k8s/deployment.yaml` relies on `fsGroup` for workspace permissions, but the non-root user (UID 65532) cannot write to the workspace volume without explicit `chown`. The init container does not run `chown -R 65532:65532 /workspace`.
+
+**Impact:** Background tasks, heartbeat state, and eval results fail with "Permission denied" because the workspace volume is owned by root.
+
+**Files:** `k8s/deployment.yaml` (missing init container)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+
+### LiteLLM API key documentation references wrong secret
+
+**Problem:** The configuration docs reference `openclaw-secrets` with key `LITELLM_API_KEY`, but the correct K8s Secret is `litellm-secrets` with key `LITELLM_MASTER_KEY`. The `api_key` field exists on `LLMConfig` but is not documented in the config reference table.
+
+**Impact:** Users deploying with LiteLLM cannot find the correct API key configuration. The documented secret reference doesn't exist.
+
+**Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`
+
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+
+### NetworkPolicy blocks LLM egress
+
+**Problem:** The K8s deployment includes a NetworkPolicy that restricts egress traffic. New RavenClaws pods have different labels than the LiteLLM ingress policy expects, so LLM requests are blocked by the network policy.
+
+**Impact:** Agent cannot reach LiteLLM for LLM requests. Silent failures or timeouts.
+
+**Files:** `k8s/deployment.yaml`, NetworkPolicy configuration
+
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+
+### `--mcp-command` silent failure
+
+**Problem:** When `--mcp-command` is specified but the MCP server fails to connect (e.g., command not found, connection refused), the error is silently swallowed. The agent continues without MCP tools, with no warning or error message visible to the user.
+
+**Impact:** Users think MCP is configured but tools are not available. No feedback on why MCP connection failed.
+
+**Files:** `src/main.rs` (MCP client creation error handling)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.7.
+
+### No `[mcp]` section in TOML config
+
+**Problem:** MCP servers can only be configured via the `--mcp-command` CLI flag. There is no `[mcp]` section in `ravenclaws.toml` for declarative configuration. Only one MCP server connection is supported.
+
+**Impact:** Users cannot configure MCP servers in their config file. Multi-server setups require workarounds.
+
+**Files:** `src/config.rs` (missing `McpConfig` struct)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.6.
+
+### OpenTelemetry warning on startup
+
+**Problem:** When OTEL is disabled (default in v0.9.4+), the OTEL exporter still logs a warning: "No OTLP exporter endpoint configured, using stdout exporter". This is confusing for users who have explicitly disabled OTEL.
+
+**Impact:** Confusing warning message on every startup, even when OTEL is disabled.
+
+**Files:** `src/telemetry.rs`
+
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
 
 ---
 
@@ -899,11 +1029,7 @@ All v0.2 items are complete:
 
 ## 🔮 Future Considerations
 
-### No graceful shutdown / signal handling
-
-The binary does not handle SIGTERM/SIGINT. When running in interactive mode,
-Ctrl+C will abort immediately without cleanup.
-
 ### No configuration hot-reload
 
-Changes to `ravenclaws.toml` require a restart. No file-watch mechanism exists.
+Changes to `ravenclaws.toml` require a restart. No SIGHUP handler exists.
+Tracked in ROADMAP.md v0.9.6.
