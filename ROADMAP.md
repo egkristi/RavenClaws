@@ -94,7 +94,7 @@ can't be added without breaking one, it doesn't ship in core.
 | `--provider anthropic` CLI flag | ❌ | Falls through to default `LiteLLM` |
 | `--webhook-port` CLI flag | ❌ | Parsed but never used; port hardcoded to 9090 |
 | Audit log mutex `unwrap()` | ❌ | 7+ calls on hot path; will panic if poisoned |
-| MCP SSE transport | ❌ | `McpTransportConfig::Sse` returns "not implemented" |
+| MCP SSE transport | ✅ **v0.9.3** | Client and server SSE transport implemented; 7 tests passing |
 | Server agent execution endpoints | ❌ | No `/chat`, `/execute`, or `/tools` endpoints |
 | Community health files | ❌ | Missing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` |
 | Container image size | ⚠️ | ~50 MB vs < 30 MB target |

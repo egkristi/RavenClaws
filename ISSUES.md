@@ -301,13 +301,13 @@ Items are ordered by severity/impact.
 
 ### MCP SSE transport not implemented
 
-**Problem:** `McpTransportConfig::Sse` variant exists but returns `"SSE transport not yet implemented"`. This is the only `TODO` in the entire codebase.
+**Problem:** `McpTransportConfig::Sse` variant existed but returned `"SSE transport not yet implemented"`.
 
-**Impact:** MCP servers that only support SSE transport (not stdio) cannot be used.
+**Impact:** MCP servers that only support SSE transport (not stdio) could not be used.
 
-**Files:** `src/mcp.rs` (lines ~225, 287)
+**Files:** `src/mcp.rs`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+**Status:** ✅ Resolved — Full SSE transport implementation: client-side (`connect_sse`, `send_request_sse`) and server-side (`McpSseServer` with `GET /sse` and `POST /message`). 7 tests passing.
 
 ### Server mode has no agent execution endpoints
 

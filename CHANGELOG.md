@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **MCP SSE transport** — Full SSE transport implementation for the MCP protocol. Client-side: `McpTransportConfig::Sse` connects to SSE endpoints, receives `endpoint` events, and sends JSON-RPC requests via HTTP POST. Server-side: `McpSseServer` provides `GET /sse` (SSE stream) and `POST /message` (JSON-RPC) endpoints with policy enforcement and audit logging. 7 tests covering server creation, initialization, tools/list, tools/call, error handling, config serialization, and connection failure.
 - **Generic `openai-compatible` provider** — New `LLMProvider::OpenAICompatible` variant unlocks vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, Fireworks, DeepInfra, and any custom OpenAI-compatible endpoint. Config: `provider = "openai-compatible"`, CLI: `--provider openai-compatible`. ~50 LOC in `config.rs` + `llm.rs` + `main.rs`.
 - **Missing library re-exports** — `HeartbeatAgent`, `SwarmOrchestrator`, `BackgroundTaskManager`, `Scheduler`, `McpClient`, `McpServer`, `EvalRunner`, `TelemetryGuard`, `RavenFabricClient`, and `run_server` are now re-exported from `src/lib.rs` for library users.
 - **Complete CLI flags documentation** — All 45+ CLI flags now documented in `docs/guides/configuration.md` and `website/public/docs/configuration.html` (was 8 flags).
