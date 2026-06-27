@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use thiserror::Error;
-use tracing::{info, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
 // Re-export sandbox for tool implementations
 use crate::sandbox::Sandbox;
@@ -287,6 +287,11 @@ impl ToolRegistry {
             .ok_or_else(|| ToolError::NotFound(call.name.clone()))?;
 
         info!(tool = %call.name, "Executing tool call");
+        debug!(
+            tool = %call.name,
+            args = %call.arguments,
+            "Tool call arguments"
+        );
 
         let mut result = tool.execute(call.arguments).await?;
         result.duration_ms = Some(start.elapsed().as_millis() as u64);
@@ -296,6 +301,11 @@ impl ToolRegistry {
                 tool = %call.name,
                 duration_ms = result.duration_ms.unwrap_or(0),
                 "Tool executed successfully"
+            );
+            debug!(
+                tool = %call.name,
+                output_len = result.output.len(),
+                "Tool result output"
             );
         } else {
             warn!(
@@ -337,6 +347,22 @@ impl ToolRegistry {
             engine.to_string(),
             max_results,
             fetch_content,
+        )));
+        registry
+    }
+
+    /// Create a default registry with web search configured from config
+    pub fn with_config(config: &crate::config::Config) -> Self {
+        let mut registry = Self::new();
+        registry.register(Arc::new(ShellTool::new()));
+        registry.register(Arc::new(ReadFileTool::new()));
+        registry.register(Arc::new(WriteFileTool::new()));
+        registry.register(Arc::new(WebFetchTool::new()));
+        registry.register(Arc::new(WebSearchTool::with_config(
+            config.web_search.endpoint.clone(),
+            config.web_search.engine.clone(),
+            config.web_search.max_results,
+            config.web_search.fetch_content,
         )));
         registry
     }
@@ -1373,6 +1399,181 @@ fn urlencoding(input: &str) -> String {
     result
 }
 
+// ── Text-based tool call detection ──────────────────────────────────────────
+
+/// Detects tool calls in natural language text when the LLM doesn't emit
+/// structured `tool_calls`. This is a fallback for models that describe
+/// tool usage in prose rather than structured function calling.
+///
+/// # Supported Patterns
+///
+/// - `Use the <tool> tool with args <args>` — explicit tool invocation
+/// - `I'll use the <tool> tool to run: <command>` — shell command pattern
+/// - `Let me read the file <path>` — read file pattern
+/// - `I'll search for <query>` — web search pattern
+/// - `I'll fetch <url>` — web fetch pattern
+///
+/// # Example
+///
+/// ```ignore
+/// let detector = ToolCallDetector::new();
+/// let response = "I'll use the shell_exec tool to run: ls -la";
+/// let calls = detector.detect(response);
+/// assert_eq!(calls.len(), 1);
+/// assert_eq!(calls[0].name, "shell_exec");
+/// ```
+#[allow(dead_code)]
+pub struct ToolCallDetector {
+    patterns: Vec<DetectorPattern>,
+}
+
+/// A single detection pattern with a regex and a parser function
+#[allow(dead_code)]
+struct DetectorPattern {
+    /// The regex pattern to match
+    regex: regex_lite::Regex,
+    /// The tool name to use if matched (or None to extract from capture)
+    tool_name: Option<String>,
+    /// The argument key to set (or None to use capture group name)
+    arg_key: Option<String>,
+    /// Capture group index for the argument value
+    arg_group: usize,
+}
+
+#[allow(dead_code)]
+impl ToolCallDetector {
+    /// Create a new detector with all built-in patterns
+    pub fn new() -> Self {
+        // These patterns handle common LLM tool invocation styles
+        let patterns = vec![
+            // Pattern: "Use the <tool> tool with args <json>"
+            // Note: Must NOT start with I'll/I will/let me to avoid overlap with the next pattern
+            DetectorPattern {
+                regex: regex_lite::Regex::new(
+                    r"(?i)(?:^|[.!?]\s+)(?:use|run|call|invoke)\s+(?:the\s+)?(\w+)\s+(?:tool|command|function)(?:\s+with\s+(?:args|arguments|parameters))?\s*:?\s*(.+?)(?:\.|$|\n)"
+                ).expect("valid regex"),
+                tool_name: None, // extracted from capture group 1
+                arg_key: None,
+                arg_group: 2,
+            },
+            // Pattern: "I'll use the <tool> tool to run: <command>"
+            DetectorPattern {
+                regex: regex_lite::Regex::new(
+                    r"(?i)(?:I'?ll|I\s+will|let\s+me)\s+use\s+(?:the\s+)?(\w+)\s+(?:tool|command|function)\s+to\s+(?:run|execute|do)\s*:?\s*(.+?)(?:\.|$|\n)"
+                ).expect("valid regex"),
+                tool_name: None,
+                arg_key: Some("command".to_string()),
+                arg_group: 2,
+            },
+            // Pattern: "Let me read the file <path>"
+            DetectorPattern {
+                regex: regex_lite::Regex::new(
+                    r"(?i)(?:let\s+me|I'?ll|I\s+will)\s+(?:read|open|check)\s+(?:the\s+)?file\s+(.+?)(?:\.|$|\n)"
+                ).expect("valid regex"),
+                tool_name: Some("read_file".to_string()),
+                arg_key: Some("path".to_string()),
+                arg_group: 1,
+            },
+            // Pattern: "I'll search for <query>"
+            DetectorPattern {
+                regex: regex_lite::Regex::new(
+                    r"(?i)(?:let\s+me|I'?ll|I\s+will)\s+(?:search|look\s+up|find|google)\s+(?:for\s+)?(.+?)(?:\.|$|\n)"
+                ).expect("valid regex"),
+                tool_name: Some("web_search".to_string()),
+                arg_key: Some("query".to_string()),
+                arg_group: 1,
+            },
+            // Pattern: "I'll fetch <url>"
+            DetectorPattern {
+                regex: regex_lite::Regex::new(
+                    r"(?i)(?:let\s+me|I'?ll|I\s+will)\s+(?:fetch|get|download)\s+(https?://\S+)(?:\.|$|\n|\s)"
+                ).expect("valid regex"),
+                tool_name: Some("web_fetch".to_string()),
+                arg_key: Some("url".to_string()),
+                arg_group: 1,
+            },
+        ];
+
+        Self { patterns }
+    }
+
+    /// Detect tool calls in a response text.
+    /// Returns a list of detected `ToolCall` structs.
+    /// Deduplicates calls with the same tool name and arguments.
+    pub fn detect(&self, text: &str) -> Vec<ToolCall> {
+        let mut seen = std::collections::HashSet::new();
+        let mut calls = Vec::new();
+
+        for pattern in &self.patterns {
+            for cap in pattern.regex.captures_iter(text) {
+                let tool_name = match &pattern.tool_name {
+                    Some(name) => name.clone(),
+                    None => cap
+                        .get(1)
+                        .map(|m| m.as_str().to_string())
+                        .unwrap_or_default(),
+                };
+
+                // Skip if tool name doesn't match any known tool
+                if !Self::is_known_tool(&tool_name) {
+                    continue;
+                }
+
+                let arg_value = cap
+                    .get(pattern.arg_group)
+                    .map(|m| m.as_str().trim().to_string())
+                    .unwrap_or_default();
+
+                if arg_value.is_empty() {
+                    continue;
+                }
+
+                // Build arguments JSON
+                let arguments = match &pattern.arg_key {
+                    Some(key) => {
+                        serde_json::json!({ key: arg_value })
+                    }
+                    None => {
+                        // Try to parse as JSON, otherwise wrap as "command" or "input"
+                        serde_json::from_str(&arg_value).unwrap_or_else(
+                            |_| serde_json::json!({ "command": arg_value, "input": arg_value }),
+                        )
+                    }
+                };
+
+                // Deduplicate: skip if we've already seen this tool+args combo
+                let key = format!("{}:{:?}", tool_name, arguments);
+                if seen.contains(&key) {
+                    continue;
+                }
+                seen.insert(key);
+
+                calls.push(ToolCall {
+                    name: tool_name,
+                    arguments,
+                    id: None,
+                });
+            }
+        }
+
+        calls
+    }
+
+    /// Check if a tool name is one of the known built-in tools
+    fn is_known_tool(name: &str) -> bool {
+        matches!(
+            name,
+            "shell_exec" | "read_file" | "write_file" | "web_fetch" | "web_search"
+        )
+    }
+}
+
+impl Default for ToolCallDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 // ── Helper functions ───────────────────────────────────────────────────────
 
 /// Run a shell command with timeout
@@ -1958,5 +2159,109 @@ mod tests {
     fn test_fetch_and_extract_content_invalid_url() {
         let result = tokio_test::block_on(fetch_and_extract_content("http://0.0.0.0:1", 1000));
         assert!(result.is_err());
+    }
+
+    // ── ToolCallDetector tests ─────────────────────────────────────────────
+
+    #[test]
+    fn test_tool_call_detector_shell_exec() {
+        let detector = ToolCallDetector::new();
+        let text = "I'll use the shell_exec tool to run: ls -la";
+        let calls = detector.detect(text);
+        assert_eq!(calls.len(), 1, "Should detect one tool call");
+        assert_eq!(calls[0].name, "shell_exec");
+        assert_eq!(calls[0].arguments["command"], "ls -la");
+    }
+
+    #[test]
+    fn test_tool_call_detector_read_file() {
+        let detector = ToolCallDetector::new();
+        let text = "Let me read the file /etc/hostname";
+        let calls = detector.detect(text);
+        assert_eq!(calls.len(), 1, "Should detect one tool call");
+        assert_eq!(calls[0].name, "read_file");
+        assert_eq!(calls[0].arguments["path"], "/etc/hostname");
+    }
+
+    #[test]
+    fn test_tool_call_detector_web_search() {
+        let detector = ToolCallDetector::new();
+        let text = "I'll search for Rust programming language";
+        let calls = detector.detect(text);
+        assert_eq!(calls.len(), 1, "Should detect one tool call");
+        assert_eq!(calls[0].name, "web_search");
+        assert!(calls[0].arguments["query"]
+            .as_str()
+            .unwrap()
+            .contains("Rust"));
+    }
+
+    #[test]
+    fn test_tool_call_detector_web_fetch() {
+        let detector = ToolCallDetector::new();
+        let text = "I'll fetch https://example.com/api";
+        let calls = detector.detect(text);
+        assert_eq!(calls.len(), 1, "Should detect one tool call");
+        assert_eq!(calls[0].name, "web_fetch");
+        assert_eq!(calls[0].arguments["url"], "https://example.com/api");
+    }
+
+    #[test]
+    fn test_tool_call_detector_use_tool_syntax() {
+        let detector = ToolCallDetector::new();
+        let text = "Use the shell_exec tool with args: echo hello world";
+        let calls = detector.detect(text);
+        assert_eq!(calls.len(), 1, "Should detect one tool call");
+        assert_eq!(calls[0].name, "shell_exec");
+    }
+
+    #[test]
+    fn test_tool_call_detector_no_false_positives() {
+        let detector = ToolCallDetector::new();
+        let text = "I think we should consider using a different approach here.";
+        let calls = detector.detect(text);
+        assert_eq!(calls.len(), 0, "Should not detect any tool calls");
+    }
+
+    #[test]
+    fn test_tool_call_detector_empty_text() {
+        let detector = ToolCallDetector::new();
+        let calls = detector.detect("");
+        assert_eq!(calls.len(), 0);
+    }
+
+    #[test]
+    fn test_tool_call_detector_multiple_calls() {
+        let detector = ToolCallDetector::new();
+        let text = "Let me read the file /etc/hosts. Then I'll search for DNS configuration.";
+        let calls = detector.detect(text);
+        assert_eq!(calls.len(), 2, "Should detect two tool calls");
+        assert_eq!(calls[0].name, "read_file");
+        assert_eq!(calls[1].name, "web_search");
+    }
+
+    #[test]
+    fn test_tool_call_detector_unknown_tool_skipped() {
+        let detector = ToolCallDetector::new();
+        let text = "Use the nonexistent_tool tool with args: something";
+        let calls = detector.detect(text);
+        assert_eq!(calls.len(), 0, "Should skip unknown tools");
+    }
+
+    #[test]
+    fn test_tool_call_detector_is_known_tool() {
+        assert!(ToolCallDetector::is_known_tool("shell_exec"));
+        assert!(ToolCallDetector::is_known_tool("read_file"));
+        assert!(ToolCallDetector::is_known_tool("write_file"));
+        assert!(ToolCallDetector::is_known_tool("web_fetch"));
+        assert!(ToolCallDetector::is_known_tool("web_search"));
+        assert!(!ToolCallDetector::is_known_tool("unknown_tool"));
+    }
+
+    #[test]
+    fn test_tool_call_detector_default() {
+        let detector = ToolCallDetector::default();
+        let calls = detector.detect("I'll use the shell_exec tool to run: echo test");
+        assert_eq!(calls.len(), 1);
     }
 }

@@ -124,6 +124,21 @@ pub async fn run_agent_loop(
     system_prompt: &str,
     config: AgentLoopConfig,
 ) -> Result<String> {
+    run_agent_loop_with_registry(llm, initial_prompt, system_prompt, config, None).await
+}
+
+/// Run the agent loop with an optional pre-configured ToolRegistry
+///
+/// This allows callers to pass a registry with custom tool configurations
+/// (e.g., configured web search endpoint). If `None` is passed, default tools are used.
+#[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model()))]
+pub async fn run_agent_loop_with_registry(
+    llm: Arc<dyn LLMProviderTrait>,
+    initial_prompt: &str,
+    system_prompt: &str,
+    config: AgentLoopConfig,
+    tool_registry: Option<ToolRegistry>,
+) -> Result<String> {
     // Initialize security components
     let policy_engine = PolicyEngine::default_secure();
     let mut sandbox = Sandbox::default();
@@ -139,8 +154,8 @@ pub async fn run_agent_loop(
         None
     };
 
-    // Initialize tool registry
-    let registry = ToolRegistry::with_default_tools();
+    // Initialize tool registry (use provided one or default)
+    let registry = tool_registry.unwrap_or_else(ToolRegistry::with_default_tools);
 
     // Track session start time for token lifetime enforcement
     let session_start = std::time::Instant::now();
@@ -423,6 +438,7 @@ pub async fn run_agent_loop(
 /// This version extends run_agent_loop with MCP tool support:
 /// 1. Registers MCP tools into the ToolRegistry
 /// 2. MCP tools are executed alongside built-in tools
+#[allow(dead_code)]
 #[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model()))]
 pub async fn run_agent_loop_with_mcp(
     llm: Arc<dyn LLMProviderTrait>,
@@ -430,6 +446,27 @@ pub async fn run_agent_loop_with_mcp(
     system_prompt: &str,
     config: AgentLoopConfig,
     mcp_client: Option<Arc<RwLock<McpClient>>>,
+) -> Result<String> {
+    run_agent_loop_with_mcp_and_registry(
+        llm,
+        initial_prompt,
+        system_prompt,
+        config,
+        mcp_client,
+        None,
+    )
+    .await
+}
+
+/// Run the agent loop with MCP tools and an optional pre-configured ToolRegistry
+#[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model()))]
+pub async fn run_agent_loop_with_mcp_and_registry(
+    llm: Arc<dyn LLMProviderTrait>,
+    initial_prompt: &str,
+    system_prompt: &str,
+    config: AgentLoopConfig,
+    mcp_client: Option<Arc<RwLock<McpClient>>>,
+    tool_registry: Option<ToolRegistry>,
 ) -> Result<String> {
     // Initialize security components
     let policy_engine = PolicyEngine::default_secure();
@@ -446,8 +483,8 @@ pub async fn run_agent_loop_with_mcp(
         None
     };
 
-    // Initialize tool registry with default tools
-    let mut registry = ToolRegistry::with_default_tools();
+    // Initialize tool registry (use provided one or default)
+    let mut registry = tool_registry.unwrap_or_else(ToolRegistry::with_default_tools);
 
     // Register MCP tools if client is provided
     if let Some(client) = &mcp_client {

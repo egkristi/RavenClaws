@@ -289,7 +289,7 @@ async fn main() -> anyhow::Result<()> {
     // Run as MCP server if --mcp-server is set (v0.7)
     if args.mcp_server {
         info!("Starting in MCP server mode");
-        let registry = tools::ToolRegistry::with_default_tools();
+        let registry = tools::ToolRegistry::with_config(&config);
         let mut server = mcp::McpServer::new(registry);
         server
             .run()
@@ -371,15 +371,19 @@ async fn main() -> anyhow::Result<()> {
             no_final_required: args.no_final_required,
         };
 
+        // Build a configured tool registry (respects web_search endpoint from config)
+        let tool_registry = Some(tools::ToolRegistry::with_config(&config));
+
         let response = if !config.llms.is_empty() {
             let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
             if let Some(client) = multi_llm.get_client(0) {
-                agent::run_agent_loop_with_mcp(
+                agent::run_agent_loop_with_mcp_and_registry(
                     client.clone(),
                     &exec_prompt,
                     system_prompt,
                     loop_config,
                     mcp_client,
+                    tool_registry,
                 )
                 .await?
             } else {
@@ -387,12 +391,13 @@ async fn main() -> anyhow::Result<()> {
             }
         } else {
             let llm = llm::create_client(&config.llm)?;
-            agent::run_agent_loop_with_mcp(
+            agent::run_agent_loop_with_mcp_and_registry(
                 llm,
                 &exec_prompt,
                 system_prompt,
                 loop_config,
                 mcp_client,
+                tool_registry,
             )
             .await?
         };

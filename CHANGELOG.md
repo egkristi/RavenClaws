@@ -10,6 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - *(none yet)*
 
+## [0.9.5] — 2026-06-27
+
+### Added
+- **ToolCallDetector — text-based tool call detection fallback** — New `ToolCallDetector` struct with 5 regex patterns for detecting tool calls in natural language text. Acts as a fallback when LLMs don't emit structured `tool_calls`. Includes 11 unit tests covering all patterns, deduplication, and edge cases.
+- **Tool execution debug logging** — Enhanced `ToolRegistry::execute()` with `debug!`-level logging of tool arguments and output length. Helps diagnose silent tool failures.
+- **`ToolRegistry::with_config()` constructor** — New method that accepts `&Config` to create a registry with configured web search endpoint. Replaces hardcoded SearXNG URL.
+- **`run_agent_loop_with_registry()` and `run_agent_loop_with_mcp_and_registry()`** — New public API functions that accept an optional pre-configured `ToolRegistry`, allowing callers to pass custom tool configurations (e.g., configured web search endpoint).
+- **`--exec` mode uses configured tool registry** — The `--exec` one-shot mode now passes a `ToolRegistry` built from config (via `with_config()`) to the agent loop, so web search endpoint and other tool settings from config are respected.
+
+### Fixed
+- **`WebSearchConfig` dead_code warnings removed** — Removed `#[allow(dead_code)]` from `WebSearchConfig` struct and `web_search` field in `Config`. Both are now wired through `ToolRegistry::with_config()`.
+- **`ToolCallDetector` and `DetectorPattern` dead_code warnings suppressed** — Added `#[allow(dead_code)]` to these types since they are a fallback mechanism used only in tests until wired into the agent loop.
+
 ## [0.9.4] — 2026-06-27
 
 ### Added

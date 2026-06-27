@@ -81,7 +81,6 @@ pub struct Config {
 
     /// Web search configuration (v0.8)
     #[serde(default)]
-    #[allow(dead_code)]
     pub web_search: WebSearchConfig,
 
     /// Heartbeat / autonomous agent configuration (v0.9)
@@ -98,7 +97,6 @@ pub struct Config {
 /// # Stability
 /// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
 #[derive(Debug, Clone, Deserialize)]
-#[allow(dead_code)]
 #[non_exhaustive]
 pub struct WebSearchConfig {
     /// Search API endpoint (SearXNG or compatible)

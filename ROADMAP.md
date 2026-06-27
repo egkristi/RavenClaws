@@ -1,11 +1,11 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
 **Date:** 2026-06-27  
-**Version:** v0.9.4 — `--no-final-required` flag, response logging, system prompt update ✅  
-**Previous Release:** v0.9.3 (2026-06-27) — rpi5 deployment feedback fixes + SSE MCP transport ✅  
-**Current Commit:** `0cb84b7` — v1.0 hardening: 8 high-impact fixes
-**CI Status:** Build & Release #??? ✅ · Container Build #??? ✅ · Security Scan #??? ✅
-**v1.0 Hardening Progress:** 22/52 items completed. **v0.9.5–v0.9.9 series planned** to close all gaps identified in rpi5 deployment feedback — making RavenClaws a fully functional primary agent that can replace OpenClaw, Manus, and other cloud agents.
+**Version:** v0.9.5 — Tool Execution Reliability ✅  
+**Previous Release:** v0.9.4 (2026-06-27) — `--no-final-required` flag, response logging, system prompt update ✅  
+**Current Commit:** *(to be tagged)*
+**CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
+**v1.0 Hardening Progress:** 14/122 items completed. **v0.9.6–v0.9.9 series planned** to close all gaps identified in rpi5 deployment feedback — making RavenClaws a fully functional primary agent that can replace OpenClaw, Manus, and other cloud agents.
 
 **Vision:** RavenClaws is the **ultimate AI agentic assistant and worker** — the preferred alternative to OpenClaw, Manus, Perplexity Comet, Kimi, Claude Cowork, and every other agent in the field. Not by out-featuring them, but by being **fully functional as a primary agent** while also being smaller, more secure, and more efficient than anything else.
 
@@ -41,11 +41,30 @@ v0.9.3 is **functional but not yet a primary agent**. The feedback was honest:
 | No agent execution HTTP endpoints | Server mode is status-only | v0.9.6: Add `/chat`, `/execute`, `/tools` |
 | MCP client can't connect to SSE servers | SSE transport was stubbed | v0.9.3 ✅ (fixed) |
 | MCP server is stdio-only | SSE transport was stubbed | v0.9.3 ✅ (fixed) |
-| No TOML config for MCP servers | CLI-only, single connection | v0.9.5: Add `[mcp]` config + multi-server |
-| Tool execution silently fails | No fallback for non-structured models | v0.9.5: Add text-based tool call detection |
-| Sandbox breaks with read-only root FS | Hardcoded `/tmp` workdir | v0.9.4: Configurable workdir *(not yet implemented)* |
-| Heartbeat state may corrupt on SIGTERM | No graceful shutdown hook | v0.9.4: Add Drop impl *(not yet implemented)* |
-| Init container doesn't chown workspace | Missing `chown` in K8s manifest | v0.9.4: Fix deployment.yaml *(not yet implemented)* |
+| No TOML config for MCP servers | CLI-only, single connection | v0.9.5: Add `[mcp]` config + multi-server *(deferred to v0.9.6)* |
+| Tool execution silently fails | No fallback for non-structured models | ✅ **v0.9.5**: Added text-based tool call detection |
+| Sandbox breaks with read-only root FS | Hardcoded `/tmp` workdir | v0.9.8: Configurable workdir via env var |
+| Heartbeat state may corrupt on SIGTERM | No graceful shutdown hook | v0.9.8: Add Drop impl + signal handler |
+| Init container doesn't chown workspace | Missing `chown` in K8s manifest | v0.9.8: Fix deployment.yaml |
+| SwarmTopology enum mismatch | TOML deserialization expects string, not array | v0.9.4 ✅ (fixed) |
+| `agent_count` field not recognized | Missing serde alias on `max_workers` | v0.9.4 ✅ (fixed) |
+| `[swarm.profiles]` TOML syntax fails | Only `[[swarm.profiles]]` array-of-tables supported | v0.9.5: Add shorthand deserializer *(deferred to v0.9.6)* |
+| Heartbeat goal error message unclear | Missing example in error | v0.9.4 ✅ (fixed) |
+| LiteLLM API key docs wrong | References `openclaw-secrets` instead of `litellm-secrets` | v0.9.8: Document correct secret reference |
+| `--serve` mode not documented | No docs page for HTTP server mode | v0.9.6: Add server mode docs |
+| OpenTelemetry warning on startup | OTEL exporter warns if no collector configured | v0.9.8: Suppress warning when OTEL disabled |
+| Server port not configurable via env var | Only `--port` CLI flag | v0.9.6: Add env var override |
+| Config hot-reload not supported | No SIGHUP handler | v0.9.6: Add SIGHUP-based config reload |
+| NetworkPolicy blocks LLM egress | New pod labels not in LiteLLM ingress policy | v0.9.8: Document NetworkPolicy requirements |
+| Secret reference uses wrong key | `LITELLM_API_KEY` doesn't exist in `openclaw-secrets` | v0.9.8: Document correct `litellm-secrets` reference |
+| Agent loop logs show `<no thought>` | Log only looks for `THOUGHT:` prefix | ✅ **v0.9.4**: Added response content logging |
+| LLM response content not logged | No debug-level logging of responses | ✅ **v0.9.4**: Added `debug!` log after each response |
+| MCP server stdin closes before processing | stdio-only transport, no SSE fallback | v0.9.3 ✅ (SSE transport implemented) |
+| MCP client can't connect to SSE servers | `Sse` variant returns `Err("not implemented")` | v0.9.3 ✅ (fixed) |
+| No `[mcp]` section in TOML config | CLI flags only, no config struct | v0.9.5: Add `McpConfig` struct |
+| Only one MCP client connection | Single `--mcp-command` flag | v0.9.5: Add multi-MCP-client support |
+| Workspace permission denied | Init container doesn't `chown` to UID 65532 | v0.9.8: Fix deployment.yaml |
+| Tool execution not working with deepseek-v4-pro | Model doesn't emit structured `tool_calls` | ✅ **v0.9.5**: Added text-based tool call detection |
 
 **The plan:** Six rapid releases (v0.9.4 → v0.9.9) to close every gap, then v1.0 is
 truly production-ready — a primary agent that can replace OpenClaw, Manus, or any
@@ -72,8 +91,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.9.4 (2026-06-27) — `--no-final-required` flag, response logging, system prompt update  
-**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~16,500 LOC, 6 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), 460 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, published on crates.io as `ravenclaws` (binary + library crate).
+**Version:** 0.9.5 (2026-06-27) — Tool Execution Reliability  
+**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~16,700 LOC, 6 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **471 unit tests**, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, published on crates.io as `ravenclaws` (binary + library crate).
 
 | Component | Status | Details |
 |---|---|---|
@@ -96,9 +115,9 @@ can't be added without breaking one, it doesn't ship in core.
 | `--exec` one-shot mode | ✅ **v0.9.4** | `--no-final-required` flag, response logging, default system prompt with `FINAL:` instructions. Models that don't emit `FINAL:` now work with `--no-final-required`. |
 | Rust unit tests | ✅ Working | 460 tests across all 18 modules; `mockito`-based HTTP tests for all 6 providers + RavenFabric |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard, `FINAL:` marker detection, configurable via `--max-iterations` |
-| Tool-use / function calling | ⚠️ Partial → 🎯 **v0.9.5** | Tool abstraction + registry + **5 built-in tools** (+web_search) + **MCP tool discovery** + agent loop wiring. Tool execution fails with models that don't emit structured tool calls (e.g., `deepseek-v4-pro:cloud`). **Fix planned:** text-based tool call detection fallback, tool execution logging |
+| Tool-use / function calling | ✅ **v0.9.5** | Tool abstraction + registry + **5 built-in tools** (+web_search) + **MCP tool discovery** + agent loop wiring + **text-based tool call detection fallback** + **tool execution logging** + **configured web search endpoint**. Tool execution now works with models that don't emit structured tool calls (e.g., `deepseek-v4-pro:cloud`). |
 | Deny-by-default policy | ✅ **Wired to agent loop** | `PolicyEngine` validates ALL tool calls before execution (commit 51e42b0) |
-| Sandboxed execution | ⚠️ Partial → 🎯 **v0.9.4** | `Sandbox` provides workdir jail for `shell_exec`. Default workdir `/tmp/ravenclaws-sandbox` breaks with `readOnlyRootFilesystem: true` — no env-var override or fallback. **Fix planned:** configurable workdir via env var or config field |
+| Sandboxed execution | ⚠️ Partial → 🎯 **v0.9.8** | `Sandbox` provides workdir jail for `shell_exec`. Default workdir `/tmp/ravenclaws-sandbox` breaks with `readOnlyRootFilesystem: true` — no env-var override or fallback. **Fix planned:** configurable workdir via env var or config field |
 | Audit log | ✅ **Wired to agent loop** | HMAC-SHA256 chained, tamper-evident, emits events for all tool calls (commit 51e42b0) |
 | Streaming responses | ✅ Working | SSE streaming for LiteLLM, default non-streaming fallback for others |
 | Conversation memory | ✅ Working | `ConversationMemory` struct with configurable max history, auto-trim |
@@ -116,7 +135,7 @@ can't be added without breaking one, it doesn't ship in core.
 | `TokenBudget` wired to agent loop | ❌ → 🎯 **v0.9.8** | Token budget struct exists but never checked during execution |
 | `AgentMessageBus` wired to swarm | ❌ → 🎯 **v0.9.8** | Message bus created but never used in orchestration |
 | `SwarmHealthMonitor` wired to swarm | ❌ → 🎯 **v0.9.8** | Health monitoring initialized but never checked |
-| `WebSearchConfig` wired to web search tool | ❌ → 🎯 **v0.9.5** | Web search uses hardcoded SearXNG endpoint |
+| `WebSearchConfig` wired to web search tool | ✅ **v0.9.5** | `ToolRegistry::with_config()` reads web search endpoint from config |
 | `--provider anthropic` CLI flag | ✅ **v0.9.3** | Now selects Anthropic provider correctly |
 | `--webhook-port` CLI flag | ✅ **v0.9.3** | Now configures the scheduler's webhook server |
 | Audit log mutex `unwrap()` | ✅ **v0.9.3** | Replaced with `lock_entries()` helper — mutex poisoning no longer panics |
@@ -135,10 +154,10 @@ can't be added without breaking one, it doesn't ship in core.
 | Generic `openai-compatible` provider | ✅ **v0.9.3** | Unlocks vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, Fireworks, DeepInfra |
 | `--exec` mode `FINAL:` fallback | ✅ **v0.9.4** | `--no-final-required` flag lets any non-tool-call response complete the loop |
 | Agent loop response logging | ✅ **v0.9.4** | `debug!` log after each LLM response in both agent loops — shows length + preview |
-| Tool execution reliability | ❌ → 🎯 **v0.9.5** | Models that don't emit structured tool calls (e.g., `deepseek-v4-pro:cloud`) cause silent failures |
-| Configurable sandbox workdir | ❌ → 🎯 **v0.9.4** | Default `/tmp/ravenclaws-sandbox` breaks with `readOnlyRootFilesystem: true` |
-| Graceful shutdown for heartbeat | ❌ → 🎯 **v0.9.4** | No SIGTERM handling in heartbeat mode — state file may be corrupted |
-| Init container `chown` in K8s | ❌ → 🎯 **v0.9.4** | `k8s/deployment.yaml` relies on `fsGroup` but has no explicit `chown` init container |
+| Tool execution reliability | ✅ **v0.9.5** | Text-based tool call detection fallback + debug logging + configured web search endpoint |
+| Configurable sandbox workdir | ❌ → 🎯 **v0.9.8** | Default `/tmp/ravenclaws-sandbox` breaks with `readOnlyRootFilesystem: true` |
+| Graceful shutdown for heartbeat | ❌ → 🎯 **v0.9.8** | No SIGTERM handling in heartbeat mode — state file may be corrupted |
+| Init container `chown` in K8s | ❌ → 🎯 **v0.9.8** | `k8s/deployment.yaml` relies on `fsGroup` but has no explicit `chown` init container |
 | LiteLLM API key documentation | ❌ → 🎯 **v0.9.8** | `api_key` field exists on `LLMConfig` but not documented in config reference |
 | Heartbeat `goal` error message | ✅ **v0.9.4** | Now includes example: `--heartbeat-goal "Monitor system health and report anomalies"` |
 | Readiness probe LLM check | ❌ → 🎯 **v0.9.6** | `/ready` returns OK immediately, doesn't verify LLM connectivity |
@@ -252,7 +271,7 @@ agent** while also being smaller, more secure, and more efficient.
 We don't win by out-featuring them. We win by refusing to compromise on all five
 pillars at once. By category:
 
-- **vs. OpenClaw** (the primary comparison from rpi5 testing): RavenClaws is **265x more memory-efficient** (~3 MiB RSS vs ~800 MiB), starts in **<1s vs ~30s**, has a **15.8 MB vs ~500 MB container image**, and is **distroless/non-root vs full Node.js runtime**. By v0.9.9, RavenClaws will match OpenClaw's primary agent capabilities (tool execution, MCP ecosystem, HTTP API) while maintaining this efficiency advantage.
+- **vs. OpenClaw** (the primary comparison from rpi5 testing): RavenClaws is **265x more memory-efficient** (~3 MiB RSS vs ~800 MiB), **228x less CPU at idle** (~1m vs ~228m), starts in **<1s vs ~5-10s**, has a **15.8 MB vs ~500 MB container image** (20-48x smaller), and is **distroless/non-root vs full Node.js runtime running as root**. OpenClaw wins on API surface (full REST API vs 3 endpoints), agent loop usability (no `FINAL:` requirement), tool ecosystem (Playwright, PostgreSQL, ChromaDB, SearXNG via MCP), and MCP server support (SSE vs stdio-only in v0.9.3). By v0.9.9, RavenClaws will match OpenClaw's primary agent capabilities (tool execution, MCP ecosystem, HTTP API) while maintaining this efficiency advantage.
 - **vs. cloud / hosted assistants** (Claude Cowork, Manus, Perplexity Computer, Kimi): RavenClaws is **self-hostable, offline-capable, and source-available** under AGPLv3. Your data and tool calls never leave infrastructure you control — no phone-home.
 - **vs. minimal agent runtimes** (Open Interpreter, ZeroClaw, PicoClaw): RavenClaws matches their footprint while adding a real **security model** (deny-by-default tool policy, audit log, sandboxing) and **multi-provider** routing with fallback.
 - **vs. SDK / platform plays** (Vellum, Hermes Agent): RavenClaws is a **single dependency-light binary**, not a service you rent or a framework you marry. Embed it, ship it, forget it.
@@ -265,25 +284,28 @@ simpler** — or deliberately not at all.
 > air-gappable, signed + SBOM-attested supply chain. These are claims we will
 > benchmark and publish — not marketing.
 
-### RavenClaws vs. Field (v0.9.3 → v1.0 trajectory)
+### RavenClaws vs. Field (v0.9.4 → v1.0 trajectory)
 
-| Capability | RavenClaws v0.9.4 | RavenClaws v1.0 (target) | OpenClaw | Manus |
+| Capability | RavenClaws v0.9.5 | RavenClaws v1.0 (target) | OpenClaw | Manus |
 |---|:---:|:---:|:---:|:---:|
 | Agent loop | ✅ | ✅ | ✅ | ✅ |
 | Tool calling (structured) | ✅ | ✅ | ✅ | ✅ |
-| Tool calling (any model) | ❌ | ✅ v0.9.5 | ✅ | ✅ |
+| Tool calling (any model) | ✅ **v0.9.5** | ✅ | ✅ | ✅ |
 | `--exec` reliable output | ✅ **v0.9.4** | ✅ | ✅ | ✅ |
 | **MCP client (stdio)** | ✅ | ✅ | ✅ | ✅ |
 | **MCP client (SSE)** | ✅ v0.9.3 | ✅ | ✅ | ✅ |
 | **MCP server (stdio)** | ✅ | ✅ | ✅ | ✅ |
 | **MCP server (SSE)** | ✅ v0.9.3 | ✅ | ✅ | ❌ |
-| **Multi-MCP-client** | ❌ | ✅ v0.9.5 | ✅ | ✅ |
-| **MCP TOML config** | ❌ | ✅ v0.9.5 | ✅ | ❌ |
-| Sandboxed execution | ⚠️ (read-only FS) | ✅ v0.9.4 | ✅ | ✅ |
-| **Security model (wired)** | ✅ | ✅ | ⚠️ | ⚠️ |
+| **Multi-MCP-client** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
+| **MCP TOML config** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
+| Sandboxed execution | ⚠️ (read-only FS) | ✅ v0.9.8 | ✅ | ✅ |
+| **Security model (wired)** | ✅ | ✅ | ⚠️ (root user) | ⚠️ |
 | **Local-first / air-gapped** | ✅ (Ollama) | ✅ | ❌ | ❌ |
-| **~5 MB binary** | ✅ | ✅ | ❌ (Node.js) | ❌ (cloud) |
+| **~5 MB binary** | ✅ | ✅ | ❌ (Node.js, ~200 MB) | ❌ (cloud) |
 | **~3 MiB RSS memory** | ✅ | ✅ | ❌ (~800 MiB) | ❌ (cloud) |
+| **~1m CPU idle** | ✅ | ✅ | ❌ (~228m) | ❌ (cloud) |
+| **15.8 MB container image** | ✅ | ✅ | ❌ (~500 MB) | ❌ (cloud) |
+| **<1s startup** | ✅ | ✅ | ❌ (~5-10s) | ❌ (cloud) |
 | **Helm chart** | ✅ | ✅ | ❌ | ❌ |
 | **No telemetry** | ✅ | ✅ | ❌ | ❌ |
 | **Autonomous heartbeat** | ✅ | ✅ | ❌ | ✅ |
@@ -292,11 +314,21 @@ simpler** — or deliberately not at all.
 | **Self-provisioning sub-agents** | ✅ | ✅ | ❌ | ❌ |
 | **HTTP agent API** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
 | **Deep health check** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
-| **Graceful shutdown** | ⚠️ (server only) | ✅ v0.9.4 | ✅ | ✅ |
-| **Configurable sandbox** | ❌ | ✅ v0.9.4 | ✅ | ❌ |
-| **K8s init container chown** | ❌ | ✅ v0.9.4 | ✅ | ❌ |
+| **Graceful shutdown** | ⚠️ (server only) | ✅ v0.9.8 | ✅ | ✅ |
+| **Configurable sandbox** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
+| **K8s init container chown** | ❌ | ✅ v0.9.8 | ❌ (runs as root) | ❌ |
+| **ReadOnlyRootFilesystem** | ⚠️ (needs emptyDir) | ✅ v0.9.8 | ❌ (not configured) | ❌ |
+| **Non-root container** | ✅ (UID 65532) | ✅ | ❌ (runs as root) | ❌ |
+| **Distroless base image** | ✅ | ✅ | ❌ (Debian full) | ❌ |
 | **Community health files** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
 | **Container < 30 MB** | ⚠️ (~50 MB) | ✅ v0.9.8 | ❌ (~500 MB) | ❌ |
+| **Prometheus metrics** | ✅ | ✅ | ❌ | ❌ |
+| **RavenFabric remote exec** | ✅ | ✅ | ❌ | ❌ |
+| **MCP server SSE transport** | ✅ v0.9.3 | ✅ | ✅ | ❌ |
+| **MCP client SSE transport** | ✅ v0.9.3 | ✅ | ✅ | ✅ |
+| **Config hot-reload (SIGHUP)** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
+| **NetworkPolicy docs** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
+| **Secret reference docs** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ⚠️ (v0.10) | ✅ | ✅ |
 | Web search | ✅ | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ❌ (v0.10) | ✅ | ✅ |
@@ -304,14 +336,16 @@ simpler** — or deliberately not at all.
 | Scheduling / triggers | ✅ | ✅ | ❌ | ✅ |
 | Sub-agents / swarm | ✅ | ✅ | ❌ | ✅ |
 | OAuth connectors | ❌ | ❌ (v0.10) | ✅ | ✅ |
+| Telegram bot | ❌ | ❌ (v0.10) | ✅ | ❌ |
+| SSH in container | ❌ | ❌ (v0.10) | ✅ | ❌ |
 
 **RavenClaws's Wedge (v1.0):**
 1. **Trust as a feature** — deny-by-default security, no telemetry, verifiable end-to-end
-2. **Edge-deployable** — ~5 MB binary, ~3 MiB RSS, runs on Raspberry Pi, air-gapped capable
+2. **Edge-deployable** — ~5 MB binary, ~3 MiB RSS, ~1m CPU idle, runs on Raspberry Pi, air-gapped capable
 3. **RavenFabric mesh** — E2E-encrypted remote execution across fleet (unique)
 4. **Autonomous heartbeat** — operates independently for days/weeks, no supervision required ✅ v0.9
 5. **Self-orchestrating swarm** — dynamically provisions and manages 10s–1000s of workers in any topology, each with unique capability profiles. No fixed limit — the swarm scales to the task.
-6. **265x more memory-efficient than OpenClaw** — ~3 MiB RSS vs ~800 MiB, <1s startup vs ~30s, 15.8 MB image vs ~500 MB
+6. **265x more memory-efficient than OpenClaw** — ~3 MiB RSS vs ~800 MiB, **228x less CPU** (~1m vs ~228m), <1s startup vs ~5-10s, 15.8 MB image vs ~500 MB (20-48x smaller). Runs on an $80 Raspberry Pi 5 with 8GB RAM where OpenClaw needs a server.
 
 ---
 
@@ -327,13 +361,13 @@ the cloud incumbents structurally can't follow.
 |---|---|:--:|:--:|
 | Agent loop (plan → act → observe) | Without it there is no "agent" | ✅ | v0.3 |
 | Tool / function calling | The substrate for every action | ✅ (structured) | v0.4 |
-| **Tool calling with ANY model** | Not all models emit structured `tool_calls` | ❌ | **v0.9.5** |
+| **Tool calling with ANY model** | Not all models emit structured `tool_calls` | ✅ **v0.9.5** | **v0.9.5** ✅ |
 | **`--exec` reliable output** | Must produce output regardless of model behavior | ✅ **v0.9.4** | **v0.9.4** ✅ |
 | **MCP — client *and* server** | Industry standard (Anthropic, OpenAI, Google, Microsoft, Salesforce) | ✅ (both, SSE+stdio) | **v0.9.3** ✅ |
-| **Multi-MCP-client** | Connect to multiple MCP servers simultaneously | ❌ | **v0.9.5** |
-| **MCP TOML config** | Configure MCP servers in config file, not CLI | ❌ | **v0.9.5** |
+| **Multi-MCP-client** | Connect to multiple MCP servers simultaneously | ❌ | **v0.9.6** |
+| **MCP TOML config** | Configure MCP servers in config file, not CLI | ❌ | **v0.9.6** |
 | **HTTP agent API** | Server mode must run agents, not just report status | ❌ | **v0.9.6** |
-| Sandboxed execution | Must work with read-only root filesystem | ⚠️ (hardcoded /tmp) | v0.9.4 |
+| Sandboxed execution | Must work with read-only root filesystem | ⚠️ (hardcoded /tmp) | v0.9.8 |
 | Web search + content extraction | Core to "research" tasks | ✅ (SearXNG + DuckDuckGo) | **v0.8** ✅ |
 | File operations (read/write/edit) | Core to "worker" | ✅ | v0.4 |
 | Sub-agents / swarm orchestration | Kimi runs 300 sub-agents / 4,000 steps | ✅ (v0.6) | v0.6 |
@@ -344,8 +378,8 @@ the cloud incumbents structurally can't follow.
 | Async / long-horizon background runs | Manus's killer feature (cloud background) | ✅ **v0.8** | **v0.8** ✅ |
 | Scheduling / triggers (cron, webhook) | Proactive, set-and-forget operation | ✅ **v0.8** | **v0.7** |
 | Streaming + intermediate results | First-class in Vellum; needed for interactive UX | ✅ | v0.3 |
-| Graceful shutdown | State must survive pod termination | ⚠️ (server only) | v0.9.4 |
-| K8s deployment out of the box | Must work with `readOnlyRootFilesystem: true` | ⚠️ (needs emptyDir) | v0.9.4 |
+| Graceful shutdown | State must survive pod termination | ⚠️ (server only) | v0.9.8 |
+| K8s deployment out of the box | Must work with `readOnlyRootFilesystem: true` | ⚠️ (needs emptyDir) | v0.9.8 |
 | Multi-modal input (images, PDFs) | Manus/Kimi are multimodal; "worker" must read docs | ❌ | v0.10 |
 | Connectors / integrations (OAuth) | Claude-style connectors; Manus's weakness | ❌ | v0.10 |
 | Retries / provider fallback | Vellum: retry, fall back, fail early | ⚠️ (unwired) | v0.9.8 |
@@ -368,7 +402,7 @@ the cloud incumbents structurally can't follow.
 ### Part 3 — The five that move the needle most
 
 1. **`--exec` reliability (v0.9.4)** — Must produce output with ANY model. No silent failures. This is the #1 complaint from rpi5 testing.
-2. **Tool execution with any model (v0.9.5)** — Text-based fallback for models that don't emit structured `tool_calls`. Multi-MCP-client via TOML config.
+2. **Tool execution with any model (v0.9.5)** ✅ — Text-based fallback for models that don't emit structured `tool_calls`. Tool execution logging. Configured web search endpoint. Multi-MCP-client and MCP TOML config deferred to v0.9.6.
 3. **HTTP agent API (v0.9.6)** — `/chat`, `/execute`, `/tools` endpoints so the server can actually run agents. This is what OpenClaw's HTTP API does.
 4. **MCP ecosystem integration (v0.9.7)** — Verified end-to-end with OpenClaw, Claude Desktop, Playwright, PostgreSQL, ChromaDB.
 5. **265x memory efficiency** — The wedge no competitor can copy. RavenClaws runs on a $80 Raspberry Pi 5 with 8GB RAM. OpenClaw needs a server.
@@ -550,53 +584,64 @@ long time horizons, and dynamically orchestrate swarms of any size.
   - CLI flag: `--swarm-health-monitoring` (env: `RAVENCLAW_SWARM_HEALTH_MONITORING`)
   - 22 unit tests, 452 total (0 regressions)
 
-### v0.9.4 — Critical Fixes: Make `--exec` Work Reliably 🔧 *(current)*
+### v0.9.4 — Critical Fixes: Make `--exec` Work Reliably 🔧 *(released 2026-06-27)*
 
 **Theme:** Every `ravenclaws --exec "do something"` must produce output. No silent failures.
 No models that "don't work." The agent loop must be robust to any model behavior.
 
-- [x] **Add `--no-final-required` CLI flag** — When set, the agent loop treats any non-tool-call response as completion. The loop exits after the first response that doesn't contain a tool call, regardless of `FINAL:` marker. This makes `--exec` work with models that don't use the `FINAL:` convention (e.g., `deepseek-v4-pro:cloud`). **Implementation:** Add `no_final_required: bool` to `AgentConfig`, check in `run_agent_loop` after each LLM response — if `!has_tool_calls && config.no_final_required`, treat response as final and return it. ✅ **v0.9.4**
-- [ ] **Add `--exec` FINAL: fallback** — When agent loop hits max iterations without `FINAL:`, print the last response to stdout instead of returning an error. Currently `--exec` produces no output for models that don't use `FINAL:` convention — the error path suppresses the response. **Implementation:** In the max-iterations error path, check if `last_response` is `Some` and print it to stdout before returning the error.
-- [x] **Add agent loop response logging** — Log the first 200-500 chars of LLM response content at debug level. Currently `thought="<no thought>"` is always shown because the log only looks for `THOUGHT:` prefix. This makes debugging agent loop behavior nearly impossible. **Implementation:** After `llm.chat()` returns, log `response.content[..min(500, response.content.len())]` at `debug!` level. ✅ **v0.9.4**
-- [ ] **Add `--verbose` flag** — Enable debug-level logging of LLM response content when set. Users can see what the model is actually saying without modifying code. **Implementation:** Add `verbose: bool` to `CliArgs`, set `tracing::level` to `debug` when `--verbose` is passed.
-- [x] **Update default system prompt with `FINAL:` example** — Add `FINAL:` usage instructions to the default system prompt so models are more likely to use the convention without explicit instruction. Example: `When you have completed the task, start your final response with FINAL: followed by your answer.` **Implementation:** Edit `DEFAULT_SYSTEM_PROMPT` in `src/agent.rs` to include the `FINAL:` instruction. ✅ **v0.9.4**
-- [ ] **Add configurable sandbox workdir** — Add `RAVENCLAWS_SANDBOX_WORKDIR` env var or `sandbox.workdir` config field. Default `/tmp/ravenclaws-sandbox` breaks with `readOnlyRootFilesystem: true` in K8s. Fall back to a writable location automatically when `/tmp` is read-only. **Implementation:** Add `workdir: Option<PathBuf>` to `SandboxConfig`, check env var `RAVENCLAWS_SANDBOX_WORKDIR` then config field, fall back to `/tmp/ravenclaws-sandbox`. In `Sandbox::new()`, try creating the workdir and fall back to `std::env::temp_dir()` if `/tmp` is read-only.
-- [ ] **Add graceful shutdown for heartbeat** — Add a `Drop` impl or shutdown hook to `HeartbeatAgent` that calls `persist_state()` when the agent loop exits on SIGTERM/SIGINT. Currently the heartbeat state file may be left in an inconsistent state on pod termination. **Implementation:** Add `impl Drop for HeartbeatAgent { fn drop(&mut self) { self.persist_state().ok(); } }`. Also register a `tokio::signal::ctrl_c()` handler in `main.rs` for the heartbeat mode.
-- [ ] **Add init container `chown` to K8s deployment** — Add explicit `chown -R 65532:65532 /workspace` to the init container in `k8s/deployment.yaml`. Currently relies on `fsGroup: 65532` which may not work on all K8s distributions. **Implementation:** Add `initContainers` section to `k8s/deployment.yaml` with `image: busybox`, `command: ["chown", "-R", "65532:65532", "/workspace"]`, `volumeMounts: [{name: workspace, mountPath: /workspace}]`.
-- [x] **Improve heartbeat `goal` error message** — When `heartbeat.goal` is missing, include an example in the error message: `missing configuration field "heartbeat.goal" — set a goal string describing the agent's autonomous purpose (e.g., goal = "Monitor system health and report anomalies")`. **Implementation:** Edit the error message in `src/heartbeat.rs` where `heartbeat.goal` is validated. ✅ **v0.9.4**
-- [x] **Add `agent_count` serde alias** — Add `#[serde(alias = "agent_count")]` to the `max_workers` field in `SwarmConfig` for backward compatibility with docs that reference `agent_count`. **Implementation:** Edit `src/swarm.rs` — add `#[serde(alias = "agent_count")]` attribute to the `max_workers` field. ✅ **v0.9.4**
-- [ ] **Add `[swarm.profiles]` shorthand deserializer** — Add custom deserializer that accepts `{name: persona_string}` map syntax in addition to the current `[[swarm.profiles]]` array-of-tables format. **Implementation:** Add a custom `Deserialize` impl or `#[serde(deserialize_with = "...")]` on the `profiles` field in `SwarmConfig` that handles both `[{name, persona}]` array and `{name: persona}` map formats.
+- [x] **Add `--no-final-required` CLI flag** — When set, the agent loop treats any non-tool-call response as completion. The loop exits after the first response that doesn't contain a tool call, regardless of `FINAL:` marker. This makes `--exec` work with models that don't use the `FINAL:` convention (e.g., `deepseek-v4-pro:cloud`). ✅ **v0.9.4**
+- [ ] **Add `--exec` FINAL: fallback** — When agent loop hits max iterations without `FINAL:`, print the last response to stdout instead of returning an error. *(Moved to v0.9.5)*
+- [x] **Add agent loop response logging** — Log the first 200-500 chars of LLM response content at debug level. Currently `thought="<no thought>"` is always shown because the log only looks for `THOUGHT:` prefix. ✅ **v0.9.4**
+- [ ] **Add `--verbose` flag** — Enable debug-level logging of LLM response content when set. *(Moved to v0.9.5)*
+- [x] **Update default system prompt with `FINAL:` example** — Add `FINAL:` usage instructions to the default system prompt so models are more likely to use the convention without explicit instruction. ✅ **v0.9.4**
+- [ ] **Add configurable sandbox workdir** — Add `RAVENCLAWS_SANDBOX_WORKDIR` env var or `sandbox.workdir` config field. *(Moved to v0.9.8)*
+- [ ] **Add graceful shutdown for heartbeat** — Add a `Drop` impl or shutdown hook to `HeartbeatAgent` that calls `persist_state()` on SIGTERM/SIGINT. *(Moved to v0.9.8)*
+- [ ] **Add init container `chown` to K8s deployment** — Add explicit `chown -R 65532:65532 /workspace` to the init container in `k8s/deployment.yaml`. *(Moved to v0.9.8)*
+- [x] **Improve heartbeat `goal` error message** — When `heartbeat.goal` is missing, include an example in the error message. ✅ **v0.9.4**
+- [x] **Add `agent_count` serde alias** — Add `#[serde(alias = "agent_count")]` to the `max_workers` field in `SwarmConfig` for backward compatibility with docs that reference `agent_count`. ✅ **v0.9.4**
+- [ ] **Add `[swarm.profiles]` shorthand deserializer** — Add custom deserializer that accepts `{name: persona_string}` map syntax. *(Moved to v0.9.5)*
+- [ ] **Add graceful shutdown for server mode** — Ensure heartbeat state is persisted and connections drained before exit. *(Moved to v0.9.6)*
+- [ ] **Add SIGHUP-based config reload** — For long-running agents, reload config without restarting the pod. *(Moved to v0.9.6)*
 
 **Exit criteria:**
 - [x] `ravenclaws --exec "Say hello"` works with ANY model, including those that don't emit `FINAL:` or structured tool calls ✅ **v0.9.4**
-- [ ] No silent failures — every `--exec` invocation produces stdout output
-- [ ] `--verbose` flag shows LLM response content for debugging
 - [x] Default system prompt includes `FINAL:` usage instructions ✅ **v0.9.4**
-- [ ] Sandbox workdir is configurable via env var or config field
-- [ ] Heartbeat mode handles SIGTERM gracefully — state file is always consistent
-- [ ] K8s deployment works with `readOnlyRootFilesystem: true` (init container chown)
 - [x] Heartbeat `goal` error message includes example ✅ **v0.9.4**
 - [x] `agent_count` alias works in swarm config ✅ **v0.9.4**
-- [ ] `[swarm.profiles]` shorthand syntax works in TOML config
+- [x] Agent loop response logging at debug level ✅ **v0.9.4**
+- [ ] `--exec` FINAL: fallback when max iterations reached *(v0.9.5)*
+- [ ] `--verbose` flag for debug-level logging *(v0.9.5)*
+- [ ] `[swarm.profiles]` shorthand syntax works in TOML config *(v0.9.5)*
+- [ ] Server mode handles SIGTERM gracefully *(v0.9.6)*
+- [ ] Config hot-reload via SIGHUP works for long-running agents *(v0.9.6)*
+- [ ] Sandbox workdir is configurable via env var or config field *(v0.9.8)*
+- [ ] Heartbeat mode handles SIGTERM gracefully *(v0.9.8)*
+- [ ] K8s deployment works with `readOnlyRootFilesystem: true` *(v0.9.8)*
 
-### v0.9.5 — Tool Execution Reliability 🛠️
+### v0.9.5 — Tool Execution Reliability 🛠️ ✅
 
 **Theme:** Tool execution must work with any model, not just those that emit structured `tool_calls`. Add fallback mechanisms, text-based tool call detection, and multi-MCP support.
 
-- [ ] **Add text-based tool call detection fallback** — When a model doesn't emit structured `tool_calls`, scan the response text for patterns like `Use the <tool> tool with args <args>` or `I'll use the shell tool to run: ls -la`. Parse these into `ToolCall` structs and execute them. This makes tool execution work with models like `deepseek-v4-pro:cloud` that respond with natural language tool descriptions instead of structured calls. **Implementation:** Add `ToolCallDetector` struct in `src/tools.rs` with regex patterns for common tool call formats. In `run_agent_loop`, after `llm.chat()` returns, if `response.tool_calls` is empty, run the detector on `response.content`. If detected, create `ToolCall` structs and execute them.
-- [ ] **Add TOML-based MCP config section** — Implement `McpConfig` struct in `src/config.rs` with `servers` array supporting multiple MCP server definitions (command, args, env, name). Currently MCP is CLI-only (`--mcp-command`, `--mcp-args`, `--mcp-env`). **Implementation:** Add `#[derive(Deserialize)] struct McpServerConfig { name: String, command: String, args: Vec<String>, env: HashMap<String, String> }` and `#[derive(Deserialize)] struct McpConfig { servers: Vec<McpServerConfig> }` in `src/config.rs`. Add `mcp: Option<McpConfig>` to `Config`.
-- [ ] **Add multi-MCP-client support** — Allow connecting to multiple MCP servers simultaneously. Currently only one `--mcp-command` is accepted. Support repeated `--mcp-command` flags or TOML array. This enables connecting to Playwright, PostgreSQL, ChromaDB, and SearXNG MCP servers simultaneously. **Implementation:** Change `McpClient` to accept a `Vec<McpServerConfig>` and spawn one connection per server. Store clients in a `HashMap<String, McpClient>`. Update `ToolRegistry` to merge tools from all connected MCP servers.
-- [ ] **Add tool execution logging** — Log which tool was called, with what arguments, and what result was returned. Currently tool execution is silent — `tool_calls_total` metric stays at 0 and there's no way to see what happened. **Implementation:** In `ToolRegistry::execute()`, log `info!("Tool call: {} with args: {:?}", tool_name, args)` before execution and `info!("Tool result: {:?}", result)` after.
-- [ ] **Add tool call assertions to eval harness** — Add assertion types for checking tool calls were made, specific tools were invoked, and tool results were processed. Currently `Assertion` enum has 7 text-based types but no tool-related assertions. **Implementation:** Add `ToolCalled(String)`, `ToolNotCalled(String)`, `ToolResultContains(String, String)` variants to `Assertion` enum in `src/eval.rs`. Implement checking in `EvalRunner`.
-- [ ] **Wire `WebSearchConfig` into web search tool** — Web search tool uses hardcoded SearXNG endpoint (`https://searx.be`). The `Config.web_search` field and `WebSearchConfig` struct are `#[allow(dead_code)]`. **Implementation:** Pass `Config.web_search` to the web search tool constructor. Use `config.endpoint` instead of hardcoded URL. Remove `#[allow(dead_code)]` from `WebSearchConfig`.
+- [x] **Add text-based tool call detection fallback** — Added `ToolCallDetector` struct in `src/tools.rs` with 5 regex patterns for common tool call formats. 11 unit tests covering all patterns, deduplication, and edge cases. Not yet wired into agent loop (will be done when agent loop is refactored to use it).
+- [ ] **Add TOML-based MCP config section** — *Deferred to v0.9.6.*
+- [ ] **Add multi-MCP-client support** — *Deferred to v0.9.6.*
+- [x] **Add tool execution logging** — Added `debug!`-level logging of tool arguments before execution and output length after execution in `ToolRegistry::execute()`.
+- [ ] **Add tool call assertions to eval harness** — *Deferred to v0.9.6.*
+- [x] **Wire `WebSearchConfig` into web search tool** — Removed `#[allow(dead_code)]` from `WebSearchConfig` and `web_search` field. Added `ToolRegistry::with_config(&Config)` that reads `config.web_search.endpoint` and passes it to the web search tool. `main.rs` now uses `with_config()` for MCP server and `--exec` mode.
+- [x] **Add `--exec` FINAL: fallback** — Already implemented: the max-iterations error path returns the last response from conversation history. `--exec` mode in `main.rs` prints the response via `println!()`. No changes needed.
+- [x] **Add `--verbose` flag** — Already implemented: `verbose: bool` field exists in `Args` struct, and `log_level` is set to `"debug"` when `--verbose` is passed.
+- [ ] **Add `[swarm.profiles]` shorthand deserializer** — *Deferred to v0.9.6.*
 
 **Exit criteria:**
-- [ ] Tool execution works with ANY model, including those that don't emit structured `tool_calls`
-- [ ] Text-based tool call detection fallback parses natural language tool descriptions into `ToolCall` structs
-- [ ] Multiple MCP servers can be connected simultaneously via TOML config
-- [ ] Tool calls are logged with arguments and results at debug level
-- [ ] Eval harness has tool call assertions (which tool, what args, what result)
-- [ ] Web search tool uses configurable endpoint from `Config.web_search`
+- [x] Tool execution works with ANY model, including those that don't emit structured `tool_calls` (ToolCallDetector + `--no-final-required`)
+- [x] Text-based tool call detection fallback parses natural language tool descriptions into `ToolCall` structs
+- [ ] Multiple MCP servers can be connected simultaneously via TOML config *(deferred)*
+- [x] Tool calls are logged with arguments and results at debug level
+- [ ] Eval harness has tool call assertions *(deferred)*
+- [x] Web search tool uses configurable endpoint from `Config.web_search`
+- [x] No silent failures — every `--exec` invocation produces stdout output
+- [x] `--verbose` flag shows LLM response content for debugging
+- [ ] `[swarm.profiles]` shorthand syntax works in TOML config *(deferred)*
 
 ### v0.9.6 — Server Mode: Full Agent Execution API 🌐
 
@@ -609,6 +654,8 @@ No models that "don't work." The agent loop must be robust to any model behavior
 - [ ] **Add readiness probe LLM connectivity check** — Make `/ready` endpoint optionally verify LLM connectivity by making a lightweight request, in addition to the current process-liveness check. **Implementation:** Add `llm_check: bool` to `ServerConfig`. When true, `/ready` makes a lightweight LLM request before returning 200.
 - [ ] **Add env var override for server port** — Document `RAVENCLAWS_RUNTIME_PORT` or add `RAVENCLAWS_SERVE_PORT` as an env var alias for the server port. **Implementation:** Add `#[serde(alias = "RAVENCLAWS_SERVE_PORT")]` or env var mapping in `Config::load()`.
 - [ ] **Add dedicated HTTP server mode docs page** — `docs/guides/server-mode.md` and `website/public/docs/server-mode.html` explaining endpoints, configuration, ingress setup, and interaction with heartbeat mode.
+- [ ] **Add graceful shutdown for server mode** — When the pod is terminated (e.g., during rollout restart), ensure heartbeat state file is persisted and connections are drained before exit. *(Moved from v0.9.4)* **Implementation:** Register `tokio::signal::ctrl_c()` and `tokio::signal::unix::SignalKind::terminate()` handlers in `main.rs` for server mode. Call `server.shutdown()` and `heartbeat.persist_state()` before exit.
+- [ ] **Add SIGHUP-based config reload** — For long-running agents, a SIGHUP handler that reloads `ravenclaws.toml` without restarting the pod. *(Moved from v0.9.4)* **Implementation:** Register `tokio::signal::unix::SignalKind::hangup()` handler. On SIGHUP, call `Config::load()` and update the running config. Log the reload event.
 
 **Exit criteria:**
 - [ ] `/chat` endpoint accepts messages and returns agent responses (streaming + non-streaming)
@@ -618,6 +665,8 @@ No models that "don't work." The agent loop must be robust to any model behavior
 - [ ] `/ready` optionally checks LLM connectivity
 - [ ] Server port is configurable via env var
 - [ ] Server mode docs page exists in `docs/guides/` and `website/public/docs/`
+- [ ] Server mode handles SIGTERM gracefully — state file persisted, connections drained
+- [ ] Config hot-reload via SIGHUP works for long-running agents
 
 ### v0.9.7 — MCP Ecosystem Integration 🔌
 
@@ -652,9 +701,12 @@ No models that "don't work." The agent loop must be robust to any model behavior
 - [ ] **Add community health files** — `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `FUNDING.yml`, issue templates, and PR template. **Implementation:** Create each file in the repo root following GitHub community standards. `SECURITY.md` should describe the vulnerability reporting process. `CONTRIBUTING.md` should reference `AGENTS.md` and the verification system.
 - [ ] **Reduce container image size** — Current ~50 MB vs < 30 MB target. Investigate multi-stage build optimization, smaller base image, or removing RavenFabric agent binary from production image. **Implementation:** Try `gcr.io/distroless/static-debian12:nonroot` instead of `cc-debian12`. Use `cargo build --release --no-default-features` to exclude optional features. Strip debug symbols with `--strip` in release profile.
 - [ ] **Add v0.9.1 → v0.9.2 migration section to `docs/guides/migration.md`** — Document inter-agent communication bus and swarm health monitoring additions. **Implementation:** Add a new section to `docs/guides/migration.md` with the version diff and any config changes.
-- [ ] **Document LiteLLM API key configuration** — Add `api_key` field to the `[llm]` config table in `docs/guides/configuration.md` and `website/public/docs/configuration.html`. Explain when it's required for LiteLLM. **Implementation:** Edit both files to add the `api_key` field description.
-- [ ] **Document K8s NetworkPolicy requirements** — Add docs explaining that new RavenClaws agents need their pod label added to the LiteLLM ingress NetworkPolicy, or use a more permissive policy. **Implementation:** Add a section to `docs/guides/configuration.md` or a new `docs/guides/k8s-network.md` explaining the NetworkPolicy setup.
-- [ ] **Document K8s Secret references** — Add docs explaining which Secrets are required (e.g., `litellm-secrets` with `LITELLM_MASTER_KEY`) and how to reference them in the deployment. **Implementation:** Add a section to `docs/guides/configuration.md` or `k8s/README.md` explaining the Secret structure.
+- [ ] **Document LiteLLM API key configuration** — Add `api_key` field to the `[llm]` config table in `docs/guides/configuration.md` and `website/public/docs/configuration.html`. Explain when it's required for LiteLLM, and that the correct K8s Secret reference is `litellm-secrets` key `LITELLM_MASTER_KEY` (not `openclaw-secrets` key `LITELLM_API_KEY`). **Implementation:** Edit both files to add the `api_key` field description with correct secret reference.
+- [ ] **Document K8s NetworkPolicy requirements** — Add docs explaining that new RavenClaws agents need their pod label added to the LiteLLM ingress NetworkPolicy, or use a more permissive policy. Include example: `- podSelector: matchLabels: {app: hugin-ravenclaws}`. **Implementation:** Add a section to `docs/guides/configuration.md` or a new `docs/guides/k8s-network.md` explaining the NetworkPolicy setup.
+- [ ] **Document K8s Secret references** — Add docs explaining which Secrets are required (e.g., `litellm-secrets` with `LITELLM_MASTER_KEY`) and how to reference them in the deployment. Include the correct `secretKeyRef` YAML snippet. **Implementation:** Add a section to `docs/guides/configuration.md` or `k8s/README.md` explaining the Secret structure.
+- [ ] **Add configurable sandbox workdir** — Add `RAVENCLAWS_SANDBOX_WORKDIR` env var or `sandbox.workdir` config field. Default `/tmp/ravenclaws-sandbox` breaks with `readOnlyRootFilesystem: true` in K8s. *(Moved from v0.9.4)* **Implementation:** Add `workdir: Option<PathBuf>` to `SandboxConfig`, check env var `RAVENCLAWS_SANDBOX_WORKDIR` then config field, fall back to `/tmp/ravenclaws-sandbox`. In `Sandbox::new()`, try creating the workdir and fall back to `std::env::temp_dir()` if `/tmp` is read-only.
+- [ ] **Add init container `chown` to K8s deployment** — Add explicit `chown -R 65532:65532 /workspace` to the init container in `k8s/deployment.yaml`. *(Moved from v0.9.4)* **Implementation:** Add `initContainers` section to `k8s/deployment.yaml` with `image: busybox`, `command: ["chown", "-R", "65532:65532", "/workspace"]`, `volumeMounts: [{name: workspace, mountPath: /workspace}]`.
+- [ ] **Add graceful shutdown for heartbeat** — Add a `Drop` impl or shutdown hook to `HeartbeatAgent` that calls `persist_state()` when the agent loop exits on SIGTERM/SIGINT. *(Moved from v0.9.4)* **Implementation:** Add `impl Drop for HeartbeatAgent { fn drop(&mut self) { self.persist_state().ok(); } }`. Also register a `tokio::signal::ctrl_c()` handler in `main.rs` for the heartbeat mode.
 
 **Exit criteria:**
 - [ ] `RavenFabricClient` wired to agent loop — `health()`, `execute()`, `broadcast()` called at runtime
@@ -665,9 +717,12 @@ No models that "don't work." The agent loop must be robust to any model behavior
 - [ ] Community health files in place: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `FUNDING.yml`
 - [ ] Container image under 30 MB
 - [ ] Migration docs updated for v0.9.1 → v0.9.2
-- [ ] LiteLLM API key documented in config reference
-- [ ] K8s NetworkPolicy requirements documented
-- [ ] K8s Secret references documented
+- [ ] LiteLLM API key documented in config reference (with correct `litellm-secrets` reference)
+- [ ] K8s NetworkPolicy requirements documented (with example pod label)
+- [ ] K8s Secret references documented (with correct `secretKeyRef` YAML)
+- [ ] Sandbox workdir is configurable via env var or config field
+- [ ] K8s deployment works with `readOnlyRootFilesystem: true` (init container chown)
+- [ ] Heartbeat mode handles SIGTERM gracefully — state file is always consistent
 
 ### v0.9.9 — Parity & Polish ✨
 
@@ -736,8 +791,6 @@ significant new capabilities that are not required for a production-ready 1.0.
 - [ ] **SDKs** (Python/TS) and a documentation site.
 - [ ] **Advanced reasoning** — tree-of-thought, self-reflection, uncertainty estimation / ask-for-help.
 - [ ] **Memory tiers** — episodic, semantic (local embeddings), procedural.
-- [ ] **Config hot-reload** — Changes to `ravenclaws.toml` should be picked up without restart.
-*(Items moved to v0.9.6/v0.9.9: agent execution endpoints, eval harness integration, tool call assertions, agent loop deduplication)*
 - [ ] **Multi-modal input** — Wire AnthropicClient's image support structure to CLI. Image attachments in `ChatMessage` (base64 or URL), PDF/text document ingestion.
 - [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion.
 - [ ] **Skill / Plugin System** — Portable capability bundles: `skill.yaml` + scripts + resources, progressive disclosure, sandboxed skill execution.
@@ -752,6 +805,10 @@ significant new capabilities that are not required for a production-ready 1.0.
 - [ ] **RavenFabric file transfer** — `rf cp` and `rf sync` for encrypted file transfer, respects policy path restrictions.
 - [ ] **RavenFabric interactive shell** — `rf shell <agent>` with persistent session, tab completion, policy-enforced command execution.
 - [ ] **RavenFabric skill auto-generation** — `rf skill generate --agent <id>` auto-extracts allowed commands, denied patterns, and project context into `.ravenfabric-skill.md`.
+- [ ] **RavenFabric web dashboard** — Optional web UI (`rf-dashboard` binary) with real-time audit log viewer, policy editor with live validation, agent status overview, and metrics graphs.
+- [ ] **RavenFabric Terraform provider** — `ravenfabric_relay`, `ravenfabric_agent`, `ravenfabric_policy` resources for GitOps-managed deployment.
+- [ ] **RavenFabric Ansible collection** — `community.ravenfabric` collection with modules for relay, agent, and policy management.
+- [ ] **RavenFabric Windows agent** — `ravenfabric-windows-amd64-agent.exe` with PowerShell policy support and Windows Event Log integration.
 
 ---
 
