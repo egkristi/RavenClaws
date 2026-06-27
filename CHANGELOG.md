@@ -5,7 +5,7 @@ All notable changes to RavenClaws are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.6] — 2026-06-02
 
 ### Added
 - **Full Agent Execution API (6 new endpoints)** — `server.rs` now exposes `POST /chat` (chat completion), `POST /execute` (async task execution with tools), `GET /tasks/{id}` (poll task status), `GET /tools` (list registered tools), `POST /tools/{name}` (execute a specific tool), and `GET /health/deep` (detailed health with uptime, request count, LLM provider, tools registered). All endpoints return structured JSON responses.
@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Config test initializers** — All 17 `Config` struct initializations in test code updated to include the new `mcp` field.
 - **Eval test calls updated** — All `check_single_assertion` test calls updated to pass the new `Option<&RunTrace>` parameter.
+
+## [Unreleased]
+
+### Added
+*(none)*
+
+### Fixed
+*(none)*
+
+### Changed
+*(none)*
+
+### Removed
+*(none)*
 
 ## [0.9.5] — 2026-06-27
 

@@ -1,6 +1,6 @@
 [package]
 name = "RavenClaws"
-version = "0.9.5"
+version = "0.9.6"
 edition = "2021"
 authors = ["Erling G M Kristiansen <egkristi@gmail.com>"]
 description = "Lightweight, secure Rust agent framework with multi-provider LLM support"
