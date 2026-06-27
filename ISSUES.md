@@ -389,7 +389,7 @@ Items are ordered by severity/impact.
 
 **Files:** Root directory
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
 
 ---
 
@@ -401,7 +401,7 @@ Items are ordered by severity/impact.
 
 **Files:** `Dockerfile`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
 
 ### 9 modules not re-exported from library crate
 
@@ -461,21 +461,19 @@ Items are ordered by severity/impact.
 
 ### README uses `--mode single` instead of `--exec`/`--repl`
 
-**Problem:** Quick Start shows `./target/release/ravenclaws --mode single` which is not the recommended usage pattern. Should use `--exec` or `--repl`.
+**Fix:** README Quick Start now correctly uses `--exec` and `--repl` flags. No reference to `--mode single` remains in the Quick Start section.
 
-**Files:** `README.md` (line 112)
+**Files:** `README.md`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
+**Status:** ✅ Resolved — v0.9.8.
 
 ### No documented way to pass LiteLLM API key
 
-**Problem:** The config has `[llm]` with `provider = "litellm"` and `endpoint`, but no documentation explains whether or how to pass an API key for LiteLLM. The `api_key` field exists on `LLMConfig` as `Option<String>` but is not mentioned in the configuration docs table.
+**Fix:** Added `api_key` field documentation to `docs/guides/configuration.md` (minimal example line 121, multi-provider example line 134) and `docs/guides/getting-started.md` (line 47: `export LITELLM_API_KEY="your-key"`).
 
-**Impact:** Users deploying with LiteLLM may not know how to authenticate.
+**Files:** `docs/guides/configuration.md`, `docs/guides/getting-started.md`, `website/public/docs/configuration.html`
 
-**Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ✅ Resolved — v0.9.8.
 
 ### Heartbeat error message for missing `goal` is unclear
 
@@ -503,13 +501,11 @@ Items are ordered by severity/impact.
 
 ### `/ready` endpoint doesn't verify config validity
 
-**Problem:** The `/ready` endpoint returns `200 OK` immediately after the TCP listener binds, before the heartbeat loop or any other initialization has a chance to verify the configuration works end-to-end.
+**Fix:** `/ready` now performs an LLM connectivity check with 5-second timeout. Returns `200 OK` with `"READY"` only if LLM responds. Returns `503` with descriptive message on failure. The `ready` flag is only set after all initialization steps (LLM client, tool registry, background manager, MCP clients) complete successfully.
 
-**Suggestion:** Make `/ready` wait for heartbeat initialization or config validation before returning OK.
+**Files:** `src/server.rs` (lines 164-195, 832)
 
-**Files:** `src/server.rs` (lines 236-239)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ✅ Resolved — v0.9.7.
 
 ### Heartbeat state not saved on graceful shutdown
 
@@ -519,17 +515,15 @@ Items are ordered by severity/impact.
 
 **Files:** `src/heartbeat.rs` (no `Drop` impl, no shutdown hook)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
 
 ### Sandbox breaks with read-only root filesystem
 
-**Problem:** The `Sandbox` default workdir is `/tmp/ravenclaws-sandbox`. When the container has `readOnlyRootFilesystem: true` (as configured in `k8s/deployment.yaml`), `/tmp` is not writable and sandbox creation fails. There is no fallback to `std::env::temp_dir()` or configurable workdir.
+**Fix:** The sandbox defaults to `/tmp/ravenclaws-sandbox` which is writable even with `readOnlyRootFilesystem: true` in K8s. The `resolve_path()` function explicitly allows paths in `/tmp`, `/var/tmp`, and `std::env::temp_dir()` as fallbacks. The K8s deployment mounts an `emptyDir` at `/workspace` for persistent storage.
 
-**Impact:** Tool execution via `shell_exec` fails in K8s deployments with `readOnlyRootFilesystem: true`. The sandbox cannot create its workdir.
+**Files:** `src/sandbox.rs` (lines 88, 237-243)
 
-**Files:** `src/sandbox.rs` (hardcoded `/tmp/ravenclaws-sandbox`)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ✅ Resolved — v0.9.8.
 
 ### Init container doesn't chown workspace
 
@@ -539,37 +533,33 @@ Items are ordered by severity/impact.
 
 **Files:** `k8s/deployment.yaml` (missing init container)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
 
 ### LiteLLM API key documentation references wrong secret
 
-**Problem:** The configuration docs reference `openclaw-secrets` with key `LITELLM_API_KEY`, but the correct K8s Secret is `litellm-secrets` with key `LITELLM_MASTER_KEY`. The `api_key` field exists on `LLMConfig` but is not documented in the config reference table.
+**Fix:** The K8s deployment now uses `ravenclaws-secrets` consistently (not `openclaw-secrets` or `litellm-secrets`). The Helm chart uses `{{ include "ravenclaws.fullname" . }}-secrets` naming convention. No documentation references the wrong secret name.
 
-**Impact:** Users deploying with LiteLLM cannot find the correct API key configuration. The documented secret reference doesn't exist.
+**Files:** `k8s/deployment.yaml`, `charts/ravenclaws/templates/`
 
-**Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ✅ Resolved — v0.9.8.
 
 ### NetworkPolicy blocks LLM egress
 
-**Problem:** The K8s deployment includes a NetworkPolicy that restricts egress traffic. New RavenClaws pods have different labels than the LiteLLM ingress policy expects, so LLM requests are blocked by the network policy.
+**Problem:** The K8s deployment has no NetworkPolicy resource in `k8s/deployment.yaml`. The Helm chart (`charts/ravenclaws/templates/networkpolicy.yaml`) has a NetworkPolicy template but it's disabled by default (`networkPolicy.enabled: false`). When enabled, default egress rules allow ports 53, 443, 80 which should work for most LLM APIs.
 
-**Impact:** Agent cannot reach LiteLLM for LLM requests. Silent failures or timeouts.
+**Impact:** No NetworkPolicy in the raw `k8s/deployment.yaml` means no egress restrictions. The Helm chart's NetworkPolicy is opt-in.
 
-**Files:** `k8s/deployment.yaml`, NetworkPolicy configuration
+**Files:** `k8s/deployment.yaml`, `charts/ravenclaws/values.yaml` (line 219)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
 
 ### `--mcp-command` silent failure
 
-**Problem:** When `--mcp-command` is specified but the MCP server fails to connect (e.g., command not found, connection refused), the error is silently swallowed. The agent continues without MCP tools, with no warning or error message visible to the user.
+**Fix:** MCP client creation in `main.rs` now logs a `warn!` message with the error when connection fails, and returns `None` to continue gracefully without MCP tools. The behavior is intentional: the agent continues without MCP tools rather than failing entirely.
 
-**Impact:** Users think MCP is configured but tools are not available. No feedback on why MCP connection failed.
+**Files:** `src/main.rs` (lines 321-355)
 
-**Files:** `src/main.rs` (MCP client creation error handling)
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.7.
+**Status:** ✅ Resolved — v0.9.7.
 
 ### No `[mcp]` section in TOML config
 
@@ -581,13 +571,11 @@ Items are ordered by severity/impact.
 
 ### OpenTelemetry warning on startup
 
-**Problem:** When OTEL is disabled (default in v0.9.4+), the OTEL exporter still logs a warning: "No OTLP exporter endpoint configured, using stdout exporter". This is confusing for users who have explicitly disabled OTEL.
+**Fix:** When `otel_disabled` is true, the telemetry module logs `info!("OpenTelemetry tracing is disabled")` and returns an empty `TelemetryGuard` — no warning. The warning `"OpenTelemetry tracing requested but no exporter feature enabled"` only appears when OTEL is enabled but no exporter feature is compiled in — a legitimate warning, not a false positive.
 
-**Impact:** Confusing warning message on every startup, even when OTEL is disabled.
+**Files:** `src/telemetry.rs` (lines 67, 107-111)
 
-**Files:** `src/telemetry.rs`
-
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.8.
+**Status:** ✅ Resolved — v0.9.8.
 
 ---
 
@@ -994,6 +982,34 @@ All v0.2 items are complete:
 - ✅ Swarm/supervisor stubs return clear errors → ✅ **Implemented v0.6** (2026-06-07)
 - ✅ Tests expanded to 149 across all modules with `mockito`
 - ✅ `cargo fmt && cargo clippy -D warnings && cargo test` all green
+
+---
+
+## Medium
+
+### K8s verification test fails on Orbstack (image pull)
+
+**Problem:** The K8s verification test (`scripts/lib/test-k8s.sh`) fails because
+the locally-built Docker image (`ravenclaws-verify:latest`) is not available to
+the Orbstack K8s cluster's container runtime. The test builds the image but K8s
+tries to pull it from Docker Hub instead of using the local image.
+
+**Root cause:** Orbstack K8s uses a separate container runtime namespace from
+the Docker CLI. Images built with `docker build` are not automatically visible
+to `kubectl`. The `imagePullPolicy: IfNotPresent` in `k8s/deployment-test.yaml`
+doesn't help because the image isn't in the K8s runtime's local store.
+
+**Workaround:** Build the image and it becomes available to K8s after a short
+delay. The test script's `docker build` output is discarded (`>/dev/null 2>&1`),
+and the image may not be registered in time for the K8s pull.
+
+**Fix options:**
+1. Push to a local registry (e.g., `localhost:5000`) and reference that in the deployment
+2. Use `orbctl` to load the image into the K8s runtime
+3. Add a retry loop in the test script that waits for the image to be available
+4. Use `kind load docker-image` equivalent for Orbstack
+
+**Status:** ❌ Open — pre-existing test infrastructure issue. Does not affect production deployments (which use `ghcr.io/egkristi/ravenclaws`).
 
 ---
 

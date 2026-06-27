@@ -40,14 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`AgentLoopConfig` extended** — 3 new optional fields: `fallback_chain`, `token_budget`, `ravenfabric`. All initializers across `agent.rs`, `background.rs`, `server.rs`, `heartbeat.rs`, and `examples/agent_loop.rs` updated.
 - **`main.rs` updated** — RavenFabricClient init moved before `--exec` block. Fallback chain and token budget created from config in `--exec` mode.
 
-### Added
-*(none)*
-
 ### Fixed
-*(none)*
-
-### Changed
-*(none)*
+- **Default workdir changed from `/workspace` to `/tmp/ravenclaws-workdir`** — The previous default `/workspace` caused `Permission denied (os error 13)` on distroless containers without an explicit volume mount. The new default uses `/tmp` which is writable on distroless. K8s deployments that explicitly set `workdir = "/workspace"` with an `emptyDir` volume are unaffected. (#rpi5-feedback)
 
 ### Removed
 *(none)*

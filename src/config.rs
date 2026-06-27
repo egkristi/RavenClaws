@@ -427,7 +427,7 @@ fn default_token_lifetime() -> u64 {
 }
 
 fn default_workdir() -> String {
-    "/workspace".to_string()
+    "/tmp/ravenclaws-workdir".to_string()
 }
 
 fn default_max_agents() -> usize {
@@ -875,7 +875,7 @@ mod tests {
     #[test]
     fn test_runtime_config_default() {
         let config = RuntimeConfig::default();
-        assert_eq!(config.workdir, "/workspace");
+        assert_eq!(config.workdir, "/tmp/ravenclaws-workdir");
         assert_eq!(config.max_agents, 10);
         assert_eq!(config.health_interval_secs, 60);
     }
@@ -1463,7 +1463,7 @@ mod tests {
     fn test_runtime_config_serde_defaults() {
         let json = r#"{}"#;
         let config: RuntimeConfig = serde_json::from_str(json).unwrap();
-        assert_eq!(config.workdir, "/workspace");
+        assert_eq!(config.workdir, "/tmp/ravenclaws-workdir");
         assert_eq!(config.max_agents, 10);
         assert_eq!(config.health_interval_secs, 60);
     }
