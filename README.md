@@ -9,12 +9,12 @@
 [![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](docs/guides/verification.md)
 [![Binary](https://img.shields.io/badge/binary-~5.2MB-blue)]()
 [![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
-[![Status](https://img.shields.io/badge/status-v0.9.2-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v0.9.4-brightgreen)](ROADMAP.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.9.2 (2026-06-26).** The provider layer (5 providers), one-shot execution (`--exec`),
+> **Status: v0.9.4 (2026-06-27).** `--no-final-required` flag, agent loop response logging, default system prompt with `FINAL:` instructions, improved heartbeat error message, `agent_count` serde alias. The provider layer (6 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
 > retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, **supervisor mode**,
 > **RavenFabric mesh client**, **MCP server**, **HTTP server mode**, **autonomous heartbeat agent**,
@@ -327,6 +327,7 @@ health_interval_secs = 60
 | `single` | ✅ **Working** | Sends prompt to LLM, logs response (agent loop with ReAct planning) |
 | `single` (multi-model) | ✅ **Working** | Iterates all configured providers, logs each response |
 | `--exec "<task>"` | ✅ **Working** | One-shot task execution with streaming, then exit |
+| `--no-final-required` | ✅ **v0.9.4** | Don't require `FINAL:` marker — any non-tool-call response completes the loop |
 | `--repl` | ✅ **Working** | Interactive REPL with `/exit`, `/reset` commands |
 | `--require-approval` | ✅ **v0.8** | Human-in-the-loop approval for sensitive tool calls |
 | `swarm` | ✅ **Working** | multiple parallel agents with different personas (single + multi-model); RavenFabric-aware |

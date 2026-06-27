@@ -238,7 +238,9 @@ pub fn default_retry_max_delay() -> u64 {
 
 pub fn default_system_prompt() -> String {
     "You are RavenClaws, a lightweight autonomous agent. \
-        Be concise, efficient, and secure. Always validate inputs and outputs."
+        Be concise, efficient, and secure. Always validate inputs and outputs. \
+        When you have completed the task, prefix your final answer with FINAL: \
+        so the system knows the task is done."
         .to_string()
 }
 

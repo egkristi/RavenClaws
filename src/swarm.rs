@@ -951,7 +951,7 @@ pub struct SwarmConfig {
     pub max_depth: usize,
 
     /// Maximum number of workers in the swarm (default: 100)
-    #[serde(default = "default_max_workers")]
+    #[serde(default = "default_max_workers", alias = "agent_count")]
     pub max_workers: usize,
 
     /// Worker profiles available for role assignment

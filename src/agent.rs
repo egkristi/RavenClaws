@@ -14,7 +14,7 @@ use crate::sandbox::Sandbox;
 use crate::tools::{ToolCall, ToolRegistry, ToolResult};
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{info, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
 /// In-memory conversation memory — stores message history for the session.
 /// Messages are lost when the process exits.
@@ -94,6 +94,8 @@ pub struct AgentLoopConfig {
     /// When non-zero, the agent loop will stop after this duration
     /// to enforce credential/session expiry.
     pub token_lifetime_secs: u64,
+    /// When true, treat any non-tool-call response as completion (no FINAL: required)
+    pub no_final_required: bool,
 }
 
 impl Default for AgentLoopConfig {
@@ -104,6 +106,7 @@ impl Default for AgentLoopConfig {
             require_approval: false,
             prompt_injection_protection: true,
             token_lifetime_secs: 0,
+            no_final_required: false,
         }
     }
 }
@@ -226,6 +229,13 @@ pub async fn run_agent_loop(
         let content = first_choice
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
+
+        debug!(
+            iteration = iteration,
+            response_length = content.len(),
+            response_preview = %content[..content.len().min(500)],
+            "LLM response received"
+        );
 
         // Prompt-injection defense: check LLM response before processing
         if let Some(ref detector) = injection_detector {
@@ -354,6 +364,25 @@ pub async fn run_agent_loop(
 
         // No tool call found and no FINAL: — treat as regular response
         memory.add_assistant_message(&content);
+
+        // If no_final_required is set, treat any non-tool-call response as completion
+        if config.no_final_required {
+            info!(
+                iteration = iteration,
+                response_length = content.len(),
+                "no_final_required: treating response as completion"
+            );
+            let _ = audit_log.append(
+                AuditEventType::AgentFinish,
+                "agent",
+                "Agent loop completed (no_final_required)",
+                Some(serde_json::json!({
+                    "iterations": iteration + 1,
+                    "final_response_length": content.len(),
+                })),
+            );
+            return Ok(content);
+        }
 
         info!(
             iteration = iteration,
@@ -523,6 +552,13 @@ pub async fn run_agent_loop_with_mcp(
             .map(|c| c.message.content.clone())
             .unwrap_or_default();
 
+        debug!(
+            iteration = iteration,
+            response_length = content.len(),
+            response_preview = %content[..content.len().min(500)],
+            "LLM response received (MCP loop)"
+        );
+
         // Prompt-injection defense: check LLM response before processing
         if let Some(ref detector) = injection_detector {
             match detector.check(&content) {
@@ -650,6 +686,25 @@ pub async fn run_agent_loop_with_mcp(
 
         // No tool call found and no FINAL: — treat as regular response
         memory.add_assistant_message(&content);
+
+        // If no_final_required is set, treat any non-tool-call response as completion
+        if config.no_final_required {
+            info!(
+                iteration = iteration,
+                response_length = content.len(),
+                "no_final_required: treating response as completion"
+            );
+            let _ = audit_log.append(
+                AuditEventType::AgentFinish,
+                "agent",
+                "Agent loop completed (no_final_required)",
+                Some(serde_json::json!({
+                    "iterations": iteration + 1,
+                    "final_response_length": content.len(),
+                })),
+            );
+            return Ok(content);
+        }
 
         info!(
             iteration = iteration,
@@ -1785,6 +1840,7 @@ mod tests {
             require_approval: true,
             prompt_injection_protection: true,
             token_lifetime_secs: 0,
+            no_final_required: false,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
@@ -1905,6 +1961,7 @@ mod tests {
             require_approval: false,
             prompt_injection_protection: false,
             token_lifetime_secs: 0,
+            no_final_required: false,
         };
         assert_eq!(config.token_lifetime_secs, 0);
         // 0 means unlimited — no timeout enforced
@@ -1918,6 +1975,7 @@ mod tests {
             require_approval: false,
             prompt_injection_protection: false,
             token_lifetime_secs: 3600,
+            no_final_required: false,
         };
         assert_eq!(config.token_lifetime_secs, 3600);
     }

@@ -218,6 +218,10 @@ struct Args {
     /// Enable swarm health monitoring (v0.9)
     #[arg(long, env = "RAVENCLAWS_SWARM_HEALTH_MONITORING")]
     swarm_health_monitoring: bool,
+
+    /// When set, treat any non-tool-call response as completion (no FINAL: required)
+    #[arg(long, env = "RAVENCLAWS_NO_FINAL_REQUIRED")]
+    no_final_required: bool,
 }
 
 #[tokio::main]
@@ -364,6 +368,7 @@ async fn main() -> anyhow::Result<()> {
             require_approval: args.require_approval,
             prompt_injection_protection: config.security.prompt_injection_protection,
             token_lifetime_secs: config.security.token_lifetime_secs,
+            no_final_required: args.no_final_required,
         };
 
         let response = if !config.llms.is_empty() {
@@ -576,7 +581,7 @@ async fn main() -> anyhow::Result<()> {
             config.heartbeat.goal.clone()
         } else {
             anyhow::bail!(
-                "No goal provided for heartbeat mode. Use --heartbeat-goal or set [heartbeat].goal in config."
+                "No goal provided for heartbeat mode. Use --heartbeat-goal (e.g., --heartbeat-goal \"Monitor system health and report anomalies\") or set [heartbeat].goal in config."
             );
         };
 
