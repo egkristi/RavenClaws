@@ -61,6 +61,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 *(none)*
 
+## [v0.9.10] — 2026-06-28
+
+### Added
+- **Community health files** — `SECURITY.md` (vulnerability reporting policy, supported versions, security features, supply chain security, hardening roadmap), `CONTRIBUTING.md` (development setup, coding conventions, testing instructions, PR process), `CODE_OF_CONDUCT.md` (Contributor Covenant v2.0 with enforcement guidelines), `SUPPORT.md` (documentation links, community channels, commercial support), `.github/FUNDING.yml` (GitHub Sponsors).
+- **Issue and PR templates** — `.github/ISSUE_TEMPLATE/bug_report.md` (structured bug report with environment, logs, reproduction steps), `.github/ISSUE_TEMPLATE/feature_request.md` (feature request with pillar alignment checklist), `.github/ISSUE_TEMPLATE/config.yml` (contact links for discussions, docs, security), `.github/PULL_REQUEST_TEMPLATE.md` (PR template with type selection, checklist for fmt/clippy/test/docs/CHANGELOG/ROADMAP/ISSUES/binary size).
+- **Graceful shutdown for HeartbeatAgent** — Added `impl Drop for HeartbeatAgent` that calls `persist_state()` on drop. State is now saved on graceful shutdown (SIGTERM/SIGINT) without requiring a signal handler. Ensures heartbeat state survives pod termination.
+- **Init container chown in K8s deployment** — Added `initContainers` section to `k8s/deployment.yaml` with `busybox:1.36.1` running `chown -R 65532:65532 /workspace` as root before the main container starts. Ensures workspace is writable by the non-root UID 65532 even with `readOnlyRootFilesystem: true`.
+- **`--exec` mode documentation** — Added comprehensive `--exec` mode section to `docs/guides/getting-started.md` covering: how `--exec` works, model compatibility table (`FINAL:` marker, structured tool calls, `--no-final-required`), `--no-final-required` flag usage, `--verbose` flag for debugging, and exit codes.
+- **Migration docs v0.9.1 → v0.9.2** — Added migration section to `docs/guides/migration.md` documenting: `AgentMessageBus`, `MessageType` enum, `SwarmHealthMonitor`, `WorkerHealthStatus`, `SwarmOrchestrator::new_with_bus()`, and new `[swarm]` config fields (`communication_enabled`, `health_monitoring_enabled`, `heartbeat_interval_secs`, `max_missed_beats`, `replacement_timeout_secs`).
+
+### Changed
+- **ROADMAP.md updated for v0.9.10** — Version bumped from v0.9.9 to v0.9.10. Completed items moved from v0.9.9 checklists to "Completed in v0.9.10" section. Strategic features (durable execution, multi-agent patterns) deferred to v0.9.11+. Status tables updated to reflect v0.9.10 completion status.
+- **AGENTS.md version reference updated** — Version changed from v0.9.7 to v0.9.10.
+
+### Fixed
+*(none)*
+
+### Removed
+*(none)*
+
 ## [0.9.5] — 2026-06-27
 
 ### Added

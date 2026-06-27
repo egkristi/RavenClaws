@@ -91,6 +91,60 @@ ravenclaws --exec "Create a file called hello.txt with the text 'Hello, RavenCla
 
 This uses the built-in `write_file` and `read_file` tools to complete the task.
 
+## Understanding `--exec` Mode
+
+The `--exec` flag runs a one-shot task and prints the response to stdout. It's
+designed for scripting, automation, and CI/CD pipelines.
+
+### How `--exec` Works
+
+1. RavenClaws sends your prompt to the configured LLM
+2. The agent loop runs: the LLM can plan, call tools, and produce a final answer
+3. When the LLM signals completion (via `FINAL:` marker or tool call resolution),
+   the response is printed to stdout
+4. The process exits with code 0
+
+### Model Compatibility
+
+`--exec` works with all models, but the behavior depends on the model's output format:
+
+| Model Behavior | What Happens | Example Models |
+|---|---|---|
+| **Uses `FINAL:` marker** | Agent loop detects `FINAL:` and prints the response | GPT-4o, Claude 3.5, Llama 3.1 (with system prompt) |
+| **Emits structured tool calls** | Agent loop executes tools, then prints final response | GPT-4o, Claude 3 (tool use mode) |
+| **No `FINAL:`, no tool calls** | Agent loop needs `--no-final-required` to complete | DeepSeek V4 Pro, some fine-tuned models |
+
+### Using `--no-final-required`
+
+If your model doesn't emit `FINAL:` or structured tool calls, add the
+`--no-final-required` flag:
+
+```bash
+ravenclaws --exec "Say hello" --no-final-required
+```
+
+This tells the agent loop to treat any non-tool-call response as the final answer.
+
+### Using `--verbose` for Debugging
+
+To see the full LLM response content (including intermediate thoughts and tool calls):
+
+```bash
+ravenclaws --exec "Summarize the repo" --verbose
+```
+
+This sets the log level to `debug`, showing:
+- LLM response content (first 500 chars)
+- Tool call arguments and results
+- Agent loop iteration progress
+
+### Exit Codes
+
+| Exit Code | Meaning |
+|---|---|
+| 0 | Success — task completed and response printed |
+| 1 | Error — configuration error, LLM unreachable, or task failed |
+
 ## Configuration
 
 RavenClaws can be configured via three layers (each overrides the previous):

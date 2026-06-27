@@ -132,6 +132,91 @@ functionality is handled internally by the agent loop.
 
 ---
 
+## v0.9.1 → v0.9.2
+
+### Summary
+
+v0.9.2 introduced the **inter-agent communication bus** and **swarm health
+monitoring** — two major additions to the swarm orchestration system. These
+additions are opt-in and do not break existing swarm configurations.
+
+### New Features (No Breaking Changes)
+
+#### 1. Inter-agent Communication Bus
+
+Swarm agents can now communicate via a shared message bus. This is disabled by
+default — enable it with `--swarm-communication` or `RAVENCLAW_SWARM_COMMUNICATION=true`.
+
+**New types (public API):**
+
+| Type | Description |
+|---|---|
+| `AgentMessage` | Message struct with UUID, sender, recipient, type, content, timestamp |
+| `MessageType` | Enum: Information, Question, Result, Error, Coordination, Generic |
+| `AgentMessageBus` | Shared bus with send, receive, filter, and broadcast |
+
+**Usage:**
+```rust
+use ravenclaws::{AgentMessageBus, MessageType};
+
+let bus = AgentMessageBus::new();
+bus.send(AgentMessage::new(
+    "worker-1", "worker-2",
+    MessageType::Information,
+    "Task completed successfully",
+));
+let messages = bus.receive("worker-2", None);
+```
+
+#### 2. Swarm Health Monitoring
+
+Health monitoring tracks per-worker heartbeats and detects degraded/unhealthy/dead
+agents. Disabled by default — enable with `--swarm-health-monitoring` or
+`RAVENCLAW_SWARM_HEALTH_MONITORING=true`.
+
+**New types (public API):**
+
+| Type | Description |
+|---|---|
+| `SwarmHealthMonitor` | Tracks heartbeats, detects failures, identifies replacements |
+| `WorkerHealthStatus` | Enum: Healthy, Degraded, Unhealthy, Dead |
+| `WorkerTelemetry` | Per-worker metrics (tasks, errors, duration, messages) |
+| `SwarmMetrics` | Aggregate swarm health metrics |
+
+**Configuration (in `ravenclaws.toml`):**
+```toml
+[swarm]
+communication_enabled = true
+health_monitoring_enabled = true
+heartbeat_interval_secs = 5
+max_missed_beats = 3
+replacement_timeout_secs = 30
+```
+
+#### 3. `SwarmOrchestrator::new_with_bus()`
+
+A new constructor that accepts a shared `AgentMessageBus` and `SwarmHealthMonitor`
+for use across sub-orchestrators in recursive supervision:
+
+```rust
+let bus = Arc::new(AgentMessageBus::new());
+let health_monitor = Arc::new(RwLock::new(SwarmHealthMonitor::new(5, 3, 30)));
+let orchestrator = SwarmOrchestrator::new_with_bus(
+    config, llm_manager, bus, health_monitor,
+);
+```
+
+### Migration Steps
+
+1. No code changes required — all new features are opt-in
+2. To enable communication: add `--swarm-communication` to CLI or set
+   `RAVENCLAW_SWARM_COMMUNICATION=true`
+3. To enable health monitoring: add `--swarm-health-monitoring` to CLI or set
+   `RAVENCLAW_SWARM_HEALTH_MONITORING=true`
+4. To configure both: add `[swarm]` section to `ravenclaws.toml` (see above)
+
+---
+
 ## v0.8 → v0.9
 
 ### Breaking Changes

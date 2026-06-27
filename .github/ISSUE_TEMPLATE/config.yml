@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/egkristi/RavenClaws/discussions
+    about: Please ask and answer questions here.
+  - name: Documentation
+    url: https://ravenclaws.io/docs
+    about: Check the documentation before filing an issue.
+  - name: Security Issues
+    url: https://github.com/egkristi/RavenClaws/security/policy
+    about: Please report security vulnerabilities privately.

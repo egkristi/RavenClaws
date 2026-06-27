@@ -529,6 +529,25 @@ impl HeartbeatAgent {
     }
 }
 
+impl Drop for HeartbeatAgent {
+    fn drop(&mut self) {
+        // Persist state on drop to ensure graceful shutdown doesn't lose the last tick
+        if let Err(e) = self.persist_state() {
+            warn!(
+                error = %e,
+                heartbeat_id = %self.state.id,
+                "Failed to persist heartbeat state during Drop"
+            );
+        } else {
+            info!(
+                heartbeat_id = %self.state.id,
+                tick = self.state.tick,
+                "Heartbeat state persisted during Drop (graceful shutdown)"
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
