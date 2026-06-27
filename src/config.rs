@@ -138,6 +138,10 @@ fn default_search_max_results() -> usize {
     5
 }
 
+fn default_otel_disabled() -> bool {
+    true
+}
+
 /// Scheduler / triggers configuration (v0.8)
 ///
 /// # Stability
@@ -165,8 +169,8 @@ pub struct TelemetryConfig {
     #[serde(default)]
     pub otel_service_name: Option<String>,
 
-    /// Disable OpenTelemetry tracing
-    #[serde(default)]
+    /// Disable OpenTelemetry tracing (default: true — opt-in)
+    #[serde(default = "default_otel_disabled")]
     pub otel_disabled: bool,
 }
 

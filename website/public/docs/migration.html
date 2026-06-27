@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migration Guide · RavenClaws Docs</title>
+<meta name="description" content="Breaking changes and migration paths between RavenClaws versions — v0.3 through v1.0.">
+<link rel="canonical" href="https://ravenclaws.io/docs/migration">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws Migration Guide">
+<meta property="og:description" content="Breaking changes and migration paths between RavenClaws versions.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <a href="/docs/migration" class="active">Migration guide</a>
+      <h5>On this page</h5>
+      <a href="#v09-v10" data-spy>v0.9 → v1.0</a>
+      <a href="#v08-v09" data-spy>v0.8 → v0.9</a>
+      <a href="#v07-v08" data-spy>v0.7 → v0.8</a>
+      <a href="#v06-v07" data-spy>v0.6 → v0.7</a>
+      <a href="#v05-v06" data-spy>v0.5 → v0.6</a>
+      <a href="#v04-v05" data-spy>v0.4 → v0.5</a>
+      <a href="#v03-v04" data-spy>v0.3 → v0.4</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / Migration guide</p>
+      <h1>Migration Guide</h1>
+      <p class="lead-box">Breaking changes and migration paths between RavenClaws versions. RavenClaws follows <a href="https://semver.org/spec/v2.0.0.html" rel="noopener">Semantic Versioning</a> — breaking changes only occur in major versions (v0.x → v1.0, v1.0 → v2.0, etc.). For pre-1.0 versions (v0.x), breaking changes may occur in minor versions but are documented here with migration instructions.</p>
+
+      <h2 id="v09-v10">v0.9 → v1.0</h2>
+      <p>v1.0 is the first stable release. The public API is now covered by semver guarantees. Key changes:</p>
+      <ul>
+        <li><code>#[non_exhaustive]</code> on all public enums and structs</li>
+        <li>Deprecated types removed</li>
+        <li>Library crate (<code>ravenclaws</code>) stabilized</li>
+      </ul>
+
+      <h3><code>#[non_exhaustive]</code> on public types</h3>
+      <p>All public enums and structs now have <code>#[non_exhaustive]</code>. This means:</p>
+      <ul>
+        <li><strong>Enums:</strong> Match statements must include a wildcard arm (<code>_ =&gt; ...</code>).</li>
+        <li><strong>Structs:</strong> Cannot be constructed with struct literal syntax outside the crate. Use the provided <code>::new()</code> or <code>::default()</code> methods instead.</li>
+      </ul>
+
+      <p><strong>Affected types:</strong></p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Type</th><th>Kind</th><th>Migration</th></tr></thead>
+        <tbody>
+          <tr><td><code>RavenClawsError</code></td><td>Enum</td><td>Add <code>_ =&gt; ...</code> to match arms</td></tr>
+          <tr><td><code>ConfigError</code></td><td>Enum</td><td>Add <code>_ =&gt; ...</code> to match arms</td></tr>
+          <tr><td><code>LLMError</code></td><td>Enum</td><td>Add <code>_ =&gt; ...</code> to match arms</td></tr>
+          <tr><td><code>ToolError</code></td><td>Enum</td><td>Add <code>_ =&gt; ...</code> to match arms</td></tr>
+          <tr><td><code>LLMProvider</code></td><td>Enum</td><td>Add <code>_ =&gt; ...</code> to match arms</td></tr>
+          <tr><td><code>OpenAICompatibleProvider</code></td><td>Enum</td><td>Add <code>_ =&gt; ...</code> to match arms</td></tr>
+          <tr><td><code>CircuitState</code></td><td>Enum</td><td>Add <code>_ =&gt; ...</code> to match arms</td></tr>
+          <tr><td><code>ToolCategory</code></td><td>Enum</td><td>Add <code>_ =&gt; ...</code> to match arms</td></tr>
+          <tr><td><code>Config</code></td><td>Struct</td><td>Use <code>Config::load()</code> or <code>Config::default()</code></td></tr>
+          <tr><td><code>LLMConfig</code></td><td>Struct</td><td>Use <code>LLMConfig::new()</code> or <code>LLMConfig::default()</code></td></tr>
+          <tr><td><code>SecurityConfig</code></td><td>Struct</td><td>Use <code>SecurityConfig::default()</code></td></tr>
+          <tr><td><code>RuntimeConfig</code></td><td>Struct</td><td>Use <code>RuntimeConfig::default()</code></td></tr>
+          <tr><td><code>RavenFabricConfig</code></td><td>Struct</td><td>Use <code>RavenFabricConfig::default()</code></td></tr>
+          <tr><td><code>TelemetryConfig</code></td><td>Struct</td><td>Use <code>TelemetryConfig::default()</code></td></tr>
+          <tr><td><code>SchedulerConfig</code></td><td>Struct</td><td>Use <code>SchedulerConfig::default()</code></td></tr>
+          <tr><td><code>WebSearchConfig</code></td><td>Struct</td><td>Use <code>WebSearchConfig::default()</code></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p><strong>Before (v0.9):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">match</span> <span class="tok-n">error</span> {
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">Config</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">LLM</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">Tool</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">Network</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">Io</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">SecurityViolation</span> <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">RavenFabric</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+}</code></pre>
+      </div>
+
+      <p><strong>After (v1.0):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">match</span> <span class="tok-n">error</span> {
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">Config</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">LLM</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">Tool</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">Network</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">Io</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">SecurityViolation</span> <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">RavenClawsError</span>::<span class="tok-n">RavenFabric</span>(<span class="tok-n">e</span>) <span class="tok-o">=&gt;</span> <span class="tok-p">...</span>,
+    <span class="tok-n">_</span> <span class="tok-o">=&gt;</span> <span class="tok-p">...,</span>  <span class="tok-c">// future-proof</span>
+}</code></pre>
+      </div>
+
+      <h3>Deprecated LLM client types removed</h3>
+      <p>The following types (deprecated since v0.5.0) have been removed:</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Removed Type</th><th>Replacement</th></tr></thead>
+        <tbody>
+          <tr><td><code>LiteLLMClient</code></td><td><code>OpenAICompatibleClient::new(OpenAICompatibleProvider::LiteLLM, ...)</code></td></tr>
+          <tr><td><code>OpenRouterClient</code></td><td><code>OpenAICompatibleClient::new(OpenAICompatibleProvider::OpenRouter, ...)</code></td></tr>
+          <tr><td><code>OpenAIClient</code></td><td><code>OpenAICompatibleClient::new(OpenAICompatibleProvider::OpenAI, ...)</code></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p><strong>Before (v0.9):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">use</span> <span class="tok-n">ravenclaws</span>::<span class="tok-n">LiteLLMClient</span>;
+<span class="tok-k">let</span> <span class="tok-n">client</span> <span class="tok-o">=</span> <span class="tok-n">LiteLLMClient</span>::<span class="tok-n">new</span>(<span class="tok-n">config</span>);</code></pre>
+      </div>
+
+      <p><strong>After (v1.0):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">use</span> <span class="tok-n">ravenclaws</span>::{<span class="tok-n">OpenAICompatibleClient</span>, <span class="tok-n">OpenAICompatibleProvider</span>};
+<span class="tok-k">let</span> <span class="tok-n">client</span> <span class="tok-o">=</span> <span class="tok-n">OpenAICompatibleClient</span>::<span class="tok-n">new</span>(
+    <span class="tok-n">OpenAICompatibleProvider</span>::<span class="tok-n">LiteLLM</span>,
+    <span class="tok-n">config</span>,
+);</code></pre>
+      </div>
+
+      <h3><code>execute_tool_call</code> removed</h3>
+      <p>The legacy <code>execute_tool_call</code> function (deprecated since v0.4) has been removed. Use <code>execute_tool_call_with_security</code> instead, which integrates with <code>PolicyEngine</code>, <code>Sandbox</code>, and <code>AuditLog</code>.</p>
+
+      <p><strong>Before (v0.9):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">let</span> <span class="tok-n">result</span> <span class="tok-o">=</span> <span class="tok-n">execute_tool_call</span>(&amp;<span class="tok-n">tool_call</span>, &amp;<span class="tok-n">tool_registry</span>).<span class="tok-n">await</span>;</code></pre>
+      </div>
+
+      <p><strong>After (v1.0):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">let</span> <span class="tok-n">result</span> <span class="tok-o">=</span> <span class="tok-n">execute_tool_call_with_security</span>(
+    &amp;<span class="tok-n">tool_call</span>,
+    &amp;<span class="tok-n">tool_registry</span>,
+    &amp;<span class="tok-n">policy_engine</span>,
+    &amp;<span class="tok-n">sandbox</span>,
+    &amp;<span class="tok-n">audit_log</span>,
+).<span class="tok-n">await</span>;</code></pre>
+      </div>
+
+      <h3><code>run_exec_stream</code> removed</h3>
+      <p>The unused <code>run_exec_stream</code> function has been removed. Streaming exec functionality is handled internally by the agent loop.</p>
+
+      <h2 id="v08-v09">v0.8 → v0.9</h2>
+
+      <h3><code>MultiModelManager</code> now implements <code>Clone</code></h3>
+      <p><code>MultiModelManager</code> now implements <code>Clone</code> to support sub-orchestrator spawning in swarm mode. If you were storing <code>MultiModelManager</code> in a context that doesn't support <code>Clone</code>, wrap it in <code>Arc</code> instead.</p>
+
+      <h3>New <code>[swarm]</code> config section</h3>
+      <p>Swarm orchestration configuration is now under <code>[swarm]</code> in <code>ravenclaws.toml</code>:</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-p">[swarm]</span>
+<span class="tok-n">max_depth</span> <span class="tok-o">=</span> <span class="tok-m">3</span>
+<span class="tok-n">max_workers</span> <span class="tok-o">=</span> <span class="tok-m">100</span>
+<span class="tok-n">topology</span> <span class="tok-o">=</span> <span class="tok-s">"hierarchical"</span>
+<span class="tok-n">dynamic_role_assignment</span> <span class="tok-o">=</span> <span class="tok-kc">true</span></code></pre>
+      </div>
+
+      <h3>New <code>[heartbeat]</code> config section</h3>
+      <p>Heartbeat agent configuration is now under <code>[heartbeat]</code>:</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-p">[heartbeat]</span>
+<span class="tok-n">tick_interval_secs</span> <span class="tok-o">=</span> <span class="tok-m">60</span>
+<span class="tok-n">max_ticks</span> <span class="tok-o">=</span> <span class="tok-m">0</span>  <span class="tok-c"># 0 = unlimited</span>
+<span class="tok-n">goal</span> <span class="tok-o">=</span> <span class="tok-s">"Monitor system health"</span></code></pre>
+      </div>
+
+      <h2 id="v07-v08">v0.7 → v0.8</h2>
+
+      <h3><code>BackgroundTaskManager</code> API</h3>
+      <p>The background task manager now persists tasks to disk. The API has changed:</p>
+      <p><strong>Before (v0.7):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">let</span> <span class="tok-n">manager</span> <span class="tok-o">=</span> <span class="tok-n">BackgroundTaskManager</span>::<span class="tok-n">new</span>();
+<span class="tok-k">let</span> <span class="tok-n">id</span> <span class="tok-o">=</span> <span class="tok-n">manager</span>.<span class="tok-n">spawn</span>(<span class="tok-n">task</span>).<span class="tok-n">await</span>;</code></pre>
+      </div>
+      <p><strong>After (v0.8):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">let</span> <span class="tok-n">manager</span> <span class="tok-o">=</span> <span class="tok-n">BackgroundTaskManager</span>::<span class="tok-n">new</span>(<span class="tok-n">workdir</span>);
+<span class="tok-k">let</span> <span class="tok-n">id</span> <span class="tok-o">=</span> <span class="tok-n">manager</span>.<span class="tok-n">spawn</span>(<span class="tok-n">task</span>).<span class="tok-n">await</span>;
+<span class="tok-c">// Tasks are persisted to &lt;workdir&gt;/tasks/&lt;id&gt;.json</span></code></pre>
+      </div>
+
+      <h3><code>--require-approval</code> flag</h3>
+      <p>The <code>--require-approval</code> flag now gates sensitive tool calls. When set, the agent prompts for approval before executing tools in the <code>requires_approval</code> category. See <code>--help</code> for details.</p>
+
+      <h3><code>zeroize</code> integration</h3>
+      <p>API keys in <code>LLMConfig</code> and HMAC secret keys in <code>AuditLog</code> are now zeroized on drop. This is transparent to most users but may affect debugging if you were inspecting key values after use.</p>
+
+      <h2 id="v06-v07">v0.6 → v0.7</h2>
+
+      <h3>MCP Server mode (<code>--mcp-server</code>)</h3>
+      <p>The <code>--mcp-server</code> flag runs RavenClaws as an MCP server over stdio. In this mode, the binary does not accept prompts — it exposes tools via the MCP protocol.</p>
+
+      <h3>HTTP Server mode (<code>--serve</code>)</h3>
+      <p>The <code>--serve</code> flag starts a long-running HTTP server with <code>/health</code>, <code>/ready</code>, and <code>/metrics</code> endpoints. This is the recommended deployment mode for Kubernetes.</p>
+
+      <h3>OpenTelemetry tracing (opt-in)</h3>
+      <p>Tracing is disabled by default. Enable with <code>--otel-endpoint</code> or <code>RAVENCLAWS_OTEL_ENDPOINT</code>. The <code>otel-grpc</code> feature is enabled by default; <code>otel-stdout</code> is optional.</p>
+
+      <h3>Helm chart</h3>
+      <p>The official Helm chart is at <code>charts/ravenclaws/</code>. See <code>charts/ravenclaws/values.yaml</code> for configuration options.</p>
+
+      <h2 id="v05-v06">v0.5 → v0.6</h2>
+
+      <h3>Swarm and Supervisor modes</h3>
+      <p>Swarm and supervisor modes are now fully implemented. The <code>--mode swarm</code> and <code>--mode supervisor</code> flags now execute real multi-agent workflows instead of returning "not yet implemented" errors.</p>
+
+      <h3>RavenFabric integration</h3>
+      <p>RavenFabric is now wired into all agent modes. If you have <code>[ravenfabric]</code> configuration, it will be used for remote agent execution. Set <code>enabled = false</code> to disable.</p>
+
+      <h2 id="v04-v05">v0.4 → v0.5</h2>
+
+      <h3>Unified OpenAI-Compatible Client</h3>
+      <p><code>LiteLLMClient</code>, <code>OpenRouterClient</code>, and <code>OpenAIClient</code> are deprecated. Use <code>OpenAICompatibleClient</code> with the appropriate <code>OpenAICompatibleProvider</code> variant.</p>
+      <p><strong>Before (v0.4):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">let</span> <span class="tok-n">client</span> <span class="tok-o">=</span> <span class="tok-n">LiteLLMClient</span>::<span class="tok-n">new</span>(<span class="tok-n">config</span>);</code></pre>
+      </div>
+      <p><strong>After (v0.5):</strong></p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">let</span> <span class="tok-n">client</span> <span class="tok-o">=</span> <span class="tok-n">OpenAICompatibleClient</span>::<span class="tok-n">new</span>(
+    <span class="tok-n">OpenAICompatibleProvider</span>::<span class="tok-n">LiteLLM</span>,
+    <span class="tok-n">config</span>,
+);</code></pre>
+      </div>
+
+      <h3>Retry and Fallback</h3>
+      <p>The <code>LLMConfig</code> now includes retry and fallback settings:</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-p">[llm]</span>
+<span class="tok-n">retry_max_attempts</span> <span class="tok-o">=</span> <span class="tok-m">3</span>
+<span class="tok-n">retry_base_delay_ms</span> <span class="tok-o">=</span> <span class="tok-m">100</span>
+<span class="tok-n">retry_max_delay_ms</span> <span class="tok-o">=</span> <span class="tok-m">10000</span>
+<span class="tok-n">fallback_provider</span> <span class="tok-o">=</span> <span class="tok-s">"ollama"</span></code></pre>
+      </div>
+
+      <h3>Token Budget</h3>
+      <p>Use <code>--token-budget &lt;N&gt;</code> or <code>RAVENCLAW_TOKEN_BUDGET</code> to set a token budget. The agent will stop when the budget is consumed.</p>
+
+      <h2 id="v03-v04">v0.3 → v0.4</h2>
+
+      <h3>Tool system</h3>
+      <p>The tool system is now based on structured function calling (OpenAI Tools format) instead of pattern-matching <code>TOOL_CALL:</code> / <code>ARGS:</code> in the prompt. If you were manually constructing tool call prompts, switch to the <code>ToolRegistry</code> API.</p>
+
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>RavenClaws — Small. Sleek. Secure. Supreme. 🐦‍⬛</p>
+    <p><a href="https://github.com/egkristi/RavenClaws">GitHub</a> · <a href="https://crates.io/crates/ravenclaws">crates.io</a> · <a href="https://docs.rs/ravenclaws">docs.rs</a> · <a href="/docs/">Docs</a> · <a href="/docs/migration">Migration guide</a></p>
+  </div>
+</footer>
+
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

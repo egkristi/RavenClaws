@@ -47,6 +47,7 @@
       <a href="/docs/swarm-mode">Swarm mode</a>
       <a href="/docs/mcp-integration">MCP integration</a>
       <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <a href="/docs/migration">Migration guide</a>
       <h5>On this page</h5>
       <a href="#location" data-spy>File location</a>
       <a href="#env" data-spy>Env var format</a>
@@ -126,9 +127,9 @@
       <table>
         <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>agent_count</code></td><td>integer</td><td><code>3</code></td><td>Number of swarm agents</td></tr>
-          <tr><td><code>profiles</code></td><td>array</td><td>—</td><td>Agent personality profiles</td></tr>
-          <tr><td><code>topology</code></td><td>string</td><td><code>"flat"</code></td><td>Swarm topology: <code>flat</code>, <code>hierarchical</code></td></tr>
+          <tr><td><code>max_workers</code></td><td>integer</td><td><code>100</code></td><td>Maximum number of swarm workers</td></tr>
+          <tr><td><code>profiles</code></td><td>array</td><td>—</td><td>Worker personality profiles (array of tables)</td></tr>
+          <tr><td><code>topology</code></td><td>string</td><td><code>"star"</code></td><td>Swarm topology: <code>star</code>, <code>mesh</code>, <code>hierarchical</code>, <code>hybrid</code></td></tr>
         </tbody>
       </table>
 
@@ -136,9 +137,12 @@
       <table>
         <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>interval_secs</code></td><td>integer</td><td><code>300</code></td><td>Sleep interval between cycles</td></tr>
-          <tr><td><code>state_file</code></td><td>string</td><td><code>"heartbeat-state.json"</code></td><td>State persistence file</td></tr>
-          <tr><td><code>max_cycles</code></td><td>integer</td><td><code>0</code></td><td>Max cycles (0 = unlimited)</td></tr>
+          <tr><td><code>goal</code></td><td>string</td><td>—</td><td><strong>Required.</strong> Agent's autonomous mission prompt</td></tr>
+          <tr><td><code>tick_interval_secs</code></td><td>integer</td><td><code>300</code></td><td>Sleep interval between cycles (seconds)</td></tr>
+          <tr><td><code>max_ticks</code></td><td>integer</td><td><code>0</code></td><td>Max ticks (0 = unlimited)</td></tr>
+          <tr><td><code>max_iterations_per_tick</code></td><td>integer</td><td><code>5</code></td><td>Max agent loop iterations per tick</td></tr>
+          <tr><td><code>enable_tools</code></td><td>boolean</td><td><code>true</code></td><td>Enable tool calling during heartbeat ticks</td></tr>
+          <tr><td><code>workdir</code></td><td>string</td><td><code>"/workspace"</code></td><td>Working directory for state persistence</td></tr>
         </tbody>
       </table>
 
@@ -165,7 +169,7 @@
         <tbody>
           <tr><td><code>host</code></td><td>string</td><td><code>"0.0.0.0"</code></td><td>Server bind address</td></tr>
           <tr><td><code>port</code></td><td>integer</td><td><code>8080</code></td><td>Server port</td></tr>
-          <tr><td><code>enable_metrics</code></td><td>boolean</td><td><code>true</code></td><td>Enable <code>/metrics</code> endpoint</td></tr>
+          <!-- enable_metrics removed — /metrics is always served -->
         </tbody>
       </table>
 
@@ -173,9 +177,9 @@
       <table>
         <thead><tr><th>Key</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>enabled</code></td><td>boolean</td><td><code>false</code></td><td>Enable OpenTelemetry tracing</td></tr>
-          <tr><td><code>exporter</code></td><td>string</td><td><code>"grpc"</code></td><td>Exporter type: <code>grpc</code> or <code>stdout</code></td></tr>
-          <tr><td><code>endpoint</code></td><td>string</td><td><code>"http://localhost:4317"</code></td><td>OTLP collector endpoint</td></tr>
+          <tr><td><code>otel_disabled</code></td><td>boolean</td><td><code>true</code></td><td>Disable OpenTelemetry tracing (opt-in)</td></tr>
+          <tr><td><code>otel_endpoint</code></td><td>string</td><td><code>"http://localhost:4317"</code></td><td>OTLP collector endpoint</td></tr>
+          <tr><td><code>otel_service_name</code></td><td>string</td><td><code>"ravenclaws"</code></td><td>Service name for traces</td></tr>
         </tbody>
       </table>
 
@@ -213,13 +217,20 @@ api_key = <span class="tok-s">"${OPENAI_API_KEY}"</span>
 model = <span class="tok-s">"gpt-4o"</span>
 
 [swarm]
-agent_count = <span class="tok-n">3</span>
-topology = <span class="tok-s">"flat"</span>
+max_workers = <span class="tok-n">3</span>
+topology = <span class="tok-s">"star"</span>
 
-[swarm.profiles]
-coder = <span class="tok-s">"You are an expert software engineer."</span>
-researcher = <span class="tok-s">"You are a thorough research analyst."</span>
-reviewer = <span class="tok-s">"You are a meticulous code reviewer."</span></code></pre></div>
+[[swarm.profiles]]
+name = <span class="tok-s">"coder"</span>
+persona = <span class="tok-s">"You are an expert software engineer."</span>
+
+[[swarm.profiles]]
+name = <span class="tok-s">"researcher"</span>
+persona = <span class="tok-s">"You are a thorough research analyst."</span>
+
+[[swarm.profiles]]
+name = <span class="tok-s">"reviewer"</span>
+persona = <span class="tok-s">"You are a meticulous code reviewer."</span></code></pre></div>
 
       <h2 id="cli">CLI flags</h2>
       <table>

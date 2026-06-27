@@ -922,6 +922,7 @@ impl WorkerProfile {
 #[serde(rename_all = "lowercase")]
 pub enum SwarmTopology {
     /// Single coordinator delegates to workers (default)
+    #[serde(alias = "flat")]
     Star,
     /// Peer-to-peer — workers communicate directly
     Mesh,

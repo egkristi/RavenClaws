@@ -250,7 +250,7 @@ h2.section-title { font-size: clamp(1.7rem, 3.4vw, 2.6rem); }
 /* feature span helpers */
 .col-span-2 { grid-column: span 2; }
 .feature-media { overflow:hidden; }
-.feature-media img { border-radius: var(--r); margin-top: 16px; }
+.feature-media img { max-width: 100%; height: auto; border-radius: var(--r); margin-top: 16px; }
 
 /* ---------- code blocks ---------- */
 .code {

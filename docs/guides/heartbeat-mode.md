@@ -23,9 +23,12 @@ ravenclaws --heartbeat --exec "Monitor the /tmp directory for new files and repo
 
 ```toml
 [heartbeat]
-interval_secs = 300        # Sleep between cycles (5 minutes)
-state_file = "heartbeat-state.json"  # State persistence
-max_cycles = 0             # 0 = unlimited
+goal = "Monitor system health and report anomalies"  # Required: agent's mission
+tick_interval_secs = 300    # Sleep between cycles (5 minutes)
+max_ticks = 0               # 0 = unlimited
+max_iterations_per_tick = 5 # Agent loop iterations per tick
+enable_tools = true         # Enable tool calling
+workdir = "/workspace"      # Working directory for state persistence
 
 [llm]
 provider = "openai"
@@ -37,9 +40,12 @@ system_prompt = "You are a vigilant system monitor. Assess, plan, and act carefu
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `interval_secs` | `300` | Sleep duration between cycles |
-| `state_file` | `"heartbeat-state.json"` | File for persisting state across restarts |
-| `max_cycles` | `0` | Maximum cycles (0 = run forever) |
+| `goal` | — | **Required.** Agent's autonomous mission prompt |
+| `tick_interval_secs` | `300` | Sleep duration between cycles (seconds) |
+| `max_ticks` | `0` | Maximum ticks (0 = run forever) |
+| `max_iterations_per_tick` | `5` | Max agent loop iterations per tick |
+| `enable_tools` | `true` | Enable tool calling during heartbeat ticks |
+| `workdir` | `"/workspace"` | Working directory for state persistence |
 
 ## State Persistence
 

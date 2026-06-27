@@ -191,9 +191,311 @@ Items are ordered by severity/impact.
 
 ---
 
-## 🚨 Critical
+## ✅ Resolved (2026-06-27) — rpi5 deployment feedback fixes
 
-*(No critical issues at this time.)*
+### SwarmTopology enum mismatch: docs say `"flat"`, code expects `"star"`
+
+**Fix:** Added `#[serde(alias = "flat")]` to `SwarmTopology::Star` variant in `src/swarm.rs`. Updated all docs to use `"star"` instead of `"flat"`. Both the code and docs now accept `"star"` (and `"flat"` is accepted as a serde alias for backward compatibility).
+
+**Files:** `src/swarm.rs`, `docs/guides/configuration.md`, `docs/guides/swarm-mode.md`, `website/public/docs/configuration.html`, `website/public/docs/swarm-mode.html`
+
+**Status:** ✅ Resolved — `#[serde(alias = "flat")]` added, all docs updated.
+
+### `[swarm.profiles]` TOML format in docs doesn't match code
+
+**Fix:** Updated all documentation to show the correct `[[swarm.profiles]]` array-of-tables syntax with `name` and `persona` fields, matching the `Vec<WorkerProfile>` struct.
+
+**Files:** `docs/guides/swarm-mode.md`, `docs/guides/configuration.md`, `website/public/docs/swarm-mode.html`, `website/public/docs/configuration.html`
+
+**Status:** ✅ Resolved — all docs now show correct `[[swarm.profiles]]` syntax.
+
+### Heartbeat docs use wrong field names — `goal` missing entirely
+
+**Fix:** Updated both heartbeat docs to use correct field names (`tick_interval_secs`, `max_ticks`, `workdir`) and added all missing fields (`goal`, `max_iterations_per_tick`, `enable_tools`).
+
+**Files:** `docs/guides/heartbeat-mode.md`, `website/public/docs/heartbeat-mode.html`
+
+**Status:** ✅ Resolved — all field names corrected, `goal` documented as required.
+
+---
+
+## 🔴 High
+
+### `RavenFabricClient` fully unwired — created but never called
+
+**Problem:** `RavenFabricClient` is created in `main.rs` and passed to all agent modes, but `health()`, `list_agents()`, `execute()`, and `broadcast()` are never invoked at runtime. The entire struct and all its methods are `#[allow(dead_code)]`.
+
+**Impact:** RavenFabric mesh integration is non-functional despite being wired into the config and CLI. Users cannot execute remote agents or broadcast to the mesh.
+
+**Files:** `src/ravenfabric.rs`, `src/main.rs`
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### `ProviderFallbackChain` fully unwired — never used in agent loop
+
+**Problem:** `ProviderFallbackChain` struct and all its methods are `#[allow(dead_code)]`. The fallback chain is never used by `run_agent_loop` or `run_agent_loop_with_mcp`.
+
+**Impact:** Provider failover does not work in the agent loop. If the primary provider fails, the agent does not fall back to secondary/tertiary providers.
+
+**Files:** `src/llm.rs` (line ~1030)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### `TokenBudget` fully unwired — never checked in agent loop
+
+**Problem:** `TokenBudget` struct and all its methods are `#[allow(dead_code)]`. Token budget is never checked during agent execution.
+
+**Impact:** The `--token-budget` CLI flag and `RAVENCLAW_TOKEN_BUDGET` env var have no effect. Agents can exceed the configured token budget without being stopped.
+
+**Files:** `src/llm.rs` (line ~175)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### `AgentMessageBus` fully unwired — created but never used
+
+**Problem:** `AgentMessageBus` is created in swarm orchestration but never used for inter-agent communication. All methods are `#[allow(dead_code)]`.
+
+**Impact:** Inter-agent communication (v0.9.1 headline feature) is non-functional. Swarm members cannot send or receive messages.
+
+**Files:** `src/swarm.rs` (line ~128)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### `SwarmHealthMonitor` fully unwired — created but never checked
+
+**Problem:** `SwarmHealthMonitor` is initialized but never checked during swarm orchestration. All methods are `#[allow(dead_code)]`.
+
+**Impact:** Swarm health monitoring (v0.9.2 headline feature) is non-functional. Dead agents are not detected or replaced.
+
+**Files:** `src/swarm.rs` (line ~417)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+---
+
+## 🟡 Medium
+
+### `--provider anthropic` CLI flag falls through to LiteLLM
+
+**Problem:** The `--provider` flag in `main.rs` maps `"openrouter"`, `"ollama"`, `"openai"` but `"anthropic"` falls through to the default `LiteLLM`. The `Anthropic` variant exists in `LLMProvider` enum and `create_client()` supports it, but the CLI can't select it.
+
+**Impact:** Users cannot select the Anthropic provider via CLI. Must use config file or env vars.
+
+**Files:** `src/main.rs` (lines ~256-262)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### `--webhook-port` CLI flag parsed but never used
+
+**Problem:** The `webhook_port` CLI flag is parsed in `main.rs` but never passed to the scheduler. The scheduler's webhook server hardcodes port `9090`.
+
+**Impact:** Users cannot configure the webhook port via CLI. The `--webhook-port` flag is silently ignored.
+
+**Files:** `src/main.rs` (lines ~909-910), `src/scheduler.rs` (line ~200)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### `unwrap()` on audit log mutex — 7+ calls on hot path
+
+**Problem:** 7+ `unwrap()` calls on `self.entries.lock()` in `audit.rs` (lines 181, 315, 320, 325, 330, 361, 367). If the mutex is poisoned (e.g., a panic in another thread), the entire audit log panics. This is a hot path — every tool call, policy decision, and approval goes through these locks.
+
+**Impact:** A single panic in any thread can bring down the entire agent by poisoning the audit log mutex.
+
+**Files:** `src/audit.rs`
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### MCP SSE transport not implemented
+
+**Problem:** `McpTransportConfig::Sse` variant exists but returns `"SSE transport not yet implemented"`. This is the only `TODO` in the entire codebase.
+
+**Impact:** MCP servers that only support SSE transport (not stdio) cannot be used.
+
+**Files:** `src/mcp.rs` (lines ~225, 287)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### Server mode has no agent execution endpoints
+
+**Problem:** HTTP server mode has only `/health`, `/ready`, `/metrics` endpoints. No `/chat`, `/execute`, or `/tools` endpoints exist. The server can report status but cannot actually run agents.
+
+**Impact:** The server mode is a health-check endpoint only. Remote agent execution requires a separate client.
+
+**Files:** `src/server.rs`
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### `WebSearchConfig` unwired — web search uses hardcoded endpoint
+
+**Problem:** The web search tool uses a hardcoded SearXNG endpoint (`https://searx.be`). The `Config.web_search` field and `WebSearchConfig` struct are `#[allow(dead_code)]`.
+
+**Impact:** Users cannot configure the SearXNG endpoint via config file or env vars. The `with_config` constructor is never called.
+
+**Files:** `src/tools.rs` (lines ~700-900), `src/config.rs` (line ~98)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### README uses wrong env var prefix (`RAVENCLAW__` instead of `RAVENCLAWS__`)
+
+**Problem:** README uses `RAVENCLAW__` (missing the final S) instead of `RAVENCLAWS__` in Quick Start, Docker, and env var table sections. The codebase uses `RAVENCLAWS__` (with the S).
+
+**Impact:** Users following the README literally will have config loading fail silently.
+
+**Files:** `README.md` (lines 111, 183, 212-219)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### Missing community health files
+
+**Problem:** The project is missing standard OSS community health files: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `FUNDING.yml`, issue templates, and PR template.
+
+**Impact:** Lower GitHub community profile score. Contributors have no guidance on how to contribute, report security issues, or expected behavior.
+
+**Files:** Root directory
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+---
+
+## 🟢 Low
+
+### Container image ~50 MB vs < 30 MB target
+
+**Problem:** The production container image is ~50 MB, exceeding the < 30 MB target. The RavenFabric agent binary (~15 MB) is included in the production image even though it's only needed for swarm/supervisor modes.
+
+**Files:** `Dockerfile`
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### 9 modules not re-exported from library crate
+
+**Problem:** `heartbeat`, `swarm`, `background`, `scheduler`, `server`, `mcp`, `eval`, `telemetry`, `ravenfabric` modules are not re-exported from `src/lib.rs`. Library users cannot easily access key types without deep path imports.
+
+**Files:** `src/lib.rs` (lines 100-112)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### Missing CLI flags in configuration docs
+
+**Problem:** `--mcp-client`, `--swarm`, `--supervisor`, `--heartbeat` flags exist in the binary but are not listed in the CLI flags table in `docs/guides/configuration.md` or `website/public/docs/configuration.html`.
+
+**Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### `[server]` docs document `enable_metrics` but field doesn't exist
+
+**Fix:** Removed `enable_metrics` from both configuration docs. The `/metrics` endpoint is always served unconditionally.
+
+**Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`
+
+**Status:** ✅ Resolved — `enable_metrics` removed from docs.
+
+### `[telemetry]` docs use wrong field names
+
+**Fix:** Updated both configuration docs to use correct field names: `otel_disabled` (not `enabled`), `otel_endpoint` (not `endpoint`), `otel_service_name` (added). Removed non-existent `exporter` field.
+
+**Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`, `src/config.rs`
+
+**Status:** ✅ Resolved — all telemetry field names corrected.
+
+### OpenTelemetry warning on every startup
+
+**Fix:** Changed `otel_disabled` default from `false` to `true` (opt-in). OTel is now disabled by default, eliminating the confusing startup warning. Users who want tracing must explicitly set `otel_disabled = false` or `RAVENCLAWS__TELEMETRY__OTEL_DISABLED=false`.
+
+**Files:** `src/config.rs` (`TelemetryConfig.otel_disabled` default)
+
+**Status:** ✅ Resolved — OTel is now opt-in (default: disabled).
+
+### `--serve` mode documentation is sparse
+
+**Problem:** The `--serve` flag starts an HTTP server with `/health`, `/ready`, `/metrics` endpoints, but there's no dedicated documentation page explaining:
+- What endpoints are available and what they return
+- How to configure the server port (it's `runtime.port`, not `server.port`)
+- How to use it behind a service mesh or ingress
+- How it interacts with heartbeat mode
+
+**Impact:** Users have to read source code to understand how to use server mode in production.
+
+**Files:** `docs/guides/configuration.md` (minimal table), `website/public/docs/configuration.html` (minimal table)
+
+**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+
+### Missing v0.9.1 → v0.9.2 migration section in docs/guides/migration.md
+
+**Problem:** No documentation for the inter-agent communication bus (`AgentMessageBus`, `MessageType`) and swarm health monitoring (`SwarmHealthMonitor`, `WorkerHealthStatus`) additions in v0.9.2.
+
+**Files:** `docs/guides/migration.md`
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### README uses `--mode single` instead of `--exec`/`--repl`
+
+**Problem:** Quick Start shows `./target/release/ravenclaws --mode single` which is not the recommended usage pattern. Should use `--exec` or `--repl`.
+
+**Files:** `README.md` (line 112)
+
+**Status:** ❌ Open — tracked in ROADMAP.md v1.0 hardening.
+
+### No documented way to pass LiteLLM API key
+
+**Problem:** The config has `[llm]` with `provider = "litellm"` and `endpoint`, but no documentation explains whether or how to pass an API key for LiteLLM. The `api_key` field exists on `LLMConfig` as `Option<String>` but is not mentioned in the configuration docs table.
+
+**Impact:** Users deploying with LiteLLM may not know how to authenticate.
+
+**Files:** `docs/guides/configuration.md`, `website/public/docs/configuration.html`
+
+**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+
+### Heartbeat error message for missing `goal` is unclear
+
+**Problem:** When `heartbeat.goal` is missing from config, the error is `missing configuration field "heartbeat.goal"` with no explanation of what `goal` is or what format it expects.
+
+**Suggestion:** Improve the error message to include an example: `missing configuration field "heartbeat.goal" — set a goal string describing the agent's autonomous purpose (e.g., goal = "Monitor system health and report anomalies")`.
+
+**Files:** `src/heartbeat.rs` (serde deserialization error)
+
+**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+
+### No env var override for HTTP server port
+
+**Problem:** The HTTP server port is configurable via `runtime.port` in TOML config, but there's no documented env var override like `RAVENCLAWS_SERVE_PORT` or `RAVENCLAWS_RUNTIME_PORT`.
+
+**Impact:** K8s deployments that rely on env vars for configuration cannot set the server port without a ConfigMap.
+
+**Files:** `src/config.rs` (`RuntimeConfig.port`)
+
+**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+
+### `/health` endpoint doesn't verify LLM connectivity
+
+**Problem:** The `/health` endpoint returns `200 OK` immediately even if the configured LLM provider is unreachable. It's a pure process-liveness check.
+
+**Suggestion:** Add an optional deep health check (e.g., `/health/deep`) that verifies LLM connectivity by making a lightweight request.
+
+**Files:** `src/server.rs` (line 233)
+
+**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+
+### `/ready` endpoint doesn't verify config validity
+
+**Problem:** The `/ready` endpoint returns `200 OK` immediately after the TCP listener binds, before the heartbeat loop or any other initialization has a chance to verify the configuration works end-to-end.
+
+**Suggestion:** Make `/ready` wait for heartbeat initialization or config validation before returning OK.
+
+**Files:** `src/server.rs` (lines 236-239)
+
+**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
+
+### Heartbeat state not saved on graceful shutdown
+
+**Problem:** The `HeartbeatAgent` saves state to disk only after each tick completes. There is no `Drop` implementation and no final `persist_state()` call when the agent loop exits on SIGTERM/SIGINT. If the process is killed between ticks, the current tick's work is lost.
+
+**Impact:** Graceful shutdown may leave heartbeat state slightly stale (up to one tick interval behind).
+
+**Files:** `src/heartbeat.rs` (no `Drop` impl, no shutdown hook)
+
+**Status:** ❌ Open — discovered during rpi5 deployment (2026-06-27).
 
 ---
 

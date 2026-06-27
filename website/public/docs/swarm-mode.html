@@ -47,6 +47,7 @@
       <a href="/docs/swarm-mode" class="active">Swarm mode</a>
       <a href="/docs/mcp-integration">MCP integration</a>
       <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <a href="/docs/migration">Migration guide</a>
       <h5>On this page</h5>
       <a href="#overview" data-spy>Overview</a>
       <a href="#quick-start" data-spy>Quick start</a>
@@ -82,13 +83,20 @@ provider = <span class="tok-s">"openai"</span>
 model = <span class="tok-s">"gpt-4o"</span>
 
 [swarm]
-agent_count = <span class="tok-n">3</span>
-topology = <span class="tok-s">"flat"</span>
+max_workers = <span class="tok-n">3</span>
+topology = <span class="tok-s">"star"</span>
 
-[swarm.profiles]
-coder = <span class="tok-s">"You are an expert Rust engineer focused on code quality."</span>
-researcher = <span class="tok-s">"You are a thorough technical researcher."</span>
-reviewer = <span class="tok-s">"You are a meticulous code reviewer."</span></code></pre></div>
+[[swarm.profiles]]
+name = <span class="tok-s">"coder"</span>
+persona = <span class="tok-s">"You are an expert Rust engineer focused on code quality."</span>
+
+[[swarm.profiles]]
+name = <span class="tok-s">"researcher"</span>
+persona = <span class="tok-s">"You are a thorough technical researcher."</span>
+
+[[swarm.profiles]]
+name = <span class="tok-s">"reviewer"</span>
+persona = <span class="tok-s">"You are a meticulous code reviewer."</span></code></pre></div>
       <p><strong>Use cases:</strong> getting multiple perspectives on a problem, parallel research on different aspects of a topic, and code review from different angles.</p>
 
       <h3>Hierarchical swarm (supervisor)</h3>
@@ -99,14 +107,24 @@ provider = <span class="tok-s">"openai"</span>
 model = <span class="tok-s">"gpt-4o"</span>
 
 [swarm]
-agent_count = <span class="tok-n">4</span>
+max_workers = <span class="tok-n">4</span>
 topology = <span class="tok-s">"hierarchical"</span>
 
-[swarm.profiles]
-supervisor = <span class="tok-s">"You are a project manager. Decompose tasks and delegate."</span>
-architect = <span class="tok-s">"You are a systems architect focused on design."</span>
-implementer = <span class="tok-s">"You are an implementer who writes production-quality code."</span>
-tester = <span class="tok-s">"You are a QA engineer who writes tests."</span></code></pre></div>
+[[swarm.profiles]]
+name = <span class="tok-s">"supervisor"</span>
+persona = <span class="tok-s">"You are a project manager. Decompose tasks and delegate."</span>
+
+[[swarm.profiles]]
+name = <span class="tok-s">"architect"</span>
+persona = <span class="tok-s">"You are a systems architect focused on design."</span>
+
+[[swarm.profiles]]
+name = <span class="tok-s">"implementer"</span>
+persona = <span class="tok-s">"You are an implementer who writes production-quality code."</span>
+
+[[swarm.profiles]]
+name = <span class="tok-s">"tester"</span>
+persona = <span class="tok-s">"You are a QA engineer who writes tests."</span></code></pre></div>
       <p><strong>Use cases:</strong> complex multi-step projects, software design and implementation, and research reports with multiple sections.</p>
 
       <h3>Self-provisioning swarm</h3>
@@ -140,9 +158,9 @@ tester = <span class="tok-s">"You are a QA engineer who writes tests."</span></c
       <table>
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>swarm.agent_count</code></td><td><code>3</code></td><td>Number of agents</td></tr>
-          <tr><td><code>swarm.topology</code></td><td><code>"flat"</code></td><td><code>flat</code> or <code>hierarchical</code></td></tr>
-          <tr><td><code>swarm.profiles</code></td><td>—</td><td>Map of agent name to system prompt</td></tr>
+          <tr><td><code>swarm.max_workers</code></td><td><code>100</code></td><td>Maximum number of workers</td></tr>
+          <tr><td><code>swarm.topology</code></td><td><code>"star"</code></td><td><code>star</code>, <code>mesh</code>, <code>hierarchical</code>, or <code>hybrid</code></td></tr>
+          <tr><td><code>swarm.profiles</code></td><td>—</td><td>Array of worker profiles (name + persona)</td></tr>
         </tbody>
       </table>
 

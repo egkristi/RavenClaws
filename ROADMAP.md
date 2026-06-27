@@ -1,11 +1,11 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
-**Date:** 2026-06-26  
+**Date:** 2026-06-27  
 **Version:** v0.9.2 — Swarm Health & Telemetry ✅  
 **Previous Release:** v0.9.1 (2026-06-22) — Inter-agent communication bus ✅  
-**Current Commit:** `eaa92b3` — v1.0 hardening: deny.toml typo fix, VERIFICATION.md stale counts, CHANGELOG cleanup
+**Current Commit:** `eaa92b3` — v1.0 hardening: deny.toml typo fix, docs/guides/verification.md stale counts, CHANGELOG cleanup
 **CI Status:** Build & Release #170 ✅ · Container Build #170 ✅ · Security Scan #128 ✅
-**v1.0 Hardening Progress:** 8/15 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified, zero CVEs, API stability, complete docs, reproducible builds)
+**v1.0 Hardening Progress:** 14/38 items completed (deprecated types removed, dead code eliminated, library API established, performance targets verified, zero CVEs, API stability, complete docs, reproducible builds, swarm docs fixed, heartbeat docs fixed, telemetry docs fixed, server docs fixed, OTel opt-in, swarm topology alias). **29 new items added** from comprehensive project audit (2026-06-27) + provider strategy (2026-06-28) + rpi5 deployment feedback (2026-06-28): wire unwired infrastructure (`RavenFabricClient`, `ProviderFallbackChain`, `TokenBudget`, `AgentMessageBus`, `SwarmHealthMonitor`, `WebSearchConfig`), fix CLI flags (`--provider anthropic`, `--webhook-port`), fix audit log `unwrap()`, fix README bugs, add missing CLI flags to docs, add community health files, reduce container image size, add server execution endpoints, implement MCP SSE transport, add missing library re-exports, add generic `openai-compatible` provider, ship vLLM docs/tests, ship llama.cpp docs/tests, add Azure OpenAI adapter, add server mode docs page, add deep health check endpoint, add env var for server port.
 
 **Vision:** RavenClaws shall become the ultimate AI agentic assistant and worker —
 the supreme, most trusted, and most capable autonomous agent. Simply the best.
@@ -47,7 +47,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 0.9.2 (2026-06-23) — Swarm Health & Telemetry  
-**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~15,200 LOC, 5 LLM providers, 5 built-in tools (+web_search), 452 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, published on crates.io as `ravenclaws` (binary + library crate).
+**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~15,200 LOC, 5 LLM providers (+ generic `openai-compatible` planned for v1.0), 5 built-in tools (+web_search), 452 unit tests, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, published on crates.io as `ravenclaws` (binary + library crate).
 
 | Component | Status | Details |
 |---|---|---|
@@ -57,7 +57,7 @@ can't be added without breaking one, it doesn't ship in core.
 | **Supervisor mode (single-provider)** | ✅ **v0.6** | Task decomposition, sub-agent spawning, result aggregation |
 | **Swarm mode (multi-model)** | ✅ **v0.6** | Parallel agents across different LLM providers; scales to any number |
 | **Supervisor mode (multi-model)** | ✅ **v0.6** | Provider-aware task decomposition and assignment |
-| LLM providers (5) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama, **Anthropic** (unified trait) |
+| LLM providers (5 + generic) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama, **Anthropic** (unified trait); generic `openai-compatible` planned for v1.0 |
 | CLI & env-var overrides | ✅ Working | `--provider`, `--endpoint`, `--model`, layered TOML→env→flags |
 | Config validation | ✅ Working | TLS enforcement, endpoint checks |
 | Container & K8s security | ✅ Working | Distroless, non-root, read-only FS, dropped caps, seccomp, RBAC |
@@ -85,11 +85,25 @@ can't be added without breaking one, it doesn't ship in core.
 | Native Anthropic provider | ✅ Working | Direct Claude API with tool use, token tracking (v0.5.3) |
 | Retry / fallback / circuit breaker | ✅ Working | Exponential backoff, token budgets, provider fallback chain (v0.5.1) |
 | Pre-built binary releases | 📋 Wired, untagged | CI produces them on tag; none released yet |
+| `RavenFabricClient` wired to agent loop | ❌ | Client created but `health()`, `execute()`, `broadcast()` never called |
+| `ProviderFallbackChain` wired to agent loop | ❌ | Fallback chain struct exists but never used by agent loop |
+| `TokenBudget` wired to agent loop | ❌ | Token budget struct exists but never checked during execution |
+| `AgentMessageBus` wired to swarm | ❌ | Message bus created but never used in orchestration |
+| `SwarmHealthMonitor` wired to swarm | ❌ | Health monitoring initialized but never checked |
+| `WebSearchConfig` wired to web search tool | ❌ | Web search uses hardcoded SearXNG endpoint |
+| `--provider anthropic` CLI flag | ❌ | Falls through to default `LiteLLM` |
+| `--webhook-port` CLI flag | ❌ | Parsed but never used; port hardcoded to 9090 |
+| Audit log mutex `unwrap()` | ❌ | 7+ calls on hot path; will panic if poisoned |
+| MCP SSE transport | ❌ | `McpTransportConfig::Sse` returns "not implemented" |
+| Server agent execution endpoints | ❌ | No `/chat`, `/execute`, or `/tools` endpoints |
+| Community health files | ❌ | Missing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` |
+| Container image size | ⚠️ | ~50 MB vs < 30 MB target |
+| Library re-exports | ⚠️ | 9 modules not re-exported from `lib.rs` |
 | Git hooks (pre-commit / pre-push) | ✅ Working | `.githooks/` — fmt, clippy, tests, binary size, secrets on commit; +release build, Docker, security on push |
 | Structured function calling | ✅ Working | OpenAI Tools format for OpenAI/LiteLLM/OpenRouter/Anthropic |
 | **Human-in-the-loop approvals** | ✅ **v0.8** | `--require-approval` flag prompts for sensitive tool calls; audited |
 | **Prompt-injection defense** | ✅ **v0.8** | `InjectionDetector` with 50+ patterns, instruction-boundary enforcement, output schema validation; wired to both agent loops; audited |
-| Multi-modal input | ⚠️ Partial | AnthropicClient has image support structure, not wired to CLI |
+| Multi-modal input | ⚠️ Partial | AnthropicClient has image support structure, not wired to CLI *(v0.10)* |
 
 ### ✅ v0.4.0 Released (2026-06-03)
 
@@ -281,7 +295,7 @@ the cloud incumbents structurally can't follow.
 | **Local-first / self-hosted / air-gapped** | Manus is cloud-only; Comet's "Local" is a browser, not a worker. RavenClaws runs fully offline with Ollama. | Secure · Simple | ✅ core |
 | **Security model: deny-by-default + sandbox + audit** | Field bolts security on; we ship it in core. | Secure | ⚠️ v0.4 (wire it) |
 | **~5 MB single binary, edge/embeddable** | No cloud agent runs on a Raspberry Pi. | Small · Efficient | ✅ |
-| **Provider-agnostic + cost-aware routing** | Not locked to one model vendor. | Efficient · Robust | v0.5 |
+| Provider-agnostic + cost-aware routing | Not locked to one model vendor. Generic `openai-compatible` unlocks 10+ backends. | Efficient · Robust | v0.5 → v1.0 |
 | **RavenFabric mesh: E2E-encrypted remote exec** | Unique — competitors are single-host or single-cloud. | Robust | ✅ v0.6.1 |
 | **No telemetry · signed + SBOM** | Trust as a feature, verifiable end-to-end. | Secure | ✅ |
 | **Open core + commercial** | No lock-in, vs. proprietary cloud. | Simple | ✅ |
@@ -383,15 +397,10 @@ Agency with guardrails — the security differentiator.
   - Image input support (stubbed for future multi-modal expansion)
   - Full test coverage (4 unit tests + integration via factory)
 
-- [ ] **Multi-modal Input** ⚠️ **PARTIAL** — AnthropicClient has image support structure, not wired to CLI
+- [ ] **Multi-modal Input** ⚠️ **PARTIAL** — AnthropicClient has image support structure, not wired to CLI *(v0.10)*
   - Image attachments in `ChatMessage` (base64 or URL)
   - PDF/text document ingestion
   - Provider-specific encoding (OpenAI vision, Anthropic images)
-
-- [ ] **Skill / Plugin System** (foundations) — **MOVED TO v0.6**
-  - Portable capability bundles: `skill.yaml` + scripts + resources
-  - Progressive disclosure: skills advertise capabilities, agent selects
-  - Sandboxed skill execution (reuse `Sandbox`)
 
 **Exit criteria:** ✅ COMPLETE (v0.5 core features)
 1. [x] Single run transparently fails over between providers
@@ -411,12 +420,6 @@ Agency with guardrails — the security differentiator.
 - [x] **CodeQL v4 migration** — all `codeql-action/*@v3` → `@v4` ✅ Implemented 2026-06-18
 - [x] **RavenFabric integration** — secure E2E remote command execution + mesh coordination (the headline capability). ✅ v0.6.1
 - [x] **Agent communication** — structured message passing; conflict resolution across agents. ✅ **v0.9.1** *(moved to v0.9)*
-- [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion (acts as the user, not a shared service account). *(v0.7)*
-- [ ] **Skill / Plugin System** (foundations) — **MOVED FROM v0.5** *(v0.7)*
-  - Portable capability bundles: `skill.yaml` + scripts + resources
-  - Progressive disclosure: skills advertise capabilities, agent selects
-  - Sandboxed skill execution (reuse `Sandbox`)
-
 **Exit criteria:** ✅ COMPLETE (v0.6 core features) — Supervisor and Swarm modes implemented for single-provider and multi-model. CI/CD hardened with Node.js 24 and CodeQL v4. RavenFabric integration complete with full client module, wiring into all agent modes, and 12 unit tests.
 
 ### v0.7 — Observability and ops 📈 **(COMPLETE)**
@@ -495,14 +498,25 @@ significant new capabilities that are not required for a production-ready 1.0.
 - [ ] **SDKs** (Python/TS) and a documentation site.
 - [ ] **Advanced reasoning** — tree-of-thought, self-reflection, uncertainty estimation / ask-for-help.
 - [ ] **Memory tiers** — episodic, semantic (local embeddings), procedural.
+- [ ] **Config hot-reload** — Changes to `ravenclaws.toml` should be picked up without restart.
+- [ ] **Agent execution endpoints in server mode** — `/chat`, `/execute`, `/tools` endpoints so the HTTP server can actually run agents, not just report status.
+- [ ] **Eval harness integration with agent loop** — `EvalRunner::run_task()` should use `run_agent_loop()` instead of calling `llm.chat()` directly, so eval tasks test tool calling, ReAct loop, and security integration.
+- [ ] **Tool call assertions in eval harness** — Add assertion types for checking tool calls were made, specific tools were invoked, and tool results were processed.
+- [ ] **Deduplicate `run_agent_loop` and `run_agent_loop_with_mcp`** — ~500 lines of duplicated code. Refactor to share common logic with MCP tool registration as a plugin.
+- [ ] **Multi-modal input** — Wire AnthropicClient's image support structure to CLI. Image attachments in `ChatMessage` (base64 or URL), PDF/text document ingestion.
+- [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion.
+- [ ] **Skill / Plugin System** — Portable capability bundles: `skill.yaml` + scripts + resources, progressive disclosure, sandboxed skill execution.
 
 ### v1.0 — Simply the best 🏆
 
 The stable release. RavenClaws is production-ready, benchmarked, documented, and
 trusted. All five pillars are verified by independent measurement.
 
-**Scope:** v1.0 = current v0.9.2 + hardening + docs + API stability. Enterprise
-features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
+**Scope:** v1.0 = current v0.9.2 + hardening + docs + API stability + provider
+strategy (generic `openai-compatible`, vLLM/llama.cpp recipes, Azure adapter) +
+rpi5 deployment fixes (swarm/heartbeat/telemetry/server docs accuracy, OTel opt-in,
+deep health check, server port env var, heartbeat state on shutdown).
+Enterprise features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
 
 - [x] **Deprecated types removed** — `LiteLLMClient`, `OpenRouterClient`, `OpenAIClient` (deprecated since v0.5.0) removed from codebase.
 - [x] **Dead code eliminated** — legacy `execute_tool_call`, unused `run_exec_stream`, and `#[allow(dead_code)]` annotations reviewed and cleaned up.
@@ -512,12 +526,188 @@ features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
 - [x] **API stability** guarantees + semver discipline. All public enums and structs reviewed: `#[non_exhaustive]` added to `RavenClawsError`, `ConfigError`, `LLMError`, `ToolError`, `LLMProvider`, `OpenAICompatibleProvider`, `CircuitState`, `ToolCategory`, `Config`, `LLMConfig`, `SecurityConfig`, `RuntimeConfig`, `RavenFabricConfig`, `TelemetryConfig`, `SchedulerConfig`, `WebSearchConfig`. Doc comments added to all public types.
 - [ ] **Autonomous operation validated** — RavenClaws runs unattended for 7+ days, completing tasks via heartbeat loop, recovering from failures, and scaling swarm up/down as needed.
 - [ ] **Swarm scale validated** — 1000+ worker agents operating in mesh topology, with < 5% overhead per additional agent. Swarm grows and shrinks organically — no fixed limit, no artificial cap.
-- [x] **Complete docs**, examples, migration guides. README includes quickstart, library usage guide, configuration reference, and architecture overview. — `docs/guides/` (getting-started, configuration, swarm-mode, mcp-integration, heartbeat-mode), `examples/` (basic_chat, agent_loop, swarm, mcp_client, heartbeat), `MIGRATION.md`, README with FAQ and doc links.
+- [x] **Complete docs**, examples, migration guides. README includes quickstart, library usage guide, configuration reference, and architecture overview. — `docs/guides/` (getting-started, configuration, swarm-mode, mcp-integration, heartbeat-mode, migration), `examples/` (basic_chat, agent_loop, swarm, mcp_client, heartbeat), README with FAQ and doc links.
 - [ ] **All verification tests passing** across all 4 deployment targets (macOS, Linux, Docker, K8s).
 - [ ] **Release automation complete** — signed tags, multi-arch containers, SBOM, provenance, crates.io publish all green. (CI pipeline fully wired; needs tag-push verification.)
 - [x] **Reproducible builds** — `Cargo.lock` committed, `lto=true` + `codegen-units=1` in release profile, Docker base images pinned to specific digests, `Cargo.toml` includes `exclude` for crate size optimization.
+- [ ] **Wire `RavenFabricClient` into agent loop** — client is created in `main.rs` but `health()`, `list_agents()`, `execute()`, and `broadcast()` are never invoked at runtime. All methods are `#[allow(dead_code)]`.
+- [ ] **Wire `ProviderFallbackChain` into agent loop** — fallback chain struct and all methods are `#[allow(dead_code)]`. Never used by `run_agent_loop` or `run_agent_loop_with_mcp`.
+- [ ] **Wire `TokenBudget` into agent loop** — entire struct and all methods are `#[allow(dead_code)]`. Token budget is never checked during agent execution.
+- [ ] **Wire `AgentMessageBus` into swarm orchestration** — message bus is created but never used in the orchestration flow. All methods are `#[allow(dead_code)]`.
+- [ ] **Wire `SwarmHealthMonitor` into swarm orchestration** — health monitoring is initialized but never checked during orchestration. All methods are `#[allow(dead_code)]`.
+- [ ] **Wire `WebSearchConfig` into web search tool** — web search tool uses hardcoded SearXNG endpoint (`https://searx.be`). The `Config.web_search` field and `WebSearchConfig` struct are `#[allow(dead_code)]`.
+- [ ] **Fix `--provider anthropic` CLI flag** — Anthropic provider is unreachable via CLI. The `--provider` flag maps `"openrouter"`, `"ollama"`, `"openai"` but `"anthropic"` falls through to default `LiteLLM`. The `Anthropic` variant exists in `LLMProvider` enum and `create_client()` supports it, but the CLI can't select it.
+- [ ] **Fix `--webhook-port` CLI flag** — `webhook_port` CLI flag is parsed in `main.rs` but never used. The scheduler's webhook server hardcodes port `9090` instead of using the parsed value.
+- [ ] **Replace `unwrap()` on audit log mutex** — 7+ `unwrap()` calls on `self.entries.lock()` in `audit.rs` (lines 181, 315, 320, 325, 330, 361, 367). If the mutex is poisoned, the entire audit log panics. This is a hot path — every tool call, policy decision, and approval goes through these locks.
+- [ ] **Fix README env var prefix** — README uses `RAVENCLAW__` (missing the final S) instead of `RAVENCLAWS__` in Quick Start, Docker, and env var table sections. This would cause config loading to fail for users following the README literally.
+- [ ] **Fix README `--mode single` reference** — Quick Start shows `./target/release/ravenclaws --mode single` which is not the recommended usage pattern. Should use `--exec` or `--repl`.
+- [ ] **Add missing CLI flags to configuration docs** — `--mcp-client`, `--swarm`, `--supervisor`, `--heartbeat` flags exist in the binary but are not listed in the CLI flags table in `docs/guides/configuration.md` or `website/public/docs/configuration.html`.
+- [ ] **Add v0.9.1 → v0.9.2 migration section to `docs/guides/migration.md`** — No documentation for the inter-agent communication bus (`AgentMessageBus`, `MessageType`) and swarm health monitoring (`SwarmHealthMonitor`, `WorkerHealthStatus`) additions.
+- [ ] **Add community health files** — Missing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `FUNDING.yml`, issue templates, and PR template. These are required for OSS project maturity and GitHub community profile.
+- [ ] **Reduce container image size** — Current ~50 MB vs < 30 MB target. Investigate multi-stage build optimization, smaller base image, or removing RavenFabric agent binary from production image.
+- [ ] **Add agent execution endpoints to HTTP server** — Server mode has `/health`, `/ready`, `/metrics` but no `/chat`, `/execute`, or `/tools` endpoints. The server can report status but cannot actually run agents.
+- [ ] **Implement SSE transport for MCP** — `McpTransportConfig::Sse` variant exists but returns `"SSE transport not yet implemented"`. This is the only `TODO` in the entire codebase.
+- [ ] **Add missing re-exports to library crate** — `heartbeat`, `swarm`, `background`, `scheduler`, `server`, `mcp`, `eval`, `telemetry`, `ravenfabric` modules are not re-exported from `src/lib.rs`. Library users cannot easily access `HeartbeatAgent`, `SwarmOrchestrator`, `BackgroundTaskManager`, `Scheduler`, `McpClient`, `McpServer`, `EvalRunner`, `TelemetryGuard`, or `RavenFabricClient` without deep path imports.
+- [ ] **Add generic `provider = "openai-compatible"` variant** — Unlocks vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, Fireworks, DeepInfra, and any custom OpenAI-compatible endpoint. ~160 LOC: enum variant in `config.rs`, CLI mapping in `main.rs`, 3-4 `mockito` tests.
+- [ ] **Ship vLLM docs + verification tests** — `docs/guides/vllm.md` with quick start, `scripts/lib/test-provider-vllm.sh` for integration testing, matching `website/public/docs/vllm.html` page.
+- [ ] **Ship llama.cpp docs + verification tests** — `docs/guides/llamacpp.md` with quick start, `scripts/lib/test-provider-llamacpp.sh` for integration testing, matching `website/public/docs/llamacpp.html` page.
+- [ ] **Add Azure OpenAI adapter** — `Azure` variant to `OpenAICompatibleProvider` with `api-key` header, deployment-based URLs, and `api-version` query parameter. ~240 LOC.
+- [x] **Fix swarm docs: `"flat"` → `"star"`** — Added `#[serde(alias = "flat")]` to `SwarmTopology::Star`. Updated all docs to use `"star"` and correct `[[swarm.profiles]]` array-of-tables syntax. Fixed `agent_count` → `max_workers`.
+- [x] **Fix heartbeat docs: wrong field names, missing `goal`** — Updated all docs to use correct field names (`tick_interval_secs`, `max_ticks`, `workdir`) and added missing `goal` (required), `max_iterations_per_tick`, `enable_tools`.
+- [x] **Fix telemetry docs: wrong field names** — Updated docs to use `otel_disabled` (not `enabled`), `otel_endpoint` (not `endpoint`), `otel_service_name`. Removed non-existent `exporter` field.
+- [x] **Fix server docs: remove `enable_metrics`** — Removed `enable_metrics` from docs. The `/metrics` endpoint is always served unconditionally.
+- [x] **Make OpenTelemetry opt-in by default** — Changed `otel_disabled` default from `false` to `true`. OTel is now disabled by default, eliminating the confusing startup warning.
+- [ ] **Add dedicated HTTP server mode docs page** — `docs/guides/server-mode.md` and `website/public/docs/server-mode.html` explaining endpoints, configuration, ingress setup, and interaction with heartbeat mode.
+- [ ] **Add deep health check endpoint** — `/health/deep` that verifies LLM connectivity by making a lightweight request, in addition to the existing process-liveness `/health`.
+- [ ] **Add env var override for server port** — Document `RAVENCLAWS_RUNTIME_PORT` or add `RAVENCLAWS_SERVE_PORT` as an env var alias for the server port.
+- [ ] **Improve heartbeat `goal` error message** — When `heartbeat.goal` is missing, include an example in the error message: `missing configuration field "heartbeat.goal" — set a goal string describing the agent's autonomous purpose (e.g., goal = "Monitor system health and report anomalies")`.
+- [ ] **Save heartbeat state on graceful shutdown** — Add a `Drop` impl or shutdown hook to `HeartbeatAgent` that calls `persist_state()` when the agent loop exits on SIGTERM/SIGINT.
 
 **Exit criteria:** All checkboxes above checked. No critical or high issues in ISSUES.md. CI/CD green across all 3 workflows. v1.0 tag pushed and released.
+
+---
+
+## Provider Strategy
+
+### Current Architecture
+
+RavenClaws has **5 native LLM providers** unified under `LLMProviderTrait`:
+
+| Provider | Client | Status |
+|---|---|---|
+| LiteLLM | `OpenAICompatibleClient` (variant: `LiteLLM`) | ✅ Working |
+| OpenAI | `OpenAICompatibleClient` (variant: `OpenAI`) | ✅ Working |
+| OpenRouter | `OpenAICompatibleClient` (variant: `OpenRouter`) | ✅ Working |
+| Ollama | `OpenAICompatibleClient` (variant: `Ollama`) | ✅ Working |
+| Anthropic | `AnthropicClient` (native, not OpenAI-compat) | ✅ Working |
+
+The `OpenAICompatibleClient` handles 4 of 5 providers via a shared `/v1/chat/completions`
+endpoint with provider-specific defaults (endpoint URL, headers, model names).
+
+### Recommendation: Add a Generic `openai-compatible` Provider
+
+**Decision: ADD a generic `provider = "openai-compatible"` variant.** This is the
+single highest-leverage provider addition — it unlocks dozens of inference engines
+with zero per-provider code.
+
+**What it covers (all speak `/v1/chat/completions`):**
+- **vLLM** — popular open-source inference engine (PagedAttention, continuous batching)
+- **llama.cpp** / **llamafile** — local CPU/GPU inference, single-binary server
+- **LM Studio** — GUI + local server for GGUF models
+- **Text Generation Inference (TGI)** — Hugging Face's inference server
+- **Groq** — ultra-fast LPU inference (free tier available)
+- **Together AI** — hosted open-source models
+- **Fireworks AI** — fast inference, function-calling support
+- **DeepInfra** — serverless inference
+- **Perplexity** — API-compatible endpoint
+- **Any custom OpenAI-compatible endpoint** — self-hosted, air-gapped, or proprietary
+
+**Implementation scope (small):**
+1. Add `OpenAICompatible` variant to `OpenAICompatibleProvider` enum in `config.rs`
+2. No new client code — `OpenAICompatibleClient` already speaks the right protocol
+3. Provider defaults: no default endpoint (user must set `--endpoint`), no default API key
+4. CLI mapping: `--provider openai-compatible` (hyphenated for readability)
+5. Tool-calling: depends on the backend — vLLM supports tools, llama.cpp does not (yet)
+6. Tests: 3-4 `mockito` tests verifying custom endpoint + no-default-key behavior
+
+**Estimated effort:** ~50 LOC in `config.rs` + ~30 LOC in `main.rs` + ~80 LOC tests = **~160 LOC total**
+
+**Why NOT add native vLLM / llama.cpp providers:**
+- Both speak OpenAI-compatible API — a native client would be a wrapper around the same
+  `/v1/chat/completions` endpoint with no additional capability
+- Adding them as named variants creates maintenance burden (version bumps, endpoint changes)
+- The generic approach is more future-proof — adding a new inference engine doesn't require a code change
+
+### Recommendation: Ship Tested Docs/Recipes
+
+**Decision: ADD configuration recipes + verification tests for vLLM and llama.cpp.**
+Documentation is where the real value lives — users need to know how to point RavenClaws
+at these backends, not that a new enum variant exists.
+
+**What to ship:**
+1. **`docs/guides/vllm.md`** — Quick start: `docker run vllm/vllm-openai:latest --model mistralai/Mistral-7B-Instruct-v0.3` → `ravenclaws --provider openai-compatible --endpoint http://localhost:8000 --model mistralai/Mistral-7B-Instruct-v0.3`
+2. **`docs/guides/llamacpp.md`** — Quick start: `llama-server -m model.gguf --port 8080` → `ravenclaws --provider openai-compatible --endpoint http://localhost:8080 --model model`
+3. **Verification tests** in `scripts/lib/test-provider-vllm.sh` and `scripts/lib/test-provider-llamacpp.sh` — start the backend, run a test prompt, verify response, stop the backend
+4. **Add to `scripts/verify.sh`** — `--vllm` and `--llamacpp` flags (skipped if backends not available)
+5. **Add to `website/public/docs/`** — matching HTML pages for ravenclaws.io
+
+**Estimated effort:** ~200 LOC docs + ~100 LOC verification tests + ~50 LOC website = **~350 LOC total**
+
+### Recommendation: Add a Small Azure OpenAI Adapter
+
+**Decision: ADD an `Azure` variant to `OpenAICompatibleProvider`.** Azure OpenAI uses
+the same `/v1/chat/completions` protocol but differs in three ways:
+1. **API key header:** `api-key` instead of `Authorization: Bearer`
+2. **Endpoint format:** `https://{resource}.openai.azure.com/openai/deployments/{deployment}/chat/completions?api-version={version}`
+3. **Model name:** deployment name, not model name
+
+**Implementation scope (small):**
+1. Add `Azure` variant to `OpenAICompatibleProvider` enum
+2. Override `build_headers()` to use `api-key` header
+3. Override `build_endpoint()` to construct the Azure-specific URL
+4. Config fields: `--endpoint` (resource base URL), `--azure-deployment`, `--azure-api-version`
+5. Tests: 3-4 `mockito` tests for header format, URL construction, and error handling
+
+**Estimated effort:** ~80 LOC in `config.rs` + ~60 LOC in `llm.rs` + ~100 LOC tests = **~240 LOC total**
+
+### Recommendation: Defer Native AWS Bedrock and Gemini/Vertex
+
+**Decision: DO NOT add native Bedrock or Gemini/Vertex providers at this time.**
+
+| Provider | Why defer | How to reach today |
+|---|---|---|
+| **AWS Bedrock** | Complex auth (AWS SigV4), separate SDK, low community demand for self-hosted agents | Via LiteLLM proxy (`litellm --model bedrock/*`) |
+| **Gemini / Vertex AI** | OpenAI-compatibility layer exists (`gemini-2.0-flash` works via OpenRouter); Vertex has complex GCP auth | Via OpenRouter or LiteLLM proxy |
+| **Mistral AI** | OpenAI-compatible API | Via `openai-compatible` generic provider |
+| **Cohere** | OpenAI-compatible API | Via `openai-compatible` generic provider |
+| **xAI (Grok)** | OpenAI-compatible API | Via `openai-compatible` generic provider |
+
+**Rationale:**
+- All four are reachable today via LiteLLM or OpenRouter — no capability gap
+- Adding native providers creates maintenance burden (API changes, auth complexity, SDK updates)
+- The generic `openai-compatible` provider covers Mistral, Cohere, and xAI with zero code
+- Bedrock and Gemini/Vertex have complex auth that would require significant code (~500+ LOC each)
+- This aligns with the **Small** and **Simple** pillars — resist adding code that LiteLLM already handles
+
+### Critical Caveat: Tool-Calling Fidelity is the Gating Feature
+
+**Tool-calling (function calling) is NOT guaranteed across OpenAI-compatible backends.**
+Chat completion works everywhere, but structured tool calling varies wildly:
+
+| Backend | Tool Calling | Notes |
+|---|---|---|
+| OpenAI | ✅ Full | Native, reliable |
+| Anthropic | ✅ Full | Native (separate client) |
+| LiteLLM | ✅ Full | Proxies to any backend |
+| vLLM | ⚠️ Partial | Supports tools format, quality varies by model |
+| llama.cpp | ❌ None | No tool-calling support (GGUF format limitation) |
+| Groq | ✅ Good | Fast, supports tools |
+| Together AI | ✅ Good | Supports tools |
+| TGI | ⚠️ Partial | Limited tool support |
+| Ollama | ⚠️ Partial | Tool support varies by model |
+
+**Impact on agent loop:** If the backend doesn't support tool calling, the agent loop
+falls back to ReAct-style text parsing (`TOOL_CALL:` / `ARGS:` patterns). This works
+but is less reliable than structured function calling.
+
+**Recommendation:** Document tool-calling support per backend in the recipe docs.
+The agent loop already handles both modes (structured + text-based), so no code change
+is needed — just clear documentation of what works where.
+
+### Summary: Provider Roadmap
+
+| Action | Priority | Effort | Impact |
+|---|---|---|---|
+| Add `provider = "openai-compatible"` generic variant | **High** | ~160 LOC | Unlocks 10+ inference engines |
+| Ship vLLM docs + verification tests | **High** | ~350 LOC | Production-grade local inference |
+| Ship llama.cpp docs + verification tests | **Medium** | ~350 LOC | Edge/air-gapped inference |
+| Add Azure OpenAI adapter | **Medium** | ~240 LOC | Enterprise Azure customers |
+| Native AWS Bedrock provider | **Defer** | ~500+ LOC | Reachable via LiteLLM |
+| Native Gemini/Vertex provider | **Defer** | ~500+ LOC | Reachable via OpenRouter/LiteLLM |
+| Native Mistral/Cohere/xAI provider | **Defer** | ~0 LOC | Covered by generic `openai-compatible` |
+
+**Total v1.0 provider scope:** ~1,100 LOC (generic provider + vLLM docs + llama.cpp docs + Azure adapter)
+**Post-v1.0:** Revisit Bedrock/Gemini if LiteLLM proxy is insufficient for production deployments.
 
 ---
 
@@ -531,6 +721,14 @@ features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
 
 **Current coverage:** 452 unit tests across 18 modules + 114 verification tests across 10 modules. All tests pass, clippy clean, fmt clean.
 
+**Known testing gaps:**
+- `EvalRunner::run_task()` calls `llm.chat()` directly — does NOT use `run_agent_loop()`. Eval tasks don't test tool calling, ReAct loop, or security integration.
+- No tool call assertions in eval harness — `Assertion` enum has 7 text-based types but no assertion for checking tool calls were made or specific tools were invoked.
+- `run_agent_loop` and `run_agent_loop_with_mcp` have ~500 lines of duplicated code — no shared test coverage for the common logic.
+- No integration tests for `RavenFabricClient` execution paths (client is created but never called).
+- No integration tests for `ProviderFallbackChain` or `TokenBudget` (both are dead code).
+- No integration tests for `AgentMessageBus` or `SwarmHealthMonitor` (both are dead code in orchestration).
+
 ---
 
 ## Performance Targets (v1.0)
@@ -538,9 +736,9 @@ features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
 | Metric | Target | Current |
 |---|---|---|
 | Stripped binary size | < 15 MB | 5.2 MB ✅ |
-| Container image size | < 30 MB | ~50 MB ⚠️ |
+| Container image size | < 30 MB | ~50 MB ⚠️ (includes RavenFabric agent binary) |
 | Cold start (single mode) | < 50 ms | 5.2 ms ✅ |
-| Idle memory (server mode) | < 20 MB RSS | N/A (no server) |
+| Idle memory (server mode) | < 20 MB RSS | Not yet measured |
 | Provider failover decision | < 5 ms | ✅ (v0.5.1) |
 | Tool-call audit write | non-blocking, < 1 ms enqueue | ✅ (wired) |
 
@@ -559,6 +757,7 @@ features (v0.8) and advanced capabilities (v0.10) are deferred to post-1.0.
 | 0.8 | RBAC, SecurityPolicy with blast-radius limits, compliance reporting. |
 | 0.9 | Inter-agent communication encryption, swarm-wide policy enforcement, heartbeat authentication, self-provisioning authorization. |
 | 0.10 | External security review, fuzzing, published threat model. |
+| 1.0 | Audit log mutex `unwrap()` → proper error handling. Community health files (SECURITY.md, CONTRIBUTING.md). SSE transport for MCP. |
 
 ---
 
@@ -582,11 +781,18 @@ Concrete items carried from the current codebase:
 4. ~~**k8s Deployment runs a program that exits immediately** → needs server mode (v0.7) or a Job manifest meanwhile.~~ ✅ **Fixed — `--serve` mode with HTTP probes**
 5. ~~**Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4).~~ ✅ **Unified `OpenAICompatibleClient` (v0.5.0)**
 6. ~~**Dead/unwired code:** `rustls` dep unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop; RavenFabric config fields consumed by client; `zeroize` wired for secret material**
-7. **No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit. *(v0.7)* ✅ **Fixed — graceful shutdown in server mode (v0.7.1)**
-8. **No config hot-reload** — Changes require restart. *(v0.7)*
-9. **Container image ~50 MB** — Target is < 30 MB. *(v0.7)*
+7. ~~**No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit.~~ ✅ **Fixed — graceful shutdown in server mode (v0.7.1)**
+8. **No config hot-reload** — Changes require restart.
+9. **Container image ~50 MB** — Target is < 30 MB.
 10. **cargo-udeps findings** — Unused dependencies detected. *(periodic review)*
 11. **cargo-outdated findings** — Dependencies behind latest. *(periodic review)*
+12. **~60 `#[allow(dead_code)]` annotations** — Significant unwired infrastructure: `RavenFabricClient`, `ProviderFallbackChain`, `TokenBudget`, `AgentMessageBus`, `SwarmHealthMonitor`, `WebSearchConfig`, and ~15 unused error variants, ~15 unused struct fields, ~15 unused methods, ~5 dead error enums.
+13. **`unwrap()` on audit log mutex** — 7+ calls on hot path (`audit.rs` lines 181, 315, 320, 325, 330, 361, 367). Will panic if mutex is poisoned.
+14. **`run_agent_loop` and `run_agent_loop_with_mcp` are nearly identical** — ~500 lines of duplicated code. The only difference is MCP tool registration.
+15. **Legacy `TOOL_CALL:` / `ARGS:` format still supported** — Dead code path in agent loop. No LLM provider generates this format.
+16. **`EvalRunner::run_task()` bypasses agent loop** — Calls `llm.chat()` directly instead of `run_agent_loop()`. Eval tasks don't test tool calling, ReAct loop, or security integration.
+17. **No tool call assertions in eval harness** — `Assertion` enum has 7 text-based types but no assertion for checking tool calls were made or specific tools were invoked.
+18. **Server mode has no agent execution endpoints** — Only `/health`, `/ready`, `/metrics`. No `/chat`, `/execute`, or `/tools`.
 
 ---
 

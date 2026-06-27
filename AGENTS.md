@@ -420,9 +420,9 @@ When a feature is finished or a fix is complete, update **all** relevant documen
 | `CHANGELOG.md` | Every feature, fix, or change → add under `[Unreleased]` |
 | `README.md` | User-facing features or config changes |
 | `ISSUES.md` | New bugs discovered, issues resolved, CI status updated |
-| `VERIFICATION.md` | Tests added, changed, or removed |
+| `docs/guides/verification.md` | Tests added, changed, or removed |
 | `AGENTS.md` | Workflow changes, new conventions, architecture changes |
-| `WEBSITE.md` | Deployment workflow changes, new website features |
+| `docs/guides/website.md` | Deployment workflow changes, new website features |
 | `website/public/index.html` | New features, providers, stats changes, comparison updates |
 | `website/public/docs/*.html` | When corresponding `docs/guides/*.md` is updated |
 | `website/public/_headers` | Security policy changes, new third-party embeds |
@@ -513,7 +513,7 @@ for r in data.get('workflow_runs',[])[:6]:
 - **Do** update CHANGELOG.md for every implemented feature, fix, or change
 - **Do** update ISSUES.md when discovering new bugs or limitations
 - **Do** update ROADMAP.md when starting or completing roadmap items
-- **Do** update VERIFICATION.md when adding or changing verification tests
+- **Do** update `docs/guides/verification.md` when adding or changing verification tests
 - **Do** update README.md when adding user-facing features
 - **Do** keep the binary under 5MB — if it grows, investigate alternatives
 - **Do** run `.githooks/setup.sh` after cloning the repo to enable pre-commit/pre-push hooks
@@ -800,7 +800,7 @@ website/
 │   └── site.webmanifest    # PWA manifest
 ├── wrangler.jsonc          # Cloudflare deploy config (name, routes, assets dir)
 ├── package.json            # wrangler dev-dependency + scripts
-└── DEPLOY.md               # full deployment walkthrough (also in WEBSITE.md)
+└── DEPLOY.md               # full deployment walkthrough (also in docs/guides/website.md)
 ```
 
 ### Key Design Decisions
@@ -975,7 +975,7 @@ The hero section shows key stats:
 - **Do** update `sitemap.xml` when adding or removing pages
 - **Do** update `site.webmanifest` when adding new icon sizes
 - **Do** use WebP for all artwork images
-- **Do** keep the website deploy documented in `WEBSITE.md` and `website/DEPLOY.md`
+- **Do** keep the website deploy documented in `docs/guides/website.md` and `website/DEPLOY.md`
 - **Do** update the version number and stats on the landing page during release
 
 ### Quick Reference

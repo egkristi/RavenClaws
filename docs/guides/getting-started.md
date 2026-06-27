@@ -119,4 +119,4 @@ See the [Configuration Reference](./configuration.md) for all available options.
 - [Swarm Mode Guide](./swarm-mode.md) — multi-agent orchestration
 - [MCP Integration](./mcp-integration.md) — connect to MCP servers
 - [Heartbeat Mode](./heartbeat-mode.md) — autonomous long-running agents
-- [Migration Guide](../../MIGRATION.md) — upgrading between versions
+- [Migration Guide](migration.md) — upgrading between versions

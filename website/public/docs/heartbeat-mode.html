@@ -47,6 +47,7 @@
       <a href="/docs/swarm-mode">Swarm mode</a>
       <a href="/docs/mcp-integration">MCP integration</a>
       <a href="/docs/heartbeat-mode" class="active">Heartbeat mode</a>
+      <a href="/docs/migration">Migration guide</a>
       <h5>On this page</h5>
       <a href="#overview" data-spy>Overview</a>
       <a href="#quick-start" data-spy>Quick start</a>
@@ -79,9 +80,12 @@
       <h2 id="configuration">Configuration</h2>
       <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
 <pre><code>[heartbeat]
-interval_secs = <span class="tok-n">300</span>        <span class="tok-c"># Sleep between cycles (5 minutes)</span>
-state_file = <span class="tok-s">"heartbeat-state.json"</span>  <span class="tok-c"># State persistence</span>
-max_cycles = <span class="tok-n">0</span>             <span class="tok-c"># 0 = unlimited</span>
+goal = <span class="tok-s">"Monitor system health and report anomalies"</span>  <span class="tok-c"># Required: agent's mission</span>
+tick_interval_secs = <span class="tok-n">300</span>    <span class="tok-c"># Sleep between cycles (5 minutes)</span>
+max_ticks = <span class="tok-n">0</span>               <span class="tok-c"># 0 = unlimited</span>
+max_iterations_per_tick = <span class="tok-n">5</span> <span class="tok-c"># Agent loop iterations per tick</span>
+enable_tools = <span class="tok-kc">true</span>         <span class="tok-c"># Enable tool calling</span>
+workdir = <span class="tok-s">"/workspace"</span>      <span class="tok-c"># Working directory for state persistence</span>
 
 [llm]
 provider = <span class="tok-s">"openai"</span>
@@ -90,9 +94,12 @@ system_prompt = <span class="tok-s">"You are a vigilant system monitor. Assess, 
       <table>
         <thead><tr><th>Setting</th><th>Default</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>interval_secs</code></td><td><code>300</code></td><td>Sleep duration between cycles</td></tr>
-          <tr><td><code>state_file</code></td><td><code>"heartbeat-state.json"</code></td><td>File for persisting state across restarts</td></tr>
-          <tr><td><code>max_cycles</code></td><td><code>0</code></td><td>Maximum cycles (0 = run forever)</td></tr>
+          <tr><td><code>goal</code></td><td>—</td><td><strong>Required.</strong> Agent's autonomous mission prompt</td></tr>
+          <tr><td><code>tick_interval_secs</code></td><td><code>300</code></td><td>Sleep duration between cycles (seconds)</td></tr>
+          <tr><td><code>max_ticks</code></td><td><code>0</code></td><td>Maximum ticks (0 = run forever)</td></tr>
+          <tr><td><code>max_iterations_per_tick</code></td><td><code>5</code></td><td>Max agent loop iterations per tick</td></tr>
+          <tr><td><code>enable_tools</code></td><td><code>true</code></td><td>Enable tool calling during heartbeat ticks</td></tr>
+          <tr><td><code>workdir</code></td><td><code>"/workspace"</code></td><td>Working directory for state persistence</td></tr>
         </tbody>
       </table>
 

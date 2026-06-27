@@ -6,7 +6,7 @@
 
 [![License](https://img.shields.io/badge/license-AGPLv3%20%2B%20Commercial-blue.svg)](LICENSING.md)
 [![CI](https://github.com/egkristi/RavenClaws/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
-[![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](VERIFICATION.md)
+[![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](docs/guides/verification.md)
 [![Binary](https://img.shields.io/badge/binary-~5.2MB-blue)]()
 [![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
 [![Status](https://img.shields.io/badge/status-v0.9.2-brightgreen)](ROADMAP.md)
@@ -55,7 +55,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 - **~5.2 MB** stripped release binary (measured) — no interpreter, no runtime image baggage.
 - **Single static binary** — no Python, no Node, no JVM, zero runtime dependencies.
-- Native Rust with `lto` + `panic=abort`. Design targets (benchmarked toward v1.0 via the [verification suite](VERIFICATION.md)): **< 50 ms** cold start, **< 20 MB** RSS, **< 15 MB** binary across all targets.
+- Native Rust with `lto` + `panic=abort`. Design targets (benchmarked toward v1.0 via the [verification suite](docs/guides/verification.md)): **< 50 ms** cold start, **< 20 MB** RSS, **< 15 MB** binary across all targets.
 
 ### Secure & trustworthy
 
@@ -93,7 +93,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 - **[MCP Integration Guide](docs/guides/mcp-integration.md)** — connect to MCP servers or expose tools via MCP
 - **[Heartbeat Mode Guide](docs/guides/heartbeat-mode.md)** — autonomous long-running agents
 - **[Examples](examples/README.md)** — runnable Rust examples using the library API
-- **[Migration Guide](MIGRATION.md)** — upgrading between versions (v0.1 → v1.0)
+- **[Migration Guide](docs/guides/migration.md)** — upgrading between versions (v0.1 → v1.0)
 - **[API Reference](https://docs.rs/ravenclaws)** — full rustdoc API documentation
 
 ## Quick Start
@@ -577,7 +577,7 @@ Yes. RavenClaws is published on [crates.io](https://crates.io/crates/ravenclaws)
 
 ### How do I upgrade from an older version?
 
-See the [Migration Guide](MIGRATION.md) for detailed upgrade paths from v0.1 through v1.0.
+See the [Migration Guide](docs/guides/migration.md) for detailed upgrade paths from v0.1 through v1.0.
 
 ### What deployment targets are supported?
 

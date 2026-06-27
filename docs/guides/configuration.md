@@ -67,17 +67,20 @@ export RAVENCLAWS__LLM__SYSTEM_PROMPT="You are a helpful assistant."
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `agent_count` | integer | `3` | Number of swarm agents |
-| `profiles` | array | — | Agent personality profiles |
-| `topology` | string | `"flat"` | Swarm topology: `flat`, `hierarchical` |
+| `max_workers` | integer | `100` | Maximum number of swarm workers |
+| `profiles` | array | — | Worker personality profiles (array of tables) |
+| `topology` | string | `"star"` | Swarm topology: `star`, `mesh`, `hierarchical`, `hybrid` |
 
 ### `[heartbeat]` — Heartbeat Settings
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `interval_secs` | integer | `300` | Sleep interval between cycles |
-| `state_file` | string | `"heartbeat-state.json"` | State persistence file |
-| `max_cycles` | integer | `0` | Max cycles (0 = unlimited) |
+| `goal` | string | — | **Required.** Agent's autonomous mission prompt |
+| `tick_interval_secs` | integer | `300` | Sleep interval between cycles (seconds) |
+| `max_ticks` | integer | `0` | Max ticks (0 = unlimited) |
+| `max_iterations_per_tick` | integer | `5` | Max agent loop iterations per tick |
+| `enable_tools` | boolean | `true` | Enable tool calling during heartbeat ticks |
+| `workdir` | string | `"/workspace"` | Working directory for state persistence |
 
 ### `[background]` — Background Task Settings
 
@@ -98,15 +101,14 @@ export RAVENCLAWS__LLM__SYSTEM_PROMPT="You are a helpful assistant."
 |-----|------|---------|-------------|
 | `host` | string | `"0.0.0.0"` | Server bind address |
 | `port` | integer | `8080` | Server port |
-| `enable_metrics` | boolean | `true` | Enable `/metrics` endpoint |
 
 ### `[telemetry]` — OpenTelemetry Settings
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `enabled` | boolean | `false` | Enable OpenTelemetry tracing |
-| `exporter` | string | `"grpc"` | Exporter type: `grpc` or `stdout` |
-| `endpoint` | string | `"http://localhost:4317"` | OTLP collector endpoint |
+| `otel_disabled` | boolean | `true` | Disable OpenTelemetry tracing (opt-in) |
+| `otel_endpoint` | string | `"http://localhost:4317"` | OTLP collector endpoint |
+| `otel_service_name` | string | `"ravenclaws"` | Service name for traces |
 
 ## Example Configurations
 

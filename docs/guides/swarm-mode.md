@@ -18,9 +18,9 @@ ravenclaws --supervisor "Design a microservice architecture for an e-commerce pl
 
 ## Topologies
 
-### Flat Swarm
+### Star Swarm (Default)
 
-In a flat swarm, all agents receive the same prompt and work independently. Results are collected and presented together.
+In a star swarm, a single coordinator delegates tasks to workers. All workers receive their assigned subtasks and report back. Results are collected and presented together.
 
 ```toml
 # config.toml
@@ -29,13 +29,20 @@ provider = "openai"
 model = "gpt-4o"
 
 [swarm]
-agent_count = 3
-topology = "flat"
+max_workers = 3
+topology = "star"
 
-[swarm.profiles]
-coder = "You are an expert Rust engineer focused on code quality."
-researcher = "You are a thorough technical researcher."
-reviewer = "You are a meticulous code reviewer."
+[[swarm.profiles]]
+name = "coder"
+persona = "You are an expert Rust engineer focused on code quality."
+
+[[swarm.profiles]]
+name = "researcher"
+persona = "You are a thorough technical researcher."
+
+[[swarm.profiles]]
+name = "reviewer"
+persona = "You are a meticulous code reviewer."
 ```
 
 **Use cases:**
@@ -54,14 +61,24 @@ provider = "openai"
 model = "gpt-4o"
 
 [swarm]
-agent_count = 4
+max_workers = 4
 topology = "hierarchical"
 
-[swarm.profiles]
-supervisor = "You are a project manager. Decompose tasks and delegate."
-architect = "You are a systems architect focused on design."
-implementer = "You are an implementer who writes production-quality code."
-tester = "You are a QA engineer who writes tests."
+[[swarm.profiles]]
+name = "supervisor"
+persona = "You are a project manager. Decompose tasks and delegate."
+
+[[swarm.profiles]]
+name = "architect"
+persona = "You are a systems architect focused on design."
+
+[[swarm.profiles]]
+name = "implementer"
+persona = "You are an implementer who writes production-quality code."
+
+[[swarm.profiles]]
+name = "tester"
+persona = "You are a QA engineer who writes tests."
 ```
 
 **Use cases:**
@@ -110,9 +127,9 @@ The health monitor tracks:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `swarm.agent_count` | `3` | Number of agents |
-| `swarm.topology` | `"flat"` | `flat` or `hierarchical` |
-| `swarm.profiles` | — | Map of agent name to system prompt |
+| `swarm.max_workers` | `100` | Maximum number of workers |
+| `swarm.topology` | `"star"` | `star`, `mesh`, `hierarchical`, or `hybrid` |
+| `swarm.profiles` | — | Array of worker profiles (name + persona) |
 
 ## Best Practices
 

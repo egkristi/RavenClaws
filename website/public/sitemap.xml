@@ -34,5 +34,8 @@
     <loc>https://ravenclaws.io/docs/heartbeat-mode</loc>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-</urlset>
+  </url>  <url>
+    <loc>https://ravenclaws.io/docs/migration</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url></urlset>

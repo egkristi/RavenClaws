@@ -1,6 +1,6 @@
 # Deploying RavenClaws.io
 
-> **Canonical reference:** [`WEBSITE.md`](../WEBSITE.md) in the repo root contains the
+> **Canonical reference:** [`docs/guides/website.md`](../docs/guides/website.md) in the repo root contains the
 > full deployment walkthrough, content management guide, and AI agent instructions.
 > This file is a local copy for quick reference.
 
