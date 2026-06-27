@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- *(none yet)*
+
+## [0.9.4] — 2026-06-27
+
+### Added
 - **`--no-final-required` CLI flag** — New `AgentLoopConfig.no_final_required` field and `--no-final-required` CLI flag. When set, any non-tool-call LLM response is treated as completion (no `FINAL:` marker required). Wired to both `run_agent_loop` and `run_agent_loop_with_mcp`. Useful for models that don't reliably emit `FINAL:` convention.
 - **Agent loop response logging** — Added `debug!` log after each LLM response in both agent loops, showing response length and first 500 characters of content. Helps diagnose silent failures and model behavior.
 - **Default system prompt `FINAL:` instructions** — Updated `default_system_prompt()` in `config.rs` to include `FINAL:` usage instructions, guiding models to signal task completion.
@@ -15,21 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Heartbeat goal error message** — Improved error message when no goal is provided for heartbeat mode. Now includes a concrete example: `--heartbeat-goal "Monitor system health and report anomalies"`.
-- **`--provider anthropic` CLI flag** — Anthropic provider is now selectable via `--provider anthropic` (previously fell through to LiteLLM).
-- **`--webhook-port` CLI flag** — Scheduler now respects the `--webhook-port` value instead of hardcoding port 9090.
-- **Audit log mutex poisoning** — Replaced 7 `unwrap()` calls on `self.entries.lock()` with proper error handling via `lock_entries()` helper. Mutex poisoning no longer panics the audit log hot path.
-- **README env var prefix** — Fixed `RAVENCLAW__` → `RAVENCLAWS__` (missing final S) in Quick Start, Docker, and env var table sections.
-- **README `--mode single` reference** — Quick Start now uses `--exec` instead of `--mode single`.
-
-### Changed
-- **Provider count updated** — Landing page, docs, and metadata updated from 5 to 6 LLM providers.
-- **Provider Strategy section updated** — ROADMAP.md Provider Strategy updated to reflect implemented `openai-compatible` provider.
-
-### Added
-- **MCP SSE transport** — Full SSE transport implementation for the MCP protocol. Client-side: `McpTransportConfig::Sse` connects to SSE endpoints, receives `endpoint` events, and sends JSON-RPC requests via HTTP POST. Server-side: `McpSseServer` provides `GET /sse` (SSE stream) and `POST /message` (JSON-RPC) endpoints with policy enforcement and audit logging. 7 tests covering server creation, initialization, tools/list, tools/call, error handling, config serialization, and connection failure.
-- **Generic `openai-compatible` provider** — New `LLMProvider::OpenAICompatible` variant unlocks vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, Fireworks, DeepInfra, and any custom OpenAI-compatible endpoint. Config: `provider = "openai-compatible"`, CLI: `--provider openai-compatible`. ~50 LOC in `config.rs` + `llm.rs` + `main.rs`.
-- **Missing library re-exports** — `HeartbeatAgent`, `SwarmOrchestrator`, `BackgroundTaskManager`, `Scheduler`, `McpClient`, `McpServer`, `EvalRunner`, `TelemetryGuard`, `RavenFabricClient`, and `run_server` are now re-exported from `src/lib.rs` for library users.
-- **Complete CLI flags documentation** — All 45+ CLI flags now documented in `docs/guides/configuration.md` and `website/public/docs/configuration.html` (was 8 flags).
 
 ## [0.9.3] — 2026-06-27
 
