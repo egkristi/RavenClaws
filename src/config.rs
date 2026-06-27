@@ -90,6 +90,57 @@ pub struct Config {
     /// Swarm orchestration configuration (v0.9)
     #[serde(default)]
     pub swarm: crate::swarm::SwarmConfig,
+
+    /// MCP server connections configuration (v0.9.6)
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub mcp: McpConfig,
+}
+
+/// MCP server connections configuration (v0.9.6)
+///
+/// Defines one or more MCP servers to connect to at startup.
+/// Each server is a subprocess that communicates via JSON-RPC 2.0 over stdio.
+///
+/// # Example (TOML)
+///
+/// ```toml
+/// [mcp]
+/// servers = [
+///   { name = "filesystem", command = "npx", args = ["-y", "@modelcontextprotocol/server-filesystem", "/workspace"] },
+///   { name = "database", command = "python", args = ["mcp-server.py"], env = { DB_URL = "postgres://..." } },
+/// ]
+/// ```
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, Deserialize, Default)]
+#[non_exhaustive]
+#[allow(dead_code)]
+pub struct McpConfig {
+    /// List of MCP servers to connect to
+    #[serde(default)]
+    pub servers: Vec<McpServerConfig>,
+}
+
+/// Configuration for a single MCP server connection (v0.9.6)
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
+#[allow(dead_code)]
+pub struct McpServerConfig {
+    /// Human-readable name for this MCP server (used in logs and tool namespacing)
+    pub name: String,
+    /// Command to launch the MCP server process
+    pub command: String,
+    /// Arguments to pass to the command
+    #[serde(default)]
+    pub args: Vec<String>,
+    /// Environment variables to set for the MCP server process
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
 }
 
 /// Web search configuration (v0.8)
@@ -647,6 +698,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -686,6 +738,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -723,6 +776,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -758,6 +812,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -797,6 +852,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -872,6 +928,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -909,6 +966,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -946,6 +1004,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -981,6 +1040,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -1030,6 +1090,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -1065,6 +1126,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -1271,6 +1333,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -1306,6 +1369,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -1341,6 +1405,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -1446,6 +1511,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -1481,6 +1547,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 
@@ -1516,6 +1583,7 @@ mod tests {
             scheduler: SchedulerConfig::default(),
             web_search: WebSearchConfig::default(),
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
+            mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
         };
 

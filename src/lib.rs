@@ -109,7 +109,9 @@ pub use agent::{
 };
 pub use audit::AuditLog;
 pub use background::BackgroundTaskManager;
-pub use config::{Config, LLMConfig, LLMProvider, RuntimeConfig, SecurityConfig};
+pub use config::{
+    Config, LLMConfig, LLMProvider, McpConfig, McpServerConfig, RuntimeConfig, SecurityConfig,
+};
 pub use error::RavenClawsError;
 pub use eval::EvalRunner;
 pub use heartbeat::HeartbeatAgent;

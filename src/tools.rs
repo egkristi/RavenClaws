@@ -217,6 +217,7 @@ pub trait ToolImpl: Send + Sync {
 // ── Tool registry ──────────────────────────────────────────────────────────
 
 /// Registry of all available tools
+#[derive(Clone)]
 pub struct ToolRegistry {
     tools: HashMap<String, Arc<dyn ToolImpl>>,
 }

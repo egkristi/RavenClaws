@@ -9,12 +9,16 @@
 [![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](docs/guides/verification.md)
 [![Binary](https://img.shields.io/badge/binary-~5.2MB-blue)]()
 [![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
-[![Status](https://img.shields.io/badge/status-v0.9.4-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v0.9.6-brightgreen)](ROADMAP.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.9.4 (2026-06-27).** `--no-final-required` flag, agent loop response logging, default system prompt with `FINAL:` instructions, improved heartbeat error message, `agent_count` serde alias. The provider layer (6 providers), one-shot execution (`--exec`),
+> **Status: v0.9.6 (2026-06-02).** HTTP agent execution API (`/chat`, `/execute`, `/tools`, `/tasks/{id}`, `/health/deep`),
+> MCP TOML config section (`[mcp]`), multi-MCP-client support via `[[mcp.servers]]`,
+> swarm profile TOML shorthand (`[swarm.profiles.name]`), config hot-reload (SIGHUP),
+> eval harness tool call assertions (`ToolCalled`, `ToolNotCalled`), server mode docs.
+> The provider layer (6 providers), one-shot execution (`--exec`),
 > reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
 > retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, **supervisor mode**,
 > **RavenFabric mesh client**, **MCP server**, **HTTP server mode**, **autonomous heartbeat agent**,
@@ -25,7 +29,7 @@ support. One static binary, zero runtime dependencies — no Python, no Node, no
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
 | **~5.2 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
-| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **452 unit tests + 114 verification checks** |
+| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **472 unit tests + 114 verification checks** |
 | **Library crate** | **18 modules** | **crates.io** | **AGPLv3 + Commercial** |
 
 ---
@@ -92,6 +96,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 - **[Swarm Mode Guide](docs/guides/swarm-mode.md)** — multi-agent orchestration with flat and hierarchical topologies
 - **[MCP Integration Guide](docs/guides/mcp-integration.md)** — connect to MCP servers or expose tools via MCP
 - **[Heartbeat Mode Guide](docs/guides/heartbeat-mode.md)** — autonomous long-running agents
+- **[Server Mode Guide](docs/guides/server-mode.md)** — HTTP API, endpoints, deployment, config hot-reload
 - **[Examples](examples/README.md)** — runnable Rust examples using the library API
 - **[Migration Guide](docs/guides/migration.md)** — upgrading between versions (v0.1 → v1.0)
 - **[API Reference](https://docs.rs/ravenclaws)** — full rustdoc API documentation
@@ -169,10 +174,10 @@ The library exposes all 18 modules with a stable public API:
 | `ravenclaws::heartbeat` | Autonomous heartbeat agent |
 | `ravenclaws::background` | Background task manager with disk persistence |
 | `ravenclaws::scheduler` | Scheduling & triggers (cron, webhook, file-watch) |
-| `ravenclaws::server` | HTTP server mode (health, readiness, metrics) |
+| `ravenclaws::server` | HTTP server mode (health, readiness, metrics, agent execution API) |
 | `ravenclaws::telemetry` | OpenTelemetry tracing (OTLP gRPC/stdout) |
 | `ravenclaws::ravenfabric` | RavenFabric mesh client |
-| `ravenclaws::eval` | Eval harness with assertions and run traces |
+| `ravenclaws::eval` | Eval harness with assertions, run traces, tool call assertions |
 | `ravenclaws::error` | Unified error types |
 
 ### Docker
@@ -199,9 +204,10 @@ kubectl -n ravenclaws get pods
 kubectl -n ravenclaws logs -l app.kubernetes.io/name=ravenclaws
 ```
 
-> Single mode currently performs one request and exits. A long-running **server
-> mode** with `/health` `/ready` `/metrics` is available via `--serve`; until then,
-> prefer the `deployment-test.yaml`/Job-style manifest for k8s smoke tests.
+> Server mode (`--serve`) provides a full HTTP API with `/health`, `/ready`, `/metrics`,
+> `/health/deep`, `/chat`, `/execute`, `/tasks/{id}`, `/tools`, and `/tools/{name}` endpoints.
+> Supports graceful shutdown, config hot-reload (SIGHUP), and configurable port.
+> See the [Server Mode Guide](docs/guides/server-mode.md) for details.
 
 ## Configuration
 
@@ -330,6 +336,8 @@ health_interval_secs = 60
 | `--no-final-required` | ✅ **v0.9.4** | Don't require `FINAL:` marker — any non-tool-call response completes the loop |
 | `--repl` | ✅ **Working** | Interactive REPL with `/exit`, `/reset` commands |
 | `--require-approval` | ✅ **v0.8** | Human-in-the-loop approval for sensitive tool calls |
+| `--serve` | ✅ **v0.7.1** | Long-running HTTP server with health, metrics, agent execution API |
+| `--mcp-server` | ✅ **v0.7.0** | Expose RavenClaws tools over MCP protocol |
 | `swarm` | ✅ **Working** | multiple parallel agents with different personas (single + multi-model); RavenFabric-aware |
 | `supervisor` | ✅ **Working** | Task decomposition + sub-agent spawning + result aggregation (single + multi-model); RavenFabric-aware |
 
@@ -348,7 +356,7 @@ cd RavenClaws
 
 cargo build --release      # release build for current platform
 cargo test                 # unit tests
-./scripts/verify.sh        # full 94-check verification suite (needs LiteLLM/Docker/kubectl)
+./scripts/verify.sh        # full 114-check verification suite (needs LiteLLM/Docker/kubectl)
 docker build -t ravenclaws:latest .
 ```
 

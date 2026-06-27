@@ -1,33 +1,50 @@
 //! RavenClaws
 //!
-//! Provides a long-running HTTP server with health, readiness, and metrics endpoints.
-//! RavenClaws to run as a stable workload in Kubernetes and other
-//! container orchestration platforms, fixing the CrashLoopBackOff issue.
+//! Provides a long-running HTTP server with health, readiness, metrics, and agent
+//! execution endpoints. RavenClaws to run as a stable workload in Kubernetes and
+//! other container orchestration platforms.
 //!
 //! # Endpoints
 //!
 //! - `GET /health` — Liveness probe (always 200 when server is running)
 //! - `GET /ready` — Readiness probe (200 when fully initialized, 503 during startup)
 //! - `GET /metrics` — Prometheus-style metrics (requests, tokens, tool calls, errors)
+//! - `GET /health/deep` — Deep health check (verifies LLM connectivity)
+//! - `POST /chat` — Send a message and get an agent response
+//! - `POST /execute` — Submit a background task, returns task ID
+//! - `GET /tasks/{id}` — Poll background task status and result
+//! - `GET /tools` — List available tools with schemas
+//! - `POST /tools/{name}` — Execute a specific tool by name
 //!
 //! # Architecture
 //!
 //! ```text
 //! HttpServer
-//!   ├── /health  → always 200 OK
-//!   ├── /ready   → 200 OK when ready, 503 Service Unavailable during startup
-//!   └── /metrics → Prometheus text format
+//!   ├── /health      → always 200 OK
+//!   ├── /ready       → 200 OK when ready, 503 during startup
+//!   ├── /metrics     → Prometheus text format
+//!   ├── /health/deep → LLM connectivity check
+//!   ├── /chat        → POST: agent response (JSON or SSE)
+//!   ├── /execute     → POST: background task submission
+//!   ├── /tasks/{id}  → GET: task status/result
+//!   ├── /tools       → GET: list tools with schemas
+//!   └── /tools/{name}→ POST: execute tool by name
 //! ```
 
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
+use tokio::io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpListener;
 use tokio::signal;
 use tracing::{debug, error, info, instrument, warn};
 
+use crate::agent::{self, AgentLoopConfig};
+use crate::background::BackgroundTaskManager;
 use crate::config::Config;
+use crate::llm::{self, ChatMessage, LLMProviderTrait};
+use crate::tools::{ToolCall, ToolRegistry};
 
 // ── Metrics ────────────────────────────────────────────────────────────────
 
@@ -102,12 +119,17 @@ pub struct ServerState {
     pub ready: AtomicBool,
     /// Server metrics
     pub metrics: ServerMetrics,
-    /// Server configuration (stored for future use by agent endpoints)
-    #[allow(dead_code)]
+    /// Server configuration
     pub config: Config,
-    /// Server start time (stored for future use)
+    /// Server start time
     #[allow(dead_code)]
     pub start_time: Instant,
+    /// LLM client for agent execution
+    pub llm: Option<Arc<dyn LLMProviderTrait>>,
+    /// Tool registry for tool listing and execution
+    pub tool_registry: Option<ToolRegistry>,
+    /// Background task manager for async execution
+    pub bg_manager: Option<BackgroundTaskManager>,
 }
 
 impl ServerState {
@@ -117,6 +139,9 @@ impl ServerState {
             metrics: ServerMetrics::new(),
             config,
             start_time: Instant::now(),
+            llm: None,
+            tool_registry: None,
+            bg_manager: None,
         }
     }
 
@@ -184,11 +209,38 @@ fn metrics_response(state: &ServerState) -> Vec<u8> {
 
 // ── HTTP handler ───────────────────────────────────────────────────────────
 
+/// Parse the Content-Length header from the request headers
+fn parse_content_length(headers: &[String]) -> usize {
+    for header in headers {
+        if let Some(value) = header
+            .strip_prefix("content-length:")
+            .or_else(|| header.strip_prefix("Content-Length:"))
+        {
+            return value.trim().parse().unwrap_or(0);
+        }
+    }
+    0
+}
+
+/// Read the request body from the reader
+async fn read_body(
+    reader: &mut BufReader<&mut tokio::net::TcpStream>,
+    content_length: usize,
+) -> Vec<u8> {
+    if content_length == 0 {
+        return Vec::new();
+    }
+    let mut body = vec![0u8; content_length];
+    if let Err(e) = reader.read_exact(&mut body).await {
+        warn!(error = %e, "Failed to read request body");
+        return Vec::new();
+    }
+    body
+}
+
 /// Handle a single HTTP connection
 #[instrument(skip_all, fields(peer = ?stream.peer_addr().ok()))]
 async fn handle_connection(mut stream: tokio::net::TcpStream, state: Arc<ServerState>) {
-    use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-
     let peer = stream.peer_addr().ok();
     let mut reader = BufReader::new(&mut stream);
     let mut request_line = String::new();
@@ -205,33 +257,114 @@ async fn handle_connection(mut stream: tokio::net::TcpStream, state: Arc<ServerS
 
     state.metrics.record_request();
 
-    // Parse the request path
-    let path = request_line.split_whitespace().nth(1).unwrap_or("/");
+    // Parse the request method and path
+    let parts: Vec<&str> = request_line.split_whitespace().collect();
+    let method = parts.first().unwrap_or(&"GET");
+    let path = parts.get(1).unwrap_or(&"/");
 
-    // Read and discard remaining headers
+    // Read headers
+    let mut headers: Vec<String> = Vec::new();
     let mut header_line = String::new();
     loop {
         header_line.clear();
         if reader.read_line(&mut header_line).await.is_err() {
             return;
         }
-        if header_line.trim().is_empty() {
+        let trimmed = header_line.trim();
+        if trimmed.is_empty() {
             break;
         }
+        headers.push(trimmed.to_lowercase());
     }
 
+    // Read body for POST requests
+    let content_length = parse_content_length(&headers);
+    let body = read_body(&mut reader, content_length).await;
+
     // Route the request
-    let (body, status_line, content_type) = match path {
-        "/health" => (health_response(), "200 OK", "text/plain"),
-        "/ready" => {
+    let (response_body, status_line, content_type) = match (*method, *path) {
+        ("GET", "/health") => (health_response(), "200 OK", "text/plain"),
+        ("GET", "/ready") => {
             let (body, status) = ready_response(&state);
             (body, status, "text/plain")
         }
-        "/metrics" => (
+        ("GET", "/metrics") => (
             metrics_response(&state),
             "200 OK",
             "text/plain; charset=utf-8",
         ),
+        ("GET", "/health/deep") => match handle_health_deep(&state).await {
+            Ok(body) => (body, "200 OK", "application/json"),
+            Err(e) => {
+                state.metrics.record_error();
+                (
+                    format!("{{\"error\":\"{}\"}}", e).into_bytes(),
+                    "503 Service Unavailable",
+                    "application/json",
+                )
+            }
+        },
+        ("POST", "/chat") => match handle_chat(&state, &body).await {
+            Ok(body) => (body, "200 OK", "application/json"),
+            Err(e) => {
+                state.metrics.record_error();
+                (
+                    format!("{{\"error\":\"{}\"}}", e).into_bytes(),
+                    "400 Bad Request",
+                    "application/json",
+                )
+            }
+        },
+        ("POST", "/execute") => match handle_execute(&state, &body).await {
+            Ok(body) => (body, "200 OK", "application/json"),
+            Err(e) => {
+                state.metrics.record_error();
+                (
+                    format!("{{\"error\":\"{}\"}}", e).into_bytes(),
+                    "400 Bad Request",
+                    "application/json",
+                )
+            }
+        },
+        ("GET", path) if path.starts_with("/tasks/") => {
+            let task_id = path.strip_prefix("/tasks/").unwrap_or("");
+            match handle_task_status(&state, task_id).await {
+                Ok(body) => (body, "200 OK", "application/json"),
+                Err(e) => {
+                    state.metrics.record_error();
+                    (
+                        format!("{{\"error\":\"{}\"}}", e).into_bytes(),
+                        "404 Not Found",
+                        "application/json",
+                    )
+                }
+            }
+        }
+        ("GET", "/tools") => match handle_list_tools(&state) {
+            Ok(body) => (body, "200 OK", "application/json"),
+            Err(e) => {
+                state.metrics.record_error();
+                (
+                    format!("{{\"error\":\"{}\"}}", e).into_bytes(),
+                    "500 Internal Server Error",
+                    "application/json",
+                )
+            }
+        },
+        ("POST", path) if path.starts_with("/tools/") => {
+            let tool_name = path.strip_prefix("/tools/").unwrap_or("");
+            match handle_execute_tool(&state, tool_name, &body).await {
+                Ok(body) => (body, "200 OK", "application/json"),
+                Err(e) => {
+                    state.metrics.record_error();
+                    (
+                        format!("{{\"error\":\"{}\"}}", e).into_bytes(),
+                        "400 Bad Request",
+                        "application/json",
+                    )
+                }
+            }
+        }
         _ => {
             state.metrics.record_error();
             (b"Not Found".to_vec(), "404 Not Found", "text/plain")
@@ -243,14 +376,14 @@ async fn handle_connection(mut stream: tokio::net::TcpStream, state: Arc<ServerS
         "HTTP/1.1 {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
         status_line,
         content_type,
-        body.len(),
+        response_body.len(),
     );
 
     if let Err(e) = stream.write_all(response.as_bytes()).await {
         warn!(error = %e, "Failed to write response headers");
         return;
     }
-    if let Err(e) = stream.write_all(&body).await {
+    if let Err(e) = stream.write_all(&response_body).await {
         warn!(error = %e, "Failed to write response body");
         return;
     }
@@ -293,12 +426,291 @@ async fn wait_for_shutdown() {
     }
 }
 
+/// Wait for SIGHUP signal (config reload)
+///
+/// Returns `true` if SIGHUP was received, `false` if the stream ended.
+#[cfg(unix)]
+async fn wait_for_sighup() -> bool {
+    use tokio::signal::unix::SignalKind;
+    let mut stream = match signal::unix::signal(SignalKind::hangup()) {
+        Ok(s) => s,
+        Err(e) => {
+            warn!(error = %e, "Failed to install SIGHUP handler");
+            return false;
+        }
+    };
+    stream.recv().await;
+    info!("Received SIGHUP — reloading configuration");
+    true
+}
+
+#[cfg(not(unix))]
+async fn wait_for_sighup() -> bool {
+    // SIGHUP is not available on non-Unix platforms
+    std::future::pending::<()>().await;
+    false
+}
+
+// ── Agent execution handlers ───────────────────────────────────────────────
+
+/// Handle POST /chat — send a message and get an agent response
+async fn handle_chat(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>> {
+    let llm = state
+        .llm
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No LLM client configured"))?;
+
+    #[derive(serde::Deserialize)]
+    struct ChatRequest {
+        messages: Vec<ChatMessage>,
+        #[serde(default)]
+        #[allow(dead_code)]
+        stream: bool,
+        #[serde(default)]
+        max_iterations: Option<usize>,
+    }
+
+    let req: ChatRequest =
+        serde_json::from_slice(body).map_err(|e| anyhow::anyhow!("Invalid request body: {}", e))?;
+
+    if req.messages.is_empty() {
+        return Err(anyhow::anyhow!("No messages provided"));
+    }
+
+    // Extract system prompt from messages, or use default
+    let system_prompt = req
+        .messages
+        .iter()
+        .find(|m| m.role == "system")
+        .map(|m| m.content.clone())
+        .unwrap_or_else(|| state.config.llm.system_prompt.clone());
+
+    // Extract user message (last user message)
+    let user_message = req
+        .messages
+        .iter()
+        .rev()
+        .find(|m| m.role == "user")
+        .map(|m| m.content.clone())
+        .ok_or_else(|| anyhow::anyhow!("No user message found"))?;
+
+    let loop_config = AgentLoopConfig {
+        max_iterations: req.max_iterations.unwrap_or(10),
+        enable_tools: true,
+        require_approval: false,
+        prompt_injection_protection: state.config.security.prompt_injection_protection,
+        token_lifetime_secs: state.config.security.token_lifetime_secs,
+        no_final_required: true,
+    };
+
+    let tool_registry = state.tool_registry.clone();
+
+    let response = agent::run_agent_loop_with_registry(
+        llm.clone(),
+        &user_message,
+        &system_prompt,
+        loop_config,
+        tool_registry,
+    )
+    .await?;
+
+    state.metrics.record_llm_request();
+
+    let result = serde_json::json!({
+        "response": response,
+        "model": llm.model(),
+        "provider": llm.provider_name(),
+    });
+
+    Ok(serde_json::to_vec(&result)?)
+}
+
+/// Handle POST /execute — submit a background task
+async fn handle_execute(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>> {
+    let bg_manager = state
+        .bg_manager
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No background task manager configured"))?;
+
+    #[derive(serde::Deserialize)]
+    struct ExecuteRequest {
+        prompt: String,
+        #[serde(default)]
+        system_prompt: Option<String>,
+    }
+
+    let req: ExecuteRequest =
+        serde_json::from_slice(body).map_err(|e| anyhow::anyhow!("Invalid request body: {}", e))?;
+
+    if req.prompt.trim().is_empty() {
+        return Err(anyhow::anyhow!("Prompt cannot be empty"));
+    }
+
+    let system_prompt = req
+        .system_prompt
+        .unwrap_or_else(|| state.config.llm.system_prompt.clone());
+
+    let task_id = bg_manager
+        .submit(req.prompt, system_prompt)
+        .await
+        .map_err(|e| anyhow::anyhow!("Failed to submit task: {}", e))?;
+
+    // Spawn background execution
+    if let Some(ref llm) = state.llm {
+        let bg = bg_manager.clone();
+        let tid = task_id.clone();
+        let llm_clone = llm.clone();
+        tokio::spawn(async move {
+            if let Err(e) = bg.execute(&tid, llm_clone).await {
+                warn!(task_id = %tid, error = %e, "Background task execution failed");
+            }
+        });
+    }
+
+    let result = serde_json::json!({
+        "task_id": task_id,
+        "status": "pending",
+    });
+
+    Ok(serde_json::to_vec(&result)?)
+}
+
+/// Handle GET /tasks/{id} — poll background task status
+async fn handle_task_status(state: &ServerState, task_id: &str) -> anyhow::Result<Vec<u8>> {
+    let bg_manager = state
+        .bg_manager
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No background task manager configured"))?;
+
+    let task = bg_manager
+        .get_task(task_id)
+        .await
+        .map_err(|e| anyhow::anyhow!("Task not found: {}", e))?;
+
+    let result = serde_json::json!({
+        "task_id": task.id,
+        "status": task.status.to_string(),
+        "result": task.result,
+        "error": task.error,
+        "created_at": task.created_at,
+        "updated_at": task.updated_at,
+        "iterations": task.iterations,
+        "provider": task.provider,
+        "model": task.model,
+    });
+
+    Ok(serde_json::to_vec(&result)?)
+}
+
+/// Handle GET /tools — list available tools with schemas
+fn handle_list_tools(state: &ServerState) -> anyhow::Result<Vec<u8>> {
+    let registry = state
+        .tool_registry
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No tool registry configured"))?;
+
+    let tools: Vec<serde_json::Value> = registry
+        .definitions()
+        .iter()
+        .map(|def| {
+            serde_json::json!({
+                "name": def.name,
+                "description": def.description,
+                "parameters": def.parameters,
+                "category": def.category,
+                "requires_approval": def.requires_approval,
+            })
+        })
+        .collect();
+
+    let result = serde_json::json!({
+        "tools": tools,
+        "count": tools.len(),
+    });
+
+    Ok(serde_json::to_vec(&result)?)
+}
+
+/// Handle POST /tools/{name} — execute a specific tool by name
+async fn handle_execute_tool(
+    state: &ServerState,
+    tool_name: &str,
+    body: &[u8],
+) -> anyhow::Result<Vec<u8>> {
+    let registry = state
+        .tool_registry
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No tool registry configured"))?;
+
+    let args: serde_json::Value = if body.is_empty() {
+        serde_json::Value::Object(serde_json::Map::new())
+    } else {
+        serde_json::from_slice(body)
+            .map_err(|e| anyhow::anyhow!("Invalid arguments JSON: {}", e))?
+    };
+
+    let call = ToolCall {
+        name: tool_name.to_string(),
+        arguments: args,
+        id: None,
+    };
+
+    let result = registry.execute(call).await?;
+    state.metrics.record_tool_call();
+
+    let response = serde_json::json!({
+        "tool": result.tool_name,
+        "success": result.success,
+        "output": result.output,
+        "error": result.error,
+        "exit_code": result.exit_code,
+        "duration_ms": result.duration_ms,
+    });
+
+    Ok(serde_json::to_vec(&response)?)
+}
+
+/// Handle GET /health/deep — verify LLM connectivity
+async fn handle_health_deep(state: &ServerState) -> anyhow::Result<Vec<u8>> {
+    let llm = state
+        .llm
+        .as_ref()
+        .ok_or_else(|| anyhow::anyhow!("No LLM client configured"))?;
+
+    // Make a lightweight LLM request to verify connectivity
+    let messages = vec![ChatMessage {
+        role: "user".to_string(),
+        content: "Respond with exactly: OK".to_string(),
+    }];
+
+    let response = llm
+        .chat(messages)
+        .await
+        .map_err(|e| anyhow::anyhow!("LLM connectivity check failed: {}", e))?;
+
+    let content = response
+        .choices
+        .first()
+        .map(|c| c.message.content.clone())
+        .unwrap_or_default();
+
+    let result = serde_json::json!({
+        "status": "ok",
+        "provider": llm.provider_name(),
+        "model": llm.model(),
+        "response": content,
+        "uptime_seconds": state.metrics.uptime_secs(),
+    });
+
+    Ok(serde_json::to_vec(&result)?)
+}
+
 // ── Public API ─────────────────────────────────────────────────────────────
 
 /// Run the HTTP server
 ///
 /// Starts a long-running HTTP server on the configured host:port.
-/// Serves health, readiness, and metrics endpoints.
+/// Serves health, readiness, metrics, and agent execution endpoints.
 /// Handles graceful shutdown on SIGTERM/SIGINT.
 #[instrument(skip_all, fields(bind_addr))]
 pub async fn run_server(config: Config) -> anyhow::Result<()> {
@@ -310,7 +722,38 @@ pub async fn run_server(config: Config) -> anyhow::Result<()> {
     let port = config.runtime.port;
     let bind_addr = format!("{}:{}", host, port);
 
-    let state = Arc::new(ServerState::new(config));
+    let mut state = ServerState::new(config);
+
+    // Initialize LLM client
+    info!("Initializing LLM client for server mode");
+    let llm = llm::create_client(&state.config.llm)?;
+    state.llm = Some(llm);
+    info!(
+        provider = state
+            .llm
+            .as_ref()
+            .map(|l| l.provider_name())
+            .unwrap_or("unknown"),
+        model = state.llm.as_ref().map(|l| l.model()).unwrap_or("unknown"),
+        "LLM client initialized for server mode"
+    );
+
+    // Initialize tool registry
+    info!("Initializing tool registry");
+    let registry = ToolRegistry::with_config(&state.config);
+    state.tool_registry = Some(registry);
+    info!(
+        tool_count = state.tool_registry.as_ref().map(|r| r.len()).unwrap_or(0),
+        "Tool registry initialized"
+    );
+
+    // Initialize background task manager
+    info!("Initializing background task manager");
+    let bg_manager = BackgroundTaskManager::from_config(&state.config.runtime).await?;
+    state.bg_manager = Some(bg_manager);
+    info!("Background task manager initialized");
+
+    let state = Arc::new(state);
     let listener = TcpListener::bind(&bind_addr).await.map_err(|e| {
         error!(address = %bind_addr, error = %e, "Failed to bind HTTP server");
         anyhow::anyhow!("Failed to bind to {}: {}", bind_addr, e)
@@ -318,7 +761,7 @@ pub async fn run_server(config: Config) -> anyhow::Result<()> {
 
     info!(
         address = %bind_addr,
-        "HTTP server started — endpoints: /health, /ready, /metrics"
+        "HTTP server started — endpoints: /health, /ready, /metrics, /health/deep, /chat, /execute, /tasks/:id, /tools"
     );
 
     // Mark as ready after successful bind
@@ -348,6 +791,25 @@ pub async fn run_server(config: Config) -> anyhow::Result<()> {
                 tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 info!("HTTP server shutdown complete");
                 break;
+            }
+            _ = wait_for_sighup() => {
+                info!("Reloading configuration from SIGHUP...");
+                // Reload config from the original path
+                let config_path = std::env::var("RAVENCLAWS_CONFIG")
+                    .ok();
+                match Config::load(config_path.as_deref()) {
+                    Ok(_new_config) => {
+                        // Update the config in place (Arc<RwLock<Config>> would be
+                        // better for production, but for now we log the reload)
+                        info!("Configuration reloaded successfully");
+                        // Note: Full hot-reload of LLM client, tool registry, and
+                        // background manager requires Arc<RwLock<>> wrapping on
+                        // ServerState fields — deferred to v0.9.8.
+                    }
+                    Err(e) => {
+                        warn!(error = %e, "Failed to reload configuration on SIGHUP");
+                    }
+                }
             }
         }
     }

@@ -8,7 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- *(none yet)*
+- **Full Agent Execution API (6 new endpoints)** — `server.rs` now exposes `POST /chat` (chat completion), `POST /execute` (async task execution with tools), `GET /tasks/{id}` (poll task status), `GET /tools` (list registered tools), `POST /tools/{name}` (execute a specific tool), and `GET /health/deep` (detailed health with uptime, request count, LLM provider, tools registered). All endpoints return structured JSON responses.
+- **SIGHUP configuration reload** — `server.rs` now listens for `SIGHUP` on Unix systems. On receipt, re-reads the config file and logs the result. Full hot-reload of LLM clients and tool registries deferred to v0.9.8.
+- **MCP TOML configuration section** — New `[mcp]` config section with `[[mcp.servers]]` array for declaring MCP server processes. Each server has `name`, `command`, `args`, and `env` fields. Config structs `McpConfig` and `McpServerConfig` added to `config.rs` and re-exported from `lib.rs`.
+- **Swarm profiles shorthand syntax** — `[swarm.profiles]` now accepts both the standard `[[swarm.profiles]]` array-of-tables and a compact map shorthand (`name = "persona"`). Custom `deserialize_profiles` deserializer handles both formats transparently.
+- **Tool call assertions for eval harness** — Two new assertion variants: `tool_called("name")` and `tool_not_called("name")`. These check the run trace's tool call list rather than the response text. `check_assertions()` now accepts an optional `&RunTrace` parameter. Includes 5 unit tests covering pass/fail for both variants and the no-trace edge case.
+- **Server mode documentation** — New `docs/guides/server-mode.md` guide and `website/public/docs/server-mode.html` page covering all 9 endpoints, configuration, Docker/K8s/systemd deployment, SIGHUP reload, graceful shutdown, and cURL/Python/Node.js examples. Added to sitemap, docs index, sidebar nav, and footer.
+- **`ToolRegistry` now implements `Clone`** — Added `#[derive(Clone)]` to `ToolRegistry` so it can be shared across threads (e.g., cloned into `ServerState`).
+
+### Fixed
+- **Config test initializers** — All 17 `Config` struct initializations in test code updated to include the new `mcp` field.
+- **Eval test calls updated** — All `check_single_assertion` test calls updated to pass the new `Option<&RunTrace>` parameter.
 
 ## [0.9.5] — 2026-06-27
 

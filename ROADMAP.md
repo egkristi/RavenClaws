@@ -38,23 +38,23 @@ v0.9.3 is **functional but not yet a primary agent**. The feedback was honest:
 |---|---|---|
 | Tool execution fails with non-structured models | Agent loop requires `FINAL:` or structured `tool_calls` | ✅ **v0.9.4**: Added `--no-final-required`, response logging, system prompt update |
 | `--exec` produces no output for most models | Error path suppresses last response | ✅ **v0.9.4**: `--no-final-required` flag + response logging |
-| No agent execution HTTP endpoints | Server mode is status-only | v0.9.6: Add `/chat`, `/execute`, `/tools` |
+| No agent execution HTTP endpoints | Server mode is status-only | ✅ **v0.9.6**: Added `/chat`, `/execute`, `/tools`, `/tasks/{id}`, `/health/deep` |
 | MCP client can't connect to SSE servers | SSE transport was stubbed | v0.9.3 ✅ (fixed) |
 | MCP server is stdio-only | SSE transport was stubbed | v0.9.3 ✅ (fixed) |
-| No TOML config for MCP servers | CLI-only, single connection | v0.9.5: Add `[mcp]` config + multi-server *(deferred to v0.9.6)* |
+| No TOML config for MCP servers | CLI-only, single connection | ✅ **v0.9.6**: Added `McpConfig` + `McpServerConfig` structs with `[mcp]` TOML section |
 | Tool execution silently fails | No fallback for non-structured models | ✅ **v0.9.5**: Added text-based tool call detection |
 | Sandbox breaks with read-only root FS | Hardcoded `/tmp` workdir | v0.9.8: Configurable workdir via env var |
 | Heartbeat state may corrupt on SIGTERM | No graceful shutdown hook | v0.9.8: Add Drop impl + signal handler |
 | Init container doesn't chown workspace | Missing `chown` in K8s manifest | v0.9.8: Fix deployment.yaml |
 | SwarmTopology enum mismatch | TOML deserialization expects string, not array | v0.9.4 ✅ (fixed) |
 | `agent_count` field not recognized | Missing serde alias on `max_workers` | v0.9.4 ✅ (fixed) |
-| `[swarm.profiles]` TOML syntax fails | Only `[[swarm.profiles]]` array-of-tables supported | v0.9.5: Add shorthand deserializer *(deferred to v0.9.6)* |
+| `[swarm.profiles]` TOML syntax fails | Only `[[swarm.profiles]]` array-of-tables supported | ✅ **v0.9.6**: Added `deserialize_profiles` — accepts both array-of-tables and map shorthand |
 | Heartbeat goal error message unclear | Missing example in error | v0.9.4 ✅ (fixed) |
 | LiteLLM API key docs wrong | References `openclaw-secrets` instead of `litellm-secrets` | v0.9.8: Document correct secret reference |
 | `--serve` mode not documented | No docs page for HTTP server mode | v0.9.6: Add server mode docs |
 | OpenTelemetry warning on startup | OTEL exporter warns if no collector configured | v0.9.8: Suppress warning when OTEL disabled |
 | Server port not configurable via env var | Only `--port` CLI flag | v0.9.6: Add env var override |
-| Config hot-reload not supported | No SIGHUP handler | v0.9.6: Add SIGHUP-based config reload |
+| Config hot-reload not supported | No SIGHUP handler | ✅ **v0.9.6**: Added `wait_for_sighup()` + SIGHUP handler in `run_server()` loop |
 | NetworkPolicy blocks LLM egress | New pod labels not in LiteLLM ingress policy | v0.9.8: Document NetworkPolicy requirements |
 | Secret reference uses wrong key | `LITELLM_API_KEY` doesn't exist in `openclaw-secrets` | v0.9.8: Document correct `litellm-secrets` reference |
 | Agent loop logs show `<no thought>` | Log only looks for `THOUGHT:` prefix | ✅ **v0.9.4**: Added response content logging |
@@ -74,7 +74,7 @@ v0.9.3 is **functional but not yet a primary agent**. The feedback was honest:
 | No way to see LLM response content in logs | No debug-level logging of responses | ✅ **v0.9.4**: Added `debug!` log |
 | MCP Server is stdio-only — no SSE transport | `Sse` variant returns `Err("not implemented")` | ✅ **v0.9.3**: SSE transport implemented |
 | MCP Client is stdio-only — cannot connect to SSE servers | `Sse` variant returns `Err("not implemented")` | ✅ **v0.9.3**: SSE transport implemented |
-| No `[mcp]` section in TOML config | CLI flags only, no config struct | v0.9.6: Add `McpConfig` struct |
+| No `[mcp]` section in TOML config | CLI flags only, no config struct | ✅ **v0.9.6**: Added `McpConfig` + `McpServerConfig` structs with `[mcp]` TOML section |
 | Only one MCP client connection supported | Single `--mcp-command` flag | v0.9.6: Add multi-MCP-client support |
 | `--exec` mode works when model uses `FINAL:` format | Confirmed working — model behavior, not code bug | ✅ Documented in feedback |
 | `--mode single` works after workspace fix | ✅ Confirmed working | ✅ |
@@ -89,13 +89,13 @@ v0.9.3 is **functional but not yet a primary agent**. The feedback was honest:
 | Tool execution not working with deepseek-v4-pro:cloud | Model doesn't emit tool calls in any format | ✅ **v0.9.5**: Text-based fallback |
 | MCP server stdin closes before processing | stdio-only transport, hard to test via kubectl exec | ⚠️ Works in theory |
 | `--mcp-command` fails silently | No error output visible | ❌ Needs investigation |
-| No `/chat`, `/execute`, `/tools` HTTP endpoints | Server mode is status-only | v0.9.6: Add agent execution API |
-| No LLM connectivity check in health endpoint | `/health` only checks process liveness | v0.9.6: Add `/health/deep` |
-| No config reload without restart | No SIGHUP handler | v0.9.6: Add SIGHUP-based reload |
+| No `/chat`, `/execute`, `/tools` HTTP endpoints | Server mode is status-only | ✅ **v0.9.6**: Added 6 new endpoints — `/chat`, `/execute`, `/tasks/{id}`, `/tools`, `/tools/{name}`, `/health/deep` |
+| No LLM connectivity check in health endpoint | `/health` only checks process liveness | ✅ **v0.9.6**: Added `/health/deep` with uptime, request count, LLM provider, tools registered |
+| No config reload without restart | No SIGHUP handler | ✅ **v0.9.6**: Added `wait_for_sighup()` + SIGHUP handler in `run_server()` loop |
 | OpenTelemetry warning on startup | OTEL exporter warns if no collector configured | v0.9.8: Suppress warning when OTEL disabled |
 | `--serve` mode not documented | No docs page for HTTP server mode | v0.9.6: Add server mode docs |
 | Server port not configurable via env var | Only `--port` CLI flag | v0.9.6: Add env var override |
-| Readiness probe doesn't verify LLM connectivity | `/ready` returns OK immediately | v0.9.6: Optional LLM check in readiness |
+| Readiness probe doesn't verify LLM connectivity | `/ready` returns OK immediately | ✅ **v0.9.6**: `/ready` returns 503 until server is fully initialized (LLM client + tools loaded) |
 
 **The plan:** Six rapid releases (v0.9.4 → v0.9.9) to close every gap, then v1.0 is
 truly production-ready — a primary agent that can replace OpenClaw, Manus, or any
@@ -173,9 +173,9 @@ can't be added without breaking one, it doesn't ship in core.
 | `--webhook-port` CLI flag | ✅ **v0.9.3** | Now configures the scheduler's webhook server |
 | Audit log mutex `unwrap()` | ✅ **v0.9.3** | Replaced with `lock_entries()` helper — mutex poisoning no longer panics |
 | MCP SSE transport | ✅ **v0.9.3** | Client and server SSE transport implemented; 7 tests passing |
-| MCP TOML config section | ❌ → 🎯 **v0.9.6** | No `[mcp]` section in `src/config.rs` — CLI flags only |
-| Multi-MCP-client support | ❌ → 🎯 **v0.9.6** | Only one MCP server connection supported (single `--mcp-command`) |
-| Server agent execution endpoints | ❌ → 🎯 **v0.9.6** | No `/chat`, `/execute`, or `/tools` endpoints |
+| MCP TOML config section | ✅ **v0.9.6** | `McpConfig` + `McpServerConfig` structs with `[mcp]` TOML section |
+| Multi-MCP-client support | ✅ **v0.9.6** | `McpConfig` supports `[[mcp.servers]]` array for declaring multiple MCP server processes |
+| Server agent execution endpoints | ✅ **v0.9.6** | 6 new endpoints: `/chat`, `/execute`, `/tasks/{id}`, `/tools`, `/tools/{name}`, `/health/deep` |
 | Community health files | ❌ → 🎯 **v0.9.8** | Missing `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` |
 | Container image size | ⚠️ → 🎯 **v0.9.8** | ~50 MB vs < 30 MB target |
 | Library re-exports | ✅ **v0.9.3** | All 9 modules now re-exported from `src/lib.rs` |
@@ -329,13 +329,13 @@ simpler** — or deliberately not at all.
 | **MCP client (SSE)** | ✅ v0.9.3 | ✅ | ✅ | ✅ |
 | **MCP server (stdio)** | ✅ | ✅ | ✅ | ✅ |
 | **MCP server (SSE)** | ✅ v0.9.3 | ✅ | ✅ | ❌ |
-| **Multi-MCP-client** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
-| **MCP TOML config** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
+| **Multi-MCP-client** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ✅ |
+| **MCP TOML config** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ❌ |
 | **Graceful shutdown (all modes)** | ❌ | ✅ v0.9.8 | ✅ | ✅ |
-| **Config hot-reload (SIGHUP)** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
-| **LLM connectivity health check** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
-| **Server port env var** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
-| **Server mode docs** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
+| **Config hot-reload (SIGHUP)** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ❌ |
+| **LLM connectivity health check** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ❌ |
+| **Server port env var** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ✅ |
+| **Server mode docs** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ✅ |
 | **OTEL warning suppression** | ❌ | ✅ v0.9.8 | ✅ | ✅ |
 | **Sandbox fallback for read-only /tmp** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
 | **Init container chown** | ❌ | ✅ v0.9.8 | ❌ (runs as root) | ❌ |
@@ -350,12 +350,12 @@ simpler** — or deliberately not at all.
 | **Azure OpenAI adapter** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
 | **vLLM docs + tests** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
 | **llama.cpp docs + tests** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
-| **Multi-MCP-client** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
+| **Multi-MCP-client** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ✅ |
 | **Graceful shutdown (all modes)** | ❌ | ✅ v0.9.8 | ✅ | ✅ |
-| **Config hot-reload (SIGHUP)** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
-| **LLM connectivity health check** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
-| **Server port env var** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
-| **Server mode docs** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
+| **Config hot-reload (SIGHUP)** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ❌ |
+| **LLM connectivity health check** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ❌ |
+| **Server port env var** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ✅ |
+| **Server mode docs** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ✅ |
 | **OTEL warning suppression** | ❌ | ✅ v0.9.8 | ✅ | ✅ |
 | **Sandbox fallback for read-only /tmp** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
 | **Init container chown** | ❌ | ✅ v0.9.8 | ❌ (runs as root) | ❌ |
@@ -384,8 +384,8 @@ simpler** — or deliberately not at all.
 | **Long-horizon persistence** | ✅ | ✅ | ❌ | ✅ |
 | **Scalable swarm (1000+)** | ✅ | ✅ | ❌ | ❌ |
 | **Self-provisioning sub-agents** | ✅ | ✅ | ❌ | ❌ |
-| **HTTP agent API** | ❌ | ✅ v0.9.6 | ✅ | ✅ |
-| **Deep health check** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
+| **HTTP agent API** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ✅ |
+| **Deep health check** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ❌ |
 | **Graceful shutdown** | ⚠️ (server only) | ✅ v0.9.8 | ✅ | ✅ |
 | **Configurable sandbox** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
 | **K8s init container chown** | ❌ | ✅ v0.9.8 | ❌ (runs as root) | ❌ |
@@ -398,7 +398,7 @@ simpler** — or deliberately not at all.
 | **RavenFabric remote exec** | ✅ | ✅ | ❌ | ❌ |
 | **MCP server SSE transport** | ✅ v0.9.3 | ✅ | ✅ | ❌ |
 | **MCP client SSE transport** | ✅ v0.9.3 | ✅ | ✅ | ✅ |
-| **Config hot-reload (SIGHUP)** | ❌ | ✅ v0.9.6 | ✅ | ❌ |
+| **Config hot-reload (SIGHUP)** | ✅ v0.9.6 | ✅ v0.9.6 | ✅ | ❌ |
 | **NetworkPolicy docs** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
 | **Secret reference docs** | ❌ | ✅ v0.9.8 | ✅ | ❌ |
 | Multi-modal input | ⚠️ (partial) | ⚠️ (v0.10) | ✅ | ✅ |

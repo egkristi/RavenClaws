@@ -115,6 +115,12 @@ pub enum Assertion {
     /// Response length must be at most N characters
     #[serde(rename = "max_length")]
     MaxLength(usize),
+    /// A tool with this name must have been called during execution (v0.9.6)
+    #[serde(rename = "tool_called")]
+    ToolCalled(String),
+    /// A tool with this name must NOT have been called during execution (v0.9.6)
+    #[serde(rename = "tool_not_called")]
+    ToolNotCalled(String),
 }
 
 // ── Run Trace ───────────────────────────────────────────────────────────────
@@ -445,7 +451,7 @@ impl EvalRunner {
 
         // Run assertions
         let (assertion_results, assertions_passed, assertions_failed) =
-            check_assertions(&content, &task.assertions);
+            check_assertions(&content, &task.assertions, Some(&trace));
 
         // Calculate score
         let score = if task.assertions.is_empty() {
@@ -482,13 +488,14 @@ impl EvalRunner {
 fn check_assertions(
     response: &str,
     assertions: &[Assertion],
+    run_trace: Option<&RunTrace>,
 ) -> (Vec<AssertionResult>, usize, usize) {
     let mut results = Vec::with_capacity(assertions.len());
     let mut passed = 0;
     let mut failed = 0;
 
     for assertion in assertions {
-        let result = check_single_assertion(response, assertion);
+        let result = check_single_assertion(response, assertion, run_trace);
         if result.passed {
             passed += 1;
         } else {
@@ -501,7 +508,11 @@ fn check_assertions(
 }
 
 /// Check a single assertion against a response
-fn check_single_assertion(response: &str, assertion: &Assertion) -> AssertionResult {
+fn check_single_assertion(
+    response: &str,
+    assertion: &Assertion,
+    run_trace: Option<&RunTrace>,
+) -> AssertionResult {
     match assertion {
         Assertion::Contains(pattern) => {
             let passed = response.contains(pattern);
@@ -599,6 +610,52 @@ fn check_single_assertion(response: &str, assertion: &Assertion) -> AssertionRes
                     format!("Response length {} <= {}", response.len(), max)
                 } else {
                     format!("Response length {} > {}", response.len(), max)
+                },
+            }
+        }
+        Assertion::ToolCalled(tool_name) => {
+            let tool_calls = run_trace
+                .map(|t| &t.tool_calls)
+                .filter(|calls| calls.iter().any(|tc| tc.tool_name == *tool_name));
+            let passed = tool_calls.is_some();
+            AssertionResult {
+                assertion: format!("tool_called: {}", tool_name),
+                passed,
+                details: if passed {
+                    format!("Tool '{}' was called", tool_name)
+                } else {
+                    let all_tools: Vec<&str> = run_trace
+                        .map(|t| {
+                            t.tool_calls
+                                .iter()
+                                .map(|tc| tc.tool_name.as_str())
+                                .collect()
+                        })
+                        .unwrap_or_default();
+                    if all_tools.is_empty() {
+                        format!("Tool '{}' was not called (no tools were called)", tool_name)
+                    } else {
+                        format!(
+                            "Tool '{}' was not called (called: {})",
+                            tool_name,
+                            all_tools.join(", ")
+                        )
+                    }
+                },
+            }
+        }
+        Assertion::ToolNotCalled(tool_name) => {
+            let tool_calls = run_trace
+                .map(|t| &t.tool_calls)
+                .filter(|calls| calls.iter().any(|tc| tc.tool_name == *tool_name));
+            let passed = tool_calls.is_none();
+            AssertionResult {
+                assertion: format!("tool_not_called: {}", tool_name),
+                passed,
+                details: if passed {
+                    format!("Tool '{}' was not called", tool_name)
+                } else {
+                    format!("Tool '{}' was called but should not have been", tool_name)
                 },
             }
         }
@@ -702,95 +759,106 @@ mod tests {
 
     #[test]
     fn test_assertion_contains_pass() {
-        let result =
-            check_single_assertion("hello world", &Assertion::Contains("world".to_string()));
+        let result = check_single_assertion(
+            "hello world",
+            &Assertion::Contains("world".to_string()),
+            None,
+        );
         assert!(result.passed);
         assert!(result.details.contains("contains"));
     }
 
     #[test]
     fn test_assertion_contains_fail() {
-        let result = check_single_assertion("hello world", &Assertion::Contains("foo".to_string()));
+        let result =
+            check_single_assertion("hello world", &Assertion::Contains("foo".to_string()), None);
         assert!(!result.passed);
     }
 
     #[test]
     fn test_assertion_not_contains_pass() {
-        let result =
-            check_single_assertion("hello world", &Assertion::NotContains("foo".to_string()));
+        let result = check_single_assertion(
+            "hello world",
+            &Assertion::NotContains("foo".to_string()),
+            None,
+        );
         assert!(result.passed);
     }
 
     #[test]
     fn test_assertion_not_contains_fail() {
-        let result =
-            check_single_assertion("hello world", &Assertion::NotContains("world".to_string()));
+        let result = check_single_assertion(
+            "hello world",
+            &Assertion::NotContains("world".to_string()),
+            None,
+        );
         assert!(!result.passed);
     }
 
     #[test]
     fn test_assertion_exact_pass() {
-        let result = check_single_assertion("hello", &Assertion::Exact("hello".to_string()));
+        let result = check_single_assertion("hello", &Assertion::Exact("hello".to_string()), None);
         assert!(result.passed);
     }
 
     #[test]
     fn test_assertion_exact_fail() {
-        let result = check_single_assertion("world", &Assertion::Exact("hello".to_string()));
+        let result = check_single_assertion("world", &Assertion::Exact("hello".to_string()), None);
         assert!(!result.passed);
     }
 
     #[test]
     fn test_assertion_regex_pass() {
-        let result = check_single_assertion("hello 123", &Assertion::Regex(r"\d+".to_string()));
+        let result =
+            check_single_assertion("hello 123", &Assertion::Regex(r"\d+".to_string()), None);
         assert!(result.passed);
     }
 
     #[test]
     fn test_assertion_regex_fail() {
-        let result = check_single_assertion("hello", &Assertion::Regex(r"\d+".to_string()));
+        let result = check_single_assertion("hello", &Assertion::Regex(r"\d+".to_string()), None);
         assert!(!result.passed);
     }
 
     #[test]
     fn test_assertion_non_empty_pass() {
-        let result = check_single_assertion("hello", &Assertion::NonEmpty);
+        let result = check_single_assertion("hello", &Assertion::NonEmpty, None);
         assert!(result.passed);
     }
 
     #[test]
     fn test_assertion_non_empty_fail() {
-        let result = check_single_assertion("", &Assertion::NonEmpty);
+        let result = check_single_assertion("", &Assertion::NonEmpty, None);
         assert!(!result.passed);
     }
 
     #[test]
     fn test_assertion_min_length_pass() {
-        let result = check_single_assertion("hello", &Assertion::MinLength(3));
+        let result = check_single_assertion("hello", &Assertion::MinLength(3), None);
         assert!(result.passed);
     }
 
     #[test]
     fn test_assertion_min_length_fail() {
-        let result = check_single_assertion("hi", &Assertion::MinLength(5));
+        let result = check_single_assertion("hi", &Assertion::MinLength(5), None);
         assert!(!result.passed);
     }
 
     #[test]
     fn test_assertion_max_length_pass() {
-        let result = check_single_assertion("hi", &Assertion::MaxLength(5));
+        let result = check_single_assertion("hi", &Assertion::MaxLength(5), None);
         assert!(result.passed);
     }
 
     #[test]
     fn test_assertion_max_length_fail() {
-        let result = check_single_assertion("hello world", &Assertion::MaxLength(5));
+        let result = check_single_assertion("hello world", &Assertion::MaxLength(5), None);
         assert!(!result.passed);
     }
 
     #[test]
     fn test_check_assertions_empty() {
-        let (results, passed, failed) = check_assertions("hello", &[]);
+        let (results, passed, failed) = check_assertions("hello", &[], None);
         assert!(results.is_empty());
         assert_eq!(passed, 0);
         assert_eq!(failed, 0);
@@ -803,10 +871,92 @@ mod tests {
             Assertion::Contains("world".to_string()),
             Assertion::NonEmpty,
         ];
-        let (results, passed, failed) = check_assertions("hello world", &assertions);
+        let (results, passed, failed) = check_assertions("hello world", &assertions, None);
         assert_eq!(passed, 3);
         assert_eq!(failed, 0);
         assert_eq!(results.len(), 3);
+    }
+
+    #[test]
+    fn test_check_assertions_tool_called() {
+        let trace = RunTrace {
+            task_name: "test".to_string(),
+            started_at: "2026-01-01T00:00:00Z".to_string(),
+            ended_at: "2026-01-01T00:00:01Z".to_string(),
+            duration_ms: 1000,
+            iterations: 1,
+            steps: vec![],
+            llm_calls: vec![],
+            tool_calls: vec![
+                ToolCallTrace {
+                    iteration: 0,
+                    tool_name: "web_search".to_string(),
+                    arguments: serde_json::json!({"query": "test"}),
+                    success: true,
+                    output_preview: "results".to_string(),
+                    duration_ms: 100,
+                },
+                ToolCallTrace {
+                    iteration: 0,
+                    tool_name: "read_file".to_string(),
+                    arguments: serde_json::json!({"path": "/tmp/test"}),
+                    success: true,
+                    output_preview: "content".to_string(),
+                    duration_ms: 50,
+                },
+            ],
+            final_response: "response".to_string(),
+        };
+
+        // ToolCalled — should pass
+        let (results, passed, failed) = check_assertions(
+            "response",
+            &[Assertion::ToolCalled("web_search".to_string())],
+            Some(&trace),
+        );
+        assert_eq!(passed, 1);
+        assert_eq!(failed, 0);
+        assert!(results[0].passed);
+
+        // ToolCalled — should fail (tool not called)
+        let (results, passed, failed) = check_assertions(
+            "response",
+            &[Assertion::ToolCalled("nonexistent".to_string())],
+            Some(&trace),
+        );
+        assert_eq!(passed, 0);
+        assert_eq!(failed, 1);
+        assert!(!results[0].passed);
+
+        // ToolNotCalled — should pass (tool not in list)
+        let (results, passed, failed) = check_assertions(
+            "response",
+            &[Assertion::ToolNotCalled("nonexistent".to_string())],
+            Some(&trace),
+        );
+        assert_eq!(passed, 1);
+        assert_eq!(failed, 0);
+        assert!(results[0].passed);
+
+        // ToolNotCalled — should fail (tool was called)
+        let (results, passed, failed) = check_assertions(
+            "response",
+            &[Assertion::ToolNotCalled("web_search".to_string())],
+            Some(&trace),
+        );
+        assert_eq!(passed, 0);
+        assert_eq!(failed, 1);
+        assert!(!results[0].passed);
+
+        // ToolCalled with no trace — should fail
+        let (results, passed, failed) = check_assertions(
+            "response",
+            &[Assertion::ToolCalled("web_search".to_string())],
+            None,
+        );
+        assert_eq!(passed, 0);
+        assert_eq!(failed, 1);
+        assert!(!results[0].passed);
     }
 
     #[test]
@@ -947,7 +1097,8 @@ prompt = "Say hello"
 
     #[test]
     fn test_assertion_regex_invalid_pattern() {
-        let result = check_single_assertion("hello", &Assertion::Regex(r"[invalid".to_string()));
+        let result =
+            check_single_assertion("hello", &Assertion::Regex(r"[invalid".to_string()), None);
         assert!(!result.passed);
         assert!(result.details.contains("Invalid regex"));
     }

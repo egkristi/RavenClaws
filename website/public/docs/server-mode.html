@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Server Mode · RavenClaws Docs</title>
+<meta name="description" content="Run RavenClaws as an HTTP server with REST API endpoints for chat, task execution, tool access, health checks, and metrics.">
+<link rel="canonical" href="https://ravenclaws.io/docs/server-mode">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws Server Mode">
+<meta property="og:description" content="Run RavenClaws as an HTTP server with a full REST API.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <a href="/docs/server-mode" class="active">Server mode</a>
+      <a href="/docs/migration">Migration guide</a>
+      <h5>On this page</h5>
+      <a href="#quick-start" data-spy>Quick start</a>
+      <a href="#endpoints" data-spy>Endpoints</a>
+      <a href="#configuration" data-spy>Configuration</a>
+      <a href="#deployment" data-spy>Deployment</a>
+      <a href="#sighup-reload" data-spy>SIGHUP reload</a>
+      <a href="#graceful-shutdown" data-spy>Graceful shutdown</a>
+      <a href="#examples" data-spy>Examples</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / Server mode</p>
+      <h1>Server mode</h1>
+      <p class="lead-box">RavenClaws can run as a long-lived HTTP server that exposes agent capabilities via a REST API. This enables integration with external systems, web UIs, CI/CD pipelines, and microservice architectures.</p>
+
+      <h2 id="quick-start">Quick start</h2>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Start the server on the default port (8080)</span>
+ravenclaws --serve
+
+<span class="tok-c"># With a custom port</span>
+<span class="tok-k">export</span> RAVENCLAWS__RUNTIME__PORT=9090
+ravenclaws --serve
+
+<span class="tok-c"># With a config file</span>
+ravenclaws --serve --config /path/to/config.toml</code></pre>
+      </div>
+
+      <h2 id="endpoints">Endpoints</h2>
+
+      <h3><code>GET /health</code> — Liveness check</h3>
+      <p>Returns <code>200 OK</code> with a JSON body indicating the server is alive.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{ <span class="tok-s">"status"</span>: <span class="tok-s">"ok"</span> }</code></pre>
+      </div>
+
+      <h3><code>GET /ready</code> — Readiness check</h3>
+      <p>Returns <code>200 OK</code> once the server is fully initialized (LLM client loaded, tools registered). Returns <code>503 Service Unavailable</code> during startup.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{ <span class="tok-s">"status"</span>: <span class="tok-s">"ready"</span> }</code></pre>
+      </div>
+
+      <h3><code>GET /health/deep</code> — Deep health check</h3>
+      <p>Returns detailed health information including uptime, request count, and LLM provider status.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{
+  <span class="tok-s">"status"</span>: <span class="tok-s">"ok"</span>,
+  <span class="tok-s">"uptime_secs"</span>: <span class="tok-n">3600</span>,
+  <span class="tok-s">"requests_served"</span>: <span class="tok-n">42</span>,
+  <span class="tok-s">"llm_provider"</span>: <span class="tok-s">"openai"</span>,
+  <span class="tok-s">"llm_model"</span>: <span class="tok-s">"gpt-4o"</span>,
+  <span class="tok-s">"tools_registered"</span>: <span class="tok-n">5</span>
+}</code></pre>
+      </div>
+
+      <h3><code>GET /metrics</code> — Prometheus-style metrics</h3>
+      <p>Returns basic operational metrics in Prometheus text format.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">text</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># HELP ravenclaws_requests_total Total HTTP requests served</span>
+<span class="tok-c"># TYPE ravenclaws_requests_total counter</span>
+ravenclaws_requests_total <span class="tok-n">42</span>
+<span class="tok-c"># HELP ravenclaws_uptime_seconds Server uptime in seconds</span>
+<span class="tok-c"># TYPE ravenclaws_uptime_seconds gauge</span>
+ravenclaws_uptime_seconds <span class="tok-n">3600</span></code></pre>
+      </div>
+
+      <h3><code>POST /chat</code> — Chat completion</h3>
+      <p>Send a prompt and receive a response from the agent.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c">// Request</span>
+{ <span class="tok-s">"prompt"</span>: <span class="tok-s">"What is the capital of France?"</span>, <span class="tok-s">"stream"</span>: <span class="tok-k">false</span> }
+
+<span class="tok-c">// Response</span>
+{
+  <span class="tok-s">"response"</span>: <span class="tok-s">"The capital of France is Paris."</span>,
+  <span class="tok-s">"model"</span>: <span class="tok-s">"gpt-4o"</span>,
+  <span class="tok-s">"usage"</span>: { <span class="tok-s">"prompt_tokens"</span>: <span class="tok-n">12</span>, <span class="tok-s">"completion_tokens"</span>: <span class="tok-n">8</span> }
+}</code></pre>
+      </div>
+
+      <h3><code>POST /execute</code> — Execute a task with tools</h3>
+      <p>Run a task that may involve tool calls. Returns a task ID for polling.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c">// Request</span>
+{ <span class="tok-s">"prompt"</span>: <span class="tok-s">"Search the web for latest Rust news"</span>, <span class="tok-s">"tools"</span>: [<span class="tok-s">"web_search"</span>] }
+
+<span class="tok-c">// Response</span>
+{ <span class="tok-s">"task_id"</span>: <span class="tok-s">"550e8400-e29b-41d4-a716-446655440000"</span>, <span class="tok-s">"status"</span>: <span class="tok-s">"running"</span> }</code></pre>
+      </div>
+
+      <h3><code>GET /tasks/{id}</code> — Poll task status</h3>
+      <p>Check the status of an async task started via <code>/execute</code>.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c">// Response (running)</span>
+{ <span class="tok-s">"task_id"</span>: <span class="tok-s">"550e8400-..."</span>, <span class="tok-s">"status"</span>: <span class="tok-s">"running"</span> }
+
+<span class="tok-c">// Response (completed)</span>
+{
+  <span class="tok-s">"task_id"</span>: <span class="tok-s">"550e8400-..."</span>,
+  <span class="tok-s">"status"</span>: <span class="tok-s">"completed"</span>,
+  <span class="tok-s">"result"</span>: <span class="tok-s">"Latest Rust news: Rust 1.86 released with ..."</span>,
+  <span class="tok-s">"tool_calls"</span>: [
+    { <span class="tok-s">"tool"</span>: <span class="tok-s">"web_search"</span>, <span class="tok-s">"arguments"</span>: {<span class="tok-s">"query"</span>: <span class="tok-s">"latest Rust news"</span>}, <span class="tok-s">"result"</span>: <span class="tok-s">"..."</span> }
+  ]
+}</code></pre>
+      </div>
+
+      <h3><code>GET /tools</code> — List available tools</h3>
+      <p>Returns all registered tools with their names and descriptions.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{
+  <span class="tok-s">"tools"</span>: [
+    { <span class="tok-s">"name"</span>: <span class="tok-s">"web_search"</span>, <span class="tok-s">"description"</span>: <span class="tok-s">"Search the web for information"</span> },
+    { <span class="tok-s">"name"</span>: <span class="tok-s">"read_file"</span>, <span class="tok-s">"description"</span>: <span class="tok-s">"Read a file from the filesystem"</span> },
+    { <span class="tok-s">"name"</span>: <span class="tok-s">"write_file"</span>, <span class="tok-s">"description"</span>: <span class="tok-s">"Write content to a file"</span> },
+    { <span class="tok-s">"name"</span>: <span class="tok-s">"shell"</span>, <span class="tok-s">"description"</span>: <span class="tok-s">"Execute a shell command"</span> },
+    { <span class="tok-s">"name"</span>: <span class="tok-s">"web_fetch"</span>, <span class="tok-s">"description"</span>: <span class="tok-s">"Fetch a URL and return its content"</span> }
+  ]
+}</code></pre>
+      </div>
+
+      <h3><code>POST /tools/{name}</code> — Execute a specific tool</h3>
+      <p>Execute a single tool by name with provided arguments.</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">json</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c">// Request</span>
+{ <span class="tok-s">"arguments"</span>: { <span class="tok-s">"query"</span>: <span class="tok-s">"Rust programming language"</span> } }
+
+<span class="tok-c">// Response</span>
+{
+  <span class="tok-s">"tool"</span>: <span class="tok-s">"web_search"</span>,
+  <span class="tok-s">"result"</span>: <span class="tok-s">"Rust is a multi-paradigm, general-purpose programming language..."</span>,
+  <span class="tok-s">"duration_ms"</span>: <span class="tok-n">450</span>
+}</code></pre>
+      </div>
+
+      <h2 id="configuration">Configuration</h2>
+      <h3>Port</h3>
+      <p>The server port defaults to <code>8080</code> and can be configured via:</p>
+      <ul>
+        <li><strong>Config file:</strong> <code>[runtime] port = 9090</code></li>
+        <li><strong>Environment variable:</strong> <code>RAVENCLAWS__RUNTIME__PORT=9090</code></li>
+      </ul>
+
+      <h3>TLS</h3>
+      <p>TLS is not built into the server. For production deployments, place RavenClaws behind a reverse proxy (nginx, Caddy, Cloudflare Tunnel) that terminates TLS.</p>
+
+      <h3>CORS</h3>
+      <p>The server does not include built-in CORS headers. When calling from a browser, use a reverse proxy to add CORS headers as needed.</p>
+
+      <h2 id="deployment">Deployment</h2>
+
+      <h3>Docker</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">docker</span> run -d \
+  --name ravenclaws \
+  -p 8080:8080 \
+  -e RAVENCLAWS__RUNTIME__PORT=8080 \
+  -e OPENAI_API_KEY=sk-... \
+  ghcr.io/egkristi/ravenclaws:latest \
+  --serve</code></pre>
+      </div>
+
+      <h3>Kubernetes</h3>
+      <p>The included Helm chart supports server mode. Set <code>mode: serve</code> in your values:</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">yaml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-na">mode</span>: <span class="tok-s">serve</span>
+<span class="tok-na">config</span>:
+  <span class="tok-na">runtime</span>:
+    <span class="tok-na">port</span>: <span class="tok-n">8080</span></code></pre>
+      </div>
+      <p>See the <a href="https://github.com/egkristi/RavenClaws/tree/master/charts/ravenclaws" rel="noopener">Helm chart</a> for full configuration options.</p>
+
+      <h3>Systemd</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ini</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[Unit]
+Description=RavenClaws Agent Server
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/ravenclaws --serve
+Environment=RAVENCLAWS__RUNTIME__PORT=8080
+Environment=OPENAI_API_KEY=sk-...
+Restart=always
+User=ravenclaws
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+      </div>
+
+      <h2 id="sighup-reload">SIGHUP reload</h2>
+      <p>The server supports hot-reloading configuration on <code>SIGHUP</code>:</p>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">kill</span> -HUP &lt;pid&gt;</code></pre>
+      </div>
+      <p>On receiving <code>SIGHUP</code>, the server re-reads the configuration file and logs the result. Full hot-reload of LLM clients and tool registries is planned for a future release.</p>
+
+      <h2 id="graceful-shutdown">Graceful shutdown</h2>
+      <p>The server handles <code>SIGTERM</code> and <code>SIGINT</code> (Ctrl+C) for graceful shutdown. In-flight requests are given up to 5 seconds to complete before the process exits.</p>
+
+      <h2 id="examples">Examples</h2>
+
+      <h3>cURL</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Health check</span>
+<span class="tok-d">curl</span> http://localhost:8080/health
+
+<span class="tok-c"># Chat</span>
+<span class="tok-d">curl</span> -X POST http://localhost:8080/chat \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{"prompt": "Hello, who are you?"}'</span>
+
+<span class="tok-c"># Execute a task</span>
+<span class="tok-d">curl</span> -X POST http://localhost:8080/execute \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{"prompt": "What is 2+2?"}'</span>
+
+<span class="tok-c"># List tools</span>
+<span class="tok-d">curl</span> http://localhost:8080/tools</code></pre>
+      </div>
+
+      <h3>Python</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">python</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">import</span> requests
+
+BASE = <span class="tok-s">"http://localhost:8080"</span>
+
+<span class="tok-c"># Health check</span>
+<span class="tok-nb">print</span>(requests.get(<span class="tok-s">f"{BASE}/health"</span>).json())
+
+<span class="tok-c"># Chat</span>
+resp = requests.post(<span class="tok-s">f"{BASE}/chat"</span>, json={<span class="tok-s">"prompt"</span>: <span class="tok-s">"Hello!"</span>})
+<span class="tok-nb">print</span>(resp.json()[<span class="tok-s">"response"</span>])</code></pre>
+      </div>
+
+      <h3>Node.js</h3>
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">javascript</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">const</span> BASE = <span class="tok-s">"http://localhost:8080"</span>;
+
+<span class="tok-c">// Health check</span>
+<span class="tok-k">const</span> health = <span class="tok-k">await</span> fetch(<span class="tok-s">`${BASE}/health`</span>).then(<span class="tok-nb">r</span> =&gt; r.json());
+<span class="tok-nb">console.log</span>(health);
+
+<span class="tok-c">// Chat</span>
+<span class="tok-k">const</span> chat = <span class="tok-k">await</span> fetch(<span class="tok-s">`${BASE}/chat`</span>, {
+  method: <span class="tok-s">"POST"</span>,
+  headers: {<span class="tok-s">"Content-Type"</span>: <span class="tok-s">"application/json"</span>},
+  body: JSON.stringify({prompt: <span class="tok-s">"Hello!"</span>})
+}).then(<span class="tok-nb">r</span> =&gt; r.json());
+<span class="tok-nb">console.log</span>(chat.response);</code></pre>
+      </div>
+
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>RavenClaws — Small. Sleek. Secure. Supreme. 🐦‍⬛</p>
+    <p><a href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a> · <a href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a> · <a href="https://docs.rs/ravenclaws" rel="noopener">docs.rs</a> · AGPL-3.0-or-later + Commercial</p>
+  </div>
+</footer>
+
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

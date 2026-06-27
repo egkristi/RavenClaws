@@ -955,7 +955,25 @@ pub struct SwarmConfig {
     pub max_workers: usize,
 
     /// Worker profiles available for role assignment
-    #[serde(default)]
+    ///
+    /// Accepts both `[[swarm.profiles]]` array-of-tables and `[swarm.profiles.name]`
+    /// map syntax in TOML. The map syntax uses the key as the profile name and the
+    /// value as the persona string (shorthand for quick configuration).
+    ///
+    /// # Examples (TOML)
+    ///
+    /// ```toml
+    /// # Array-of-tables (full syntax)
+    /// [[swarm.profiles]]
+    /// name = "researcher"
+    /// persona = "You are a research specialist..."
+    ///
+    /// # Map shorthand (name → persona)
+    /// [swarm.profiles]
+    /// coder = "You are a Rust expert..."
+    /// reviewer = "You are a code reviewer..."
+    /// ```
+    #[serde(default, deserialize_with = "deserialize_profiles")]
     pub profiles: Vec<WorkerProfile>,
 
     /// Enable dynamic role assignment based on task analysis
@@ -977,6 +995,46 @@ fn default_max_depth() -> usize {
 
 fn default_max_workers() -> usize {
     100
+}
+
+/// Custom deserializer for `profiles` that accepts both array-of-tables and map syntax.
+///
+/// In TOML:
+/// - `[[swarm.profiles]]` → array of tables (standard)
+/// - `[swarm.profiles.name]` → map with key as profile name, value as persona string
+///
+/// The map shorthand creates a `WorkerProfile` with the key as `name` and the
+/// string value as `persona`. All other fields use defaults.
+fn deserialize_profiles<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Vec<WorkerProfile>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    // Try to deserialize as a map first (shorthand syntax)
+    // If that fails, fall back to array-of-tables
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum ProfilesOrMap {
+        Array(Vec<WorkerProfile>),
+        Map(std::collections::HashMap<String, String>),
+    }
+
+    match ProfilesOrMap::deserialize(deserializer) {
+        Ok(ProfilesOrMap::Array(profiles)) => Ok(profiles),
+        Ok(ProfilesOrMap::Map(map)) => {
+            let profiles: Vec<WorkerProfile> = map
+                .into_iter()
+                .map(|(name, persona)| WorkerProfile {
+                    name,
+                    persona,
+                    ..WorkerProfile::default()
+                })
+                .collect();
+            Ok(profiles)
+        }
+        Err(e) => Err(e),
+    }
 }
 
 impl Default for SwarmConfig {
