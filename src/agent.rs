@@ -150,6 +150,40 @@ pub async fn run_agent_loop_with_registry(
     config: AgentLoopConfig,
     tool_registry: Option<ToolRegistry>,
 ) -> Result<String> {
+    let registry = tool_registry.unwrap_or_else(ToolRegistry::with_default_tools);
+    run_agent_loop_inner(
+        llm,
+        initial_prompt,
+        system_prompt,
+        config,
+        registry,
+        "security integration",
+        false,
+    )
+    .await
+}
+
+/// Shared inner agent loop — contains all iteration logic.
+///
+/// Both `run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry`
+/// delegate to this function, avoiding ~400 lines of duplicated code.
+///
+/// # Parameters
+///
+/// * `registry` — A fully initialized `ToolRegistry` (caller resolves defaults/MCP tools).
+/// * `loop_label` — Label for log messages (e.g. "security integration" or "MCP integration").
+/// * `mcp_enabled` — Whether MCP is active, used in audit event metadata.
+#[allow(clippy::too_many_arguments)]
+#[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model()))]
+async fn run_agent_loop_inner(
+    llm: Arc<dyn LLMProviderTrait>,
+    initial_prompt: &str,
+    system_prompt: &str,
+    config: AgentLoopConfig,
+    registry: ToolRegistry,
+    loop_label: &str,
+    mcp_enabled: bool,
+) -> Result<String> {
     // Initialize security components
     let policy_engine = PolicyEngine::default_secure();
     let mut sandbox = Sandbox::default();
@@ -165,9 +199,6 @@ pub async fn run_agent_loop_with_registry(
         None
     };
 
-    // Initialize tool registry (use provided one or default)
-    let registry = tool_registry.unwrap_or_else(ToolRegistry::with_default_tools);
-
     // Track session start time for token lifetime enforcement
     let session_start = std::time::Instant::now();
 
@@ -176,10 +207,12 @@ pub async fn run_agent_loop_with_registry(
         model = llm.model(),
         max_iterations = config.max_iterations,
         enable_tools = config.enable_tools,
+        tool_count = registry.len(),
         require_approval = config.require_approval,
         prompt_injection_protection = config.prompt_injection_protection,
         token_lifetime_secs = config.token_lifetime_secs,
-        "Agent loop starting with security integration"
+        "Agent loop starting with {}",
+        loop_label
     );
 
     // Audit: agent start
@@ -196,6 +229,8 @@ pub async fn run_agent_loop_with_registry(
             "model": llm.model(),
             "max_iterations": config.max_iterations,
             "enable_tools": config.enable_tools,
+            "mcp_enabled": mcp_enabled,
+            "tool_count": registry.len(),
             "require_approval": config.require_approval,
             "prompt_injection_protection": config.prompt_injection_protection,
             "token_lifetime_secs": config.token_lifetime_secs,
@@ -571,21 +606,6 @@ pub async fn run_agent_loop_with_mcp_and_registry(
     mcp_client: Option<Arc<RwLock<McpClient>>>,
     tool_registry: Option<ToolRegistry>,
 ) -> Result<String> {
-    // Initialize security components
-    let policy_engine = PolicyEngine::default_secure();
-    let mut sandbox = Sandbox::default();
-    sandbox.init().await.map_err(|e| {
-        crate::error::RavenClawsError::CommandExecution(format!("Sandbox init failed: {}", e))
-    })?;
-    let audit_log = AuditLog::new(format!("agent-{}", std::process::id()));
-
-    // Initialize injection detector
-    let injection_detector = if config.prompt_injection_protection {
-        Some(crate::policy::InjectionDetector::new())
-    } else {
-        None
-    };
-
     // Initialize tool registry (use provided one or default)
     let mut registry = tool_registry.unwrap_or_else(ToolRegistry::with_default_tools);
 
@@ -601,375 +621,17 @@ pub async fn run_agent_loop_with_mcp_and_registry(
         }
     }
 
-    // Track session start time for token lifetime enforcement
-    let session_start = std::time::Instant::now();
-
-    info!(
-        provider = llm.provider_name(),
-        model = llm.model(),
-        max_iterations = config.max_iterations,
-        enable_tools = config.enable_tools,
-        tool_count = registry.len(),
-        require_approval = config.require_approval,
-        prompt_injection_protection = config.prompt_injection_protection,
-        token_lifetime_secs = config.token_lifetime_secs,
-        "Agent loop starting with MCP integration"
-    );
-
-    // Audit: agent start
-    let _ = audit_log.append(
-        AuditEventType::AgentStart,
-        "agent",
-        &format!(
-            "Agent loop started with {} (model: {})",
-            llm.provider_name(),
-            llm.model()
-        ),
-        Some(serde_json::json!({
-            "provider": llm.provider_name(),
-            "model": llm.model(),
-            "max_iterations": config.max_iterations,
-            "enable_tools": config.enable_tools,
-            "mcp_enabled": mcp_client.is_some(),
-            "tool_count": registry.len(),
-            "require_approval": config.require_approval,
-            "prompt_injection_protection": config.prompt_injection_protection,
-            "token_lifetime_secs": config.token_lifetime_secs,
-        })),
-    );
-
-    let mut memory = ConversationMemory::new(system_prompt, 0);
-    memory.add_user_message(initial_prompt);
-
-    for iteration in 0..config.max_iterations {
-        // Check token lifetime: enforce session expiry
-        if config.token_lifetime_secs > 0 {
-            let elapsed = session_start.elapsed().as_secs();
-            if elapsed >= config.token_lifetime_secs {
-                warn!(
-                    iteration = iteration,
-                    elapsed_secs = elapsed,
-                    token_lifetime_secs = config.token_lifetime_secs,
-                    "Agent loop reached token lifetime limit"
-                );
-                let _ = audit_log.append(
-                    AuditEventType::SecurityViolation,
-                    "token_lifetime",
-                    &format!(
-                        "Session expired after {} seconds (limit: {}s)",
-                        elapsed, config.token_lifetime_secs
-                    ),
-                    Some(serde_json::json!({
-                        "elapsed_secs": elapsed,
-                        "token_lifetime_secs": config.token_lifetime_secs,
-                        "iteration": iteration,
-                    })),
-                );
-                return Err(crate::error::RavenClawsError::SecurityViolation(format!(
-                    "Session token expired after {} seconds (limit: {}s)",
-                    elapsed, config.token_lifetime_secs
-                )));
-            }
-        }
-        let messages = memory.history().to_vec();
-
-        // Check token budget before making LLM call
-        if let Some(ref budget) = config.token_budget {
-            let budget = budget.lock().unwrap();
-            if budget.remaining() < 100 {
-                warn!(
-                    iteration = iteration,
-                    remaining = budget.remaining(),
-                    "Token budget exhausted"
-                );
-                let _ = audit_log.append(
-                    AuditEventType::SecurityViolation,
-                    "token_budget",
-                    &format!("Token budget exhausted (remaining: {})", budget.remaining()),
-                    Some(serde_json::json!({
-                        "remaining": budget.remaining(),
-                        "used": budget.used_tokens,
-                        "iteration": iteration,
-                    })),
-                );
-                return Err(crate::error::RavenClawsError::SecurityViolation(
-                    "Token budget exhausted".to_string(),
-                ));
-            }
-        }
-
-        let response = match llm.chat(messages.clone()).await {
-            Ok(r) => r,
-            Err(e) => {
-                // Try fallback chain if available
-                if let Some(ref chain) = config.fallback_chain {
-                    warn!(error = %e, "Primary LLM failed, trying fallback chain");
-                    let _ = audit_log.append(
-                        AuditEventType::Error,
-                        "llm",
-                        &format!("Primary LLM failed, trying fallback: {}", e),
-                        None,
-                    );
-                    // Clone configs out of mutex to avoid holding MutexGuard across .await
-                    let configs = {
-                        let c = chain.lock().unwrap();
-                        c.configs.clone()
-                    };
-                    let mut temp_chain = ProviderFallbackChain::new(configs);
-                    match temp_chain.chat_with_fallback(messages).await {
-                        Ok(r) => {
-                            info!("Fallback chain succeeded");
-                            // Record token usage from fallback response
-                            if let Some(ref budget) = config.token_budget {
-                                if let Some(usage) = &r.usage {
-                                    let mut b = budget.lock().unwrap();
-                                    b.record_usage(usage.total_tokens);
-                                }
-                            }
-                            r
-                        }
-                        Err(fallback_e) => {
-                            warn!(error = %fallback_e, "Fallback chain also failed");
-                            let _ = audit_log.append(
-                                AuditEventType::Error,
-                                "llm",
-                                &format!("All providers failed: {}", fallback_e),
-                                None,
-                            );
-                            return Err(crate::error::RavenClawsError::Llm(fallback_e));
-                        }
-                    }
-                } else {
-                    warn!(error = %e, "LLM request failed");
-                    let _ = audit_log.append(
-                        AuditEventType::Error,
-                        "llm",
-                        &format!("LLM request failed: {}", e),
-                        None,
-                    );
-                    return Err(crate::error::RavenClawsError::Llm(e));
-                }
-            }
-        };
-
-        // Record token usage from response
-        if let Some(ref budget) = config.token_budget {
-            if let Some(usage) = &response.usage {
-                let mut b = budget.lock().unwrap();
-                b.record_usage(usage.total_tokens);
-                debug!(
-                    iteration = iteration,
-                    tokens_used = usage.total_tokens,
-                    total_used = b.used_tokens,
-                    remaining = b.remaining(),
-                    "Token usage recorded"
-                );
-            }
-        }
-
-        // Report progress to RavenFabric if configured
-        if let Some(ref rf) = config.ravenfabric {
-            if rf.is_enabled() {
-                let _ = rf.health().await;
-                info!(
-                    iteration = iteration,
-                    ravenfabric = true,
-                    "RavenFabric health check completed"
-                );
-            }
-        }
-
-        let first_choice = response.choices.first();
-        let content = first_choice
-            .map(|c| c.message.content.clone())
-            .unwrap_or_default();
-
-        debug!(
-            iteration = iteration,
-            response_length = content.len(),
-            response_preview = %content[..content.len().min(500)],
-            "LLM response received (MCP loop)"
-        );
-
-        // Prompt-injection defense: check LLM response before processing
-        if let Some(ref detector) = injection_detector {
-            match detector.check(&content) {
-                crate::policy::InjectionVerdict::Suspicious(reason) => {
-                    warn!(
-                        iteration = iteration,
-                        reason = %reason,
-                        "Prompt-injection detected in LLM response"
-                    );
-                    let _ = audit_log.append(
-                        AuditEventType::SecurityViolation,
-                        "injection_detector",
-                        &format!("Prompt-injection detected: {}", reason),
-                        Some(serde_json::json!({
-                            "reason": reason,
-                            "iteration": iteration,
-                            "content_preview": &content[..content.len().min(200)],
-                        })),
-                    );
-                    return Err(crate::error::RavenClawsError::SecurityViolation(format!(
-                        "LLM response blocked: potential prompt injection ({})",
-                        reason
-                    )));
-                }
-                crate::policy::InjectionVerdict::Clean => {}
-            }
-        }
-
-        // Check for structured tool calls first (OpenAI Tools format)
-        if config.enable_tools {
-            if let Some((tool_name, args)) = first_choice.and_then(parse_structured_tool_call) {
-                info!(tool = %tool_name, "Structured tool call detected");
-
-                // Execute tool with security
-                if let Some(tool_result) = execute_parsed_tool_call(
-                    tool_name,
-                    args,
-                    &registry,
-                    &policy_engine,
-                    &sandbox,
-                    &audit_log,
-                    config.require_approval,
-                )
-                .await
-                {
-                    let observation = if tool_result.success {
-                        format!("OBSERVATION: {}", tool_result.output)
-                    } else {
-                        format!(
-                            "OBSERVATION: Tool failed with error: {}",
-                            tool_result.error.as_deref().unwrap_or("unknown error")
-                        )
-                    };
-
-                    memory.add_user_message(&observation);
-
-                    info!(
-                        iteration = iteration,
-                        tool = %tool_result.tool_name,
-                        success = tool_result.success,
-                        "Structured tool executed"
-                    );
-                    continue;
-                }
-            }
-        }
-
-        // Check for completion signal
-        if content.contains("FINAL:") {
-            let final_response = content
-                .split("FINAL:")
-                .nth(1)
-                .unwrap_or("")
-                .trim()
-                .to_string();
-
-            memory.add_assistant_message(&content);
-
-            // Audit: agent finish
-            let _ = audit_log.append(
-                AuditEventType::AgentFinish,
-                "agent",
-                "Agent loop completed successfully",
-                Some(serde_json::json!({
-                    "iterations": iteration + 1,
-                    "final_response_length": final_response.len(),
-                })),
-            );
-
-            return Ok(final_response);
-        }
-
-        // Execute tool calls if enabled (legacy pattern-matching fallback)
-        if config.enable_tools {
-            if let Some(tool_result) = execute_tool_call_with_security(
-                &content,
-                &registry,
-                &policy_engine,
-                &sandbox,
-                &audit_log,
-            )
-            .await
-            {
-                let observation = if tool_result.success {
-                    format!("OBSERVATION: {}", tool_result.output)
-                } else {
-                    format!(
-                        "OBSERVATION: Tool failed with error: {}",
-                        tool_result.error.as_deref().unwrap_or("unknown error")
-                    )
-                };
-
-                memory.add_assistant_message(&content);
-                memory.add_user_message(&observation);
-
-                info!(
-                    iteration = iteration,
-                    tool = %tool_result.tool_name,
-                    success = tool_result.success,
-                    "Tool executed"
-                );
-                continue;
-            }
-        }
-
-        // No tool call found and no FINAL: — treat as regular response
-        memory.add_assistant_message(&content);
-
-        // If no_final_required is set, treat any non-tool-call response as completion
-        if config.no_final_required {
-            info!(
-                iteration = iteration,
-                response_length = content.len(),
-                "no_final_required: treating response as completion"
-            );
-            let _ = audit_log.append(
-                AuditEventType::AgentFinish,
-                "agent",
-                "Agent loop completed (no_final_required)",
-                Some(serde_json::json!({
-                    "iterations": iteration + 1,
-                    "final_response_length": content.len(),
-                })),
-            );
-            return Ok(content);
-        }
-
-        info!(
-            iteration = iteration,
-            thought = %content.lines().find(|l| l.starts_with("THOUGHT:")).unwrap_or("<no thought>"),
-            "Agent loop progress"
-        );
-    }
-
-    // Max iterations reached
-    warn!(
-        max_iterations = config.max_iterations,
-        "Agent loop reached max iterations"
-    );
-
-    let _ = audit_log.append(
-        AuditEventType::Error,
-        "agent",
-        "Agent loop reached max iterations without completing",
-        Some(serde_json::json!({
-            "max_iterations": config.max_iterations,
-        })),
-    );
-
-    let history = memory.history();
-    if history.len() > 1 {
-        if let Some(last) = history.last() {
-            return Ok(last.content.clone());
-        }
-    }
-
-    Err(crate::error::RavenClawsError::CommandExecution(
-        "Agent loop reached max iterations without completing the task".to_string(),
-    ))
+    let mcp_enabled = mcp_client.is_some();
+    run_agent_loop_inner(
+        llm,
+        initial_prompt,
+        system_prompt,
+        config,
+        registry,
+        "MCP integration",
+        mcp_enabled,
+    )
+    .await
 }
 
 /// Prompt the user for approval of a tool call via stdin.

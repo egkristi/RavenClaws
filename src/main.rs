@@ -348,6 +348,7 @@ async fn main() -> anyhow::Result<()> {
             "openai" => config::LLMProvider::OpenAI,
             "anthropic" => config::LLMProvider::Anthropic,
             "openai-compatible" | "openai_compatible" => config::LLMProvider::OpenAICompatible,
+            "azure" => config::LLMProvider::Azure,
             _ => config::LLMProvider::LiteLLM,
         };
     }
@@ -920,6 +921,7 @@ async fn main() -> anyhow::Result<()> {
             config::LLMProvider::OpenAI => "OpenAI",
             config::LLMProvider::Anthropic => "Anthropic",
             config::LLMProvider::OpenAICompatible => "OpenAI-Compatible",
+            config::LLMProvider::Azure => "Azure OpenAI",
         };
 
         info!(provider = provider_name, endpoint = %config.llm.endpoint, model = %config.llm.model, "LLM client initialized");
@@ -1082,6 +1084,7 @@ mod tests {
             ("openrouter", config::LLMProvider::OpenRouter),
             ("ollama", config::LLMProvider::Ollama),
             ("openai", config::LLMProvider::OpenAI),
+            ("azure", config::LLMProvider::Azure),
             ("unknown", config::LLMProvider::LiteLLM), // default
         ];
 
@@ -1090,6 +1093,7 @@ mod tests {
                 "openrouter" => config::LLMProvider::OpenRouter,
                 "ollama" => config::LLMProvider::Ollama,
                 "openai" => config::LLMProvider::OpenAI,
+                "azure" => config::LLMProvider::Azure,
                 _ => config::LLMProvider::LiteLLM,
             };
             assert_eq!(mapped, expected, "Provider mapping failed for '{}'", input);

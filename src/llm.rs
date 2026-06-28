@@ -40,6 +40,8 @@ pub enum OpenAICompatibleProvider {
     OpenRouter,
     /// Generic OpenAI-compatible endpoint (vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, etc.)
     Generic,
+    /// Azure OpenAI Service — uses `api-key` header and `api-version` query parameter
+    Azure,
 }
 
 impl OpenAICompatibleProvider {
@@ -50,6 +52,7 @@ impl OpenAICompatibleProvider {
             OpenAICompatibleProvider::OpenAI => "https://api.openai.com",
             OpenAICompatibleProvider::OpenRouter => "https://openrouter.ai",
             OpenAICompatibleProvider::Generic => "http://localhost:8000",
+            OpenAICompatibleProvider::Azure => "https://YOUR_RESOURCE.openai.azure.com",
         }
     }
 
@@ -60,12 +63,17 @@ impl OpenAICompatibleProvider {
             OpenAICompatibleProvider::OpenAI => "openai",
             OpenAICompatibleProvider::OpenRouter => "openrouter",
             OpenAICompatibleProvider::Generic => "openai-compatible",
+            OpenAICompatibleProvider::Azure => "azure",
         }
     }
 
     /// Check if provider requires special headers
+    #[allow(dead_code)]
     pub fn requires_custom_headers(&self) -> bool {
-        matches!(self, OpenAICompatibleProvider::OpenRouter)
+        matches!(
+            self,
+            OpenAICompatibleProvider::OpenRouter | OpenAICompatibleProvider::Azure
+        )
     }
 }
 
@@ -490,16 +498,29 @@ impl OpenAICompatibleClient {
         } else {
             &self.config.endpoint
         };
-        format!("{}/v1/chat/completions", base.trim_end_matches('/'))
+        let mut url = format!("{}/v1/chat/completions", base.trim_end_matches('/'));
+        if self.provider == OpenAICompatibleProvider::Azure {
+            // Azure OpenAI requires api-version query parameter
+            // Default to 2024-02-15-preview if not specified; users can override via endpoint
+            if !url.contains("api-version") {
+                url = format!("{}?api-version=2024-02-15-preview", url);
+            }
+        }
+        url
     }
 
     fn apply_headers(&self, mut req: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         if let Some(ref key) = self.config.api_key {
-            req = req.header("Authorization", format!("Bearer {}", key));
+            if self.provider == OpenAICompatibleProvider::Azure {
+                // Azure OpenAI uses api-key header (not Bearer)
+                req = req.header("api-key", key);
+            } else {
+                req = req.header("Authorization", format!("Bearer {}", key));
+            }
         }
 
-        // OpenRouter-specific headers
-        if self.provider.requires_custom_headers() {
+        // Provider-specific headers
+        if self.provider == OpenAICompatibleProvider::OpenRouter {
             req = req
                 .header("HTTP-Referer", "https://github.com/egkristi/RavenClaws")
                 .header("X-Title", "RavenClaws");
@@ -950,6 +971,10 @@ pub fn create_client(config: &LLMConfig) -> Result<Arc<dyn LLMProviderTrait>, LL
         LLMProvider::Anthropic => Ok(Arc::new(AnthropicClient::new(config)?)),
         LLMProvider::OpenAICompatible => {
             let unified = OpenAICompatibleClient::new(config, OpenAICompatibleProvider::Generic)?;
+            Ok(Arc::new(unified))
+        }
+        LLMProvider::Azure => {
+            let unified = OpenAICompatibleClient::new(config, OpenAICompatibleProvider::Azure)?;
             Ok(Arc::new(unified))
         }
     }

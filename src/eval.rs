@@ -22,8 +22,9 @@
 //!   └── tool_calls: Vec<ToolCallTrace>
 //! ```
 
+use crate::agent::{run_agent_loop, AgentLoopConfig};
 use crate::error::{RavenClawsError, Result};
-use crate::llm::{ChatMessage, LLMProviderTrait};
+use crate::llm::LLMProviderTrait;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{info, instrument, warn};
@@ -355,129 +356,121 @@ impl EvalRunner {
     }
 
     /// Run a single eval task and return the result with trace
+    ///
+    /// Uses the full agent loop (`run_agent_loop`) instead of a single LLM call,
+    /// so eval tasks exercise the complete ReAct loop with tool use, security
+    /// checks, and iteration limits.
     #[instrument(skip(self), fields(task = %task.name))]
     async fn run_task(&self, task: &EvalTask) -> EvalResult {
         let task_start = std::time::Instant::now();
         let started_at = chrono::Utc::now().to_rfc3339();
-        let mut trace = RunTrace {
-            task_name: task.name.clone(),
-            started_at: started_at.clone(),
-            ended_at: String::new(),
-            duration_ms: 0,
-            iterations: 0,
-            steps: Vec::new(),
-            llm_calls: Vec::new(),
-            tool_calls: Vec::new(),
-            final_response: String::new(),
+
+        // Build agent loop config from suite settings
+        let agent_config = AgentLoopConfig {
+            max_iterations: self.config.max_iterations,
+            enable_tools: true,
+            require_approval: false,
+            prompt_injection_protection: true,
+            token_lifetime_secs: 0,
+            no_final_required: false,
+            fallback_chain: None,
+            token_budget: None,
+            ravenfabric: None,
         };
 
-        // Build messages
-        let messages = vec![
-            ChatMessage {
-                role: "system".to_string(),
-                content: self.config.system_prompt.clone(),
-            },
-            ChatMessage {
-                role: "user".to_string(),
-                content: task.prompt.clone(),
-            },
-        ];
+        // Run the full agent loop (ReAct + tools + security)
+        let result = run_agent_loop(
+            self.llm.clone(),
+            &task.prompt,
+            &self.config.system_prompt,
+            agent_config,
+        )
+        .await;
 
-        // Make the LLM call
-        let call_start = std::time::Instant::now();
-        let response = match self.llm.chat(messages).await {
-            Ok(r) => r,
-            Err(e) => {
-                let duration_ms = task_start.elapsed().as_millis() as u64;
-                trace.ended_at = chrono::Utc::now().to_rfc3339();
-                trace.duration_ms = duration_ms;
-                trace.steps.push(TraceStep {
-                    number: 0,
-                    step_type: StepType::Error,
-                    content: format!("LLM call failed: {}", e),
+        let duration_ms = task_start.elapsed().as_millis() as u64;
+
+        match result {
+            Ok(final_response) => {
+                let trace = RunTrace {
+                    task_name: task.name.clone(),
+                    started_at,
+                    ended_at: chrono::Utc::now().to_rfc3339(),
                     duration_ms,
-                });
+                    iterations: self.config.max_iterations, // best-effort; agent loop doesn't expose exact count
+                    steps: vec![TraceStep {
+                        number: 0,
+                        step_type: StepType::Final,
+                        content: final_response.clone(),
+                        duration_ms,
+                    }],
+                    llm_calls: Vec::new(), // agent loop doesn't expose per-call traces
+                    tool_calls: Vec::new(), // agent loop doesn't expose per-call traces
+                    final_response: final_response.clone(),
+                };
 
-                return EvalResult {
+                // Run assertions against the final response
+                let (assertion_results, assertions_passed, assertions_failed) =
+                    check_assertions(&final_response, &task.assertions, Some(&trace));
+
+                // Calculate score
+                let score = if task.assertions.is_empty() {
+                    if final_response.is_empty() || final_response.len() < 10 {
+                        0.0
+                    } else {
+                        1.0
+                    }
+                } else if task.assertions.len() == assertions_passed + assertions_failed {
+                    assertions_passed as f64 / task.assertions.len() as f64
+                } else {
+                    0.0
+                };
+
+                let passed = assertions_failed == 0 && !final_response.is_empty();
+
+                EvalResult {
+                    task_name: task.name.clone(),
+                    passed,
+                    score,
+                    assertions_passed,
+                    assertions_failed,
+                    assertion_results,
+                    trace,
+                    error: None,
+                }
+            }
+            Err(e) => {
+                let trace = RunTrace {
+                    task_name: task.name.clone(),
+                    started_at,
+                    ended_at: chrono::Utc::now().to_rfc3339(),
+                    duration_ms,
+                    iterations: 0,
+                    steps: vec![TraceStep {
+                        number: 0,
+                        step_type: StepType::Error,
+                        content: format!("Agent loop failed: {}", e),
+                        duration_ms,
+                    }],
+                    llm_calls: Vec::new(),
+                    tool_calls: Vec::new(),
+                    final_response: String::new(),
+                };
+
+                EvalResult {
                     task_name: task.name.clone(),
                     passed: false,
                     score: 0.0,
                     assertions_passed: 0,
                     assertions_failed: 1,
                     assertion_results: vec![AssertionResult {
-                        assertion: "llm_call".to_string(),
+                        assertion: "agent_loop".to_string(),
                         passed: false,
-                        details: format!("LLM call failed: {}", e),
+                        details: format!("Agent loop failed: {}", e),
                     }],
                     trace,
                     error: Some(e.to_string()),
-                };
+                }
             }
-        };
-        let call_duration_ms = call_start.elapsed().as_millis() as u64;
-
-        let first_choice = response.choices.first();
-        let content = first_choice
-            .map(|c| c.message.content.clone())
-            .unwrap_or_default();
-
-        // Record LLM call trace
-        trace.llm_calls.push(LlmCallTrace {
-            iteration: 0,
-            provider: self.llm.provider_name().to_string(),
-            model: self.llm.model().to_string(),
-            prompt_tokens: response.usage.as_ref().map(|u| u.prompt_tokens),
-            completion_tokens: response.usage.as_ref().map(|u| u.completion_tokens),
-            duration_ms: call_duration_ms,
-            response_preview: content.chars().take(1000).collect(),
-        });
-
-        // Record step
-        trace.steps.push(TraceStep {
-            number: 0,
-            step_type: if content.contains("FINAL:") {
-                StepType::Final
-            } else {
-                StepType::Thought
-            },
-            content: content.clone(),
-            duration_ms: call_duration_ms,
-        });
-
-        trace.iterations = 1;
-        trace.final_response = content.clone();
-        trace.ended_at = chrono::Utc::now().to_rfc3339();
-        trace.duration_ms = task_start.elapsed().as_millis() as u64;
-
-        // Run assertions
-        let (assertion_results, assertions_passed, assertions_failed) =
-            check_assertions(&content, &task.assertions, Some(&trace));
-
-        // Calculate score
-        let score = if task.assertions.is_empty() {
-            // No assertions: score based on non-empty response
-            if content.is_empty() || content.len() < 10 {
-                0.0
-            } else {
-                1.0
-            }
-        } else if task.assertions.len() == assertions_passed + assertions_failed {
-            assertions_passed as f64 / task.assertions.len() as f64
-        } else {
-            0.0
-        };
-
-        let passed = assertions_failed == 0 && !content.is_empty();
-
-        EvalResult {
-            task_name: task.name.clone(),
-            passed,
-            score,
-            assertions_passed,
-            assertions_failed,
-            assertion_results,
-            trace,
-            error: None,
         }
     }
 }

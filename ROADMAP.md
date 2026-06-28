@@ -1,9 +1,9 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
-**Date:** 2026-06-28  
-**Version:** v0.9.10 — Production Hardening & Documentation 📚  
-**Previous Release:** v0.9.9 (2026-06-28) — Strategic Differentiation: Durable Execution & Multi-Agent Patterns 🎯  
-**Current Commit:** 3f17160
+**Date:** 2026-07-02  
+**Version:** v0.9.11 — Strategic Features: Dedup, Azure, Eval Integration 🎯  
+**Previous Release:** v0.9.10 (2026-06-28) — Production Hardening & Documentation 📚  
+**Current Commit:** 98d9912
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
 **v1.0 Hardening Progress:** v0.9.4–v0.9.9 all complete ✅. **v0.9.10 closes ALL remaining production hardening gaps** — community health files, graceful shutdown for heartbeat, init container chown, `--exec` mode documentation, migration docs, container image size (UPX), K8s NetworkPolicy/Secret documentation, and graceful shutdown for all modes. All tactical gaps from rpi5 deployment feedback are now closed. The strategic features (durable execution, multi-agent patterns) are deferred to v0.9.11+.
 
@@ -398,9 +398,9 @@ simpler** — or deliberately not at all.
 | **Default system prompt with FINAL:** | ✅ v0.9.4 | ✅ | ✅ | ✅ |
 | **LLM response content logging** | ✅ v0.9.4 | ✅ | ✅ | ✅ |
 | **`--exec` mode docs** | ✅ **v0.9.10** | ✅ | ✅ | ✅ |
-| **Agent loop deduplication** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
-| **Eval harness agent loop integration** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
-| **Azure OpenAI adapter** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
+| **Agent loop deduplication** | ✅ **v0.9.11** | ✅ v0.9.9 | ✅ | ✅ |
+| **Eval harness agent loop integration** | ✅ **v0.9.11** | ✅ v0.9.9 | ✅ | ✅ |
+| **Azure OpenAI adapter** | ✅ **v0.9.11** | ✅ v0.9.9 | ✅ | ✅ |
 | **vLLM docs + tests** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
 | **llama.cpp docs + tests** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
 | **Durable execution (checkpoint/resume)** | ❌ | ✅ **v0.9.9** | ❌ | ❌ |
@@ -873,17 +873,14 @@ ecosystem — were the focus. SSE MCP was already implemented (v0.9.3).
 - [x] **Add init container `chown` to K8s deployment** — Added `initContainers` section with `chown -R 65532:65532 /workspace`. *(moved from v0.9.8)*
 - [x] **Add graceful shutdown for heartbeat** — Added `Drop` impl on `HeartbeatAgent` that calls `persist_state()`. *(moved from v0.9.8)*
 
-**Deferred to v0.9.11+:**
-- [ ] **Durable execution: checkpoint/resume in agent loop** — The #1 gap across ALL agent frameworks. *(deferred to v0.9.11)*
-- [ ] **Multi-agent patterns as built-in primitives** — Debate, review-loop, research-synthesize, voting. *(deferred to v0.9.11)*
-- [ ] **Deduplicate `run_agent_loop` and `run_agent_loop_with_mcp`** — ~500 lines of duplicated code. *(deferred to v0.9.11)*
-- [ ] **Integrate eval harness with agent loop** — `EvalRunner::run_task()` should use `run_agent_loop()`. *(deferred to v0.9.11)*
-- [ ] **Add Azure OpenAI adapter** — `Azure` variant to `OpenAICompatibleProvider`. *(deferred to v0.9.11)*
-- [ ] **Ship vLLM docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.11)*
-- [ ] **Ship llama.cpp docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.11)*
-- [ ] **Add verified MCP server SSE integration tests** — Test against real MCP clients. *(deferred to v0.9.11)*
-- [ ] **Add verified MCP client SSE integration tests** — Test against real SSE-based MCP servers. *(deferred to v0.9.11)*
-- [ ] **Document SSE MCP transport in getting-started guide** — SSE transport examples. *(deferred to v0.9.11)*
+**Deferred to v0.9.12+:**
+- [ ] **Durable execution: checkpoint/resume in agent loop** — The #1 gap across ALL agent frameworks. *(deferred to v0.9.12)*
+- [ ] **Multi-agent patterns as built-in primitives** — Debate, review-loop, research-synthesize, voting. *(deferred to v0.9.12)*
+- [ ] **Ship vLLM docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.12)*
+- [ ] **Ship llama.cpp docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.12)*
+- [ ] **Add verified MCP server SSE integration tests** — Test against real MCP clients. *(deferred to v0.9.12)*
+- [ ] **Add verified MCP client SSE integration tests** — Test against real SSE-based MCP servers. *(deferred to v0.9.12)*
+- [ ] **Document SSE MCP transport in getting-started guide** — SSE transport examples. *(deferred to v0.9.12)*
 - [x] **Reduce container image size** — ✅ **v0.9.10** (UPX compression + conditional RF binary)
 - [x] **Document K8s NetworkPolicy requirements** — ✅ **v0.9.10** (NetworkPolicy in deployment.yaml + docs)
 - [x] **Document K8s Secret references** — ✅ **v0.9.10** (example YAML in getting-started.md)
@@ -928,6 +925,24 @@ shutdown for all modes. All tactical gaps from rpi5 deployment feedback are now 
 - [x] K8s Secret references documented with example YAML (in getting-started.md)
 - [x] All modes handle SIGTERM/SIGINT gracefully (ShutdownFlag + heartbeat integration)
 
+### ✅ v0.9.11 — Strategic Features: Dedup, Azure, Eval Integration 🎯 *(current)*
+
+**Theme:** Three high-leverage internal improvements that reduce code duplication, expand
+provider coverage, and improve test quality. No new user-facing features — this is an
+engineering excellence release.
+
+#### Completed in v0.9.11
+
+- [x] **Agent loop deduplication** — Extracted shared `run_agent_loop_inner()` function containing all iteration logic (~400 lines). Both `run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry` now delegate to it, eliminating near-identical code duplication. ~350 lines saved. (#dedup)
+- [x] **Azure OpenAI adapter** — New `Azure` variant in both `LLMProvider` (config.rs) and `OpenAICompatibleProvider` (llm.rs). Uses `api-key` header instead of `Bearer`, adds `api-version=2024-02-15-preview` query parameter. Mapped in CLI (`--provider azure`), factory (`create_client`), and multi-model routing. (#azure-adapter)
+- [x] **Eval harness integrated with agent loop** — `EvalRunner::run_task()` now uses `run_agent_loop()` instead of a single direct LLM call. Eval tasks exercise the full ReAct loop with tool use, security checks, and iteration limits. (#eval-integration)
+
+**Exit criteria:**
+- [x] `run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry` share a single implementation via `run_agent_loop_inner`
+- [x] Azure OpenAI provider works with `api-key` auth and `api-version` query parameter
+- [x] Eval harness exercises the full agent loop (ReAct + tools) instead of single LLM calls
+- [x] All 472 tests pass, clippy clean, no regressions
+
 ### v1.0 — Simply the Best 🏆
 
 **The stable release. RavenClaws is a fully functional primary agent — production-ready,
@@ -952,9 +967,10 @@ advanced capabilities (v0.10) are deferred to post-1.0.
 - [x] All v0.9.8 exit criteria met — all infrastructure wired, OTEL warning suppressed, sandbox configurable, LiteLLM API key docs fixed
 - [x] All v0.9.9 exit criteria met — community health files, heartbeat graceful shutdown, init container chown, `--exec` docs, migration docs
 - [x] All v0.9.10 exit criteria met — container image size (UPX), NetworkPolicy docs, Secret reference docs, graceful shutdown for all modes
-- [ ] **Durable execution** — agent loop checkpoints after every iteration; survives crash/restart with full state *(v0.9.11+)*
-- [ ] **Multi-agent patterns** — debate, review-loop, research-synthesize, voting all work as first-class modes *(v0.9.11+)*
-- [ ] **SSE MCP ecosystem** — verified integration tests pass for both client and server SSE transport *(v0.9.11+)*
+- [x] All v0.9.11 exit criteria met — agent loop deduplication, Azure OpenAI adapter, eval harness integration
+- [ ] **Durable execution** — agent loop checkpoints after every iteration; survives crash/restart with full state *(v0.9.12+)*
+- [ ] **Multi-agent patterns** — debate, review-loop, research-synthesize, voting all work as first-class modes *(v0.9.12+)*
+- [ ] **SSE MCP ecosystem** — verified integration tests pass for both client and server SSE transport *(v0.9.12+)*
 - [x] `ravenclaws --exec "Summarize this repository"` works with ANY provider and produces output
 - [x] `ravenclaws --serve` provides a fully functional agent API (chat, execute, tools)
 - [x] Tool execution works with models that don't emit structured `tool_calls` (text-based fallback)
@@ -1019,7 +1035,7 @@ significant new capabilities that are not required for a production-ready 1.0.
 
 ### Current Architecture
 
-RavenClaws has **6 LLM providers** unified under `LLMProviderTrait`:
+RavenClaws has **7 LLM providers** unified under `LLMProviderTrait`:
 
 | Provider | Client | Status |
 |---|---|---|
@@ -1028,6 +1044,7 @@ RavenClaws has **6 LLM providers** unified under `LLMProviderTrait`:
 | OpenRouter | `OpenAICompatibleClient` (variant: `OpenRouter`) | ✅ Working |
 | Ollama | `OpenAICompatibleClient` (variant: `Ollama`) | ✅ Working |
 | Anthropic | `AnthropicClient` (native, not OpenAI-compat) | ✅ Working |
+| Azure OpenAI | `OpenAICompatibleClient` (variant: `Azure`) | ✅ **v0.9.11** |
 | OpenAI-Compatible | `OpenAICompatibleClient` (variant: `Generic`) | ✅ v0.9.3 |
 
 The `OpenAICompatibleClient` handles 5 of 6 providers via a shared `/v1/chat/completions`
