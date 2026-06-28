@@ -14,13 +14,17 @@ use crate::policy::{Decision, PolicyEngine};
 use crate::ravenfabric::RavenFabricClient;
 use crate::sandbox::Sandbox;
 use crate::tools::{ToolCall, ToolRegistry, ToolResult};
+use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{debug, info, instrument, warn};
 
 /// In-memory conversation memory — stores message history for the session.
-/// Messages are lost when the process exits.
-#[derive(Debug, Clone)]
+///
+/// With durable execution, messages can be serialized to disk between iterations
+/// so the agent loop can survive process restarts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConversationMemory {
     /// Maximum number of messages to retain (0 = unlimited)
     max_messages: usize,
@@ -65,6 +69,27 @@ impl ConversationMemory {
         &self.messages
     }
 
+    /// Create a ConversationMemory from an existing message history.
+    /// Used when restoring from a checkpoint.
+    pub fn from_history(messages: Vec<ChatMessage>, max_messages: usize) -> Self {
+        Self {
+            max_messages,
+            messages,
+        }
+    }
+
+    /// Get the number of messages in history.
+    #[allow(dead_code)]
+    pub fn len(&self) -> usize {
+        self.messages.len()
+    }
+
+    /// Check if history is empty (only system prompt or nothing).
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.messages.is_empty()
+    }
+
     /// Trim oldest non-system messages when over the limit.
     fn trim_to_max(&mut self) {
         if self.max_messages == 0 {
@@ -77,6 +102,155 @@ impl ConversationMemory {
             } else {
                 break;
             }
+        }
+    }
+}
+
+/// Checkpoint state for durable execution — captures agent loop state between iterations.
+///
+/// This struct is serialized to disk after each iteration so the agent loop can
+/// survive process restarts. On resume, the checkpoint is loaded and the loop
+/// continues from where it left off.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckpointState {
+    /// Unique session identifier
+    pub session_id: String,
+    /// Current iteration number
+    pub iteration: usize,
+    /// Maximum iterations configured for this loop
+    pub max_iterations: usize,
+    /// Serialized conversation memory (message history)
+    pub messages: Vec<ChatMessage>,
+    /// The initial prompt that started this session
+    pub initial_prompt: String,
+    /// The system prompt for this session
+    pub system_prompt: String,
+    /// Provider name used for this session
+    pub provider: String,
+    /// Model name used for this session
+    pub model: String,
+    /// Whether tools were enabled
+    pub enable_tools: bool,
+    /// Timestamp of last checkpoint (ISO 8601)
+    pub last_checkpoint: String,
+}
+
+impl CheckpointState {
+    /// Create a new checkpoint state from current agent loop state.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        session_id: String,
+        iteration: usize,
+        max_iterations: usize,
+        messages: Vec<ChatMessage>,
+        initial_prompt: &str,
+        system_prompt: &str,
+        provider: &str,
+        model: &str,
+        enable_tools: bool,
+    ) -> Self {
+        Self {
+            session_id,
+            iteration,
+            max_iterations,
+            messages,
+            initial_prompt: initial_prompt.to_string(),
+            system_prompt: system_prompt.to_string(),
+            provider: provider.to_string(),
+            model: model.to_string(),
+            enable_tools,
+            last_checkpoint: chrono::Utc::now().to_rfc3339(),
+        }
+    }
+}
+
+/// Save a checkpoint to disk.
+///
+/// Writes the checkpoint state as a JSON file to `{checkpoint_dir}/{session_id}.json`.
+/// Returns the path that was written to, or `None` if checkpointing is not configured.
+pub fn save_checkpoint(
+    checkpoint_dir: &std::path::Path,
+    state: &CheckpointState,
+) -> std::result::Result<std::path::PathBuf, String> {
+    let path = checkpoint_dir.join(format!("{}.json", state.session_id));
+
+    // Ensure the checkpoint directory exists
+    std::fs::create_dir_all(checkpoint_dir)
+        .map_err(|e| format!("Failed to create checkpoint directory: {}", e))?;
+
+    let content = serde_json::to_string_pretty(state)
+        .map_err(|e| format!("Failed to serialize checkpoint: {}", e))?;
+
+    // Write atomically: write to temp file, then rename
+    let tmp_path = path.with_extension("json.tmp");
+    std::fs::write(&tmp_path, &content)
+        .map_err(|e| format!("Failed to write checkpoint: {}", e))?;
+    std::fs::rename(&tmp_path, &path)
+        .map_err(|e| format!("Failed to finalize checkpoint: {}", e))?;
+
+    Ok(path)
+}
+
+/// Load a checkpoint from disk.
+///
+/// Reads the checkpoint state from `{checkpoint_dir}/{session_id}.json`.
+/// Returns `None` if the checkpoint file doesn't exist or can't be read.
+pub fn load_checkpoint(
+    checkpoint_dir: &std::path::Path,
+    session_id: &str,
+) -> Option<CheckpointState> {
+    let path = checkpoint_dir.join(format!("{}.json", session_id));
+
+    match std::fs::read_to_string(&path) {
+        Ok(content) => match serde_json::from_str::<CheckpointState>(&content) {
+            Ok(state) => {
+                info!(
+                    session_id = %session_id,
+                    iteration = state.iteration,
+                    max_iterations = state.max_iterations,
+                    "Loaded checkpoint"
+                );
+                Some(state)
+            }
+            Err(e) => {
+                warn!(
+                    session_id = %session_id,
+                    error = %e,
+                    "Failed to deserialize checkpoint"
+                );
+                None
+            }
+        },
+        Err(e) => {
+            if e.kind() != std::io::ErrorKind::NotFound {
+                warn!(
+                    session_id = %session_id,
+                    error = %e,
+                    "Failed to read checkpoint"
+                );
+            }
+            None
+        }
+    }
+}
+
+/// Delete a checkpoint file from disk.
+///
+/// Called when the agent loop completes successfully or fails definitively.
+pub fn delete_checkpoint(checkpoint_dir: &std::path::Path, session_id: &str) {
+    let path = checkpoint_dir.join(format!("{}.json", session_id));
+    if path.exists() {
+        if let Err(e) = std::fs::remove_file(&path) {
+            warn!(
+                session_id = %session_id,
+                error = %e,
+                "Failed to delete checkpoint"
+            );
+        } else {
+            debug!(
+                session_id = %session_id,
+                "Deleted checkpoint"
+            );
         }
     }
 }
@@ -104,6 +278,13 @@ pub struct AgentLoopConfig {
     pub token_budget: Option<Arc<std::sync::Mutex<TokenBudget>>>,
     /// Optional RavenFabric client — reports agent status and results to mesh
     pub ravenfabric: Option<RavenFabricClient>,
+    /// Optional checkpoint directory for durable execution.
+    /// When set, the agent loop saves state after each iteration and can resume
+    /// from the latest checkpoint if interrupted.
+    pub checkpoint_dir: Option<PathBuf>,
+    /// Unique session ID for checkpointing.
+    /// If not set but checkpoint_dir is set, a UUID is generated automatically.
+    pub session_id: Option<String>,
 }
 
 impl Default for AgentLoopConfig {
@@ -118,6 +299,8 @@ impl Default for AgentLoopConfig {
             fallback_chain: None,
             token_budget: None,
             ravenfabric: None,
+            checkpoint_dir: None,
+            session_id: None,
         }
     }
 }
@@ -237,10 +420,49 @@ async fn run_agent_loop_inner(
         })),
     );
 
-    let mut memory = ConversationMemory::new(system_prompt, 0);
-    memory.add_user_message(initial_prompt);
+    // ── Durable execution: checkpoint resume ──────────────────────────────
+    // If a checkpoint exists for this session, restore state from it instead
+    // of starting fresh. This allows the agent loop to survive process restarts.
+    let (mut memory, start_iteration) = if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+        if let Some(ref session_id) = config.session_id {
+            if let Some(checkpoint) = load_checkpoint(checkpoint_dir, session_id) {
+                info!(
+                    session_id = %session_id,
+                    iteration = checkpoint.iteration,
+                    max_iterations = checkpoint.max_iterations,
+                    "Resuming agent loop from checkpoint"
+                );
+                (
+                    ConversationMemory::from_history(checkpoint.messages, 0),
+                    checkpoint.iteration + 1, // resume from next iteration
+                )
+            } else {
+                info!(
+                    session_id = %session_id,
+                    "No checkpoint found, starting fresh"
+                );
+                let mut m = ConversationMemory::new(system_prompt, 0);
+                m.add_user_message(initial_prompt);
+                (m, 0)
+            }
+        } else {
+            let mut m = ConversationMemory::new(system_prompt, 0);
+            m.add_user_message(initial_prompt);
+            (m, 0)
+        }
+    } else {
+        let mut m = ConversationMemory::new(system_prompt, 0);
+        m.add_user_message(initial_prompt);
+        (m, 0)
+    };
 
-    for iteration in 0..config.max_iterations {
+    // Generate a session ID if checkpointing is enabled but no ID was provided
+    let session_id = config
+        .session_id
+        .clone()
+        .unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+
+    for iteration in start_iteration..config.max_iterations {
         // Check token lifetime: enforce session expiry
         if config.token_lifetime_secs > 0 {
             let elapsed = session_start.elapsed().as_secs();
@@ -264,6 +486,10 @@ async fn run_agent_loop_inner(
                         "iteration": iteration,
                     })),
                 );
+                // Delete checkpoint on security violation
+                if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                    delete_checkpoint(checkpoint_dir, &session_id);
+                }
                 return Err(crate::error::RavenClawsError::SecurityViolation(format!(
                     "Session token expired after {} seconds (limit: {}s)",
                     elapsed, config.token_lifetime_secs
@@ -291,6 +517,10 @@ async fn run_agent_loop_inner(
                         "iteration": iteration,
                     })),
                 );
+                // Delete checkpoint on budget exhaustion
+                if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                    delete_checkpoint(checkpoint_dir, &session_id);
+                }
                 return Err(crate::error::RavenClawsError::SecurityViolation(
                     "Token budget exhausted".to_string(),
                 ));
@@ -335,6 +565,10 @@ async fn run_agent_loop_inner(
                                 &format!("All providers failed: {}", fallback_e),
                                 None,
                             );
+                            // Delete checkpoint on LLM failure
+                            if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                                delete_checkpoint(checkpoint_dir, &session_id);
+                            }
                             return Err(crate::error::RavenClawsError::Llm(fallback_e));
                         }
                     }
@@ -346,6 +580,10 @@ async fn run_agent_loop_inner(
                         &format!("LLM request failed: {}", e),
                         None,
                     );
+                    // Delete checkpoint on LLM failure
+                    if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                        delete_checkpoint(checkpoint_dir, &session_id);
+                    }
                     return Err(crate::error::RavenClawsError::Llm(e));
                 }
             }
@@ -409,6 +647,10 @@ async fn run_agent_loop_inner(
                             "content_preview": &content[..content.len().min(200)],
                         })),
                     );
+                    // Delete checkpoint on injection detection
+                    if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                        delete_checkpoint(checkpoint_dir, &session_id);
+                    }
                     return Err(crate::error::RavenClawsError::SecurityViolation(format!(
                         "LLM response blocked: potential prompt injection ({})",
                         reason
@@ -479,6 +721,11 @@ async fn run_agent_loop_inner(
                 })),
             );
 
+            // Delete checkpoint on successful completion
+            if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                delete_checkpoint(checkpoint_dir, &session_id);
+            }
+
             return Ok(final_response);
         }
 
@@ -518,6 +765,35 @@ async fn run_agent_loop_inner(
         // No tool call found and no FINAL: — treat as regular response
         memory.add_assistant_message(&content);
 
+        // ── Durable execution: save checkpoint after each iteration ────────
+        if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+            let checkpoint = CheckpointState::new(
+                session_id.clone(),
+                iteration,
+                config.max_iterations,
+                memory.history().to_vec(),
+                initial_prompt,
+                system_prompt,
+                llm.provider_name(),
+                llm.model(),
+                config.enable_tools,
+            );
+            if let Err(e) = save_checkpoint(checkpoint_dir, &checkpoint) {
+                warn!(
+                    session_id = %session_id,
+                    iteration = iteration,
+                    error = %e,
+                    "Failed to save checkpoint"
+                );
+            } else {
+                debug!(
+                    session_id = %session_id,
+                    iteration = iteration,
+                    "Checkpoint saved"
+                );
+            }
+        }
+
         // If no_final_required is set, treat any non-tool-call response as completion
         if config.no_final_required {
             info!(
@@ -534,6 +810,10 @@ async fn run_agent_loop_inner(
                     "final_response_length": content.len(),
                 })),
             );
+            // Delete checkpoint on successful completion
+            if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                delete_checkpoint(checkpoint_dir, &session_id);
+            }
             return Ok(content);
         }
 
@@ -558,6 +838,11 @@ async fn run_agent_loop_inner(
             "max_iterations": config.max_iterations,
         })),
     );
+
+    // Delete checkpoint on max iterations (task is done, even if incomplete)
+    if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+        delete_checkpoint(checkpoint_dir, &session_id);
+    }
 
     let history = memory.history();
     if history.len() > 1 {
@@ -1841,6 +2126,8 @@ mod tests {
             fallback_chain: None,
             token_budget: None,
             ravenfabric: None,
+            checkpoint_dir: None,
+            session_id: None,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
@@ -1965,6 +2252,8 @@ mod tests {
             fallback_chain: None,
             token_budget: None,
             ravenfabric: None,
+            checkpoint_dir: None,
+            session_id: None,
         };
         assert_eq!(config.token_lifetime_secs, 0);
         // 0 means unlimited — no timeout enforced
@@ -1982,6 +2271,8 @@ mod tests {
             fallback_chain: None,
             token_budget: None,
             ravenfabric: None,
+            checkpoint_dir: None,
+            session_id: None,
         };
         assert_eq!(config.token_lifetime_secs, 3600);
     }

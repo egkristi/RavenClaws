@@ -539,6 +539,8 @@ async fn handle_chat(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>
         fallback_chain: None,
         token_budget: None,
         ravenfabric: None,
+        checkpoint_dir: None,
+        session_id: None,
     };
 
     let tool_registry = state.tool_registry.clone();

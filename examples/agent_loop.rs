@@ -29,6 +29,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         fallback_chain: None,
         token_budget: None,
         ravenfabric: None,
+        checkpoint_dir: None,
+        session_id: None,
     };
 
     // Run the agent loop

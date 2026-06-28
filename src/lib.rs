@@ -104,8 +104,9 @@ pub mod tools;
 // ── Re-exports of commonly used types ──────────────────────────────────────
 
 pub use agent::{
-    run_agent_loop, run_agent_loop_with_mcp, run_agent_loop_with_mcp_and_registry,
-    run_agent_loop_with_registry, AgentLoopConfig, ConversationMemory,
+    delete_checkpoint, load_checkpoint, run_agent_loop, run_agent_loop_with_mcp,
+    run_agent_loop_with_mcp_and_registry, run_agent_loop_with_registry, save_checkpoint,
+    AgentLoopConfig, CheckpointState, ConversationMemory,
 };
 pub use audit::AuditLog;
 pub use background::BackgroundTaskManager;

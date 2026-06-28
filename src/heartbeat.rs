@@ -389,6 +389,8 @@ impl HeartbeatAgent {
                                     fallback_chain: None,
                                     token_budget: None,
                                     ravenfabric: None,
+                                    checkpoint_dir: None,
+                                    session_id: None,
                                 };
 
                                 match crate::agent::run_agent_loop(

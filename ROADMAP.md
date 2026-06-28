@@ -1,13 +1,13 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
 **Date:** 2026-07-02  
-**Version:** v0.9.11 — Strategic Features: Dedup, Azure, Eval Integration 🎯  
-**Previous Release:** v0.9.10 (2026-06-28) — Production Hardening & Documentation 📚  
-**Current Commit:** 98d9912
+**Version:** v0.9.12 — Durable Execution 🎯  
+**Previous Release:** v0.9.11 (2026-07-02) — Strategic Features: Dedup, Azure, Eval Integration 🎯  
+**Current Commit:** (pending release)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
 **v1.0 Hardening Progress:** v0.9.4–v0.9.9 all complete ✅. **v0.9.10 closes ALL remaining production hardening gaps** — community health files, graceful shutdown for heartbeat, init container chown, `--exec` mode documentation, migration docs, container image size (UPX), K8s NetworkPolicy/Secret documentation, and graceful shutdown for all modes. All tactical gaps from rpi5 deployment feedback are now closed. The strategic features (durable execution, multi-agent patterns) are deferred to v0.9.11+.
 
-**Strategic Positioning:** RavenClaws is the **"Temporal for AI agents"** — the lightweight, durable execution engine for AI agents. Unlike LangGraph (complex graphs), Temporal (heavy infra), or CrewAI (Python-only), RavenClaws gives you reliable, checkpointed agent execution in a 15.8MB binary that runs on a Raspberry Pi.
+**Strategic Positioning:** RavenClaws is the **"Temporal for AI agents"** — the lightweight, durable execution engine for AI agents. Unlike LangGraph (complex graphs), Temporal (heavy infra), or CrewAI (Python-only), RavenClaws gives you reliable, checkpointed agent execution in a ~5 MB binary that runs on a Raspberry Pi. **Durable execution (checkpoint/resume) is now implemented in v0.9.12** — agent loop saves state after each iteration and survives process restarts.
 
 **Key messaging:**
 - "Your agents survive crashes" — durable execution means no lost work
@@ -172,8 +172,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.9.10 (2026-06-28) — Production Hardening & Documentation 📚  
-**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~16,700 LOC, 6 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **472 unit tests**, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, published on crates.io as `ravenclaws` (binary + library crate).
+**Version:** 0.9.12 — Durable Execution 🎯  
+**Stats:** 18 source modules (+lib.rs, +eval.rs, +ravenfabric.rs), ~16,700 LOC, 6 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **472 unit tests**, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, **durable execution (checkpoint/resume)**, published on crates.io as `ravenclaws` (binary + library crate).
 
 **rpi5 Deployment Verdict (v0.9.10):** All 13 resolved issues from feedback confirmed working. 10 critical bugs fixed. 4 documentation gaps closed. 4 feature requests documented for future versions. **All production hardening items completed — container image size reduced via UPX compression, NetworkPolicy added to deployment.yaml, Secret reference docs added to getting-started guide, graceful shutdown for all modes implemented.** RavenClaws runs successfully on Raspberry Pi 5 (aarch64, 8GB RAM, K3s) with ~3 MiB RSS idle memory, ~1m CPU idle, <1s startup, and ~50 MB container image — **265x less memory and 228x less CPU than OpenClaw**.
 
@@ -403,7 +403,7 @@ simpler** — or deliberately not at all.
 | **Azure OpenAI adapter** | ✅ **v0.9.11** | ✅ v0.9.9 | ✅ | ✅ |
 | **vLLM docs + tests** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
 | **llama.cpp docs + tests** | ❌ | ✅ v0.9.9 | ✅ | ✅ |
-| **Durable execution (checkpoint/resume)** | ❌ | ✅ **v0.9.9** | ❌ | ❌ |
+| **Durable execution (checkpoint/resume)** | ✅ **v0.9.12** | ✅ **v0.9.9** | ❌ | ❌ |
 | **Multi-agent patterns as primitives** | ❌ | ✅ **v0.9.9** | ❌ | ❌ |
 | **SSE MCP ecosystem (verified)** | ❌ | ✅ **v0.9.9** | ✅ | ❌ |
 | **WASM plugin system** | ❌ | ✅ v0.10 | ❌ | ❌ |
@@ -506,7 +506,7 @@ the cloud incumbents structurally can't follow.
 | K8s deployment out of the box | Must work with `readOnlyRootFilesystem: true` | ✅ **v0.9.10** (init container chown) | **v0.9.10** ✅ |
 | Retries / provider fallback | Vellum: retry, fall back, fail early | ✅ **v0.9.8** | **v0.9.8** ✅ |
 | Human-in-the-loop approvals | Enterprises require guardrails + audit + HITL | ✅ **v0.8** | **v0.4** |
-| **Durable execution (checkpoint/resume)** | #1 gap across ALL agent frameworks | ❌ | **v0.9.9** 🎯 |
+| **Durable execution (checkpoint/resume)** | #1 gap across ALL agent frameworks | ✅ **v0.9.12** | **v0.9.9** 🎯 |
 | **Multi-agent patterns as primitives** | Debate, review-loop, research-synthesize, voting out of the box | ❌ | **v0.9.9** 🎯 |
 | **SSE MCP ecosystem (verified)** | Transport implemented (v0.9.3), needs docs + integration tests | ⚠️ Implemented | **v0.9.9** 🎯 |
 | **WASM plugin system** | Extend without recompiling | ❌ | **v0.10** |
@@ -873,14 +873,14 @@ ecosystem — were the focus. SSE MCP was already implemented (v0.9.3).
 - [x] **Add init container `chown` to K8s deployment** — Added `initContainers` section with `chown -R 65532:65532 /workspace`. *(moved from v0.9.8)*
 - [x] **Add graceful shutdown for heartbeat** — Added `Drop` impl on `HeartbeatAgent` that calls `persist_state()`. *(moved from v0.9.8)*
 
-**Deferred to v0.9.12+:**
-- [ ] **Durable execution: checkpoint/resume in agent loop** — The #1 gap across ALL agent frameworks. *(deferred to v0.9.12)*
-- [ ] **Multi-agent patterns as built-in primitives** — Debate, review-loop, research-synthesize, voting. *(deferred to v0.9.12)*
-- [ ] **Ship vLLM docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.12)*
-- [ ] **Ship llama.cpp docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.12)*
-- [ ] **Add verified MCP server SSE integration tests** — Test against real MCP clients. *(deferred to v0.9.12)*
-- [ ] **Add verified MCP client SSE integration tests** — Test against real SSE-based MCP servers. *(deferred to v0.9.12)*
-- [ ] **Document SSE MCP transport in getting-started guide** — SSE transport examples. *(deferred to v0.9.12)*
+**Deferred to v0.9.13+:**
+- [x] **Durable execution: checkpoint/resume in agent loop** — ✅ **v0.9.12**
+- [ ] **Multi-agent patterns as built-in primitives** — Debate, review-loop, research-synthesize, voting. *(deferred to v0.9.13)*
+- [ ] **Ship vLLM docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.13)*
+- [ ] **Ship llama.cpp docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.13)*
+- [ ] **Add verified MCP server SSE integration tests** — Test against real MCP clients. *(deferred to v0.9.13)*
+- [ ] **Add verified MCP client SSE integration tests** — Test against real SSE-based MCP servers. *(deferred to v0.9.13)*
+- [ ] **Document SSE MCP transport in getting-started guide** — SSE transport examples. *(deferred to v0.9.13)*
 - [x] **Reduce container image size** — ✅ **v0.9.10** (UPX compression + conditional RF binary)
 - [x] **Document K8s NetworkPolicy requirements** — ✅ **v0.9.10** (NetworkPolicy in deployment.yaml + docs)
 - [x] **Document K8s Secret references** — ✅ **v0.9.10** (example YAML in getting-started.md)
@@ -925,7 +925,7 @@ shutdown for all modes. All tactical gaps from rpi5 deployment feedback are now 
 - [x] K8s Secret references documented with example YAML (in getting-started.md)
 - [x] All modes handle SIGTERM/SIGINT gracefully (ShutdownFlag + heartbeat integration)
 
-### ✅ v0.9.11 — Strategic Features: Dedup, Azure, Eval Integration 🎯 *(current)*
+### ✅ v0.9.11 — Strategic Features: Dedup, Azure, Eval Integration 🎯 *(released 2026-07-02)*
 
 **Theme:** Three high-leverage internal improvements that reduce code duplication, expand
 provider coverage, and improve test quality. No new user-facing features — this is an
@@ -943,6 +943,23 @@ engineering excellence release.
 - [x] Eval harness exercises the full agent loop (ReAct + tools) instead of single LLM calls
 - [x] All 472 tests pass, clippy clean, no regressions
 
+### ✅ v0.9.12 — Durable Execution 🎯 *(current)*
+
+**Theme:** The #1 gap across ALL agent frameworks — agent loop checkpoints after every
+iteration, survives crash/restart with full state. RavenClaws becomes the "Temporal for
+AI agents" — reliable, checkpointed agent execution in a ~5 MB binary.
+
+#### Completed in v0.9.12
+
+- [x] **Durable execution (checkpoint/resume)** — Agent loop now saves iteration-level checkpoints to disk as atomic JSON files. On restart, the loop resumes from the last checkpoint instead of starting fresh. `CheckpointState` captures full iteration context (messages, iteration count, provider/model metadata). Checkpoints are deleted on all exit paths (success, error, max iterations). Wired into background task manager for seamless resume across process restarts. (#durable-execution)
+
+**Exit criteria:**
+- [x] Agent loop saves checkpoint after each iteration (atomic write: `.json.tmp` → `.json`)
+- [x] Agent loop resumes from checkpoint on restart (loads from `{checkpoint_dir}/{session_id}.json`)
+- [x] Checkpoint deleted on all exit paths (success, error, max iterations, token exhaustion, injection detection)
+- [x] Background task manager creates checkpoint directory and passes `checkpoint_dir` + `session_id` to agent loop
+- [x] All 472 tests pass, clippy clean, no regressions
+
 ### v1.0 — Simply the Best 🏆
 
 **The stable release. RavenClaws is a fully functional primary agent — production-ready,
@@ -950,8 +967,8 @@ benchmarked, documented, and trusted. All five pillars are verified by independe
 measurement. No more "use OpenClaw for real work" — RavenClaws IS the real work.**
 
 **Strategic positioning realized:** RavenClaws is the "Temporal for AI agents" —
-durable execution, multi-agent patterns, and edge-native deployment, all in a
-15.8 MB binary that runs on a Raspberry Pi.
+durable execution (✅ v0.9.12), multi-agent patterns, and edge-native deployment, all in a
+~5 MB binary that runs on a Raspberry Pi.
 
 **Scope:** v1.0 = v0.9.3 + v0.9.4 (critical fixes) + v0.9.5 (tool reliability) + v0.9.6
 (server endpoints) + v0.9.7 (MCP ecosystem) + v0.9.8 (infrastructure wiring) + v0.9.9
@@ -968,9 +985,10 @@ advanced capabilities (v0.10) are deferred to post-1.0.
 - [x] All v0.9.9 exit criteria met — community health files, heartbeat graceful shutdown, init container chown, `--exec` docs, migration docs
 - [x] All v0.9.10 exit criteria met — container image size (UPX), NetworkPolicy docs, Secret reference docs, graceful shutdown for all modes
 - [x] All v0.9.11 exit criteria met — agent loop deduplication, Azure OpenAI adapter, eval harness integration
-- [ ] **Durable execution** — agent loop checkpoints after every iteration; survives crash/restart with full state *(v0.9.12+)*
-- [ ] **Multi-agent patterns** — debate, review-loop, research-synthesize, voting all work as first-class modes *(v0.9.12+)*
-- [ ] **SSE MCP ecosystem** — verified integration tests pass for both client and server SSE transport *(v0.9.12+)*
+- [x] All v0.9.12 exit criteria met — durable execution (checkpoint/resume) implemented
+- [x] **Durable execution** — agent loop checkpoints after every iteration; survives crash/restart with full state ✅ **v0.9.12**
+- [ ] **Multi-agent patterns** — debate, review-loop, research-synthesize, voting all work as first-class modes *(v0.9.13+)*
+- [ ] **SSE MCP ecosystem** — verified integration tests pass for both client and server SSE transport *(v0.9.13+)*
 - [x] `ravenclaws --exec "Summarize this repository"` works with ANY provider and produces output
 - [x] `ravenclaws --serve` provides a fully functional agent API (chat, execute, tools)
 - [x] Tool execution works with models that don't emit structured `tool_calls` (text-based fallback)

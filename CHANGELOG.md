@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Azure OpenAI adapter** — New `Azure` variant in both `LLMProvider` (config.rs) and `OpenAICompatibleProvider` (llm.rs). Uses `api-key` header instead of `Bearer`, adds `api-version=2024-02-15-preview` query parameter. Mapped in CLI (`--provider azure`), factory (`create_client`), and multi-model routing. (#azure-adapter)
 - **Eval harness integrated with agent loop** — `EvalRunner::run_task()` now uses `run_agent_loop()` instead of a single direct LLM call. Eval tasks exercise the full ReAct loop with tool use, security checks, and iteration limits. (#eval-integration)
+- **Durable execution (checkpoint/resume)** — Agent loop now saves iteration-level checkpoints to disk as atomic JSON files. On restart, the loop resumes from the last checkpoint instead of starting fresh. `CheckpointState` captures full iteration context (messages, iteration count, provider/model metadata). Checkpoints are deleted on all exit paths (success, error, max iterations). Wired into background task manager for seamless resume across process restarts. (#durable-execution)
 
 ### Changed
 - **Agent loop deduplication** — Extracted shared `run_agent_loop_inner()` function containing all iteration logic (~400 lines). Both `run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry` now delegate to it, eliminating near-identical code duplication. (#dedup)

@@ -81,6 +81,10 @@ pub struct BackgroundTask {
     pub provider: Option<String>,
     /// Model name that executed this task
     pub model: Option<String>,
+    /// Serialized checkpoint state for durable execution (v0.9.12+)
+    /// When set, the agent loop can resume from this checkpoint instead of
+    /// starting from scratch after a process restart.
+    pub checkpoint: Option<String>,
 }
 
 impl BackgroundTask {
@@ -99,6 +103,7 @@ impl BackgroundTask {
             iterations: 0,
             provider: None,
             model: None,
+            checkpoint: None,
         }
     }
 }
@@ -254,7 +259,11 @@ impl BackgroundTaskManager {
             "Executing background task"
         );
 
-        // Run the agent loop
+        // Determine checkpoint directory for durable execution
+        let checkpoint_dir = self.tasks_dir.join("checkpoints");
+        let _ = std::fs::create_dir_all(&checkpoint_dir);
+
+        // Run the agent loop with checkpointing enabled
         let loop_config = crate::agent::AgentLoopConfig {
             max_iterations: 10,
             enable_tools: true,
@@ -265,6 +274,8 @@ impl BackgroundTaskManager {
             fallback_chain: None,
             token_budget: None,
             ravenfabric: None,
+            checkpoint_dir: Some(checkpoint_dir),
+            session_id: Some(task_id.to_string()),
         };
 
         let result = crate::agent::run_agent_loop(

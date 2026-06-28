@@ -491,6 +491,8 @@ async fn main() -> anyhow::Result<()> {
             fallback_chain,
             token_budget,
             ravenfabric: ravenfabric.clone(),
+            checkpoint_dir: None,
+            session_id: None,
         };
 
         // Build a configured tool registry (respects web_search endpoint from config)

@@ -23,7 +23,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.9.11 (Strategic Features: Dedup, Azure, Eval Integration)
+- **Version:** 0.9.12 (Durable Execution)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io
@@ -91,6 +91,7 @@ src/
 | Scheduling & triggers | ✅ v0.8.0 — cron, webhook, and file-watch activation for proactive 24/7 agents |
 | Autonomous heartbeat | ✅ v0.9.0 — persistent assess→plan→act→persist→sleep loop with state persistence and resumability |
 | Long-horizon task persistence | ✅ v0.9.0 — task state survives restarts; heartbeat resumes from last checkpoint; background tasks persist to disk |
+| Durable execution (checkpoint/resume) | ✅ v0.9.12 — agent loop saves iteration-level checkpoints as atomic JSON files; resumes from last checkpoint on restart; checkpoint deleted on all exit paths |
 | Retry / fallback chains | ✅ Working — exponential backoff, circuit breaker, token budgets |
 | RavenFabric integration | ✅ Working — HTTP client with health, list_agents, execute, broadcast; wired to all modes |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |

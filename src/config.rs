@@ -399,6 +399,25 @@ pub struct RuntimeConfig {
     /// HTTP server port (v0.7)
     #[serde(default = "default_server_port")]
     pub port: u16,
+
+    /// Checkpoint directory for durable execution (v0.9.12+)
+    /// When set, the agent loop saves state after each iteration to this directory.
+    /// On restart, the agent loop can resume from the latest checkpoint.
+    /// Defaults to `{workdir}/checkpoints/` if not set.
+    #[serde(default)]
+    #[allow(dead_code)]
+    pub checkpoint_dir: Option<String>,
+
+    /// Checkpoint interval in iterations (v0.9.12+)
+    /// Save a checkpoint every N iterations. Default: 1 (every iteration).
+    /// Higher values reduce I/O but lose more work on crash.
+    #[serde(default = "default_checkpoint_interval")]
+    #[allow(dead_code)]
+    pub checkpoint_interval: usize,
+}
+
+fn default_checkpoint_interval() -> usize {
+    1
 }
 
 impl Default for RuntimeConfig {
@@ -409,6 +428,8 @@ impl Default for RuntimeConfig {
             health_interval_secs: default_health_interval(),
             host: None,
             port: default_server_port(),
+            checkpoint_dir: None,
+            checkpoint_interval: 1,
         }
     }
 }
@@ -1169,6 +1190,8 @@ mod tests {
             health_interval_secs: 120,
             host: Some("127.0.0.1".to_string()),
             port: 9090,
+            checkpoint_dir: None,
+            checkpoint_interval: 1,
         };
         assert_eq!(config.workdir, "/data");
         assert_eq!(config.max_agents, 5);

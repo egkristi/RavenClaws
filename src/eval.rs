@@ -376,6 +376,8 @@ impl EvalRunner {
             fallback_chain: None,
             token_budget: None,
             ravenfabric: None,
+            checkpoint_dir: None,
+            session_id: None,
         };
 
         // Run the full agent loop (ReAct + tools + security)
