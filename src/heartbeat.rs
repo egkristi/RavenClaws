@@ -36,6 +36,7 @@ use crate::error::{RavenClawsError, Result};
 use crate::llm::LLMProviderTrait;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::sleep;
@@ -165,6 +166,9 @@ pub struct HeartbeatAgent {
 
     /// Path to the state file
     state_path: PathBuf,
+
+    /// Optional shutdown flag for graceful termination (v0.9.11)
+    shutdown_flag: Option<Arc<AtomicBool>>,
 }
 
 impl HeartbeatAgent {
@@ -228,7 +232,14 @@ impl HeartbeatAgent {
             config,
             state,
             state_path,
+            shutdown_flag: None,
         })
+    }
+
+    /// Set a shutdown flag that the heartbeat loop will check between ticks.
+    /// When the flag becomes true, the loop exits gracefully after persisting state.
+    pub fn set_shutdown_flag(&mut self, flag: Arc<AtomicBool>) {
+        self.shutdown_flag = Some(flag);
     }
 
     /// Get the heartbeat session ID
@@ -458,16 +469,56 @@ impl HeartbeatAgent {
             // Persist state after every tick
             self.persist_state()?;
 
-            // ── Step 4: Sleep until next tick ────────────────────────────
+            // ── Step 4: Sleep until next tick (with shutdown check) ────
             if (self.config.max_ticks == 0 || self.state.tick < self.config.max_ticks)
                 && !self.state.completed
             {
+                // Check shutdown flag before sleeping
+                if let Some(ref flag) = self.shutdown_flag {
+                    if flag.load(Ordering::Relaxed) {
+                        info!(
+                            tick = self.state.tick,
+                            "Shutdown flag set, exiting heartbeat loop"
+                        );
+                        self.state.progress = format!(
+                            "{}\n\n## Shutdown at tick {}\nHeartbeat was gracefully shut down via signal.",
+                            self.state.progress, self.state.tick
+                        );
+                        self.persist_state()?;
+                        return Ok(self.state.progress.clone());
+                    }
+                }
+
                 info!(
                     tick = self.state.tick,
                     sleep_secs = self.config.tick_interval_secs,
                     "Heartbeat sleeping until next tick"
                 );
-                sleep(Duration::from_secs(self.config.tick_interval_secs)).await;
+
+                // Sleep in short intervals to allow responsive shutdown
+                let total_sleep = Duration::from_secs(self.config.tick_interval_secs);
+                let check_interval = Duration::from_secs(1);
+                let mut elapsed = Duration::from_secs(0);
+
+                while elapsed < total_sleep {
+                    // Check shutdown flag during sleep
+                    if let Some(ref flag) = self.shutdown_flag {
+                        if flag.load(Ordering::Relaxed) {
+                            info!(
+                                tick = self.state.tick,
+                                "Shutdown signal received during sleep, exiting heartbeat loop"
+                            );
+                            self.state.progress = format!(
+                                "{}\n\n## Shutdown at tick {}\nHeartbeat was gracefully shut down via signal.",
+                                self.state.progress, self.state.tick
+                            );
+                            self.persist_state()?;
+                            return Ok(self.state.progress.clone());
+                        }
+                    }
+                    sleep(check_interval).await;
+                    elapsed += check_interval;
+                }
             }
         }
     }

@@ -167,6 +167,104 @@ model = "gpt-4o-mini"
 
 See the [Configuration Reference](./configuration.md) for all available options.
 
+## Kubernetes Deployment
+
+RavenClaws includes a production-ready Kubernetes deployment manifest at
+[`k8s/deployment.yaml`](https://github.com/egkristi/RavenClaws/blob/master/k8s/deployment.yaml).
+
+### Prerequisites
+
+- A Kubernetes cluster (v1.24+)
+- `kubectl` configured with cluster access
+- Container registry access (default: `ghcr.io/egkristi/ravenclaws`)
+
+### Quick Deploy
+
+```bash
+kubectl apply -f k8s/deployment.yaml
+```
+
+This creates:
+- A `ravenclaws` namespace
+- A `ravenclaws-secrets` Secret (update the values first!)
+- A `ravenclaws-config` ConfigMap
+- A Deployment with 1 replica
+- A ServiceAccount, Role, and RoleBinding for RBAC
+- A NetworkPolicy for network isolation
+
+### Required Secrets
+
+The deployment expects a Secret named `ravenclaws-secrets` in the `ravenclaws`
+namespace with the following keys:
+
+| Key | Description | Required |
+|---|---|---|
+| `LITELLM_API_KEY` | API key for LiteLLM or OpenAI-compatible provider | Yes |
+| `OPENAI_API_KEY` | API key for OpenAI (if using OpenAI directly) | No |
+| `ANTHROPIC_API_KEY` | API key for Anthropic (if using Claude directly) | No |
+| `OPENROUTER_API_KEY` | API key for OpenRouter (if using OpenRouter) | No |
+
+**Example Secret YAML:**
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ravenclaws-secrets
+  namespace: ravenclaws
+type: Opaque
+stringData:
+  LITELLM_API_KEY: "sk-your-actual-key-here"
+  # Add other keys as needed:
+  # OPENAI_API_KEY: "sk-..."
+  # ANTHROPIC_API_KEY: "sk-ant-..."
+```
+
+> **Security note:** Use `stringData` for convenience during development. For
+> production, use `data` with base64-encoded values, or an external secrets
+> manager like External Secrets Operator or Sealed Secrets.
+
+### Environment Variables from Secrets
+
+The deployment automatically maps Secret keys to environment variables via
+`secretKeyRef`:
+
+```yaml
+env:
+  - name: LITELLM_API_KEY
+    valueFrom:
+      secretKeyRef:
+        name: ravenclaws-secrets
+        key: LITELLM_API_KEY
+```
+
+To add additional environment variables from secrets, add more entries to the
+`env` array in the Deployment spec.
+
+### NetworkPolicy
+
+The deployment includes a `NetworkPolicy` that:
+- **Denies all ingress** by default (no inbound traffic allowed)
+- **Allows DNS resolution** (UDP/TCP port 53)
+- **Allows HTTPS egress** (TCP port 443) for LLM API calls
+- **Allows HTTP egress** (TCP port 80) for local services like LiteLLM proxy
+
+If your LLM API is on a specific CIDR range, uncomment and adjust the
+`ipBlock` section in the NetworkPolicy.
+
+### Container Image Size
+
+The production image uses:
+- **Distroless base** (`gcr.io/distroless/cc-debian12:nonroot`) — minimal OS surface
+- **UPX compression** — binary is compressed to reduce image size
+- **Conditional RavenFabric agent** — set `--build-arg INCLUDE_RAVENFABRIC=false`
+  to exclude the optional RavenFabric agent binary (~15 MB savings)
+
+Build a minimal image (no RavenFabric):
+```bash
+docker buildx build --build-arg INCLUDE_RAVENFABRIC=false -t ravenclaws:minimal .
+```
+
 ## Next Steps
 
 - [Configuration Reference](./configuration.md) — all config options

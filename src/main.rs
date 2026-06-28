@@ -23,8 +23,11 @@ mod tools;
 
 use clap::Parser;
 use std::sync::Arc;
+use tokio::signal;
 use tracing::{info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Parser, Debug)]
 #[command(name = "ravenclaws")]
@@ -225,6 +228,82 @@ struct Args {
     no_final_required: bool,
 }
 
+/// A shared shutdown flag that can be checked by running modes.
+/// Set to true when SIGTERM or SIGINT is received.
+#[derive(Clone)]
+struct ShutdownFlag {
+    triggered: Arc<AtomicBool>,
+}
+
+impl ShutdownFlag {
+    fn new() -> Self {
+        Self {
+            triggered: Arc::new(AtomicBool::new(false)),
+        }
+    }
+
+    /// Returns true if a shutdown signal has been received.
+    fn is_shutting_down(&self) -> bool {
+        self.triggered.load(Ordering::Relaxed)
+    }
+
+    /// Spawns a task that listens for SIGTERM/SIGINT and sets the flag.
+    /// Returns the flag handle for checking shutdown status.
+    fn spawn() -> Self {
+        let flag = Self::new();
+        let flag_clone = flag.clone();
+        tokio::spawn(async move {
+            // Use a stream to handle both SIGTERM and SIGINT
+            let sigterm = signal::unix::signal(signal::unix::SignalKind::terminate());
+            let sigint = signal::unix::signal(signal::unix::SignalKind::interrupt());
+
+            let signal_name = match (sigterm, sigint) {
+                (Ok(mut term), Ok(mut int)) => {
+                    tokio::select! {
+                        _ = term.recv() => "SIGTERM",
+                        _ = int.recv() => "SIGINT",
+                    }
+                }
+                _ => {
+                    // Fallback: Ctrl+C only (Windows or permission-denied)
+                    let _ = signal::ctrl_c().await;
+                    "SIGINT"
+                }
+            };
+
+            info!(signal = %signal_name, "Shutdown signal received, initiating graceful shutdown");
+            flag_clone.triggered.store(true, Ordering::Relaxed);
+        });
+        flag
+    }
+}
+
+/// A guard that logs a shutdown message on drop.
+/// Place at the end of each mode's scope to ensure graceful shutdown is visible.
+struct ShutdownGuard {
+    mode: &'static str,
+}
+
+impl ShutdownGuard {
+    fn new(mode: &'static str) -> Self {
+        Self { mode }
+    }
+}
+
+impl Drop for ShutdownGuard {
+    fn drop(&mut self) {
+        info!(mode = self.mode, "RavenClaws shutdown complete");
+    }
+}
+
+/// Waits until the shutdown flag is set.
+/// Used with `tokio::select!` to interrupt long-running modes on signal.
+async fn wait_for_shutdown(flag: &ShutdownFlag) {
+    while !flag.is_shutting_down() {
+        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+    }
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -240,6 +319,9 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     info!(version = env!("CARGO_PKG_VERSION"), "RavenClaws starting");
+
+    // Initialize global shutdown flag for graceful shutdown (v0.9.11)
+    let shutdown = ShutdownFlag::spawn();
 
     // Load configuration
     let mut config = config::Config::load(args.config.as_deref())?;
@@ -622,9 +704,11 @@ async fn main() -> anyhow::Result<()> {
             "Scheduler started — waiting for triggers"
         );
 
-        // Wait for shutdown signal
-        tokio::signal::ctrl_c().await?;
-        info!("Received Ctrl+C, stopping scheduler...");
+        // Wait for shutdown signal via unified flag
+        while !shutdown.is_shutting_down() {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        }
+        info!("Shutdown signal received, stopping scheduler...");
 
         scheduler.stop().await;
         info!("RavenClaws scheduler shutdown complete");
@@ -659,6 +743,9 @@ async fn main() -> anyhow::Result<()> {
         let llm = llm::create_client(&config.llm)?;
         let mut agent =
             heartbeat::HeartbeatAgent::new(llm, hb_config, args.heartbeat_session).await?;
+
+        // Wire up the shutdown flag for graceful termination (v0.9.11)
+        agent.set_shutdown_flag(shutdown.triggered.clone());
 
         info!(
             heartbeat_id = %agent.id(),
@@ -741,7 +828,10 @@ async fn main() -> anyhow::Result<()> {
     // Determine if multi-model or single-provider mode
     let has_multi_model = !config.llms.is_empty();
 
-    if has_multi_model {
+    // Run the selected mode with graceful shutdown support.
+    // Long-running modes (single/swarm/supervisor/orchestrate) are spawned in a task
+    // so that SIGTERM/SIGINT can trigger a graceful exit.
+    let mode_result: anyhow::Result<()> = if has_multi_model {
         info!(providers = config.llms.len(), "Multi-model mode enabled");
 
         // Create multi-model manager
@@ -760,18 +850,46 @@ async fn main() -> anyhow::Result<()> {
         // Run agent based on mode with multi-model support
         match args.mode.as_str() {
             "single" => {
+                let guard = ShutdownGuard::new("single (multi-model)");
                 info!("Running in single agent mode (multi-model)");
-                agent::run_single_multi(multi_llm, config, ravenfabric).await?;
+                let mode_fut = agent::run_single_multi(multi_llm, config, ravenfabric);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting single agent mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
             }
             "swarm" => {
+                let guard = ShutdownGuard::new("swarm (multi-model)");
                 info!("Running in swarm mode (multi-model)");
-                agent::run_swarm_multi(multi_llm, config, ravenfabric).await?;
+                let mode_fut = agent::run_swarm_multi(multi_llm, config, ravenfabric);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting swarm mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
             }
             "supervisor" => {
+                let guard = ShutdownGuard::new("supervisor (multi-model)");
                 info!("Running in supervisor mode (multi-model)");
-                agent::run_supervisor_multi(multi_llm, config, ravenfabric).await?;
+                let mode_fut = agent::run_supervisor_multi(multi_llm, config, ravenfabric);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting supervisor mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
             }
             "orchestrate" => {
+                let guard = ShutdownGuard::new("orchestrate (multi-model)");
                 info!("Running in swarm orchestration mode (multi-model)");
                 let mut orchestrator = swarm::SwarmOrchestrator::new(
                     config.swarm.clone(),
@@ -783,6 +901,8 @@ async fn main() -> anyhow::Result<()> {
                 let task = "Complete the assigned task using available providers.";
                 let result = orchestrator.orchestrate(task).await?;
                 println!("{}", result);
+                drop(guard);
+                Ok(())
             }
             _ => {
                 anyhow::bail!(
@@ -815,18 +935,46 @@ async fn main() -> anyhow::Result<()> {
         // Run agent based on mode
         match args.mode.as_str() {
             "single" => {
+                let guard = ShutdownGuard::new("single");
                 info!("Running in single agent mode");
-                agent::run_single(llm, config, ravenfabric).await?;
+                let mode_fut = agent::run_single(llm, config, ravenfabric);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting single agent mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
             }
             "swarm" => {
+                let guard = ShutdownGuard::new("swarm");
                 info!("Running in swarm mode");
-                agent::run_swarm(llm, config, ravenfabric).await?;
+                let mode_fut = agent::run_swarm(llm, config, ravenfabric);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting swarm mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
             }
             "supervisor" => {
+                let guard = ShutdownGuard::new("supervisor");
                 info!("Running in supervisor mode");
-                agent::run_supervisor(llm, config, ravenfabric).await?;
+                let mode_fut = agent::run_supervisor(llm, config, ravenfabric);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting supervisor mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
             }
             "orchestrate" => {
+                let guard = ShutdownGuard::new("orchestrate");
                 info!("Running in swarm orchestration mode");
                 let mut orchestrator = swarm::SwarmOrchestrator::new(
                     config.swarm.clone(),
@@ -838,6 +986,8 @@ async fn main() -> anyhow::Result<()> {
                 let task = "Complete the assigned task using available providers.";
                 let result = orchestrator.orchestrate(task).await?;
                 println!("{}", result);
+                drop(guard);
+                Ok(())
             }
             _ => {
                 anyhow::bail!(
@@ -846,7 +996,10 @@ async fn main() -> anyhow::Result<()> {
                 );
             }
         }
-    }
+    };
+
+    // Propagate any mode error
+    mode_result?;
 
     info!("RavenClaws shutdown complete");
     Ok(())

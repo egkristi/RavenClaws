@@ -8,6 +8,49 @@ metadata:
     app.kubernetes.io/part-of: ravenclaws
 
 ---
+# NetworkPolicy: Deny all ingress by default, allow specific egress
+# Required for production deployments with network isolation.
+# Adjust the egress CIDR blocks to match your LLM API endpoints.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: ravenclaws-default-deny
+  namespace: ravenclaws
+  labels:
+    app.kubernetes.io/name: ravenclaws
+    app.kubernetes.io/part-of: ravenclaws
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: ravenclaws
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    # DNS resolution (required for all outbound connections)
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    # HTTPS egress to LLM API endpoints (LiteLLM, OpenAI, etc.)
+    - ports:
+        - port: 443
+          protocol: TCP
+    # HTTP egress to local services (LiteLLM proxy, RavenFabric, etc.)
+    - ports:
+        - port: 80
+          protocol: TCP
+    # Allow egress to specific CIDR blocks if needed
+    # - to:
+    #     - ipBlock:
+    #         cidr: 10.0.0.0/8
+    #   ports:
+    #     - port: 443
+    #       protocol: TCP
+
+---
 apiVersion: v1
 kind: Secret
 metadata:

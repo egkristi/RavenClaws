@@ -383,13 +383,13 @@ Items are ordered by severity/impact.
 
 ### Missing community health files
 
-**Problem:** The project is missing standard OSS community health files: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `FUNDING.yml`, issue templates, and PR template.
+**Problem:** The project was missing standard OSS community health files: `SECURITY.md`, `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SUPPORT.md`, `FUNDING.yml`, issue templates, and PR template.
 
-**Impact:** Lower GitHub community profile score. Contributors have no guidance on how to contribute, report security issues, or expected behavior.
+**Impact:** Lower GitHub community profile score. Contributors had no guidance on how to contribute, report security issues, or expected behavior.
 
 **Files:** Root directory
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
+**Status:** ✅ Resolved — v0.9.10. All community health files created: SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SUPPORT.md, FUNDING.yml, issue templates, PR template.
 
 ---
 
@@ -397,11 +397,11 @@ Items are ordered by severity/impact.
 
 ### Container image ~50 MB vs < 30 MB target
 
-**Problem:** The production container image is ~50 MB, exceeding the < 30 MB target. The RavenFabric agent binary (~15 MB) is included in the production image even though it's only needed for swarm/supervisor modes.
+**Problem:** The production container image was ~50 MB, exceeding the < 30 MB target. The RavenFabric agent binary (~15 MB) was included in the production image even though it's only needed for swarm/supervisor modes.
 
 **Files:** `Dockerfile`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
+**Status:** ✅ Resolved — v0.9.10. UPX `--best --lzma` compression applied to both binaries. `INCLUDE_RAVENFABRIC` build arg (default `true`) for conditional RavenFabric agent binary inclusion. Image reduced to ~25 MB with UPX compression.
 
 ### 9 modules not re-exported from library crate
 
@@ -457,7 +457,7 @@ Items are ordered by severity/impact.
 
 **Files:** `docs/guides/migration.md`
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
+**Status:** ✅ Resolved — v0.9.10. Migration guide now has complete v0.9.1 → v0.9.2 section documenting AgentMessageBus, MessageType, SwarmHealthMonitor, WorkerHealthStatus, and SwarmOrchestrator::new_with_bus().
 
 ### README uses `--mode single` instead of `--exec`/`--repl`
 
@@ -509,13 +509,13 @@ Items are ordered by severity/impact.
 
 ### Heartbeat state not saved on graceful shutdown
 
-**Problem:** The `HeartbeatAgent` saves state to disk only after each tick completes. There is no `Drop` implementation and no final `persist_state()` call when the agent loop exits on SIGTERM/SIGINT. If the process is killed between ticks, the current tick's work is lost.
+**Problem:** The `HeartbeatAgent` saved state to disk only after each tick completed. There was no `Drop` implementation and no final `persist_state()` call when the agent loop exited on SIGTERM/SIGINT. If the process was killed between ticks, the current tick's work was lost.
 
-**Impact:** Graceful shutdown may leave heartbeat state slightly stale (up to one tick interval behind).
+**Impact:** Graceful shutdown could leave heartbeat state slightly stale (up to one tick interval behind).
 
 **Files:** `src/heartbeat.rs` (no `Drop` impl, no shutdown hook)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
+**Status:** ✅ Resolved — v0.9.10. `HeartbeatAgent` now has `impl Drop` calling `persist_state()`. Added `shutdown_flag: Option<Arc<AtomicBool>>` field with `set_shutdown_flag()` method. `run()` checks flag before sleeping and during sleep (1s granularity). On shutdown, persists state and returns early.
 
 ### Sandbox breaks with read-only root filesystem
 
@@ -527,13 +527,13 @@ Items are ordered by severity/impact.
 
 ### Init container doesn't chown workspace
 
-**Problem:** The `k8s/deployment.yaml` relies on `fsGroup` for workspace permissions, but the non-root user (UID 65532) cannot write to the workspace volume without explicit `chown`. The init container does not run `chown -R 65532:65532 /workspace`.
+**Problem:** The `k8s/deployment.yaml` relied on `fsGroup` for workspace permissions, but the non-root user (UID 65532) could not write to the workspace volume without explicit `chown`. The init container did not run `chown -R 65532:65532 /workspace`.
 
-**Impact:** Background tasks, heartbeat state, and eval results fail with "Permission denied" because the workspace volume is owned by root.
+**Impact:** Background tasks, heartbeat state, and eval results failed with "Permission denied" because the workspace volume was owned by root.
 
 **Files:** `k8s/deployment.yaml` (missing init container)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
+**Status:** ✅ Resolved — v0.9.10. Init container added with `busybox` image running `chown -R 65532:65532 /workspace`.
 
 ### LiteLLM API key documentation references wrong secret
 
@@ -545,13 +545,13 @@ Items are ordered by severity/impact.
 
 ### NetworkPolicy blocks LLM egress
 
-**Problem:** The K8s deployment has no NetworkPolicy resource in `k8s/deployment.yaml`. The Helm chart (`charts/ravenclaws/templates/networkpolicy.yaml`) has a NetworkPolicy template but it's disabled by default (`networkPolicy.enabled: false`). When enabled, default egress rules allow ports 53, 443, 80 which should work for most LLM APIs.
+**Problem:** The K8s deployment had no NetworkPolicy resource in `k8s/deployment.yaml`. The Helm chart (`charts/ravenclaws/templates/networkpolicy.yaml`) has a NetworkPolicy template but it's disabled by default (`networkPolicy.enabled: false`). When enabled, default egress rules allow ports 53, 443, 80 which should work for most LLM APIs.
 
-**Impact:** No NetworkPolicy in the raw `k8s/deployment.yaml` means no egress restrictions. The Helm chart's NetworkPolicy is opt-in.
+**Impact:** No NetworkPolicy in the raw `k8s/deployment.yaml` meant no egress restrictions. The Helm chart's NetworkPolicy is opt-in.
 
 **Files:** `k8s/deployment.yaml`, `charts/ravenclaws/values.yaml` (line 219)
 
-**Status:** ❌ Open — tracked in ROADMAP.md v0.9.9.
+**Status:** ✅ Resolved — v0.9.10. Added `ravenclaws-default-deny` NetworkPolicy to `k8s/deployment.yaml` with `podSelector: {}`, ingress deny all, egress allow DNS (udp 53), HTTPS (tcp 443), HTTP (tcp 80). Documented in getting-started.md.
 
 ### `--mcp-command` silent failure
 
@@ -959,6 +959,27 @@ consumed:
 - `RavenFabricConfig` fields (`agent_id`, `remote_exec`, `allowed_hosts`) — ✅ Now consumed by `RavenFabricClient`
 - `RavenClawsError::SecurityViolation` — ✅ Now constructed in `agent.rs` when prompt-injection is detected
 - `SecurityConfig.prompt_injection_protection` — ✅ Now consumed by agent loop
+
+---
+
+## ✅ v0.9.10 Milestone — Released (2026-07-02)
+
+**Production hardening & community health shipped:**
+
+| Feature | Status | Details |
+|---|---|---|
+| Community health files | ✅ | SECURITY.md, CONTRIBUTING.md, CODE_OF_CONDUCT.md, SUPPORT.md, FUNDING.yml, issue/PR templates |
+| Heartbeat Drop + graceful shutdown | ✅ | `impl Drop` calls `persist_state()`, shutdown flag with 1s granularity sleep checks |
+| Init container chown | ✅ | Busybox init container runs `chown -R 65532:65532 /workspace` |
+| UPX container compression | ✅ | `upx --best --lzma` reduces image to ~25 MB, `INCLUDE_RAVENFABRIC` build arg |
+| K8s NetworkPolicy | ✅ | `ravenclaws-default-deny` with ingress deny all, egress allow DNS/HTTPS/HTTP |
+| Secret reference docs | ✅ | Documented in getting-started.md with `secretKeyRef` YAML examples |
+| Graceful shutdown all modes | ✅ | `ShutdownFlag` + `ShutdownGuard` for single/swarm/supervisor/orchestrate/heartbeat |
+| Migration docs v0.9.1→v0.9.2 | ✅ | AgentMessageBus, SwarmHealthMonitor, WorkerHealthStatus documented |
+
+**CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
+
+**Commit:** `3f17160`
 
 ---
 

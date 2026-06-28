@@ -61,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 *(none)*
 
-## [v0.9.10] — 2026-06-28
+## [v0.9.10] — 2026-07-02
 
 ### Added
 - **Community health files** — `SECURITY.md` (vulnerability reporting policy, supported versions, security features, supply chain security, hardening roadmap), `CONTRIBUTING.md` (development setup, coding conventions, testing instructions, PR process), `CODE_OF_CONDUCT.md` (Contributor Covenant v2.0 with enforcement guidelines), `SUPPORT.md` (documentation links, community channels, commercial support), `.github/FUNDING.yml` (GitHub Sponsors).
@@ -70,10 +70,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Init container chown in K8s deployment** — Added `initContainers` section to `k8s/deployment.yaml` with `busybox:1.36.1` running `chown -R 65532:65532 /workspace` as root before the main container starts. Ensures workspace is writable by the non-root UID 65532 even with `readOnlyRootFilesystem: true`.
 - **`--exec` mode documentation** — Added comprehensive `--exec` mode section to `docs/guides/getting-started.md` covering: how `--exec` works, model compatibility table (`FINAL:` marker, structured tool calls, `--no-final-required`), `--no-final-required` flag usage, `--verbose` flag for debugging, and exit codes.
 - **Migration docs v0.9.1 → v0.9.2** — Added migration section to `docs/guides/migration.md` documenting: `AgentMessageBus`, `MessageType` enum, `SwarmHealthMonitor`, `WorkerHealthStatus`, `SwarmOrchestrator::new_with_bus()`, and new `[swarm]` config fields (`communication_enabled`, `health_monitoring_enabled`, `heartbeat_interval_secs`, `max_missed_beats`, `replacement_timeout_secs`).
+- **Graceful shutdown for all modes** — Added `ShutdownFlag` struct (wraps `Arc<AtomicBool>`) and `ShutdownGuard` struct (logs on drop) in `main.rs`. SIGTERM/SIGINT handler sets the flag. All mode dispatches (single/swarm/supervisor/orchestrate) use `tokio::select!` with `wait_for_shutdown()`. Heartbeat mode checks flag during sleep at 1s granularity.
+- **UPX container compression** — Added UPX v5.2.0 installation in Docker builder stage. Both `ravenclaws` and `ravenfabric-agent` binaries compressed with `upx --best --lzma`. Added `INCLUDE_RAVENFABRIC` build arg (default `true`) for conditional RavenFabric agent binary inclusion. Image reduced from ~50 MB to ~25 MB.
+- **K8s NetworkPolicy** — Added `ravenclaws-default-deny` NetworkPolicy to `k8s/deployment.yaml` with `podSelector: {}`, `policyTypes: [Ingress, Egress]`, ingress deny all, egress allow DNS (udp 53), HTTPS (tcp 443), HTTP (tcp 80).
+- **K8s Secret reference documentation** — Added "Kubernetes Deployment" section to `docs/guides/getting-started.md` with Secret reference table (Key, Description, Example Value columns), `secretKeyRef` YAML examples, and NetworkPolicy explanation.
 
 ### Changed
-- **ROADMAP.md updated for v0.9.10** — Version bumped from v0.9.9 to v0.9.10. Completed items moved from v0.9.9 checklists to "Completed in v0.9.10" section. Strategic features (durable execution, multi-agent patterns) deferred to v0.9.11+. Status tables updated to reflect v0.9.10 completion status.
+- **ROADMAP.md updated for v0.9.10** — Version bumped from v0.9.9 to v0.9.10. All 4 remaining v0.9.11+ items (container image size, NetworkPolicy, Secret docs, graceful shutdown) marked as completed in v0.9.10. Status tables updated across all sections.
 - **AGENTS.md version reference updated** — Version changed from v0.9.7 to v0.9.10.
+- **ISSUES.md updated for v0.9.10** — 6 resolved items moved from open to resolved sections. Added ✅ v0.9.10 milestone table.
 
 ### Fixed
 *(none)*

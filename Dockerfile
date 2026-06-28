@@ -1,6 +1,7 @@
 # RavenClaws — Multi-stage build for minimal production image
 # Supports: linux/amd64, linux/arm64
 # Usage: docker buildx build --platform linux/amd64,linux/arm64 -t ravenclaws:latest .
+#        docker buildx build --build-arg INCLUDE_RAVENFABRIC=false -t ravenclaws:latest .
 # syntax=docker/dockerfile:1
 
 # Stage 1: Builder
@@ -10,6 +11,9 @@ ARG BUILDPLATFORM
 FROM --platform=$BUILDPLATFORM rust:1.86-slim-bookworm@sha256:57d415bbd61ce11e2d5f73de068103c7bd9f3188dc132c97cef4a8f62989e944 AS builder
 
 WORKDIR /app
+
+# Whether to include RavenFabric agent binary (adds ~15 MB)
+ARG INCLUDE_RAVENFABRIC=true
 
 # Map TARGETPLATFORM to Rust target triple and RavenFabric arch
 ARG TARGETPLATFORM
@@ -22,7 +26,7 @@ RUN case "$TARGETPLATFORM" in \
                         && echo "amd64" > /tmp/rf_arch.txt ;; \
     esac
 
-# Install dependencies and cross-compilation tools
+# Install dependencies, cross-compilation tools, and UPX
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
@@ -36,7 +40,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libc6-dev-amd64-cross \
     linux-libc-dev-arm64-cross \
     linux-libc-dev-amd64-cross \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/*
+
+# Install UPX for binary compression
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN UPX_VERSION="5.2.0" && \
+    curl -fsSL "https://github.com/upx/upx/releases/download/v${UPX_VERSION}/upx-${UPX_VERSION}-amd64_linux.tar.xz" \
+      -o /tmp/upx.tar.xz && \
+    tar xf /tmp/upx.tar.xz -C /tmp/ && \
+    cp "/tmp/upx-${UPX_VERSION}-amd64_linux/upx" /usr/local/bin/ && \
+    rm -rf /tmp/upx* && \
+    upx --version
 
 # Configure cargo for cross-compilation
 RUN case "$TARGETPLATFORM" in \
@@ -47,25 +62,30 @@ RUN case "$TARGETPLATFORM" in \
     esac
 
 # Download RavenFabric agent binary (optional runtime component)
-SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 ARG RAVENFABRIC_VERSION=v0.25.1
-RUN RF_ARCH=$(cat /tmp/rf_arch.txt) && \
-    echo "Downloading RavenFabric ${RAVENFABRIC_VERSION} for ${RF_ARCH}..." && \
-    curl -fsSL \
-      "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/ravenfabric-linux-${RF_ARCH}-agent" \
-      -o /app/ravenfabric-agent && \
-    curl -fsSL \
-      "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/SHA256SUMS" \
-      -o /app/SHA256SUMS && \
-    EXPECTED=$(grep "ravenfabric-linux-${RF_ARCH}-agent" /app/SHA256SUMS | cut -d' ' -f1) && \
-    ACTUAL=$(sha256sum /app/ravenfabric-agent | cut -d' ' -f1) && \
-    if [ "$EXPECTED" != "$ACTUAL" ]; then \
-      echo "SHA256 mismatch: expected $EXPECTED, got $ACTUAL"; \
-      exit 1; \
-    fi && \
-    echo "SHA256 match: $ACTUAL" && \
-    chmod +x /app/ravenfabric-agent && \
-    rm /app/SHA256SUMS
+RUN if [ "$INCLUDE_RAVENFABRIC" = "true" ]; then \
+      RF_ARCH=$(cat /tmp/rf_arch.txt) && \
+      echo "Downloading RavenFabric ${RAVENFABRIC_VERSION} for ${RF_ARCH}..." && \
+      curl -fsSL \
+        "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/ravenfabric-linux-${RF_ARCH}-agent" \
+        -o /app/ravenfabric-agent && \
+      curl -fsSL \
+        "https://github.com/egkristi/RavenFabric-Published/releases/download/${RAVENFABRIC_VERSION}/SHA256SUMS" \
+        -o /app/SHA256SUMS && \
+      EXPECTED=$(grep "ravenfabric-linux-${RF_ARCH}-agent" /app/SHA256SUMS | cut -d' ' -f1) && \
+      ACTUAL=$(sha256sum /app/ravenfabric-agent | cut -d' ' -f1) && \
+      if [ "$EXPECTED" != "$ACTUAL" ]; then \
+        echo "SHA256 mismatch: expected $EXPECTED, got $ACTUAL"; \
+        exit 1; \
+      fi && \
+      echo "SHA256 match: $ACTUAL" && \
+      chmod +x /app/ravenfabric-agent && \
+      upx --best --lzma /app/ravenfabric-agent && \
+      rm /app/SHA256SUMS; \
+    else \
+      echo "Skipping RavenFabric agent download (INCLUDE_RAVENFABRIC=false)"; \
+      touch /app/ravenfabric-agent; \
+    fi
 
 # Copy manifests
 COPY Cargo.toml Cargo.lock* ./
@@ -75,14 +95,15 @@ COPY src/ ./src/
 RUN TARGET=$(cat /tmp/rust_target.txt) && \
     rustup target add "$TARGET" && \
     cargo build --release --locked --target "$TARGET" && \
-    cp "target/$TARGET/release/ravenclaws" /app/ravenclaws
+    cp "target/$TARGET/release/ravenclaws" /app/ravenclaws && \
+    upx --best --lzma /app/ravenclaws
 
 # Stage 2: Runtime (minimal)
 FROM gcr.io/distroless/cc-debian12:nonroot@sha256:b0ae8e989418b458e0f25489bc3be523718938a2b70864cc0f6a00af1ddbd985
 
 WORKDIR /app
 
-# Copy RavenClaws binary
+# Copy RavenClaws binary (UPX-compressed)
 COPY --from=builder /app/ravenclaws /app/ravenclaws
 
 # Copy RavenFabric agent binary (optional — for swarm/supervisor modes)
