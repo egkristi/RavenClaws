@@ -47,7 +47,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 *(none)*
 
-## [Unreleased]
+## [v1.0.0] — 2026-07-02
 
 ### Added
 - **`--mcp-sse-server` CLI flag** — New `--mcp-sse-server` flag (env: `RAVENCLAWS_MCP_SSE_SERVER`) runs RavenClaws as an MCP SSE (Server-Sent Events) transport server. Supports `--mcp-sse-host` (default `0.0.0.0`) and `--mcp-sse-port` (default `8081`) flags. Wired into `main.rs` dispatch with graceful shutdown via `ShutdownFlag`. (#mcp-sse-wiring)
@@ -62,6 +62,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`#[allow(dead_code)]` removed from SSE components** — `McpTransportConfig::Sse` variant, `McpSseServer` struct and impl, and `McpClientManager::from_config()` SSE branch all unwired — now fully wired and active. (#mcp-sse-wiring)
 - **`lib.rs` re-exports updated** — `McpSseServer` added to public API re-exports. Module description updated to "JSON-RPC 2.0 over stdio + SSE". (#mcp-sse-wiring)
 - **ROADMAP.md updated for v0.9.16** — SSE MCP items marked complete. v1.0 exit criteria updated. (#roadmap-update)
+- **Version bumped to 1.0.0** — Stable release. All v1.0 exit criteria met. (#v1.0-release)
 
 ### Fixed
 *(none)*
