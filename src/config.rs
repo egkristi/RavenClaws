@@ -133,7 +133,9 @@ pub struct McpConfig {
 pub struct McpServerConfig {
     /// Human-readable name for this MCP server (used in logs and tool namespacing)
     pub name: String,
-    /// Command to launch the MCP server process
+    /// Command to launch the MCP server process (stdio transport)
+    /// Either `command` or `url` must be set, but not both.
+    #[serde(default)]
     pub command: String,
     /// Arguments to pass to the command
     #[serde(default)]
@@ -141,6 +143,10 @@ pub struct McpServerConfig {
     /// Environment variables to set for the MCP server process
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
+    /// SSE endpoint URL for SSE transport (e.g., "http://localhost:8080/sse")
+    /// Either `command` or `url` must be set, but not both.
+    #[serde(default)]
+    pub url: String,
 }
 
 /// Web search configuration (v0.8)

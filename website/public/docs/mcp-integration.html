@@ -58,6 +58,9 @@
       <a href="#security" data-spy>Security</a>
       <a href="#use-cases" data-spy>Use cases</a>
       <a href="#best-practices" data-spy>Best practices</a>
+      <h5>New in v0.9.16</h5>
+      <a href="#server" data-spy>MCP SSE server</a>
+      <a href="#client" data-spy>SSE client transport</a>
     </aside>
 
     <article class="doc-body">
@@ -74,25 +77,60 @@
 
       <h2 id="client">MCP client mode</h2>
       <p>In client mode, RavenClaws connects to one or more MCP servers and discovers their available tools. The agent can then use those tools during task execution.</p>
-      <h3>Starting an MCP server</h3>
+
+      <h3>Transport types</h3>
+      <p>RavenClaws supports two MCP transport types:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Transport</th><th>Description</th><th>Use case</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Stdio</strong></td><td>Spawns a child process and communicates via stdin/stdout</td><td>Local MCP servers (filesystem, git, etc.)</td></tr>
+          <tr><td><strong>SSE</strong></td><td>Connects to an HTTP endpoint with Server-Sent Events</td><td>Remote MCP servers (network services, cloud-hosted)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Stdio transport</h3>
+      <h4>Starting an MCP server</h4>
       <p>First, you need an MCP server running. Here's an example using the official MCP filesystem server:</p>
       <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
 <pre><code><span class="tok-d">npx</span> @modelcontextprotocol/server-filesystem /path/to/allowed/directory</code></pre></div>
-      <h3>Connecting RavenClaws as a client</h3>
+      <h4>Connecting RavenClaws as a client (Stdio)</h4>
       <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
 <pre><code><span class="tok-c"># Connect to an MCP server via stdio</span>
 <span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-client</span> <span class="tok-s">"npx @modelcontextprotocol/server-filesystem /tmp"</span> <span class="tok-k">--exec</span> <span class="tok-s">"List files in the current directory"</span></code></pre></div>
-      <h3>Configuration</h3>
+
+      <h3>SSE transport</h3>
+      <p>SSE (Server-Sent Events) transport allows RavenClaws to connect to MCP servers over HTTP, which is ideal for remote or containerized MCP servers.</p>
+      <h4>Connecting RavenClaws as a client (SSE)</h4>
+      <p>Configure SSE-based MCP servers in your config file:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[mcp]
+servers = [
+  { name = <span class="tok-s">"playwright"</span>, url = <span class="tok-s">"http://playwright-mcp:8080/sse"</span> },
+  { name = <span class="tok-s">"postgres"</span>, url = <span class="tok-s">"http://postgres-mcp:8081/sse"</span> },
+]</code></pre></div>
+      <h4>How SSE transport works</h4>
+      <ol>
+        <li>RavenClaws connects to the SSE endpoint via HTTP GET.</li>
+        <li>The server sends an <code>endpoint</code> event with the message endpoint URL.</li>
+        <li>RavenClaws sends JSON-RPC requests via HTTP POST to the message endpoint.</li>
+        <li>The server sends JSON-RPC responses via the SSE stream.</li>
+        <li>Automatic reconnection with exponential backoff on disconnection.</li>
+      </ol>
+
+      <h3>Configuration (all transports)</h3>
       <p>You can configure MCP servers in your config file:</p>
       <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
 <pre><code>[mcp]
 servers = [
+  <span class="tok-c"># Stdio transport</span>
   { command = <span class="tok-s">"npx"</span>, args = [<span class="tok-s">"@modelcontextprotocol/server-filesystem"</span>, <span class="tok-s">"/tmp"</span>], name = <span class="tok-s">"filesystem"</span> },
   { command = <span class="tok-s">"npx"</span>, args = [<span class="tok-s">"@modelcontextprotocol/server-github"</span>], name = <span class="tok-s">"github"</span> },
+  <span class="tok-c"># SSE transport</span>
+  { name = <span class="tok-s">"playwright"</span>, url = <span class="tok-s">"http://playwright-mcp:8080/sse"</span> },
 ]</code></pre></div>
       <h3>How it works</h3>
       <ol>
-        <li>RavenClaws spawns the MCP server process.</li>
+        <li>RavenClaws connects to MCP servers (via stdio or SSE).</li>
         <li>Discovers available tools via the <code>tools/list</code> endpoint.</li>
         <li>Registers discovered tools in the <code>ToolRegistry</code>.</li>
         <li>When the agent calls a tool, RavenClaws sends a <code>tools/call</code> request.</li>
@@ -101,6 +139,8 @@ servers = [
 
       <h2 id="server">MCP server mode</h2>
       <p>In server mode, RavenClaws exposes its built-in tools (shell, read/write file, web fetch, web search) as MCP tools that other AI agents can discover and use.</p>
+
+      <h3>Stdio server</h3>
       <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
 <pre><code><span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-server</span></code></pre></div>
       <p>This starts RavenClaws in MCP server mode, listening on stdio for JSON-RPC 2.0 requests. Any MCP-compatible client can connect:</p>
@@ -125,6 +165,49 @@ servers = [
   }
 }</code></pre></div>
 
+      <h3>SSE server</h3>
+      <p>RavenClaws also supports MCP over SSE (Server-Sent Events) transport, which allows remote MCP clients to connect over HTTP.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Default port 8081</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-sse-server</span>
+
+<span class="tok-c"># Custom host and port</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-sse-server</span> <span class="tok-k">--mcp-sse-host</span> 127.0.0.1 <span class="tok-k">--mcp-sse-port</span> 9090</code></pre></div>
+      <p>The SSE server provides two endpoints:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>/sse</code></td><td>GET</td><td>SSE stream for receiving JSON-RPC messages</td></tr>
+          <tr><td><code>/message</code></td><td>POST</td><td>Send JSON-RPC requests to the server</td></tr>
+        </tbody>
+      </table></div>
+      <h4>Connecting from OpenClaw</h4>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">OpenClaw config</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{
+  <span class="tok-s">"mcpServers"</span>: {
+    <span class="tok-s">"ravenclaws"</span>: {
+      <span class="tok-s">"url"</span>: <span class="tok-s">"http://ravenclaws:8081/sse"</span>
+    }
+  }
+}</code></pre></div>
+      <h4>Connecting from Claude Desktop</h4>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">Claude Desktop config</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{
+  <span class="tok-s">"mcpServers"</span>: {
+    <span class="tok-s">"ravenclaws"</span>: {
+      <span class="tok-s">"url"</span>: <span class="tok-s">"http://localhost:8081/sse"</span>
+    }
+  }
+}</code></pre></div>
+      <h4>How SSE server works</h4>
+      <ol>
+        <li>Client connects to <code>GET /sse</code> and receives an <code>endpoint</code> event with the message URL.</li>
+        <li>Client sends JSON-RPC requests via <code>POST /message</code>.</li>
+        <li>Server processes requests through PolicyEngine, Sandbox, and AuditLog.</li>
+        <li>Server sends JSON-RPC responses via the SSE stream.</li>
+        <li>Multiple concurrent clients are supported via separate SSE connections.</li>
+      </ol>
+
       <h2 id="security">Security</h2>
       <p>When running in MCP server mode, all tool calls are still subject to:</p>
       <ul>
@@ -134,7 +217,7 @@ servers = [
       </ul>
 
       <h2 id="use-cases">Use cases</h2>
-      <h3>IDE integration</h3>
+      <h3>IDE integration (Stdio)</h3>
       <p>Connect RavenClaws to VS Code via MCP for AI-assisted development:</p>
       <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">VS Code MCP settings</span><button class="code__copy" type="button">Copy</button></div>
 <pre><code>{
@@ -147,8 +230,27 @@ servers = [
     }
   }
 }</code></pre></div>
+      <h3>IDE integration (SSE)</h3>
+      <p>Or connect via SSE transport for remote access:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">VS Code MCP settings</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>{
+  <span class="tok-s">"mcp"</span>: {
+    <span class="tok-s">"servers"</span>: {
+      <span class="tok-s">"ravenclaws"</span>: {
+        <span class="tok-s">"url"</span>: <span class="tok-s">"http://localhost:8081/sse"</span>
+      }
+    }
+  }
+}</code></pre></div>
       <h3>Multi-agent workflows</h3>
       <p>Chain multiple RavenClaws instances together:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Agent 1: MCP SSE server with filesystem access</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-sse-server</span> <span class="tok-k">--mcp-sse-port</span> 8081 <span class="tok-k">--config</span> agent1.toml &amp;
+
+<span class="tok-c"># Agent 2: MCP client using Agent 1's tools via SSE</span>
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--exec</span> <span class="tok-s">"Analyze the codebase and suggest improvements"</span></code></pre></div>
+      <p>Or use stdio transport for local-only workflows:</p>
       <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
 <pre><code><span class="tok-c"># Agent 1: MCP server with filesystem access</span>
 <span class="tok-d">ravenclaws</span> <span class="tok-k">--mcp-server</span> <span class="tok-k">--config</span> agent1.toml &amp;

@@ -239,7 +239,6 @@ pub enum McpTransportConfig {
         env: HashMap<String, String>,
     },
     /// SSE transport: connect to HTTP endpoint
-    #[allow(dead_code)]
     Sse { url: String },
 }
 
@@ -808,10 +807,17 @@ impl McpClientManager {
     pub async fn from_config(config: &crate::config::McpConfig) -> Self {
         let mut manager = Self::new();
         for server in &config.servers {
-            let transport_config = McpTransportConfig::Stdio {
-                command: server.command.clone(),
-                args: server.args.clone(),
-                env: server.env.clone(),
+            // Determine transport type: SSE if url is set, otherwise stdio
+            let transport_config = if !server.url.is_empty() {
+                McpTransportConfig::Sse {
+                    url: server.url.clone(),
+                }
+            } else {
+                McpTransportConfig::Stdio {
+                    command: server.command.clone(),
+                    args: server.args.clone(),
+                    env: server.env.clone(),
+                }
             };
             let mut client = McpClient::new(transport_config);
             match client.connect().await {
@@ -1558,7 +1564,6 @@ mod server_tests {
 ///    message endpoint URL
 /// 2. Client sends JSON-RPC requests via `POST /message`
 /// 3. Server sends JSON-RPC responses via the SSE stream
-#[allow(dead_code)]
 pub struct McpSseServer {
     registry: crate::tools::ToolRegistry,
     policy_engine: crate::policy::PolicyEngine,
@@ -1571,7 +1576,6 @@ pub struct McpSseServer {
     port: u16,
 }
 
-#[allow(dead_code)]
 impl McpSseServer {
     /// Create a new MCP SSE server
     pub fn new(registry: crate::tools::ToolRegistry, host: String, port: u16) -> Self {

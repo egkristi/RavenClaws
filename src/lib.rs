@@ -24,7 +24,7 @@
 //! | [`policy`] | Deny-by-default policy engine |
 //! | [`sandbox`] | Sandboxed execution (workdir jail, resource limits) |
 //! | [`audit`] | Tamper-evident audit log (HMAC-SHA256 chained) |
-//! | [`mcp`] | MCP client + server (JSON-RPC 2.0 over stdio) |
+//! | [`mcp`] | MCP client + server (JSON-RPC 2.0 over stdio + SSE) |
 //! | [`swarm`] | Swarm orchestration, worker profiles, health monitoring |
 //! | [`heartbeat`] | Autonomous heartbeat agent |
 //! | [`background`] | Background task manager with disk persistence |
@@ -118,7 +118,7 @@ pub use error::RavenClawsError;
 pub use eval::EvalRunner;
 pub use heartbeat::HeartbeatAgent;
 pub use llm::{create_client, ChatMessage, ChatResponse, LLMProviderTrait, MultiModelManager};
-pub use mcp::{McpClient, McpClientManager, McpServer};
+pub use mcp::{McpClient, McpClientManager, McpServer, McpSseServer};
 pub use patterns::{
     run_debate, run_debate_multi, run_research_synthesize, run_research_synthesize_multi,
     run_review_loop, run_review_loop_multi, run_voting, run_voting_multi, PatternConfig,

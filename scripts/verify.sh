@@ -47,6 +47,7 @@ MODULES=(
     "eval:test-eval.sh:test_eval_harness:Eval Harness"
     "vllm:test-provider-vllm.sh:test_provider_vllm:vLLM Provider"
     "llamacpp:test-provider-llamacpp.sh:test_provider_llamacpp:llama.cpp Provider"
+    "mcp:test-mcp.sh:test_mcp_integration:MCP Integration (stdio + SSE)"
 )
 
 list_modules() {

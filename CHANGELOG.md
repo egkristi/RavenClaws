@@ -50,16 +50,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **vLLM integration guide** — New `docs/guides/vllm.md` with quick-start (Docker + pip), configuration reference (env vars, TOML, CLI), tool-calling support table, troubleshooting guide, and multi-model config example. Uses existing `openai-compatible` provider — no code changes needed. (#vllm-docs)
-- **llama.cpp integration guide** — New `docs/guides/llamacpp.md` with quick-start (native + Docker), configuration reference, tool-calling support table (GGUF limitations documented), troubleshooting table, performance tips (quantization, context window, GPU offloading), and multi-model config example. Uses existing `openai-compatible` provider — no code changes needed. (#llamacpp-docs)
-- **vLLM verification tests** — New `scripts/lib/test-provider-vllm.sh` with 3 tests: connectivity check, model detection, basic prompt test, and agent loop test with `--no-final-required`. Skips gracefully if vLLM not running. (#vllm-tests)
-- **llama.cpp verification tests** — New `scripts/lib/test-provider-llamacpp.sh` with 3 tests: connectivity check, model detection, basic prompt test, and agent loop test with `--no-final-required`. Skips gracefully if llama.cpp not running. (#llamacpp-tests)
-- **Distroless HTTP testing documentation** — Added "Testing Distroless Containers" section to `docs/guides/getting-started.md` covering `kubectl port-forward` and `docker run` methods for testing HTTP endpoints in distroless environments without shell/curl. (#distroless-testing-docs)
-- **Website docs pages for vLLM and llama.cpp** — New `website/public/docs/vllm.html` and `website/public/docs/llamacpp.html` pages mirroring the integration guides. Added to docs index, sidebar nav, footer, and sitemap. (#website-docs)
+- **`--mcp-sse-server` CLI flag** — New `--mcp-sse-server` flag (env: `RAVENCLAWS_MCP_SSE_SERVER`) runs RavenClaws as an MCP SSE (Server-Sent Events) transport server. Supports `--mcp-sse-host` (default `0.0.0.0`) and `--mcp-sse-port` (default `8081`) flags. Wired into `main.rs` dispatch with graceful shutdown via `ShutdownFlag`. (#mcp-sse-wiring)
+- **SSE transport for MCP client config** — `McpServerConfig` now supports a `url` field for SSE transport. When `url` is non-empty, `McpClientManager::from_config()` creates an SSE transport instead of stdio. Both `command` (stdio) and `url` (SSE) fields are supported, but not both simultaneously. (#mcp-sse-wiring)
+- **MCP SSE integration tests** — New `scripts/lib/test-mcp.sh` with 5 test scenarios: stdio server tools/list, SSE server endpoint + tools/list + tools/call, SSE server health check + 404 handling, SSE client CLI flag verification, and multiple concurrent SSE clients. (#mcp-sse-tests)
+- **SSE transport documentation** — Added SSE transport sections to `docs/guides/mcp-integration.md` covering: transport types comparison table, SSE client configuration, SSE server mode (`--mcp-sse-server`), SSE IDE integration (OpenClaw, Claude Desktop, VS Code), and SSE multi-agent workflows. (#mcp-sse-docs)
+- **Website SSE transport docs** — Updated `website/public/docs/mcp-integration.html` with transport types table, SSE client config, SSE server endpoint table, IDE integration examples, and "New in v0.9.16" sidebar section. (#mcp-sse-docs)
 
 ### Changed
-- **`scripts/verify.sh` MODULES array** — Added `vllm` and `llamacpp` provider test modules to the verification suite. (#verify-modules)
-- **ROADMAP.md updated for v0.9.15** — Version bumped from v0.9.14 to v0.9.15. All ecosystem expansion items marked complete. v1.0 exit criteria updated. (#roadmap-update)
+- **`scripts/verify.sh` MODULES array** — Added `mcp` test module for MCP integration tests (stdio + SSE). (#mcp-sse-tests)
+- **`McpServerConfig` extended with `url` field** — New `url: String` field (default empty) enables SSE transport. Validation ensures only one of `command` or `url` is set. (#mcp-sse-wiring)
+- **`#[allow(dead_code)]` removed from SSE components** — `McpTransportConfig::Sse` variant, `McpSseServer` struct and impl, and `McpClientManager::from_config()` SSE branch all unwired — now fully wired and active. (#mcp-sse-wiring)
+- **`lib.rs` re-exports updated** — `McpSseServer` added to public API re-exports. Module description updated to "JSON-RPC 2.0 over stdio + SSE". (#mcp-sse-wiring)
+- **ROADMAP.md updated for v0.9.16** — SSE MCP items marked complete. v1.0 exit criteria updated. (#roadmap-update)
 
 ### Fixed
 *(none)*

@@ -112,6 +112,18 @@ struct Args {
     #[arg(long, env = "RAVENCLAWS_MCP_SERVER")]
     mcp_server: bool,
 
+    /// Run as MCP SSE server (v0.9.16) — exposes RavenClaws tools over HTTP with SSE transport
+    #[arg(long, env = "RAVENCLAWS_MCP_SSE_SERVER")]
+    mcp_sse_server: bool,
+
+    /// MCP SSE server host (v0.9.16) — overrides default 0.0.0.0
+    #[arg(long, env = "RAVENCLAWS_MCP_SSE_HOST", default_value = "0.0.0.0")]
+    mcp_sse_host: String,
+
+    /// MCP SSE server port (v0.9.16) — overrides default 8081
+    #[arg(long, env = "RAVENCLAWS_MCP_SSE_PORT", default_value = "8081")]
+    mcp_sse_port: u16,
+
     /// Run as HTTP server (v0.7) — long-running with /health, /ready, /metrics endpoints
     #[arg(long, env = "RAVENCLAWS_SERVE")]
     serve: bool,
@@ -402,6 +414,36 @@ async fn main() -> anyhow::Result<()> {
             .await
             .map_err(|e| anyhow::anyhow!("MCP server error: {}", e))?;
         info!("RavenClaws MCP server shutdown complete");
+        return Ok(());
+    }
+
+    // Run as MCP SSE server if --mcp-sse-server is set (v0.9.16)
+    if args.mcp_sse_server {
+        info!(
+            host = %args.mcp_sse_host,
+            port = %args.mcp_sse_port,
+            "Starting in MCP SSE server mode"
+        );
+        let registry = tools::ToolRegistry::with_config(&config);
+        let mut server =
+            mcp::McpSseServer::new(registry, args.mcp_sse_host.clone(), args.mcp_sse_port);
+        // Create a watch channel for shutdown
+        let (shutdown_tx, shutdown_rx) = tokio::sync::watch::channel(false);
+        let shutdown_flag = shutdown.triggered.clone();
+
+        // Spawn a task to trigger shutdown when the global flag is set
+        tokio::spawn(async move {
+            while !shutdown_flag.load(std::sync::atomic::Ordering::Relaxed) {
+                tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+            }
+            let _ = shutdown_tx.send(true);
+        });
+
+        server
+            .run(shutdown_rx)
+            .await
+            .map_err(|e| anyhow::anyhow!("MCP SSE server error: {}", e))?;
+        info!("RavenClaws MCP SSE server shutdown complete");
         return Ok(());
     }
 
