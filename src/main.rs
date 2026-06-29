@@ -12,6 +12,7 @@ mod eval;
 mod heartbeat;
 mod llm;
 mod mcp;
+mod patterns;
 mod policy;
 mod ravenfabric;
 mod sandbox;
@@ -226,6 +227,27 @@ struct Args {
     /// When set, treat any non-tool-call response as completion (no FINAL: required)
     #[arg(long, env = "RAVENCLAWS_NO_FINAL_REQUIRED")]
     no_final_required: bool,
+
+    // ── Multi-agent pattern flags (v0.9.13) ──
+    /// Maximum debate rounds (default: 3)
+    #[arg(long, env = "RAVENCLAWS_PATTERN_MAX_ROUNDS", default_value = "3")]
+    pattern_max_rounds: usize,
+
+    /// Maximum review-loop iterations (default: 3)
+    #[arg(long, env = "RAVENCLAWS_PATTERN_MAX_REVIEW", default_value = "3")]
+    pattern_max_review: usize,
+
+    /// Number of research agents (default: 3)
+    #[arg(long, env = "RAVENCLAWS_PATTERN_RESEARCH_AGENTS", default_value = "3")]
+    pattern_research_agents: usize,
+
+    /// Number of voters (default: 3)
+    #[arg(long, env = "RAVENCLAWS_PATTERN_VOTERS", default_value = "3")]
+    pattern_voters: usize,
+
+    /// Show verbose intermediate results for patterns
+    #[arg(long, env = "RAVENCLAWS_PATTERN_VERBOSE")]
+    pattern_verbose: bool,
 }
 
 /// A shared shutdown flag that can be checked by running modes.
@@ -907,9 +929,98 @@ async fn main() -> anyhow::Result<()> {
                 drop(guard);
                 Ok(())
             }
+            // ── Multi-agent patterns (multi-model, v0.9.13) ──
+            "debate" => {
+                let guard = ShutdownGuard::new("debate (multi-model)");
+                info!("Running in debate mode (multi-model)");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                };
+                let mode_fut =
+                    patterns::run_debate_multi(multi_llm, config, ravenfabric, pattern_cfg);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting debate mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
+            "review-loop" | "review_loop" => {
+                let guard = ShutdownGuard::new("review-loop (multi-model)");
+                info!("Running in review-loop mode (multi-model)");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                };
+                let mode_fut =
+                    patterns::run_review_loop_multi(multi_llm, config, ravenfabric, pattern_cfg);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting review-loop mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
+            "research-synthesize" | "research_synthesize" => {
+                let guard = ShutdownGuard::new("research-synthesize (multi-model)");
+                info!("Running in research-synthesize mode (multi-model)");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                };
+                let mode_fut = patterns::run_research_synthesize_multi(
+                    multi_llm,
+                    config,
+                    ravenfabric,
+                    pattern_cfg,
+                );
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting research-synthesize mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
+            "voting" => {
+                let guard = ShutdownGuard::new("voting (multi-model)");
+                info!("Running in voting mode (multi-model)");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                };
+                let mode_fut =
+                    patterns::run_voting_multi(multi_llm, config, ravenfabric, pattern_cfg);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting voting mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
             _ => {
                 anyhow::bail!(
-                    "Unknown mode: {}. Use: single, swarm, supervisor, or orchestrate",
+                    "Unknown mode: {}. Use: single, swarm, supervisor, orchestrate, debate, review-loop, research-synthesize, or voting",
                     args.mode
                 );
             }
@@ -993,9 +1104,91 @@ async fn main() -> anyhow::Result<()> {
                 drop(guard);
                 Ok(())
             }
+            // ── Multi-agent patterns (v0.9.13) ──
+            "debate" => {
+                let guard = ShutdownGuard::new("debate");
+                info!("Running in debate mode");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                };
+                let mode_fut = patterns::run_debate(llm, config, ravenfabric, pattern_cfg);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting debate mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
+            "review-loop" | "review_loop" => {
+                let guard = ShutdownGuard::new("review-loop");
+                info!("Running in review-loop mode");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                };
+                let mode_fut = patterns::run_review_loop(llm, config, ravenfabric, pattern_cfg);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting review-loop mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
+            "research-synthesize" | "research_synthesize" => {
+                let guard = ShutdownGuard::new("research-synthesize");
+                info!("Running in research-synthesize mode");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                };
+                let mode_fut =
+                    patterns::run_research_synthesize(llm, config, ravenfabric, pattern_cfg);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting research-synthesize mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
+            "voting" => {
+                let guard = ShutdownGuard::new("voting");
+                info!("Running in voting mode");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                };
+                let mode_fut = patterns::run_voting(llm, config, ravenfabric, pattern_cfg);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting voting mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
             _ => {
                 anyhow::bail!(
-                    "Unknown mode: {}. Use: single, swarm, supervisor, or orchestrate",
+                    "Unknown mode: {}. Use: single, swarm, supervisor, orchestrate, debate, review-loop, research-synthesize, or voting",
                     args.mode
                 );
             }

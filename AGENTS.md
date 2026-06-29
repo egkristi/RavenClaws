@@ -23,14 +23,14 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 0.9.12 (Durable Execution)
+- **Version:** 0.9.13 (Multi-Agent Patterns)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io
 - **Build:** `cargo build --release` (~5.2 MB stripped binary, ~5 ms startup)
 - **Library:** Available as `ravenclaws` on crates.io (binary + library crate)
 
-### Architecture (18 modules)
+### Architecture (19 modules)
 
 ```
 src/
@@ -52,7 +52,9 @@ src/
 ├── audit.rs     — Tamper-evident audit log (HMAC-SHA256 chained, structured JSON)
 ├── sandbox.rs   — Sandboxed execution (workdir jail, path resolution, resource limits, timeouts)
 ├── eval.rs      — Eval harness (assertions, run traces, text/JSON reports)
-└── ravenfabric.rs— RavenFabric mesh client (health, list_agents, execute, broadcast)
+├── ravenfabric.rs— RavenFabric mesh client (health, list_agents, execute, broadcast)
+└── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting)
+└── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting)
 ```
 
 ### Current State
@@ -66,7 +68,7 @@ src/
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
 | Library crate (ravenclaws on crates.io) | ✅ Working — binary + library |
-| Verification suite (452 tests, 18 modules, 0 failures) | ✅ Working |
+| Verification suite (478 tests, 19 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -92,6 +94,7 @@ src/
 | Autonomous heartbeat | ✅ v0.9.0 — persistent assess→plan→act→persist→sleep loop with state persistence and resumability |
 | Long-horizon task persistence | ✅ v0.9.0 — task state survives restarts; heartbeat resumes from last checkpoint; background tasks persist to disk |
 | Durable execution (checkpoint/resume) | ✅ v0.9.12 — agent loop saves iteration-level checkpoints as atomic JSON files; resumes from last checkpoint on restart; checkpoint deleted on all exit paths |
+| Multi-agent patterns (debate, review-loop, research-synthesize, voting) | ✅ v0.9.13 — 4 collaboration strategies as first-class modes; single-provider + multi-model variants; PatternConfig with CLI flags |
 | Retry / fallback chains | ✅ Working — exponential backoff, circuit breaker, token budgets |
 | RavenFabric integration | ✅ Working — HTTP client with health, list_agents, execute, broadcast; wired to all modes |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |

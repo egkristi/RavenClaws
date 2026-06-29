@@ -92,6 +92,7 @@ pub mod eval;
 pub mod heartbeat;
 pub mod llm;
 pub mod mcp;
+pub mod patterns;
 pub mod policy;
 pub mod ravenfabric;
 pub mod sandbox;
@@ -118,6 +119,10 @@ pub use eval::EvalRunner;
 pub use heartbeat::HeartbeatAgent;
 pub use llm::{create_client, ChatMessage, ChatResponse, LLMProviderTrait, MultiModelManager};
 pub use mcp::{McpClient, McpClientManager, McpServer};
+pub use patterns::{
+    run_debate, run_debate_multi, run_research_synthesize, run_research_synthesize_multi,
+    run_review_loop, run_review_loop_multi, run_voting, run_voting_multi, PatternConfig,
+};
 pub use policy::PolicyEngine;
 pub use ravenfabric::RavenFabricClient;
 pub use sandbox::Sandbox;
