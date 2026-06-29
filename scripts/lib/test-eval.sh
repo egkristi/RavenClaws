@@ -171,17 +171,19 @@ EOF
     if timeout 60 "$BINARY" --config "$TEST_CONFIG" \
         --eval "$empty_toml" \
         > "$empty_log" 2>&1; then
-        log_ok "Empty task list — completed successfully"
-        if grep -q "0/0 passed" "$empty_log" 2>/dev/null; then
-            log_ok "Empty task list — shows 0/0 passed"
-        else
-            log_detail "Empty suite output:"
-            tail -5 "$empty_log" | sed 's/^/    /'
-        fi
+        log_fail "Empty task list should have exited with error"
+        tail -5 "$empty_log" | sed 's/^/    /'
     else
         local exit_code=$?
-        log_fail "Empty task list exited with code ${exit_code}"
-        tail -10 "$empty_log" | sed 's/^/    /'
+        if [ "$exit_code" -eq 1 ]; then
+            log_ok "Empty task list — correctly exited with code 1"
+            if grep -q "has no tasks defined" "$empty_log" 2>/dev/null; then
+                log_ok "Empty task list — shows meaningful error message"
+            fi
+        else
+            log_fail "Empty task list exited with unexpected code ${exit_code}"
+            tail -10 "$empty_log" | sed 's/^/    /'
+        fi
     fi
     rm -f "$empty_toml"
 

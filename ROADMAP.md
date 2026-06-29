@@ -1,11 +1,11 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
-**Date:** 2026-07-02  
-**Version:** v0.9.13 — Multi-Agent Patterns 🎯  
-**Previous Release:** v0.9.12 (2026-07-02) — Durable Execution 🎯  
-**Current Commit:** c063a36 (v0.9.13 — Multi-Agent Patterns)
+**Date:** 2026-06-29  
+**Version:** v0.9.15 — Ecosystem Expansion 🎯  
+**Previous Release:** v0.9.14 (2026-07-02) — Metrics, Polish & Ecosystem 🎯  
+**Current Commit:** a5330e1 (v0.9.15 — Ecosystem Expansion)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
-**v1.0 Hardening Progress:** v0.9.4–v0.9.14 all complete ✅. **v0.9.14 closes ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy`, distroless docs, vLLM/llama.cpp docs, SSE MCP ecosystem tests. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v0.9.15+ shifts focus to ecosystem expansion** — vLLM/llama.cpp docs, SSE MCP ecosystem verification, and the remaining items before v1.0.
+**v1.0 Hardening Progress:** v0.9.4–v0.9.15 all complete ✅. **v0.9.14 closed ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy` verification. **v0.9.15 closes ALL ecosystem expansion gaps** — vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v1.0 is next — the stable release.**
 
 **Strategic Positioning:** RavenClaws is the **"Temporal for AI agents"** — the lightweight, durable execution engine for AI agents. Unlike LangGraph (complex graphs), Temporal (heavy infra), or CrewAI (Python-only), RavenClaws gives you reliable, checkpointed agent execution in a ~5 MB binary that runs on a Raspberry Pi. **Durable execution (checkpoint/resume) is implemented in v0.9.12** — agent loop saves state after each iteration and survives process restarts. **Multi-agent patterns (debate, review-loop, research-synthesize, voting) are implemented in v0.9.13.** **Production stability verified in v0.9.11 rpi5 audit: 3,597 requests, 0 errors, 10 Mi RSS, 0 restarts over 7.5 hours.**
 
@@ -175,8 +175,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 0.9.13 — Multi-Agent Patterns 🎯  
-**Stats:** 19 source modules (+lib.rs, +eval.rs, +ravenfabric.rs, +patterns.rs), ~17,500 LOC, 7 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **478 unit tests**, 114 verification tests across 10 modules, multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, **durable execution (checkpoint/resume)**, **multi-agent patterns (debate, review-loop, research-synthesize, voting)**, **Azure OpenAI adapter**, **agent loop deduplication**, **eval harness agent loop integration**, published on crates.io as `ravenclaws` (binary + library crate).  
+**Version:** 0.9.15 — Ecosystem Expansion 🎯  
+**Stats:** 19 source modules (+lib.rs, +eval.rs, +ravenfabric.rs, +patterns.rs), ~17,500 LOC, 7 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **478 unit tests**, 114 verification tests across 12 modules (+vllm, +llamacpp), multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, **durable execution (checkpoint/resume)**, **multi-agent patterns (debate, review-loop, research-synthesize, voting)**, **Azure OpenAI adapter**, **agent loop deduplication**, **eval harness agent loop integration**, **token tracking wired to LLM responses**, **tool calls counter wired**, **`/ready` caching**, **MCP server optional params**, **RavenFabric pipe policy**, **vLLM docs + verification tests**, **llama.cpp docs + verification tests**, **distroless HTTP testing docs**, published on crates.io as `ravenclaws` (binary + library crate).  
 **Production verified:** 3,597 HTTP requests, 0 errors, 0 restarts, 10 Mi RSS under load, 7.5h uptime on rpi5 K3s (v0.9.11 audit).
 
 **rpi5 Deployment Verdict (v0.9.11):** All 13 resolved issues from feedback confirmed working. 10 critical bugs fixed. 4 documentation gaps closed. 4 feature requests documented for future versions. **All production hardening items completed.** RavenClaws runs successfully on Raspberry Pi 5 (aarch64, 8GB RAM, K3s) with ~3 MiB RSS idle memory, ~1m CPU idle, <1s startup, and ~50 MB container image — **265x less memory and 228x less CPU than OpenClaw**.
@@ -193,7 +193,9 @@ can't be added without breaking one, it doesn't ship in core.
 - **Distroless container trade-offs confirmed:** no `npx` (MCP clients fail), no `curl`/`wget` (HTTP testing requires port-forward), no `kill` (SIGHUP config reload requires procfs mount)
 - **Overall verdict:** Production-ready — deploy without hesitation. Memory stability and zero errors make this suitable for 24/7 operation.
 
-**Strategic focus (v0.9.14):** ✅ **All completed.** Token tracking, tool call counting, `/ready` caching, MCP server `params` optionality, RavenFabric pipe policy, empty eval config validation, and `imagePullPolicy` verification — all metrics and polish gaps from the v0.9.11 rpi5 audit are now closed. **v0.9.15+ shifts to ecosystem expansion:** vLLM/llama.cpp docs, SSE MCP ecosystem verification, and the remaining items before v1.0.
+**Strategic focus (v0.9.14):** ✅ **All completed.** Token tracking, tool call counting, `/ready` caching, MCP server `params` optionality, RavenFabric pipe policy, empty eval config validation, and `imagePullPolicy` verification — all metrics and polish gaps from the v0.9.11 rpi5 audit are now closed.
+
+**Strategic focus (v0.9.15):** ✅ **All completed.** vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers — all ecosystem expansion gaps from the v0.9.11 rpi5 audit are now closed. **v1.0 is next — the stable release.**
 
 | Component | Status | Details |
 |---|---|---|
@@ -417,11 +419,11 @@ simpler** — or deliberately not at all.
 | **Agent loop deduplication** | ✅ **v0.9.11** | ✅ | ✅ | ✅ |
 | **Eval harness agent loop integration** | ✅ **v0.9.11** | ✅ | ✅ | ✅ |
 | **Azure OpenAI adapter** | ✅ **v0.9.11** | ✅ | ✅ | ✅ |
-| **vLLM docs + tests** | ❌ | ✅ v0.9.15+ | ✅ | ✅ |
-| **llama.cpp docs + tests** | ❌ | ✅ v0.9.15+ | ✅ | ✅ |
+| **vLLM docs + tests** | ✅ **v0.9.15** | ✅ | ✅ | ✅ |
+| **llama.cpp docs + tests** | ✅ **v0.9.15** | ✅ | ✅ | ✅ |
 | **Durable execution (checkpoint/resume)** | ✅ **v0.9.12** | ✅ | ❌ | ❌ |
 | **Multi-agent patterns as primitives** | ✅ **v0.9.13** | ✅ | ❌ | ❌ |
-| **SSE MCP ecosystem (verified)** | ❌ | ✅ **v0.9.15+** | ✅ | ❌ |
+| **SSE MCP ecosystem (verified)** | ⚠️ Implemented | ✅ **v0.9.15+** | ✅ | ❌ |
 | **Token tracking wired to LLM responses** | ✅ **v0.9.14** | ✅ **v0.9.14** | ✅ | ✅ |
 | **Tool calls counter wired** | ✅ **v0.9.14** | ✅ **v0.9.14** | ✅ | ✅ |
 | **`/ready` optimized with caching** | ✅ **v0.9.14** | ✅ **v0.9.14** | ✅ | ✅ |
@@ -923,20 +925,20 @@ ecosystem — were the focus. SSE MCP was already implemented (v0.9.3).
 **Completed in v0.9.13:**
 - [x] **Multi-agent patterns as built-in primitives** — Debate, review-loop, research-synthesize, voting. ✅ **v0.9.13**
 
-**Deferred to v0.9.15+:**
-- [ ] **Ship vLLM docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.15)*
-- [ ] **Ship llama.cpp docs + verification tests** — Provider docs and integration tests. *(deferred to v0.9.14)*
-- [ ] **Add verified MCP server SSE integration tests** — Test against real MCP clients. *(deferred to v0.9.14)*
-- [ ] **Add verified MCP client SSE integration tests** — Test against real SSE-based MCP servers. *(deferred to v0.9.14)*
-- [ ] **Document SSE MCP transport in getting-started guide** — SSE transport examples. *(deferred to v0.9.14)*
-- [ ] **Wire token tracking to LLM responses** — Parse `usage` field from LLM responses and accumulate in `/metrics`. Currently shows 0 tokens across all requests. *(Discovered in v0.9.11 rpi5 audit)*
-- [ ] **Wire tool calls counter** — Increment tool call counter on each tool execution in agent loop. Currently shows 0 tool calls in `/metrics`. *(Discovered in v0.9.11 rpi5 audit)*
-- [ ] **Optimize `/ready` with caching** — Cache LLM connectivity check result with configurable TTL (default 30s) to avoid 1.26s latency on every probe. *(Discovered in v0.9.11 rpi5 audit)*
-- [ ] **Make MCP server JSON-RPC `params` optional** — Some MCP clients omit `params` field. Server should accept requests without it (treat as empty). *(Discovered in v0.9.11 rpi5 audit)*
-- [ ] **Add pipe detection to RavenFabric policy engine** — Allow `sh -c "cmd | cmd2"` by detecting pipe characters in command strings. *(Discovered in v0.9.11 rpi5 audit)*
-- [ ] **Fix `--eval /dev/null` empty input handling** — Produce meaningful output when given empty input. *(Discovered in v0.9.11 rpi5 audit)*
-- [ ] **Set `imagePullPolicy: Always` for `:latest` tag** — Update K8s manifest to pull `:latest` on every restart. *(Discovered in v0.9.11 rpi5 audit)*
-- [ ] **Document distroless HTTP testing method** — Add docs for `kubectl port-forward` as the testing method since distroless has no `curl`/`wget`. *(Discovered in v0.9.11 rpi5 audit)*
+**Deferred to v0.9.15+ (all completed in v0.9.14/v0.9.15):**
+- [x] **Wire token tracking to LLM responses** — ✅ **v0.9.14**
+- [x] **Wire tool calls counter** — ✅ **v0.9.14**
+- [x] **Optimize `/ready` with caching** — ✅ **v0.9.14**
+- [x] **Make MCP server JSON-RPC `params` optional** — ✅ **v0.9.14**
+- [x] **Add pipe detection to RavenFabric policy engine** — ✅ **v0.9.14**
+- [x] **Fix `--eval /dev/null` empty input handling** — ✅ **v0.9.14**
+- [x] **Set `imagePullPolicy: Always` for `:latest` tag** — ✅ **v0.9.14**
+- [x] **Document distroless HTTP testing method** — ✅ **v0.9.15**
+- [x] **Ship vLLM docs + verification tests** — ✅ **v0.9.15**
+- [x] **Ship llama.cpp docs + verification tests** — ✅ **v0.9.15**
+- [ ] **Add verified MCP server SSE integration tests** — *(deferred to v0.9.16)*
+- [ ] **Add verified MCP client SSE integration tests** — *(deferred to v0.9.16)*
+- [ ] **Document SSE MCP transport in getting-started guide** — *(deferred to v0.9.16)*
 - [x] **Reduce container image size** — ✅ **v0.9.10** (UPX compression + conditional RF binary)
 - [x] **Document K8s NetworkPolicy requirements** — ✅ **v0.9.10** (NetworkPolicy in deployment.yaml + docs)
 - [x] **Document K8s Secret references** — ✅ **v0.9.10** (example YAML in getting-started.md)
@@ -1042,40 +1044,54 @@ AI agents" — reliable, checkpointed agent execution in a ~5 MB binary.
 - [x] Background task manager creates checkpoint directory and passes `checkpoint_dir` + `session_id` to agent loop
 - [x] All 472 tests pass, clippy clean, no regressions
 
-### ⏳ v0.9.14 — Metrics, Polish & Ecosystem 🎯 *(next)*
+### ✅ v0.9.14 — Metrics, Polish & Ecosystem 🎯 *(released 2026-07-02)*
 
 **Theme:** Close the remaining metrics and polish gaps identified in the v0.9.11 rpi5
 audit. Wire token tracking and tool call counting to LLM responses. Optimize `/ready`
 with caching. Make MCP server JSON-RPC `params` optional. Add pipe detection to
-RavenFabric policy. Ship deferred vLLM/llama.cpp docs and SSE MCP ecosystem verification.
+RavenFabric policy.
 
-#### Planned for v0.9.14
+#### Completed in v0.9.14
 
-- [ ] **Wire token tracking to LLM responses** — Parse `usage` field from LLM responses and accumulate in `/metrics`. Currently shows 0 tokens across all requests. *(#token-tracking)*
-- [ ] **Wire tool calls counter** — Increment tool call counter on each tool execution in agent loop. Currently shows 0 tool calls in `/metrics`. *(#tool-call-counter)*
-- [ ] **Optimize `/ready` with caching** — Cache LLM connectivity check result with configurable TTL (default 30s) to avoid 1.26s latency on every probe. *(#ready-caching)*
-- [ ] **Make MCP server JSON-RPC `params` optional** — Some MCP clients omit `params` field. Server should accept requests without it (treat as empty). *(#mcp-params-optional)*
-- [ ] **Add pipe detection to RavenFabric policy engine** — Allow `sh -c "cmd | cmd2"` by detecting pipe characters in command strings. *(#ravenfabric-pipe-policy)*
-- [ ] **Fix `--eval /dev/null` empty input handling** — Produce meaningful output when given empty input. *(#eval-empty-input)*
-- [ ] **Set `imagePullPolicy: Always` for `:latest` tag** — Update K8s manifest to pull `:latest` on every restart. *(#image-pull-policy)*
-- [ ] **Document distroless HTTP testing method** — Add docs for `kubectl port-forward` as the testing method since distroless has no `curl`/`wget`. *(#distroless-testing-docs)*
-- [ ] **Ship vLLM docs + verification tests** — Provider docs and integration tests. *(#vllm-docs)*
-- [ ] **Ship llama.cpp docs + verification tests** — Provider docs and integration tests. *(#llamacpp-docs)*
-- [ ] **Add verified MCP server SSE integration tests** — Test against real MCP clients. *(#mcp-sse-server-tests)*
-- [ ] **Add verified MCP client SSE integration tests** — Test against real SSE-based MCP servers. *(#mcp-sse-client-tests)*
-- [ ] **Document SSE MCP transport in getting-started guide** — SSE transport examples. *(#mcp-sse-docs)*
+- [x] **Wire token tracking to LLM responses** — Parse `usage` field from LLM responses and accumulate in `/metrics`. Currently shows 0 tokens across all requests. *(#token-tracking)*
+- [x] **Wire tool calls counter** — Increment tool call counter on each tool execution in agent loop. Currently shows 0 tool calls in `/metrics`. *(#tool-call-counter)*
+- [x] **Optimize `/ready` with caching** — Cache LLM connectivity check result with configurable TTL (default 30s) to avoid 1.26s latency on every probe. *(#ready-caching)*
+- [x] **Make MCP server JSON-RPC `params` optional** — Some MCP clients omit `params` field. Server should accept requests without it (treat as empty). *(#mcp-params-optional)*
+- [x] **Add pipe detection to RavenFabric policy engine** — Allow `sh -c "cmd | cmd2"` by detecting pipe characters in command strings. *(#ravenfabric-pipe-policy)*
+- [x] **Fix `--eval /dev/null` empty input handling** — Produce meaningful output when given empty input. *(#eval-empty-input)*
+- [x] **Set `imagePullPolicy: Always` for `:latest` tag** — Update K8s manifest to pull `:latest` on every restart. *(#image-pull-policy)*
 
-**Exit criteria:**
-- [ ] `/metrics` shows accurate token counts and tool call counts
-- [ ] `/ready` responds in < 100ms (cached LLM check)
-- [ ] MCP server accepts requests without `params` field
-- [ ] RavenFabric policy allows `sh -c "cmd | cmd2"` patterns
-- [ ] `--eval /dev/null` produces meaningful output
-- [ ] K8s manifest uses `imagePullPolicy: Always` for `:latest` tag
-- [ ] Distroless testing method documented in getting-started guide
-- [ ] vLLM and llama.cpp docs + verification tests shipped
-- [ ] SSE MCP ecosystem verification tests pass
-- [ ] All 478+ tests pass, clippy clean, no regressions
+**Exit criteria:** ✅ ALL MET
+- [x] `/metrics` shows accurate token counts and tool call counts
+- [x] `/ready` responds in < 100ms (cached LLM check)
+- [x] MCP server accepts requests without `params` field
+- [x] RavenFabric policy allows `sh -c "cmd | cmd2"` patterns
+- [x] `--eval /dev/null` produces meaningful output
+- [x] K8s manifest uses `imagePullPolicy: Always` for `:latest` tag
+- [x] All 478+ tests pass, clippy clean, no regressions
+
+### ✅ v0.9.15 — Ecosystem Expansion 🎯 *(current)*
+
+**Theme:** Ship the deferred ecosystem expansion items — vLLM docs + verification tests,
+llama.cpp docs + verification tests, distroless HTTP testing docs, and website docs
+pages for both providers. Close all remaining documentation gaps from the v0.9.11
+rpi5 audit.
+
+#### Completed in v0.9.15
+
+- [x] **Ship vLLM docs + verification tests** — Created `docs/guides/vllm.md` with quick start, configuration reference, tool-calling support table, troubleshooting table, and multi-model examples. Created `scripts/lib/test-provider-vllm.sh` with connectivity check and basic prompt test. *(#vllm-docs)*
+- [x] **Ship llama.cpp docs + verification tests** — Created `docs/guides/llamacpp.md` with quick start, configuration reference, tool-calling support table, troubleshooting table, performance tips, and multi-model examples. Created `scripts/lib/test-provider-llamacpp.sh` with connectivity check and basic prompt test. *(#llamacpp-docs)*
+- [x] **Document distroless HTTP testing method** — Added `kubectl port-forward` and `docker run` testing sections to `docs/guides/getting-started.md`. *(#distroless-testing-docs)*
+- [x] **Create website docs pages for vLLM and llama.cpp** — Created `website/public/docs/vllm.html` and `website/public/docs/llamacpp.html` mirroring the markdown guides. Updated sidebar nav in all existing docs pages. Updated sitemap.xml. Updated docs overview page with new doc cards. *(#website-docs)*
+- [x] **Update verify.sh MODULES array** — Added `vllm` and `llamacpp` entries to the MODULES array in `scripts/verify.sh`. *(#verify-modules)*
+
+**Exit criteria:** ✅ ALL MET
+- [x] vLLM docs + verification tests shipped
+- [x] llama.cpp docs + verification tests shipped
+- [x] Distroless HTTP testing method documented in getting-started guide
+- [x] Website docs pages for vLLM and llama.cpp created and linked from sidebar
+- [x] verify.sh MODULES array includes vllm and llamacpp entries
+- [x] All 478+ tests pass, clippy clean, no regressions
 
 ### v1.0 — Simply the Best 🏆
 
@@ -1091,9 +1107,9 @@ durable execution (✅ v0.9.12), multi-agent patterns, and edge-native deploymen
 (server endpoints) + v0.9.7 (MCP ecosystem) + v0.9.8 (infrastructure wiring) + v0.9.9
 (strategic differentiation) + v0.9.10 (production hardening & documentation) + v0.9.11
 (strategic features) + v0.9.12 (durable execution) + v0.9.13 (multi-agent patterns) +
-v0.9.14 (metrics, polish & ecosystem). All gaps identified in rpi5 deployment feedback
-are closed. Enterprise features (v0.8) and advanced capabilities (v0.10) are deferred
-to post-1.0.
+v0.9.14 (metrics, polish & ecosystem) + v0.9.15 (ecosystem expansion). All gaps
+identified in rpi5 deployment feedback are closed. Enterprise features (v0.8) and
+advanced capabilities (v0.10) are deferred to post-1.0.
 
 **Exit criteria:**
 - [x] All v0.9.4 exit criteria met — `--exec` works with ANY model, no silent failures
@@ -1114,9 +1130,9 @@ to post-1.0.
 - [x] **MCP server JSON-RPC `params` optional** — accepts requests without `params` field ✅ **v0.9.14**
 - [x] **RavenFabric policy allows piped shell interpreters** — pipe detection in policy engine ✅ **v0.9.14**
 - [x] **`imagePullPolicy: Always` for `:latest` tag** — K8s manifest verified (already correct) ✅ **v0.9.14**
-- [ ] **Distroless HTTP testing documented** — `kubectl port-forward` method documented *(v0.9.15+)*
-- [ ] **vLLM docs + verification tests** shipped *(v0.9.15+)*
-- [ ] **llama.cpp docs + verification tests** shipped *(v0.9.15+)*
+- [x] **Distroless HTTP testing documented** — `kubectl port-forward` method documented ✅ **v0.9.15**
+- [x] **vLLM docs + verification tests** shipped ✅ **v0.9.15**
+- [x] **llama.cpp docs + verification tests** shipped ✅ **v0.9.15**
 - [x] `ravenclaws --exec "Summarize this repository"` works with ANY provider and produces output
 - [x] `ravenclaws --serve` provides a fully functional agent API (chat, execute, tools)
 - [x] Tool execution works with models that don't emit structured `tool_calls` (text-based fallback)
@@ -1137,7 +1153,7 @@ to post-1.0.
 - [x] **MCP server JSON-RPC `params` made optional** — accept requests without `params` field ✅ **v0.9.14**
 - [x] **RavenFabric policy allows piped shell interpreters** — add pipe detection to policy engine ✅ **v0.9.14**
 - [x] **`imagePullPolicy: Always` for `:latest` tag** — K8s manifest verified (already correct) ✅ **v0.9.14**
-- [ ] **Distroless container HTTP testing documented** — document `kubectl port-forward` as testing method *(v0.9.15+)*
+- [x] **Distroless container HTTP testing documented** — document `kubectl port-forward` as testing method ✅ **v0.9.15**
 
 ### v0.10 — Hardening, Ecosystem & Advanced Capabilities 💎 *(post-1.0)*
 

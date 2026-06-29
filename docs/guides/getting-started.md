@@ -265,10 +265,45 @@ Build a minimal image (no RavenFabric):
 docker buildx build --build-arg INCLUDE_RAVENFABRIC=false -t ravenclaws:minimal .
 ```
 
+### Testing Distroless Containers
+
+The production image uses a **distroless base** (`gcr.io/distroless/cc-debian12:nonroot`)
+which contains no shell, no `curl`, no `wget`, and no package manager. This is intentional
+for security — minimal attack surface.
+
+To test HTTP endpoints in a distroless container deployed on Kubernetes:
+
+```bash
+# Port-forward the service to your local machine
+kubectl port-forward svc/ravenclaws 8080:8080
+
+# Now test from your local machine (which has curl)
+curl http://localhost:8080/health
+curl http://localhost:8080/ready
+curl http://localhost:8080/metrics
+
+# Test the chat endpoint
+curl -X POST http://localhost:8080/chat \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Say hello"}'
+```
+
+For local Docker testing without Kubernetes:
+
+```bash
+# Run the container
+docker run --rm -p 8080:8080 ghcr.io/egkristi/ravenclaws:latest --serve
+
+# Test from your host (which has curl)
+curl http://localhost:8080/health
+```
+
 ## Next Steps
 
 - [Configuration Reference](./configuration.md) — all config options
 - [Swarm Mode Guide](./swarm-mode.md) — multi-agent orchestration
 - [MCP Integration](./mcp-integration.md) — connect to MCP servers
 - [Heartbeat Mode](./heartbeat-mode.md) — autonomous long-running agents
+- [vLLM Integration](./vllm.md) — high-throughput local inference
+- [llama.cpp Integration](./llamacpp.md) — lightweight CPU inference
 - [Migration Guide](migration.md) — upgrading between versions

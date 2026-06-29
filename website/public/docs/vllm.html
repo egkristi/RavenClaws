@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>vLLM Integration · RavenClaws Docs</title>
+<meta name="description" content="Use RavenClaws with vLLM for high-throughput, GPU-accelerated local inference via the OpenAI-compatible provider.">
+<link rel="canonical" href="https://ravenclaws.io/docs/vllm">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws vLLM Integration">
+<meta property="og:description" content="High-throughput local inference with vLLM.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <a href="/docs/server-mode">Server mode</a>
+      <a href="/docs/vllm" class="active">vLLM</a>
+      <a href="/docs/llamacpp">llama.cpp</a>
+      <a href="/docs/migration">Migration guide</a>
+      <h5>On this page</h5>
+      <a href="#quick-start" data-spy>Quick start</a>
+      <a href="#configuration" data-spy>Configuration</a>
+      <a href="#tool-calling" data-spy>Tool calling</a>
+      <a href="#troubleshooting" data-spy>Troubleshooting</a>
+      <a href="#multi-model" data-spy>Multi-model</a>
+    </aside>
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / vLLM</p>
+      <h1>vLLM integration</h1>
+      <p class="lead-box"><a href="https://github.com/vllm-project/vllm" rel="noopener">vLLM</a> is a high-throughput, GPU-accelerated inference engine. RavenClaws supports vLLM via the generic <code>openai-compatible</code> provider — no special configuration needed.</p>
+
+      <h2 id="quick-start">Quick start</h2>
+      <h3>1. Start vLLM server</h3>
+      <p>Using Docker (recommended):</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">docker run --rm --gpus all -p 8000:8000</span> \
+  <span class="tok-d">vllm/vllm-openai:latest</span> \
+  <span class="tok-k">--model</span> mistralai/Mistral-7B-Instruct-v0.3 \
+  <span class="tok-k">--port</span> 8000</code></pre></div>
+      <p>Or using pip:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">pip install vllm</span>
+<span class="tok-d">python -m vllm.entrypoints.openai.api_server</span> \
+  <span class="tok-k">--model</span> mistralai/Mistral-7B-Instruct-v0.3 \
+  <span class="tok-k">--port</span> 8000</code></pre></div>
+
+      <h3>2. Configure RavenClaws</h3>
+      <p>Via environment variables:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">export</span> RAVENCLAWS__LLM__PROVIDER=<span class="tok-s">"openai-compatible"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__ENDPOINT=<span class="tok-s">"http://localhost:8000/v1/chat/completions"</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__MODEL=<span class="tok-s">"mistralai/Mistral-7B-Instruct-v0.3"</span>
+
+<span class="tok-d">ravenclaws</span> <span class="tok-k">--exec</span> <span class="tok-s">"What is the capital of France?"</span></code></pre></div>
+
+      <h2 id="configuration">Configuration reference</h2>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Value</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>provider</code></td><td><code>openai-compatible</code></td><td>Must be set to <code>openai-compatible</code></td></tr>
+          <tr><td><code>endpoint</code></td><td><code>http://localhost:8000/v1/chat/completions</code></td><td>vLLM's OpenAI-compatible endpoint</td></tr>
+          <tr><td><code>model</code></td><td>(model name)</td><td>The model loaded in vLLM</td></tr>
+          <tr><td><code>api_key</code></td><td>(optional)</td><td>Not needed for local vLLM</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2 id="tool-calling">Tool-calling support</h2>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Backend</th><th>Tool calling</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>vLLM (with tool support)</td><td>✅ Structured</td><td>Works with models that support OpenAI tool format</td></tr>
+          <tr><td>vLLM (no tool support)</td><td>⚠️ Text fallback</td><td>RavenClaws detects <code>TOOL_CALL:</code> / <code>ARGS:</code> patterns</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <p>vLLM supports structured function calling for models that include it in their tokenizer config. For models without native tool support, RavenClaws falls back to text-based parsing.</p>
+
+      <h2 id="troubleshooting">Troubleshooting</h2>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Problem</th><th>Likely cause</th><th>Solution</th></tr></thead>
+        <tbody>
+          <tr><td>Connection refused</td><td>vLLM not running</td><td>Start vLLM with <code>--port 8000</code></td></tr>
+          <tr><td>Model not found</td><td>Wrong model name</td><td>Check <code>curl http://localhost:8000/v1/models</code></td></tr>
+          <tr><td>CUDA out of memory</td><td>Model too large for GPU</td><td>Use a smaller model or reduce <code>--max-model-len</code></td></tr>
+          <tr><td>Slow first response</td><td>Model loading</td><td>Wait for vLLM to finish loading; subsequent requests are fast</td></tr>
+          <tr><td>Tool calls not working</td><td>Model lacks tool support</td><td>Use <code>--no-final-required</code> for text-based fallback</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2 id="multi-model">Multi-model with vLLM</h2>
+      <p>You can use vLLM alongside other providers in multi-model mode:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">ravenclaws.toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[llm]
+provider = <span class="tok-s">"multi"</span>
+
+[[llm.models]]
+provider = <span class="tok-s">"openai-compatible"</span>
+endpoint = <span class="tok-s">"http://localhost:8000/v1/chat/completions"</span>
+model = <span class="tok-s">"mistralai/Mistral-7B-Instruct-v0.3"</span>
+
+[[llm.models]]
+provider = <span class="tok-s">"openai"</span>
+model = <span class="tok-s">"gpt-4o"</span>
+api_key = <span class="tok-s">"${OPENAI_API_KEY}"</span></code></pre></div>
+
+      <nav class="doc-nav">
+        <a class="prev" href="/docs/server-mode"><span class="dir">← Previous</span><br><span class="ttl">Server mode</span></a>
+        <a class="next" href="/docs/llamacpp"><span class="dir">Next →</span><br><span class="ttl">llama.cpp</span></a>
+      </nav>
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-bottom" style="border-top:0">
+      <span>© <span data-year>2026</span> RavenClaws · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

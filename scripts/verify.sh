@@ -45,6 +45,8 @@ MODULES=(
     "llm-quality:test-llm-quality.sh:test_llm_quality:LLM Response Quality"
     "swarm:test-swarm.sh:test_swarm_and_subagent:Swarm & Sub-Agent Scalability"
     "eval:test-eval.sh:test_eval_harness:Eval Harness"
+    "vllm:test-provider-vllm.sh:test_provider_vllm:vLLM Provider"
+    "llamacpp:test-provider-llamacpp.sh:test_provider_llamacpp:llama.cpp Provider"
 )
 
 list_modules() {
