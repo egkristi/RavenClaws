@@ -378,6 +378,7 @@ impl EvalRunner {
             ravenfabric: None,
             checkpoint_dir: None,
             session_id: None,
+            metrics_callback: None,
         };
 
         // Run the full agent loop (ReAct + tools + security)
@@ -738,9 +739,23 @@ impl EvalConfig {
             RavenClawsError::CommandExecution(format!("Failed to read eval config: {}", e))
         })?;
 
+        if content.trim().is_empty() {
+            return Err(RavenClawsError::CommandExecution(format!(
+                "Eval config file '{}' is empty — no tasks to run",
+                path
+            )));
+        }
+
         let config: EvalConfig = toml::from_str(&content).map_err(|e| {
             RavenClawsError::CommandExecution(format!("Failed to parse eval config: {}", e))
         })?;
+
+        if config.tasks.is_empty() {
+            return Err(RavenClawsError::CommandExecution(format!(
+                "Eval config file '{}' has no tasks defined",
+                path
+            )));
+        }
 
         Ok(config)
     }

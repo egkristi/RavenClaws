@@ -256,7 +256,9 @@ pub fn delete_checkpoint(checkpoint_dir: &std::path::Path, session_id: &str) {
 }
 
 /// Agent loop configuration
-#[derive(Debug, Clone)]
+///
+/// Note: `Debug` and `Clone` are implemented manually because `metrics_callback`
+/// is a boxed closure that doesn't implement either trait.
 pub struct AgentLoopConfig {
     /// Maximum iterations before forcing completion
     pub max_iterations: usize,
@@ -285,6 +287,10 @@ pub struct AgentLoopConfig {
     /// Unique session ID for checkpointing.
     /// If not set but checkpoint_dir is set, a UUID is generated automatically.
     pub session_id: Option<String>,
+    /// Optional callback for recording metrics (token usage, tool calls).
+    /// Called with (tokens_used, tool_calls_count) after each iteration.
+    /// This allows the HTTP server to wire ServerMetrics without coupling agent.rs to server.rs.
+    pub metrics_callback: Option<Box<dyn Fn(u64, u64) + Send + Sync>>,
 }
 
 impl Default for AgentLoopConfig {
@@ -301,6 +307,54 @@ impl Default for AgentLoopConfig {
             ravenfabric: None,
             checkpoint_dir: None,
             session_id: None,
+            metrics_callback: None,
+        }
+    }
+}
+
+// Manual Debug implementation — skips metrics_callback (boxed closure doesn't impl Debug)
+impl std::fmt::Debug for AgentLoopConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AgentLoopConfig")
+            .field("max_iterations", &self.max_iterations)
+            .field("enable_tools", &self.enable_tools)
+            .field("require_approval", &self.require_approval)
+            .field(
+                "prompt_injection_protection",
+                &self.prompt_injection_protection,
+            )
+            .field("token_lifetime_secs", &self.token_lifetime_secs)
+            .field("no_final_required", &self.no_final_required)
+            .field("fallback_chain", &self.fallback_chain)
+            .field("token_budget", &self.token_budget)
+            .field("ravenfabric", &self.ravenfabric)
+            .field("checkpoint_dir", &self.checkpoint_dir)
+            .field("session_id", &self.session_id)
+            .field(
+                "metrics_callback",
+                &self.metrics_callback.as_ref().map(|_| "Box<Fn>"),
+            )
+            .finish()
+    }
+}
+
+// Manual Clone implementation — metrics_callback is NOT cloned (intentionally dropped)
+// because the callback is only needed by the original caller (e.g., HTTP server).
+impl Clone for AgentLoopConfig {
+    fn clone(&self) -> Self {
+        Self {
+            max_iterations: self.max_iterations,
+            enable_tools: self.enable_tools,
+            require_approval: self.require_approval,
+            prompt_injection_protection: self.prompt_injection_protection,
+            token_lifetime_secs: self.token_lifetime_secs,
+            no_final_required: self.no_final_required,
+            fallback_chain: self.fallback_chain.clone(),
+            token_budget: self.token_budget.clone(),
+            ravenfabric: self.ravenfabric.clone(),
+            checkpoint_dir: self.checkpoint_dir.clone(),
+            session_id: self.session_id.clone(),
+            metrics_callback: None,
         }
     }
 }
@@ -590,10 +644,12 @@ async fn run_agent_loop_inner(
         };
 
         // Record token usage from response
+        let mut iteration_tokens: u64 = 0;
         if let Some(ref budget) = config.token_budget {
             if let Some(usage) = &response.usage {
                 let mut b = budget.lock().unwrap();
                 b.record_usage(usage.total_tokens);
+                iteration_tokens = usage.total_tokens as u64;
                 debug!(
                     iteration = iteration,
                     tokens_used = usage.total_tokens,
@@ -602,6 +658,13 @@ async fn run_agent_loop_inner(
                     "Token usage recorded"
                 );
             }
+        } else if let Some(usage) = &response.usage {
+            iteration_tokens = usage.total_tokens as u64;
+        }
+
+        // Report metrics via callback if configured
+        if let Some(ref cb) = config.metrics_callback {
+            cb(iteration_tokens, 0);
         }
 
         // Report progress to RavenFabric if configured
@@ -688,6 +751,11 @@ async fn run_agent_loop_inner(
 
                     memory.add_user_message(&observation);
 
+                    // Report tool call via metrics callback
+                    if let Some(ref cb) = config.metrics_callback {
+                        cb(0, 1);
+                    }
+
                     info!(
                         iteration = iteration,
                         tool = %tool_result.tool_name,
@@ -751,6 +819,11 @@ async fn run_agent_loop_inner(
 
                 memory.add_assistant_message(&content);
                 memory.add_user_message(&observation);
+
+                // Report tool call via metrics callback
+                if let Some(ref cb) = config.metrics_callback {
+                    cb(0, 1);
+                }
 
                 info!(
                     iteration = iteration,
@@ -2128,6 +2201,7 @@ mod tests {
             ravenfabric: None,
             checkpoint_dir: None,
             session_id: None,
+            metrics_callback: None,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
@@ -2254,6 +2328,7 @@ mod tests {
             ravenfabric: None,
             checkpoint_dir: None,
             session_id: None,
+            metrics_callback: None,
         };
         assert_eq!(config.token_lifetime_secs, 0);
         // 0 means unlimited — no timeout enforced
@@ -2273,6 +2348,7 @@ mod tests {
             ravenfabric: None,
             checkpoint_dir: None,
             session_id: None,
+            metrics_callback: None,
         };
         assert_eq!(config.token_lifetime_secs, 3600);
     }

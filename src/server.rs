@@ -63,6 +63,26 @@ pub struct ServerMetrics {
     pub tokens_total: AtomicU64,
     /// Server start timestamp (seconds since epoch)
     pub start_time: AtomicU64,
+    /// Readiness check cache: 0 = not cached, otherwise timestamp of last check
+    pub ready_cache_time: AtomicU64,
+    /// Readiness check cache: 1 = ready, 0 = not ready
+    pub ready_cache_result: AtomicU64,
+}
+
+// Manual Clone — AtomicU64 doesn't implement Clone, so we construct new atomics
+impl Clone for ServerMetrics {
+    fn clone(&self) -> Self {
+        Self {
+            requests_total: AtomicU64::new(self.requests_total.load(Ordering::Relaxed)),
+            llm_requests_total: AtomicU64::new(self.llm_requests_total.load(Ordering::Relaxed)),
+            tool_calls_total: AtomicU64::new(self.tool_calls_total.load(Ordering::Relaxed)),
+            errors_total: AtomicU64::new(self.errors_total.load(Ordering::Relaxed)),
+            tokens_total: AtomicU64::new(self.tokens_total.load(Ordering::Relaxed)),
+            start_time: AtomicU64::new(self.start_time.load(Ordering::Relaxed)),
+            ready_cache_time: AtomicU64::new(self.ready_cache_time.load(Ordering::Relaxed)),
+            ready_cache_result: AtomicU64::new(self.ready_cache_result.load(Ordering::Relaxed)),
+        }
+    }
 }
 
 impl ServerMetrics {
@@ -82,12 +102,10 @@ impl ServerMetrics {
         self.requests_total.fetch_add(1, Ordering::Relaxed);
     }
 
-    #[allow(dead_code)]
     fn record_llm_request(&self) {
         self.llm_requests_total.fetch_add(1, Ordering::Relaxed);
     }
 
-    #[allow(dead_code)]
     fn record_tool_call(&self) {
         self.tool_calls_total.fetch_add(1, Ordering::Relaxed);
     }
@@ -96,7 +114,7 @@ impl ServerMetrics {
         self.errors_total.fetch_add(1, Ordering::Relaxed);
     }
 
-    #[allow(dead_code)]
+    #[cfg_attr(not(test), allow(dead_code))]
     fn record_tokens(&self, count: u64) {
         self.tokens_total.fetch_add(count, Ordering::Relaxed);
     }
@@ -168,7 +186,28 @@ async fn ready_response(state: &ServerState) -> (Vec<u8>, &'static str) {
 
     // If an LLM client is configured, verify connectivity for deep readiness
     if let Some(ref llm) = state.llm {
-        match tokio::time::timeout(
+        // Check cache: re-check at most every 30 seconds
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        let cache_time = state.metrics.ready_cache_time.load(Ordering::Relaxed);
+        let cache_ttl: u64 = 30;
+
+        if now.saturating_sub(cache_time) < cache_ttl {
+            // Cache is fresh — return cached result
+            if state.metrics.ready_cache_result.load(Ordering::Relaxed) == 1 {
+                return (b"READY".to_vec(), "200 OK");
+            } else {
+                return (
+                    b"NOT READY: LLM unreachable".to_vec(),
+                    "503 Service Unavailable",
+                );
+            }
+        }
+
+        // Cache expired — perform actual check
+        let result = match tokio::time::timeout(
             std::time::Duration::from_secs(5),
             llm.chat(vec![ChatMessage {
                 role: "user".to_string(),
@@ -179,10 +218,14 @@ async fn ready_response(state: &ServerState) -> (Vec<u8>, &'static str) {
         {
             Ok(Ok(_)) => {
                 // LLM is reachable
+                state.metrics.ready_cache_result.store(1, Ordering::Relaxed);
+                state.metrics.ready_cache_time.store(now, Ordering::Relaxed);
                 (b"READY".to_vec(), "200 OK")
             }
             Ok(Err(e)) => {
                 warn!(error = %e, "Readiness check: LLM connectivity failed");
+                state.metrics.ready_cache_result.store(0, Ordering::Relaxed);
+                state.metrics.ready_cache_time.store(now, Ordering::Relaxed);
                 (
                     b"NOT READY: LLM unreachable".to_vec(),
                     "503 Service Unavailable",
@@ -190,12 +233,15 @@ async fn ready_response(state: &ServerState) -> (Vec<u8>, &'static str) {
             }
             Err(_) => {
                 warn!("Readiness check: LLM connectivity timed out");
+                state.metrics.ready_cache_result.store(0, Ordering::Relaxed);
+                state.metrics.ready_cache_time.store(now, Ordering::Relaxed);
                 (
                     b"NOT READY: LLM timeout".to_vec(),
                     "503 Service Unavailable",
                 )
             }
-        }
+        };
+        result
     } else {
         (b"READY".to_vec(), "200 OK")
     }
@@ -529,6 +575,7 @@ async fn handle_chat(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>
         .map(|m| m.content.clone())
         .ok_or_else(|| anyhow::anyhow!("No user message found"))?;
 
+    let metrics = state.metrics.clone();
     let loop_config = AgentLoopConfig {
         max_iterations: req.max_iterations.unwrap_or(10),
         enable_tools: true,
@@ -541,6 +588,16 @@ async fn handle_chat(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>
         ravenfabric: None,
         checkpoint_dir: None,
         session_id: None,
+        metrics_callback: Some(Box::new(move |tokens, tool_calls| {
+            if tokens > 0 {
+                metrics.tokens_total.fetch_add(tokens, Ordering::Relaxed);
+            }
+            if tool_calls > 0 {
+                metrics
+                    .tool_calls_total
+                    .fetch_add(tool_calls, Ordering::Relaxed);
+            }
+        })),
     };
 
     let tool_registry = state.tool_registry.clone();

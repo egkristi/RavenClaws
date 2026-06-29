@@ -515,6 +515,7 @@ async fn main() -> anyhow::Result<()> {
             ravenfabric: ravenfabric.clone(),
             checkpoint_dir: None,
             session_id: None,
+            metrics_callback: None,
         };
 
         // Build a configured tool registry (respects web_search endpoint from config)

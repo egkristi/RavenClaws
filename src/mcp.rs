@@ -83,11 +83,15 @@ pub type McpResult<T> = std::result::Result<T, McpError>;
 // ── JSON-RPC types ─────────────────────────────────────────────────────────
 
 /// JSON-RPC 2.0 request
+///
+/// Per JSON-RPC 2.0 spec, `params` is OPTIONAL — some MCP clients omit it.
+/// We use `Option<serde_json::Value>` to accept requests both with and without params.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JsonRpcRequest {
     pub jsonrpc: String,
     pub method: String,
-    pub params: serde_json::Value,
+    #[serde(default)]
+    pub params: Option<serde_json::Value>,
     pub id: serde_json::Value,
 }
 
@@ -96,7 +100,7 @@ impl JsonRpcRequest {
         Self {
             jsonrpc: "2.0".to_string(),
             method: method.to_string(),
-            params,
+            params: Some(params),
             id: serde_json::Value::Number(id.into()),
         }
     }
@@ -695,7 +699,7 @@ impl McpClient {
         let notify = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: "notifications/initialized".to_string(),
-            params: serde_json::Value::Null,
+            params: Some(serde_json::Value::Null),
             id: serde_json::Value::Null,
         };
         self.transport.send_request(notify).await?;
@@ -1227,7 +1231,7 @@ impl McpServer {
         request_id: &serde_json::Value,
     ) -> serde_json::Value {
         // Parse client info from params (optional — we accept any client)
-        if let Some(params) = request.params.as_object() {
+        if let Some(params) = request.params.as_ref().and_then(|p| p.as_object()) {
             if let Some(client_info) = params.get("clientInfo") {
                 info!(
                     client = ?client_info.get("name").and_then(|v| v.as_str()).unwrap_or("unknown"),
@@ -1290,15 +1294,15 @@ impl McpServer {
         request: &JsonRpcRequest,
         request_id: &serde_json::Value,
     ) -> serde_json::Value {
-        let name = request
-            .params
+        let params = request.params.as_ref().unwrap_or(&serde_json::Value::Null);
+
+        let name = params
             .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
 
-        let arguments = request
-            .params
+        let arguments = params
             .get("arguments")
             .cloned()
             .unwrap_or(serde_json::Value::Null);
@@ -1456,7 +1460,7 @@ mod server_tests {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: "unknown_method".to_string(),
-            params: serde_json::Value::Null,
+            params: Some(serde_json::Value::Null),
             id: serde_json::Value::Number(1.into()),
         };
 
@@ -1490,7 +1494,7 @@ mod server_tests {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: "tools/call".to_string(),
-            params: serde_json::json!({}),
+            params: Some(serde_json::json!({})),
             id: serde_json::Value::Number(1.into()),
         };
 
@@ -1512,10 +1516,10 @@ mod server_tests {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: "tools/call".to_string(),
-            params: serde_json::json!({
+            params: Some(serde_json::json!({
                 "name": "nonexistent_tool",
                 "arguments": {}
-            }),
+            })),
             id: serde_json::Value::Number(1.into()),
         };
 
@@ -1911,7 +1915,7 @@ impl McpSseServer {
         match request.method.as_str() {
             "initialize" => {
                 // Parse client info from params
-                if let Some(params) = request.params.as_object() {
+                if let Some(params) = request.params.as_ref().and_then(|p| p.as_object()) {
                     if let Some(client_info) = params.get("clientInfo") {
                         info!(
                             client = ?client_info.get("name").and_then(|v| v.as_str()).unwrap_or("unknown"),
@@ -1969,15 +1973,15 @@ impl McpSseServer {
                 })
             }
             "tools/call" => {
-                let name = request
-                    .params
+                let params = request.params.as_ref().unwrap_or(&serde_json::Value::Null);
+
+                let name = params
                     .get("name")
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
 
-                let arguments = request
-                    .params
+                let arguments = params
                     .get("arguments")
                     .cloned()
                     .unwrap_or(serde_json::Value::Null);
@@ -2128,13 +2132,13 @@ mod sse_server_tests {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: "initialize".to_string(),
-            params: serde_json::json!({
+            params: Some(serde_json::json!({
                 "protocolVersion": "2024-11-05",
                 "clientInfo": {
                     "name": "test-client",
                     "version": "1.0.0"
                 }
-            }),
+            })),
             id: serde_json::Value::Number(1.into()),
         };
 
@@ -2174,7 +2178,7 @@ mod sse_server_tests {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: "tools/list".to_string(),
-            params: serde_json::Value::Null,
+            params: Some(serde_json::Value::Null),
             id: serde_json::Value::Number(1.into()),
         };
 
@@ -2216,7 +2220,7 @@ mod sse_server_tests {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: "unknown_method".to_string(),
-            params: serde_json::Value::Null,
+            params: Some(serde_json::Value::Null),
             id: serde_json::Value::Number(1.into()),
         };
 
@@ -2259,7 +2263,7 @@ mod sse_server_tests {
         let request = JsonRpcRequest {
             jsonrpc: "2.0".to_string(),
             method: "tools/call".to_string(),
-            params: serde_json::json!({}),
+            params: Some(serde_json::json!({})),
             id: serde_json::Value::Number(1.into()),
         };
 

