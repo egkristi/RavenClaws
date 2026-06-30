@@ -270,7 +270,7 @@ impl BackgroundTaskManager {
             require_approval: false,
             prompt_injection_protection: true,
             token_lifetime_secs: 0,
-            no_final_required: false,
+            no_final_required: true,
             fallback_chain: None,
             token_budget: None,
             ravenfabric: None,

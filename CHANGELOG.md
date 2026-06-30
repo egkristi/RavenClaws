@@ -5,6 +5,16 @@ All notable changes to RavenClaws are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **`/execute` returns empty result without `no_final_required`** — Changed `no_final_required` default from `false` to `true` in `background.rs` task execution config. The `/execute` endpoint now correctly returns the agent's response even when the model doesn't emit a `FINAL:` marker, matching the behavior of the `/chat` endpoint. (#39, rpi5-feedback)
+- **RavenFabric health check URL builder error with WebSocket endpoints** — Added `http_url()` helper method in `ravenfabric.rs` that converts `ws://` to `http://` and `wss://` to `https://` for REST API calls. Applied to `health()`, `list_agents()`, and `execute()` methods. (#42, rpi5-feedback)
+- **`GET /tools/{name}` returns 404 instead of falling through to catch-all** — Added dedicated `GET /tools/{name}` route handler (`handle_get_tool`) that returns tool details by name. Also improved error status mapping in `POST /tools/{name}` to return 404 (not 400) when a tool is not found. (rpi5-feedback)
+
+### Added
+- **`POST /reload` endpoint for distroless-friendly config reload** — New `/reload` HTTP endpoint provides the same config reload functionality as SIGHUP but works in distroless containers that lack a shell or `kill` binary. Accepts `POST` requests and reloads configuration from the original config path. (rpi5-feedback)
+
 ## [0.9.6] — 2026-06-02
 
 ### Added

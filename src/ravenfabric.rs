@@ -122,18 +122,28 @@ impl RavenFabricClient {
         self.config.remote_exec
     }
 
-    /// Check RavenFabric health
-    pub async fn health(&self) -> Result<bool> {
+    /// Build an HTTP URL from the configured endpoint, converting ws:// to http://
+    /// and wss:// to https:// as needed for HTTP-based API calls.
+    fn http_url(&self, path: &str) -> Result<String> {
         let endpoint = self.config.endpoint.as_deref().ok_or_else(|| {
             RavenFabricError::NotConfigured("No RavenFabric endpoint configured".to_string())
         })?;
+        let url = format!("{}{}", endpoint.trim_end_matches('/'), path);
+        // Convert WebSocket schemes to HTTP for REST API calls
+        let url = url
+            .replacen("ws://", "http://", 1)
+            .replacen("wss://", "https://", 1);
+        Ok(url)
+    }
 
-        let url = format!("{}/api/v1/health", endpoint.trim_end_matches('/'));
+    /// Check RavenFabric health
+    pub async fn health(&self) -> Result<bool> {
+        let url = self.http_url("/api/v1/health")?;
 
         match self.http_client.get(&url).send().await {
             Ok(response) => Ok(response.status().is_success()),
             Err(e) => {
-                warn!(error = %e, endpoint = %endpoint, "RavenFabric health check failed");
+                warn!(error = %e, url = %url, "RavenFabric health check failed");
                 Err(RavenFabricError::ConnectionFailed(e.to_string()))
             }
         }
@@ -141,11 +151,7 @@ impl RavenFabricClient {
 
     /// List available remote agents
     pub async fn list_agents(&self) -> Result<Vec<RemoteAgent>> {
-        let endpoint = self.config.endpoint.as_deref().ok_or_else(|| {
-            RavenFabricError::NotConfigured("No RavenFabric endpoint configured".to_string())
-        })?;
-
-        let url = format!("{}/api/v1/agents", endpoint.trim_end_matches('/'));
+        let url = self.http_url("/api/v1/agents")?;
 
         let response = self
             .http_client
@@ -178,11 +184,7 @@ impl RavenFabricClient {
         target_host: Option<&str>,
         timeout_secs: u64,
     ) -> Result<ExecuteResponse> {
-        let endpoint = self.config.endpoint.as_deref().ok_or_else(|| {
-            RavenFabricError::NotConfigured("No RavenFabric endpoint configured".to_string())
-        })?;
-
-        let url = format!("{}/api/v1/execute", endpoint.trim_end_matches('/'));
+        let url = self.http_url("/api/v1/execute")?;
 
         let request = ExecuteRequest {
             command: command.to_string(),

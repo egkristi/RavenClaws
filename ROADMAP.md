@@ -3,9 +3,9 @@
 **Date:** 2026-07-02  
 **Version:** v1.0.0 — Simply the Best 🏆  
 **Previous Release:** v0.9.16 (2026-07-02) — SSE MCP Ecosystem Verification 🎯  
-**Current Commit:** 775db2c (v1.0.0 — Simply the Best)
+**Current Commit:** (v1.0.1 — rpi5 Critical Fixes)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
-**v1.0 Hardening Progress:** v0.9.4–v0.9.16 all complete ✅. **v0.9.14 closed ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy` verification. **v0.9.15 closed ALL ecosystem expansion gaps** — vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers. **v0.9.16 closed the last v1.0 blocker** — SSE MCP ecosystem verification: `--mcp-sse-server` CLI flag wired, SSE transport for MCP client config, MCP integration tests (stdio + SSE), SSE transport documentation. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v1.0 is released — the stable release. All exit criteria are met.**
+**v1.0 Hardening Progress:** v0.9.4–v0.9.16 all complete ✅. **v0.9.14 closed ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy` verification. **v0.9.15 closed ALL ecosystem expansion gaps** — vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers. **v0.9.16 closed the last v1.0 blocker** — SSE MCP ecosystem verification: `--mcp-sse-server` CLI flag wired, SSE transport for MCP client config, MCP integration tests (stdio + SSE), SSE transport documentation. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v1.0 is released — the stable release. All exit criteria are met.** **v1.0.1 fixes the 4 remaining critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.**
 
 **Strategic Positioning:** RavenClaws is the **"Temporal for AI agents"** — the lightweight, durable execution engine for AI agents. Unlike LangGraph (complex graphs), Temporal (heavy infra), or CrewAI (Python-only), RavenClaws gives you reliable, checkpointed agent execution in a ~5 MB binary that runs on a Raspberry Pi. **Durable execution (checkpoint/resume) is implemented in v0.9.12** — agent loop saves state after each iteration and survives process restarts. **Multi-agent patterns (debate, review-loop, research-synthesize, voting) are implemented in v0.9.13.** **Production stability verified in v0.9.11 rpi5 audit: 3,597 requests, 0 errors, 10 Mi RSS, 0 restarts over 7.5 hours.**
 
@@ -179,7 +179,7 @@ can't be added without breaking one, it doesn't ship in core.
 **Stats:** 19 source modules (+lib.rs, +eval.rs, +ravenfabric.rs, +patterns.rs), ~17,500 LOC, 7 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **478 unit tests**, 119 verification tests across 13 modules (+vllm, +llamacpp, +mcp), multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--mcp-sse-server` CLI flag, MCP integration tests (stdio + SSE), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, **durable execution (checkpoint/resume)**, **multi-agent patterns (debate, review-loop, research-synthesize, voting)**, **Azure OpenAI adapter**, **agent loop deduplication**, **eval harness agent loop integration**, **token tracking wired to LLM responses**, **tool calls counter wired**, **`/ready` caching**, **MCP server optional params**, **RavenFabric pipe policy**, **vLLM docs + verification tests**, **llama.cpp docs + verification tests**, **distroless HTTP testing docs**, **SSE transport documentation**, published on crates.io as `ravenclaws` (binary + library crate).  
 **Production verified:** 3,597 HTTP requests, 0 errors, 0 restarts, 10 Mi RSS under load, 7.5h uptime on rpi5 K3s (v0.9.11 audit).
 
-**rpi5 Deployment Verdict (v0.9.11):** All 13 resolved issues from feedback confirmed working. 10 critical bugs fixed. 4 documentation gaps closed. 4 feature requests documented for future versions. **All production hardening items completed.** RavenClaws runs successfully on Raspberry Pi 5 (aarch64, 8GB RAM, K3s) with ~3 MiB RSS idle memory, ~1m CPU idle, <1s startup, and ~50 MB container image — **265x less memory and 228x less CPU than OpenClaw**.
+**rpi5 Deployment Verdict (v0.9.11):** All 13 resolved issues from feedback confirmed working. 10 critical bugs fixed. 4 documentation gaps closed. 4 feature requests documented for future versions. **All production hardening items completed.** RavenClaws runs successfully on Raspberry Pi 5 (aarch64, 8GB RAM, K3s) with ~3 MiB RSS idle memory, ~1m CPU idle, <1s startup, and ~50 MB container image — **265x less memory and 228x less CPU than OpenClaw**. **v1.0.1 closes the final 4 critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.**
 
 **v0.9.11 Comprehensive Performance Audit (2026-06-29, 7.5h test session):**
 - **3,597** HTTP requests served, **0 errors**, **0 restarts** — production-stable
@@ -1171,7 +1171,7 @@ advanced capabilities (v0.10) are deferred to post-1.0.
 - [x] No critical or high issues in ISSUES.md
 - [x] CI/CD green across all 3 workflows
 - [x] v1.0 tag pushed and released *(completed)*
-- [x] All rpi5 deployment feedback items addressed (13 resolved ✅, 0 critical 🔴, 0 documentation gaps 🟡, 0 feature requests 🟢)
+- [x] All rpi5 deployment feedback items addressed (17 resolved ✅, 0 critical 🔴, 0 documentation gaps 🟡, 0 feature requests 🟢)
 - [x] RavenClaws verified as a drop-in replacement for OpenClaw on rpi5 K3s
 - [x] RavenClaws verified as uniquely valuable — production-proven on rpi5 (3,597 requests, 0 errors, 10 Mi RSS, 7.5h uptime)
 - [x] **Token tracking wired to LLM responses** — `/metrics` shows accurate token counts ✅ **v0.9.14**
@@ -1188,7 +1188,17 @@ advanced capabilities (v0.10) are deferred to post-1.0.
 These features are deferred to after the v1.0 stable release. They represent
 significant new capabilities that are not required for a production-ready 1.0.
 
-#### Core Agent Improvements
+#### 🔴 Critical — Unresolved Issues from rpi5 Deployment Feedback
+
+All 4 critical issues from rpi5 deployment feedback are now resolved. ✅
+These were production pain points that have been addressed in v1.0.1.
+
+- [x] **`/tools/{name}` path parameter routing returns 404** — The `/tools` endpoint lists all tools correctly, but `/tools/{name}` (e.g., `/tools/web_search`) returns `Not Found`. The path parameter routing is not matching correctly in the HTTP server. **Impact:** Cannot invoke individual tools via HTTP API. **Workaround:** Use `/chat` or `/execute` endpoints instead. *(Discovered in v0.9.6 rpi5 testing)* ✅ **Fixed — added `GET /tools/{name}` handler + improved error status mapping to return 404 (not 400) when tool not found**
+- [x] **Distroless-friendly SIGHUP mechanism** — Config hot-reload via SIGHUP is implemented (v0.9.6), but the distroless container has no `kill` binary, no `sh`, and no `cat`. Sending SIGHUP requires either mounting host `procfs` and writing to `/proc/1/status`, using `kubectl exec` with signal support, or switching to a non-distroless base image. **Impact:** Config hot-reload is unusable in the default distroless deployment. **Solutions:** (a) Add a `/reload` HTTP endpoint for config reload, (b) Watch config file for changes with `inotify`-style polling, (c) Document the `kubectl exec` workaround. *(Discovered in v0.9.6 rpi5 testing)* ✅ **Fixed — added `POST /reload` HTTP endpoint as distroless-friendly alternative to SIGHUP**
+- [x] **RavenFabric health check URL builder error (#42)** — Every agent loop iteration logs: `RavenFabric health check failed error="builder error for url (ws://192.168.1.199:9090/api/v1/health)"`. The health check URL builder appends `/api/v1/health` to the WebSocket URL (`ws://`), but health checks should use `http://` scheme. **Impact:** RavenFabric health check always fails, logged every iteration. **Fix:** Use `http://` scheme for health check URLs, not `ws://`. *(Discovered in v0.9.9 rpi5 testing)* ✅ **Fixed — added `http_url()` helper that converts `ws://` → `http://` and `wss://` → `https://`; applied to `health()`, `list_agents()`, and `execute()`**
+- [x] **`/execute` returns empty result without `no_final_required` (#39)** — When `no_final_required` is NOT set, `/execute` tasks complete with `result: ""` (empty string) because the agent loop hits max iterations (10) without the model emitting `FINAL:`. **Impact:** The `/execute` endpoint is unusable without `no_final_required: true` for models that don't emit `FINAL:`. **Fix:** Make `no_final_required: true` the default for `/execute` endpoint, or document that it must be set explicitly. *(Discovered in v0.9.9 rpi5 testing)* ✅ **Fixed — changed `no_final_required` default from `false` to `true` in `background.rs` task execution config**
+
+#### 🟡 Important — RavenClaws Core Improvements
 
 - [ ] **WASM plugin system** — Extend RavenClaws without recompiling. WASM-based plugins with a stable ABI, sandboxed execution, and capability-based security. Plugins can add tools, providers, and agent behaviors. **Rationale:** The #1 request from rpi5 feedback for extensibility without forking the codebase.
 - [ ] **Conversation persistence (SQLite backend)** — Persist conversation history to SQLite so agents survive pod restarts without losing context. Configurable retention policy (time-based, count-based, token-budget-based). **Rationale:** Currently conversation memory is in-memory only — lost on restart.
@@ -1202,6 +1212,9 @@ significant new capabilities that are not required for a production-ready 1.0.
 - [ ] **Browser automation** — Headless browser tool (Playwright or Chromium-based) for web interaction, form filling, and data extraction. **Rationale:** OpenClaw's Playwright MCP server is one of its most-used features.
 - [ ] **Telegram bot** — Native Telegram bot integration so RavenClaws can be interacted with via Telegram. **Rationale:** Common deployment pattern for home server agents.
 - [ ] **SSH in container** — Optional SSH server in the container for debugging and interactive access. **Rationale:** OpenClaw supports this; useful for development and troubleshooting.
+- [ ] **SSE MCP server for RavenClaws** — Currently RavenClaws MCP server is stdio-only (`--mcp-server`). Add SSE transport for the MCP server so other tools can connect to RavenClaws as an MCP server over HTTP. **Rationale:** OpenClaw supports SSE MCP server; this is the #1 integration gap for RavenClaws as an MCP provider.
+- [ ] **`--no-final-required` as default** — Make `no_final_required: true` the default behavior for `--exec` and `/execute` modes. The `FINAL:` requirement is the #1 usability issue — most models don't emit it. Add `--require-final` flag for users who want the old behavior. **Rationale:** Every rpi5 test session confirmed this is essential for reliable agent loop completion.
+- [ ] **Non-distroless base image option** — Add a `Dockerfile.slim` using a minimal Debian-based image (e.g., `debian:stable-slim`) as an alternative to the distroless image. This would enable MCP client connections (via `npx`), SIGHUP config reload (via `kill`), and debugging (via shell). **Rationale:** The distroless container provides excellent security but prevents MCP client connections, SIGHUP reload, and HTTP endpoint testing. A "slim" Debian-based image (~30MB) would enable these features while still being 25x smaller than OpenClaw.
 
 #### Security & Compliance
 
@@ -1403,7 +1416,7 @@ is needed — just clear documentation of what works where.
 | Metric | Target | Current |
 |---|---|---|
 | Stripped binary size | < 15 MB | 5.2 MB ✅ |
-| Container image size | < 30 MB | ~50 MB ⚠️ (includes RavenFabric agent binary) |
+| Container image size | < 30 MB | 15.8 MB ✅ *(UPX compressed, v0.9.10)* |
 | Cold start (single mode) | < 50 ms | 5.2 ms ✅ |
 | Idle memory (server mode) | < 20 MB RSS | ~8 MiB RSS ✅ *(measured on rpi5 K3s)* |
 | Memory under load (server mode) | < 30 MB RSS | ~10 MiB RSS ✅ *(after 3,597 requests, 7.5h test)* |
@@ -1411,9 +1424,13 @@ is needed — just clear documentation of what works where.
 | Tool-call audit write | non-blocking, < 1 ms enqueue | ✅ (wired) |
 | `/health` response time | < 10 ms | 3 ms ✅ *(measured on rpi5 K3s)* |
 | `/chat` response time | < 1 s | 899 ms ✅ *(measured on rpi5 K3s)* |
-| `/ready` response time | < 500 ms | 1,259 ms ⚠️ *(LLM-dependent; caching needed)* |
+| `/ready` response time | < 500 ms | 1,259 ms ⚠️ *(LLM-dependent; 30s TTL caching added in v0.9.14)* |
 | Zero errors under sustained load | 0 errors | ✅ *(3,597 requests, 0 errors, 0 restarts)* |
 | Memory leak | 0 | ✅ *(only +2 MiB from idle after 7.5h heavy testing)* |
+| Token tracking | Accurate counts | ✅ **v0.9.14** *(wired to LLM response `usage` field)* |
+| Tool calls counter | Accurate counts | ✅ **v0.9.14** *(incremented on each tool execution)* |
+| MCP server `params` optional | Accept without | ✅ **v0.9.14** *(per JSON-RPC 2.0 spec)* |
+| RavenFabric pipe policy | Allow pipes | ✅ **v0.9.14** *(segment-level validation)* |
 
 ---
 
@@ -1459,8 +1476,8 @@ Concrete items carried from the current codebase:
 5. ~~**Client duplication** across LiteLLM/OpenAI/OpenRouter (`handle_response` ×4).~~ ✅ **Unified `OpenAICompatibleClient` (v0.5.0)**
 6. ~~**Dead/unwired code:** `rustls` dep unused; `security`/`ravenfabric` config fields not honored.~~ ✅ **All modules wired to agent loop; RavenFabric config fields consumed by client; `zeroize` wired for secret material**
 7. ~~**No graceful shutdown** — SIGTERM/SIGINT not handled; no audit log flush on exit.~~ ✅ **Fixed — graceful shutdown in server mode (v0.7.1)**
-8. **No config hot-reload** — Changes require restart.
-9. **Container image ~50 MB** — Target is < 30 MB.
+8. ~~**No config hot-reload** — Changes require restart.~~ ✅ **Fixed in v0.9.6 (SIGHUP handler)** — but distroless container has no `kill` binary, making it hard to use in production. See v0.10 for `/reload` HTTP endpoint solution.
+9. ~~**Container image ~50 MB** — Target is < 30 MB.~~ ✅ **Fixed in v0.9.10 (UPX compression)** — now ~15.8 MB.
 10. **cargo-udeps findings** — Unused dependencies detected. *(periodic review)*
 11. **cargo-outdated findings** — Dependencies behind latest. *(periodic review)*
 12. **~60 `#[allow(dead_code)]` annotations** — Significant unwired infrastructure: `RavenFabricClient`, `ProviderFallbackChain`, `TokenBudget`, `AgentMessageBus`, `SwarmHealthMonitor`, `WebSearchConfig`, and ~15 unused error variants, ~15 unused struct fields, ~15 unused methods, ~5 dead error enums.
@@ -1470,14 +1487,18 @@ Concrete items carried from the current codebase:
 16. ~~**`EvalRunner::run_task()` bypasses agent loop** — Calls `llm.chat()` directly instead of `run_agent_loop()`. Eval tasks don't test tool calling, ReAct loop, or security integration.~~ ✅ **Fixed in v0.9.11 — eval harness now uses `run_agent_loop()`**
 17. **No tool call assertions in eval harness** — `Assertion` enum has 7 text-based types but no assertion for checking tool calls were made or specific tools were invoked.
 18. ~~**Server mode has no agent execution endpoints** — Only `/health`, `/ready`, `/metrics`. No `/chat`, `/execute`, or `/tools`.~~ ✅ **Fixed in v0.9.6 — 6 new endpoints added**
-19. **Token tracking not wired to LLM responses** — `/metrics` shows 0 tokens across all requests. The `usage` field from LLM responses is not parsed and accumulated. *(Discovered in v0.9.11 rpi5 audit)*
-20. **Tool calls counter not wired** — `/metrics` shows 0 tool calls. Counter not incremented on tool execution in agent loop. *(Discovered in v0.9.11 rpi5 audit)*
-21. **`/ready` latency is LLM-dependent** — 1.26s response time because it waits for LLM connectivity check. Consider caching the LLM check result with a configurable TTL. *(Discovered in v0.9.11 rpi5 audit)*
-22. **`--eval /dev/null` produces no meaningful output** — When given `/dev/null` as input, the eval harness produces no meaningful output. Should handle empty input gracefully. *(Discovered in v0.9.11 rpi5 audit)*
-23. **MCP server JSON-RPC `params` field required** — Some MCP clients omit the `params` field in JSON-RPC requests. The server should accept requests without `params` (treat as empty). *(Discovered in v0.9.11 rpi5 audit)*
-24. **RavenFabric policy blocks piped shell interpreters** — `sh -c "cmd | cmd2"` is blocked by policy because the pipe character is not in the allowed command list. Policy engine needs pipe detection. *(Discovered in v0.9.11 rpi5 audit)*
-25. **`imagePullPolicy: IfNotPresent` for `:latest` tag** — Stale `:latest` image not pulled on pod restart. Should use `imagePullPolicy: Always` when tag is `:latest`. *(Discovered in v0.9.11 rpi5 audit)*
-26. **Distroless container limits HTTP testing** — No `curl`/`wget` in distroless image. Need to document `kubectl port-forward` as the testing method. *(Discovered in v0.9.11 rpi5 audit)*
+19. ~~**Token tracking not wired to LLM responses** — `/metrics` shows 0 tokens across all requests. The `usage` field from LLM responses is not parsed and accumulated. *(Discovered in v0.9.11 rpi5 audit)*~~ ✅ **Fixed in v0.9.14**
+20. ~~**Tool calls counter not wired** — `/metrics` shows 0 tool calls. Counter not incremented on tool execution in agent loop. *(Discovered in v0.9.11 rpi5 audit)*~~ ✅ **Fixed in v0.9.14**
+21. ~~**`/ready` latency is LLM-dependent** — 1.26s response time because it waits for LLM connectivity check. Consider caching the LLM check result with a configurable TTL. *(Discovered in v0.9.11 rpi5 audit)*~~ ✅ **Fixed in v0.9.14 (30s TTL caching)**
+22. ~~**`--eval /dev/null` produces no meaningful output** — When given `/dev/null` as input, the eval harness produces no meaningful output. Should handle empty input gracefully. *(Discovered in v0.9.11 rpi5 audit)*~~ ✅ **Fixed in v0.9.14**
+23. ~~**MCP server JSON-RPC `params` field required** — Some MCP clients omit the `params` field in JSON-RPC requests. The server should accept requests without `params` (treat as empty). *(Discovered in v0.9.11 rpi5 audit)*~~ ✅ **Fixed in v0.9.14**
+24. ~~**RavenFabric policy blocks piped shell interpreters** — `sh -c "cmd | cmd2"` is blocked by policy because the pipe character is not in the allowed command list. Policy engine needs pipe detection. *(Discovered in v0.9.11 rpi5 audit)*~~ ✅ **Fixed in v0.9.14**
+25. ~~**`imagePullPolicy: IfNotPresent` for `:latest` tag** — Stale `:latest` image not pulled on pod restart. Should use `imagePullPolicy: Always` when tag is `:latest`. *(Discovered in v0.9.11 rpi5 audit)*~~ ✅ **Fixed in v0.9.14**
+26. ~~**Distroless container limits HTTP testing** — No `curl`/`wget` in distroless image. Need to document `kubectl port-forward` as the testing method. *(Discovered in v0.9.11 rpi5 audit)*~~ ✅ **Fixed in v0.9.15**
+27. ~~**`/tools/{name}` path parameter routing returns 404** — The `/tools` endpoint lists all tools correctly, but `/tools/{name}` returns `Not Found`. *(Discovered in v0.9.6 rpi5 testing)*~~ ✅ **Fixed — added `GET /tools/{name}` handler + improved error status mapping**
+28. ~~**RavenFabric health check URL builder error** — Uses `ws://` scheme for HTTP health check endpoint. *(Discovered in v0.9.9 rpi5 testing, #42)*~~ ✅ **Fixed — `http_url()` helper converts `ws://` → `http://` and `wss://` → `https://`**
+29. ~~**`/execute` returns empty result without `no_final_required`** — Agent loop hits max iterations when model doesn't emit `FINAL:`. *(Discovered in v0.9.9 rpi5 testing, #39)*~~ ✅ **Fixed — `no_final_required: true` default for background tasks**
+30. ~~**Distroless container has no `kill` binary** — SIGHUP config reload requires `kill` or procfs access. *(Discovered in v0.9.6 rpi5 testing)*~~ ✅ **Fixed — added `POST /reload` HTTP endpoint as distroless-friendly alternative**
 
 ---
 
