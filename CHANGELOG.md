@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.0.1] — 2026-06-02
+
 ### Fixed
 - **`/execute` returns empty result without `no_final_required`** — Changed `no_final_required` default from `false` to `true` in `background.rs` task execution config. The `/execute` endpoint now correctly returns the agent's response even when the model doesn't emit a `FINAL:` marker, matching the behavior of the `/chat` endpoint. (#39, rpi5-feedback)
 - **RavenFabric health check URL builder error with WebSocket endpoints** — Added `http_url()` helper method in `ravenfabric.rs` that converts `ws://` to `http://` and `wss://` to `https://` for REST API calls. Applied to `health()`, `list_agents()`, and `execute()` methods. (#42, rpi5-feedback)
