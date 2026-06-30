@@ -236,9 +236,15 @@ struct Args {
     #[arg(long, env = "RAVENCLAWS_SWARM_HEALTH_MONITORING")]
     swarm_health_monitoring: bool,
 
-    /// When set, treat any non-tool-call response as completion (no FINAL: required)
+    /// When set, treat any non-tool-call response as completion (no FINAL: required).
+    /// This is now the DEFAULT behavior. Use --require-final for the old behavior.
     #[arg(long, env = "RAVENCLAWS_NO_FINAL_REQUIRED")]
     no_final_required: bool,
+
+    /// Require FINAL: marker for agent loop completion (inverse of --no-final-required).
+    /// When set, the agent will only consider a response complete if it contains "FINAL:".
+    #[arg(long, env = "RAVENCLAWS_REQUIRE_FINAL")]
+    require_final: bool,
 
     // ── Multi-agent pattern flags (v0.9.13) ──
     /// Maximum debate rounds (default: 3)
@@ -551,7 +557,11 @@ async fn main() -> anyhow::Result<()> {
             require_approval: args.require_approval,
             prompt_injection_protection: config.security.prompt_injection_protection,
             token_lifetime_secs: config.security.token_lifetime_secs,
-            no_final_required: args.no_final_required,
+            no_final_required: if args.require_final {
+                false
+            } else {
+                args.no_final_required
+            },
             fallback_chain,
             token_budget,
             ravenfabric: ravenfabric.clone(),

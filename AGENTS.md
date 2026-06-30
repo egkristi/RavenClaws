@@ -30,7 +30,7 @@ RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider
 - **Build:** `cargo build --release` (~5.2 MB stripped binary, ~5 ms startup)
 - **Library:** Available as `ravenclaws` on crates.io (binary + library crate)
 
-### Architecture (19 modules)
+### Architecture (20 modules)
 
 ```
 src/
@@ -53,8 +53,9 @@ src/
 ├── sandbox.rs   — Sandboxed execution (workdir jail, path resolution, resource limits, timeouts)
 ├── eval.rs      — Eval harness (assertions, run traces, text/JSON reports)
 ├── ravenfabric.rs— RavenFabric mesh client (health, list_agents, execute, broadcast)
-└── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting)
-└── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting)
+├── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting)
+├── persistence.rs — SQLite-backed conversation persistence with retention policies
+└── plugins.rs — WASM plugin system (Plugin ABI v1, WasmPlugin, WasmPluginManager)
 ```
 
 ### Current State
@@ -68,7 +69,7 @@ src/
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
 | Library crate (ravenclaws on crates.io) | ✅ Working — binary + library |
-| Verification suite (478 tests, 19 modules, 0 failures) | ✅ Working |
+| Verification suite (485 tests, 20 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -99,6 +100,9 @@ src/
 | RavenFabric integration | ✅ Working — HTTP client with health, list_agents, execute, broadcast; wired to all modes |
 | GitHub Actions CI/CD | ✅ Implemented — fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented — CodeQL, cargo-audit, cargo-deny, cargo-outdated, cargo-udeps, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard, dependency review |
+| WASM plugin system | ✅ v1.0.1 — `src/plugins.rs` with `WasmPlugin`, `WasmPluginManager`, Plugin ABI v1, 11 unit tests |
+| SQLite conversation persistence | ✅ v1.0.1 — `src/persistence.rs` with `ConversationStore`, retention policies, 15 unit tests |
+| Dockerfile.slim (Debian-based) | ✅ v1.0.1 — `Dockerfile.slim` for MCP client support with nodejs, npm, curl |
 | Pre-built binaries / releases | 📋 Wired, untagged — CI produces them on tag; none released yet |
 
 ---

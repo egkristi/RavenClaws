@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v1.0.1] — 2026-06-02
 
+### Added
+- **WASM plugin system** — New `src/plugins.rs` module with `WasmPlugin`, `WasmPluginManager`, and `PluginTool` types. Load `.wasm` binaries at runtime via Plugin ABI v1 (7 required exports). Supports tool enumeration, execution, and registration into `ToolRegistry`. 11 unit tests covering load, tools, execute, manager, unload, version mismatch, and missing export scenarios. Uses `wasmtime` 28 with `cranelift` and `runtime` features. (rpi5-feedback)
+
 ### Fixed
 - **`/execute` returns empty result without `no_final_required`** — Changed `no_final_required` default from `false` to `true` in `background.rs` task execution config. The `/execute` endpoint now correctly returns the agent's response even when the model doesn't emit a `FINAL:` marker, matching the behavior of the `/chat` endpoint. (#39, rpi5-feedback)
 - **RavenFabric health check URL builder error with WebSocket endpoints** — Added `http_url()` helper method in `ravenfabric.rs` that converts `ws://` to `http://` and `wss://` to `https://` for REST API calls. Applied to `health()`, `list_agents()`, and `execute()` methods. (#42, rpi5-feedback)
@@ -16,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **`POST /reload` endpoint for distroless-friendly config reload** — New `/reload` HTTP endpoint provides the same config reload functionality as SIGHUP but works in distroless containers that lack a shell or `kill` binary. Accepts `POST` requests and reloads configuration from the original config path. (rpi5-feedback)
+- **`--no-final-required` is now the default** — Changed `AgentLoopConfig::default()` to set `no_final_required: true`. The agent loop now treats any non-tool-call response as completion without requiring a `FINAL:` marker. Added `--require-final` CLI flag (and `RAVENCLAWS_REQUIRE_FINAL` env var) for users who want the old behavior. This is the #1 usability fix — most models don't emit `FINAL:`. (rpi5-feedback)
+- **`Dockerfile.slim` — Debian-based alternative for MCP client support** — New `Dockerfile.slim` using `debian:stable-slim` as the runtime base image. Includes `nodejs` and `npm` for MCP client connections (via `npx`), `curl` for HTTP endpoint testing, and a shell for debugging. Runs as non-root user (UID 65532). Build with `docker buildx build -f Dockerfile.slim ...`. (rpi5-feedback)
+- **SQLite conversation persistence** — New `src/persistence.rs` module with `ConversationStore` for SQLite-backed conversation history. Supports session CRUD, message storage with token counts, and configurable retention policies (time-based, count-based, token-budget-based, unlimited). `import_memory()` bridges `ConversationMemory` to SQLite. 15 unit tests. (rpi5-feedback)
 
 ## [0.9.6] — 2026-06-02
 

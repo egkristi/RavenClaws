@@ -1,11 +1,11 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
 **Date:** 2026-07-02  
-**Version:** v1.0.0 — Simply the Best 🏆  
-**Previous Release:** v0.9.16 (2026-07-02) — SSE MCP Ecosystem Verification 🎯  
-**Current Commit:** (v1.0.1 — rpi5 Critical Fixes)
+**Version:** v1.0.1 — Simply the Best 🏆  
+**Previous Release:** v1.0.0 (2026-07-02) — Simply the Best 🏆  
+**Current Commit:** (v1.0.1 — WASM Plugin System + SQLite Persistence)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
-**v1.0 Hardening Progress:** v0.9.4–v0.9.16 all complete ✅. **v0.9.14 closed ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy` verification. **v0.9.15 closed ALL ecosystem expansion gaps** — vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers. **v0.9.16 closed the last v1.0 blocker** — SSE MCP ecosystem verification: `--mcp-sse-server` CLI flag wired, SSE transport for MCP client config, MCP integration tests (stdio + SSE), SSE transport documentation. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v1.0 is released — the stable release. All exit criteria are met.** **v1.0.1 fixes the 4 remaining critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.**
+**v1.0 Hardening Progress:** v0.9.4–v0.9.16 all complete ✅. **v0.9.14 closed ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy` verification. **v0.9.15 closed ALL ecosystem expansion gaps** — vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers. **v0.9.16 closed the last v1.0 blocker** — SSE MCP ecosystem verification: `--mcp-sse-server` CLI flag wired, SSE transport for MCP client config, MCP integration tests (stdio + SSE), SSE transport documentation. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v1.0 is released — the stable release. All exit criteria are met.** **v1.0.1 fixes the 4 remaining critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.** **v1.0.1 also adds WASM plugin system (Plugin ABI v1, 11 unit tests) and SQLite conversation persistence (15 unit tests) — 485 total unit tests across 20 modules.**
 
 **Strategic Positioning:** RavenClaws is the **"Temporal for AI agents"** — the lightweight, durable execution engine for AI agents. Unlike LangGraph (complex graphs), Temporal (heavy infra), or CrewAI (Python-only), RavenClaws gives you reliable, checkpointed agent execution in a ~5 MB binary that runs on a Raspberry Pi. **Durable execution (checkpoint/resume) is implemented in v0.9.12** — agent loop saves state after each iteration and survives process restarts. **Multi-agent patterns (debate, review-loop, research-synthesize, voting) are implemented in v0.9.13.** **Production stability verified in v0.9.11 rpi5 audit: 3,597 requests, 0 errors, 10 Mi RSS, 0 restarts over 7.5 hours.**
 
@@ -175,8 +175,8 @@ can't be added without breaking one, it doesn't ship in core.
 
 ## Current State
 
-**Version:** 1.0.0 — Simply the Best 🏆  
-**Stats:** 19 source modules (+lib.rs, +eval.rs, +ravenfabric.rs, +patterns.rs), ~17,500 LOC, 7 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **478 unit tests**, 119 verification tests across 13 modules (+vllm, +llamacpp, +mcp), multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--mcp-sse-server` CLI flag, MCP integration tests (stdio + SSE), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, **durable execution (checkpoint/resume)**, **multi-agent patterns (debate, review-loop, research-synthesize, voting)**, **Azure OpenAI adapter**, **agent loop deduplication**, **eval harness agent loop integration**, **token tracking wired to LLM responses**, **tool calls counter wired**, **`/ready` caching**, **MCP server optional params**, **RavenFabric pipe policy**, **vLLM docs + verification tests**, **llama.cpp docs + verification tests**, **distroless HTTP testing docs**, **SSE transport documentation**, published on crates.io as `ravenclaws` (binary + library crate).  
+**Version:** 1.0.1 — Simply the Best 🏆  
+**Stats:** 20 source modules (+lib.rs, +eval.rs, +ravenfabric.rs, +patterns.rs, +persistence.rs, +plugins.rs), ~18,500 LOC, 7 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **485 unit tests**, 119 verification tests across 13 modules (+vllm, +llamacpp, +mcp), multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--mcp-sse-server` CLI flag, MCP integration tests (stdio + SSE), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, **durable execution (checkpoint/resume)**, **multi-agent patterns (debate, review-loop, research-synthesize, voting)**, **Azure OpenAI adapter**, **agent loop deduplication**, **eval harness agent loop integration**, **token tracking wired to LLM responses**, **tool calls counter wired**, **`/ready` caching**, **MCP server optional params**, **RavenFabric pipe policy**, **vLLM docs + verification tests**, **llama.cpp docs + verification tests**, **distroless HTTP testing docs**, **SSE transport documentation**, published on crates.io as `ravenclaws` (binary + library crate).  
 **Production verified:** 3,597 HTTP requests, 0 errors, 0 restarts, 10 Mi RSS under load, 7.5h uptime on rpi5 K3s (v0.9.11 audit).
 
 **rpi5 Deployment Verdict (v0.9.11):** All 13 resolved issues from feedback confirmed working. 10 critical bugs fixed. 4 documentation gaps closed. 4 feature requests documented for future versions. **All production hardening items completed.** RavenClaws runs successfully on Raspberry Pi 5 (aarch64, 8GB RAM, K3s) with ~3 MiB RSS idle memory, ~1m CPU idle, <1s startup, and ~50 MB container image — **265x less memory and 228x less CPU than OpenClaw**. **v1.0.1 closes the final 4 critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.**
@@ -335,7 +335,7 @@ These must be resolved before v0.5 can ship:
 │  · Ollama · Anthropic · MultiModel   │
 └───────────────────────────────────────┘
 
-✅ 18 modules: policy, audit, sandbox, mcp, ravenfabric, heartbeat, eval, lib integrated
+✅ 20 modules: policy, audit, sandbox, mcp, ravenfabric, heartbeat, eval, persistence, plugins, lib integrated
 ```
 
 ### Target (v1.0)
@@ -353,7 +353,8 @@ These must be resolved before v0.5 can ship:
      │ policy✅│    │ routing+ │   │ swarm/superv. │
      │ sandbox✅│   │ fallback+│   │ RavenFabric ✅│
      │ audit  ✅│   │ budgets  │   │  (E2E remote) │
-     └─────────┘    └──────────┘   └───────┬───────┘
+     │ plugins✅│   │          │   └───────┬───────┘
+     └─────────┘    └──────────┘           │
           │                                │
    ┌──────┴───────┐              ┌─────────┴─────────┐
    │ Observability│              │  HeartbeatAgent   │
@@ -361,6 +362,11 @@ These must be resolved before v0.5 can ship:
    │ tracing ·    │              │  act → persist →  │
    │ health       │              │  sleep (loop)     │
    └──────────────┘              └───────────────────┘
+
+   ┌──────────────────┐
+   │  Persistence     │  SQLite-backed conversation store
+   │  (SQLite)        │  with retention policies
+   └──────────────────┘
 
 ✅ = Infrastructure exists, needs wiring to agent loop (v0.4)
 ```
@@ -431,8 +437,8 @@ simpler** — or deliberately not at all.
 | **`/ready` optimized with caching** | ✅ **v0.9.14** | ✅ **v0.9.14** | ✅ | ✅ |
 | **MCP server optional `params`** | ✅ **v0.9.14** | ✅ **v0.9.14** | ✅ | ✅ |
 | **RavenFabric pipe policy** | ✅ **v0.9.14** | ✅ **v0.9.14** | ❌ | ❌ |
-| **WASM plugin system** | ❌ | ✅ v0.10 | ❌ | ❌ |
-| **Conversation persistence (SQLite)** | ❌ | ✅ v0.10 | ✅ | ✅ |
+| **WASM plugin system** | ✅ **v1.0.1** | ✅ v1.0.1 | ❌ | ❌ |
+| **Conversation persistence (SQLite)** | ✅ **v1.0.1** | ✅ v1.0.1 | ✅ | ✅ |
 | Sandboxed execution | ✅ **v0.9.8** | ✅ | ✅ | ✅ |
 | **Security model (wired)** | ✅ | ✅ | ⚠️ (root user) | ⚠️ |
 | **Local-first / air-gapped** | ✅ (Ollama) | ✅ | ❌ | ❌ |
@@ -1201,7 +1207,7 @@ These were production pain points that have been addressed in v1.0.1.
 #### 🟡 Important — RavenClaws Core Improvements
 
 - [ ] **WASM plugin system** — Extend RavenClaws without recompiling. WASM-based plugins with a stable ABI, sandboxed execution, and capability-based security. Plugins can add tools, providers, and agent behaviors. **Rationale:** The #1 request from rpi5 feedback for extensibility without forking the codebase.
-- [ ] **Conversation persistence (SQLite backend)** — Persist conversation history to SQLite so agents survive pod restarts without losing context. Configurable retention policy (time-based, count-based, token-budget-based). **Rationale:** Currently conversation memory is in-memory only — lost on restart.
+- [x] **Conversation persistence (SQLite backend)** — New `src/persistence.rs` module with `ConversationStore` (SQLite-backed), `RetentionPolicy` (time-based, count-based, token-budget-based, unlimited), and full CRUD for sessions and messages. `import_memory()` bridges `ConversationMemory` to SQLite. 15 unit tests. ✅ **v1.0.1**
 - [ ] **Multi-modal input** — Wire AnthropicClient's image support structure to CLI. Image attachments in `ChatMessage` (base64 or URL), PDF/text document ingestion. **Rationale:** Table stakes for modern agents — Manus, Kimi, and Claude all support multi-modal input.
 - [ ] **Graceful degradation under load** — When resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
 - [ ] **Self-healing** — Failed agents are detected, replaced, and caught up. Supervisor re-assigns orphaned tasks. No single point of failure in mesh topologies.
@@ -1212,9 +1218,9 @@ These were production pain points that have been addressed in v1.0.1.
 - [ ] **Browser automation** — Headless browser tool (Playwright or Chromium-based) for web interaction, form filling, and data extraction. **Rationale:** OpenClaw's Playwright MCP server is one of its most-used features.
 - [ ] **Telegram bot** — Native Telegram bot integration so RavenClaws can be interacted with via Telegram. **Rationale:** Common deployment pattern for home server agents.
 - [ ] **SSH in container** — Optional SSH server in the container for debugging and interactive access. **Rationale:** OpenClaw supports this; useful for development and troubleshooting.
-- [ ] **SSE MCP server for RavenClaws** — Currently RavenClaws MCP server is stdio-only (`--mcp-server`). Add SSE transport for the MCP server so other tools can connect to RavenClaws as an MCP server over HTTP. **Rationale:** OpenClaw supports SSE MCP server; this is the #1 integration gap for RavenClaws as an MCP provider.
-- [ ] **`--no-final-required` as default** — Make `no_final_required: true` the default behavior for `--exec` and `/execute` modes. The `FINAL:` requirement is the #1 usability issue — most models don't emit it. Add `--require-final` flag for users who want the old behavior. **Rationale:** Every rpi5 test session confirmed this is essential for reliable agent loop completion.
-- [ ] **Non-distroless base image option** — Add a `Dockerfile.slim` using a minimal Debian-based image (e.g., `debian:stable-slim`) as an alternative to the distroless image. This would enable MCP client connections (via `npx`), SIGHUP config reload (via `kill`), and debugging (via shell). **Rationale:** The distroless container provides excellent security but prevents MCP client connections, SIGHUP reload, and HTTP endpoint testing. A "slim" Debian-based image (~30MB) would enable these features while still being 25x smaller than OpenClaw.
+- [x] **SSE MCP server for RavenClaws** — Added `McpSseServer` with `GET /sse` (SSE stream) and `POST /message` (JSON-RPC) endpoints. `--mcp-sse-server` CLI flag with `--mcp-sse-host` and `--mcp-sse-port` options. Uses raw TCP (no axum dependency). ✅ **v0.9.16**
+- [x] **`--no-final-required` as default** — Changed `AgentLoopConfig::default()` to set `no_final_required: true`. Added `--require-final` CLI flag (inverse of `--no-final-required`) for users who want the old behavior. The `FINAL:` requirement was the #1 usability issue — most models don't emit it. ✅ **v1.0.1**
+- [x] **Non-distroless base image option** — Added `Dockerfile.slim` using `debian:stable-slim` as an alternative to the distroless image. Includes `nodejs` and `npm` for MCP client connections (via `npx`), `curl` for HTTP endpoint testing, and a shell for debugging. Runs as non-root user (UID 65532). ✅ **v1.0.1**
 
 #### Security & Compliance
 

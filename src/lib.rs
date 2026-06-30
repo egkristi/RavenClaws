@@ -13,7 +13,7 @@
 //!
 //! ## Architecture
 //!
-//! The crate is organized into 18 modules:
+//! The crate is organized into 20 modules:
 //!
 //! | Module | Purpose |
 //! |---|---|
@@ -21,6 +21,8 @@
 //! | [`llm`] | LLM provider abstraction + 5 client implementations |
 //! | [`config`] | Configuration structs, TOML/env loading, validation |
 //! | [`tools`] | Tool abstraction, registry, 5 built-in tools |
+//! | [`persistence`] | SQLite-backed conversation persistence with retention policies |
+//! | [`plugins`] | WASM plugin system for extending RavenClaws without recompiling |
 //! | [`policy`] | Deny-by-default policy engine |
 //! | [`sandbox`] | Sandboxed execution (workdir jail, resource limits) |
 //! | [`audit`] | Tamper-evident audit log (HMAC-SHA256 chained) |
@@ -93,6 +95,8 @@ pub mod heartbeat;
 pub mod llm;
 pub mod mcp;
 pub mod patterns;
+pub mod persistence;
+pub mod plugins;
 pub mod policy;
 pub mod ravenfabric;
 pub mod sandbox;
@@ -123,6 +127,8 @@ pub use patterns::{
     run_debate, run_debate_multi, run_research_synthesize, run_research_synthesize_multi,
     run_review_loop, run_review_loop_multi, run_voting, run_voting_multi, PatternConfig,
 };
+pub use persistence::{ConversationStore, RetentionPolicy, StoredMessage, StoredSession};
+pub use plugins::{PluginError, PluginTool, WasmPlugin, WasmPluginManager};
 pub use policy::PolicyEngine;
 pub use ravenfabric::RavenFabricClient;
 pub use sandbox::Sandbox;
