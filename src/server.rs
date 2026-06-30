@@ -211,10 +211,10 @@ async fn ready_response(state: &ServerState) -> (Vec<u8>, &'static str) {
         // Cache expired — perform actual check
         let result = match tokio::time::timeout(
             std::time::Duration::from_secs(5),
-            llm.chat(vec![ChatMessage {
-                role: "user".to_string(),
-                content: "Respond with exactly one word: ready".to_string(),
-            }]),
+            llm.chat(vec![ChatMessage::new(
+                "user",
+                "Respond with exactly one word: ready",
+            )]),
         )
         .await
         {
@@ -833,10 +833,7 @@ async fn handle_health_deep(state: &ServerState) -> anyhow::Result<Vec<u8>> {
         .ok_or_else(|| anyhow::anyhow!("No LLM client configured"))?;
 
     // Make a lightweight LLM request to verify connectivity
-    let messages = vec![ChatMessage {
-        role: "user".to_string(),
-        content: "Respond with exactly: OK".to_string(),
-    }];
+    let messages = vec![ChatMessage::new("user", "Respond with exactly: OK")];
 
     let response = llm
         .chat(messages)

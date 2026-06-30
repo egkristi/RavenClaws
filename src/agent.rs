@@ -38,29 +38,37 @@ impl ConversationMemory {
     pub fn new(system_prompt: &str, max_messages: usize) -> Self {
         Self {
             max_messages,
-            messages: vec![ChatMessage {
-                role: "system".to_string(),
-                content: system_prompt.to_string(),
-            }],
+            messages: vec![ChatMessage::new("system", system_prompt.to_string())],
         }
     }
 
     /// Add a user message and return the full message history for an LLM call.
     pub fn add_user_message(&mut self, content: &str) -> &[ChatMessage] {
-        self.messages.push(ChatMessage {
-            role: "user".to_string(),
-            content: content.to_string(),
-        });
+        self.messages
+            .push(ChatMessage::new("user", content.to_string()));
+        self.trim_to_max();
+        &self.messages
+    }
+
+    /// Add a multi-modal user message with image attachments.
+    pub fn add_user_message_with_images(
+        &mut self,
+        text: &str,
+        image_data_uris: Vec<String>,
+    ) -> &[ChatMessage] {
+        self.messages.push(ChatMessage::with_images(
+            "user",
+            text.to_string(),
+            image_data_uris,
+        ));
         self.trim_to_max();
         &self.messages
     }
 
     /// Add an assistant message to history.
     pub fn add_assistant_message(&mut self, content: &str) {
-        self.messages.push(ChatMessage {
-            role: "assistant".to_string(),
-            content: content.to_string(),
-        });
+        self.messages
+            .push(ChatMessage::new("assistant", content.to_string()));
         self.trim_to_max();
     }
 
@@ -396,6 +404,35 @@ pub async fn run_agent_loop_with_registry(
         registry,
         "security integration",
         false,
+        Vec::new(),
+    )
+    .await
+}
+
+/// Run the agent loop with multi-modal image input.
+///
+/// Accepts a list of base64-encoded image data URIs that will be attached
+/// to the initial user message. Supported formats: PNG, JPEG, GIF, WebP.
+#[allow(dead_code)]
+#[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model(), image_count = image_data_uris.len()))]
+pub async fn run_agent_loop_with_images(
+    llm: Arc<dyn LLMProviderTrait>,
+    initial_prompt: &str,
+    system_prompt: &str,
+    config: AgentLoopConfig,
+    tool_registry: Option<ToolRegistry>,
+    image_data_uris: Vec<String>,
+) -> Result<String> {
+    let registry = tool_registry.unwrap_or_else(ToolRegistry::with_default_tools);
+    run_agent_loop_inner(
+        llm,
+        initial_prompt,
+        system_prompt,
+        config,
+        registry,
+        "security integration",
+        false,
+        image_data_uris,
     )
     .await
 }
@@ -410,6 +447,7 @@ pub async fn run_agent_loop_with_registry(
 /// * `registry` — A fully initialized `ToolRegistry` (caller resolves defaults/MCP tools).
 /// * `loop_label` — Label for log messages (e.g. "security integration" or "MCP integration").
 /// * `mcp_enabled` — Whether MCP is active, used in audit event metadata.
+/// * `image_data_uris` — Optional list of base64-encoded image data URIs for multi-modal input.
 #[allow(clippy::too_many_arguments)]
 #[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model()))]
 async fn run_agent_loop_inner(
@@ -420,6 +458,7 @@ async fn run_agent_loop_inner(
     registry: ToolRegistry,
     loop_label: &str,
     mcp_enabled: bool,
+    image_data_uris: Vec<String>,
 ) -> Result<String> {
     // Initialize security components
     let policy_engine = PolicyEngine::default_secure();
@@ -496,17 +535,29 @@ async fn run_agent_loop_inner(
                     "No checkpoint found, starting fresh"
                 );
                 let mut m = ConversationMemory::new(system_prompt, 0);
-                m.add_user_message(initial_prompt);
+                if image_data_uris.is_empty() {
+                    m.add_user_message(initial_prompt);
+                } else {
+                    m.add_user_message_with_images(initial_prompt, image_data_uris.clone());
+                }
                 (m, 0)
             }
         } else {
             let mut m = ConversationMemory::new(system_prompt, 0);
-            m.add_user_message(initial_prompt);
+            if image_data_uris.is_empty() {
+                m.add_user_message(initial_prompt);
+            } else {
+                m.add_user_message_with_images(initial_prompt, image_data_uris.clone());
+            }
             (m, 0)
         }
     } else {
         let mut m = ConversationMemory::new(system_prompt, 0);
-        m.add_user_message(initial_prompt);
+        if image_data_uris.is_empty() {
+            m.add_user_message(initial_prompt);
+        } else {
+            m.add_user_message_with_images(initial_prompt, image_data_uris.clone());
+        }
         (m, 0)
     };
 
@@ -988,6 +1039,45 @@ pub async fn run_agent_loop_with_mcp_and_registry(
         registry,
         "MCP integration",
         mcp_enabled,
+        Vec::new(),
+    )
+    .await
+}
+
+/// Run the agent loop with MCP tools and multi-modal image input.
+#[instrument(skip_all, fields(provider = %llm.provider_name(), model = %llm.model(), image_count = image_data_uris.len()))]
+pub async fn run_agent_loop_with_mcp_and_images(
+    llm: Arc<dyn LLMProviderTrait>,
+    initial_prompt: &str,
+    system_prompt: &str,
+    config: AgentLoopConfig,
+    mcp_client: Option<Arc<RwLock<McpClient>>>,
+    tool_registry: Option<ToolRegistry>,
+    image_data_uris: Vec<String>,
+) -> Result<String> {
+    let mut registry = tool_registry.unwrap_or_else(ToolRegistry::with_default_tools);
+
+    if let Some(client) = &mcp_client {
+        match crate::mcp::register_mcp_tools(&mut registry, client.clone()).await {
+            Ok(count) => {
+                info!(count, "MCP tools registered");
+            }
+            Err(e) => {
+                warn!(error = %e, "Failed to register MCP tools");
+            }
+        }
+    }
+
+    let mcp_enabled = mcp_client.is_some();
+    run_agent_loop_inner(
+        llm,
+        initial_prompt,
+        system_prompt,
+        config,
+        registry,
+        "MCP integration",
+        mcp_enabled,
+        image_data_uris,
     )
     .await
 }
@@ -1268,14 +1358,8 @@ pub async fn run_single(
     let system_prompt = &config.llm.system_prompt;
 
     let messages = vec![
-        ChatMessage {
-            role: "system".to_string(),
-            content: system_prompt.to_string(),
-        },
-        ChatMessage {
-            role: "user".to_string(),
-            content: "Ready. Awaiting instructions.".to_string(),
-        },
+        ChatMessage::new("system", system_prompt.to_string()),
+        ChatMessage::new("user", "Ready. Awaiting instructions."),
     ];
 
     match llm.chat(messages).await {
@@ -1664,14 +1748,8 @@ pub async fn run_single_multi(
     let system_prompt = &config.llm.system_prompt;
 
     let messages = vec![
-        ChatMessage {
-            role: "system".to_string(),
-            content: system_prompt.to_string(),
-        },
-        ChatMessage {
-            role: "user".to_string(),
-            content: "Ready. Awaiting instructions.".to_string(),
-        },
+        ChatMessage::new("system", system_prompt.to_string()),
+        ChatMessage::new("user", "Ready. Awaiting instructions."),
     ];
 
     // Round-robin: start with first provider, then rotate

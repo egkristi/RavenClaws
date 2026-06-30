@@ -289,14 +289,8 @@ impl HeartbeatAgent {
             match self
                 .llm
                 .chat(vec![
-                    crate::llm::ChatMessage {
-                        role: "system".to_string(),
-                        content: self.build_system_prompt(),
-                    },
-                    crate::llm::ChatMessage {
-                        role: "user".to_string(),
-                        content: assessment_prompt,
-                    },
+                    crate::llm::ChatMessage::new("system", self.build_system_prompt()),
+                    crate::llm::ChatMessage::new("user", assessment_prompt),
                 ])
                 .await
             {
@@ -343,14 +337,8 @@ impl HeartbeatAgent {
                     match self
                         .llm
                         .chat(vec![
-                            crate::llm::ChatMessage {
-                                role: "system".to_string(),
-                                content: self.build_system_prompt(),
-                            },
-                            crate::llm::ChatMessage {
-                                role: "user".to_string(),
-                                content: plan_prompt,
-                            },
+                            crate::llm::ChatMessage::new("system", self.build_system_prompt()),
+                            crate::llm::ChatMessage::new("user", plan_prompt),
                         ])
                         .await
                     {

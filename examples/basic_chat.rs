@@ -23,10 +23,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Send a chat message
     let response = client
-        .chat(vec![ChatMessage {
-            role: "user".to_string(),
-            content: "What is the capital of France?".to_string(),
-        }])
+        .chat(vec![ChatMessage::new(
+            "user",
+            "What is the capital of France?",
+        )])
         .await?;
 
     // Print the response

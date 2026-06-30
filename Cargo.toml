@@ -115,6 +115,9 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 # WASM runtime for plugin system (v1.0.1)
 wasmtime = { version = "28", default-features = false, features = ["cranelift", "runtime"] }
 
+# Base64 encoding for multi-modal image support (v1.1.0)
+base64 = "0.22"
+
 [dev-dependencies]
 tokio-test = "0.4"
 mockito = "1.5"

@@ -248,15 +248,232 @@ impl TokenBudget {
     }
 }
 
+/// A content part for multi-modal messages — text or image.
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(untagged)]
+#[non_exhaustive]
+pub enum ContentPart {
+    /// Plain text content
+    Text { text: String },
+    /// Image content as a data URI (base64-encoded)
+    /// Format: `data:{mime_type};base64,{data}`
+    ImageUrl {
+        #[serde(rename = "image_url")]
+        image_url: ImageUrlContent,
+    },
+}
+
+/// URL/content for an image in a multi-modal message
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageUrlContent {
+    pub url: String,
+}
+
+impl ContentPart {
+    /// Create a text content part
+    pub fn text(text: impl Into<String>) -> Self {
+        Self::Text { text: text.into() }
+    }
+
+    /// Create an image content part from a data URI
+    pub fn image(data_uri: impl Into<String>) -> Self {
+        Self::ImageUrl {
+            image_url: ImageUrlContent {
+                url: data_uri.into(),
+            },
+        }
+    }
+
+    /// Serialize this content part as a `serde_json::Value` for OpenAI-compatible APIs.
+    pub fn to_openai_value(&self) -> serde_json::Value {
+        match self {
+            ContentPart::Text { text } => serde_json::json!({
+                "type": "text",
+                "text": text
+            }),
+            ContentPart::ImageUrl { image_url } => serde_json::json!({
+                "type": "image_url",
+                "image_url": {
+                    "url": image_url.url
+                }
+            }),
+        }
+    }
+
+    /// Serialize this content part as a `serde_json::Value` for Anthropic APIs.
+    pub fn to_anthropic_value(&self) -> serde_json::Value {
+        match self {
+            ContentPart::Text { text } => serde_json::json!({
+                "type": "text",
+                "text": text
+            }),
+            ContentPart::ImageUrl { image_url } => {
+                // Parse the data URI to extract media_type and base64 data
+                let url = &image_url.url;
+                if let Some(rest) = url.strip_prefix("data:") {
+                    if let Some((media_type, data)) = rest.split_once(";base64,") {
+                        return serde_json::json!({
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": media_type,
+                                "data": data
+                            }
+                        });
+                    }
+                }
+                // Fallback: send as text if we can't parse the data URI
+                serde_json::json!({
+                    "type": "text",
+                    "text": format!("[Image: {}]", url.chars().take(100).collect::<String>())
+                })
+            }
+        }
+    }
+}
+
+/// Load an image file and return a data URI string.
+///
+/// Reads the file, detects the MIME type from the extension, base64-encodes
+/// the contents, and returns a data URI in the format `data:{mime};base64,{data}`.
+///
+/// Supported formats: PNG, JPEG, GIF, WebP.
+pub fn load_image(path: &std::path::Path) -> Result<String, crate::error::RavenClawsError> {
+    let data = std::fs::read(path).map_err(crate::error::RavenClawsError::IO)?;
+
+    let mime = match path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.to_lowercase())
+        .as_deref()
+    {
+        Some("png") => "image/png",
+        Some("jpg") | Some("jpeg") => "image/jpeg",
+        Some("gif") => "image/gif",
+        Some("webp") => "image/webp",
+        _ => {
+            return Err(crate::error::RavenClawsError::CommandExecution(format!(
+                "Unsupported image format: '{}'. Supported: png, jpg, jpeg, gif, webp",
+                path.display()
+            )));
+        }
+    };
+
+    let encoded = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &data);
+    Ok(format!("data:{};base64,{}", mime, encoded))
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
+    /// Optional structured content parts for multi-modal messages.
+    /// When set, `content` is used as a fallback text representation.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub content_parts: Option<Vec<ContentPart>>,
+}
+
+impl ChatMessage {
+    /// Create a new text-only chat message.
+    pub fn new(role: impl Into<String>, content: impl Into<String>) -> Self {
+        Self {
+            role: role.into(),
+            content: content.into(),
+            content_parts: None,
+        }
+    }
+
+    /// Create a new multi-modal chat message with text and optional image attachments.
+    pub fn with_images(
+        role: impl Into<String>,
+        text: impl Into<String>,
+        image_data_uris: Vec<String>,
+    ) -> Self {
+        let text = text.into();
+        let mut parts = Vec::with_capacity(1 + image_data_uris.len());
+        parts.push(ContentPart::text(&text));
+        for uri in image_data_uris {
+            parts.push(ContentPart::image(uri));
+        }
+        Self {
+            role: role.into(),
+            content: text.clone(),
+            content_parts: Some(parts),
+        }
+    }
+
+    /// Serialize this message as a `serde_json::Value` for OpenAI-compatible APIs.
+    /// When `content_parts` is `Some`, produces the multi-modal content array format.
+    pub fn to_openai_message(&self) -> serde_json::Value {
+        match &self.content_parts {
+            Some(parts) => {
+                let content_array: Vec<serde_json::Value> =
+                    parts.iter().map(|p| p.to_openai_value()).collect();
+                serde_json::json!({
+                    "role": self.role,
+                    "content": content_array
+                })
+            }
+            None => {
+                serde_json::json!({
+                    "role": self.role,
+                    "content": self.content
+                })
+            }
+        }
+    }
+
+    /// Serialize this message as a `serde_json::Value` for Anthropic APIs.
+    pub fn to_anthropic_message(&self) -> serde_json::Value {
+        match &self.content_parts {
+            Some(parts) => {
+                let content_array: Vec<serde_json::Value> =
+                    parts.iter().map(|p| p.to_anthropic_value()).collect();
+                serde_json::json!({
+                    "role": self.role,
+                    "content": content_array
+                })
+            }
+            None => {
+                serde_json::json!({
+                    "role": self.role,
+                    "content": self.content
+                })
+            }
+        }
+    }
+
+    /// Get the base64 image data for Ollama's `images` array format.
+    /// Returns `None` if there are no image content parts.
+    pub fn ollama_images(&self) -> Option<Vec<String>> {
+        let parts = self.content_parts.as_ref()?;
+        let images: Vec<String> = parts
+            .iter()
+            .filter_map(|p| match p {
+                ContentPart::ImageUrl { image_url } => {
+                    let url = &image_url.url;
+                    url.strip_prefix("data:")
+                        .and_then(|rest| rest.split_once(";base64,").map(|x| x.1))
+                        .map(|s| s.to_string())
+                }
+                _ => None,
+            })
+            .collect();
+        if images.is_empty() {
+            None
+        } else {
+            Some(images)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
 pub struct ChatRequest {
     pub model: String,
+    #[serde(serialize_with = "serialize_messages_openai")]
     pub messages: Vec<ChatMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub temperature: Option<f32>,
@@ -268,6 +485,20 @@ pub struct ChatRequest {
     pub tools: Option<Vec<serde_json::Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_choice: Option<String>,
+}
+
+/// Serialize messages for OpenAI-compatible APIs, handling multi-modal content.
+fn serialize_messages_openai<S>(messages: &[ChatMessage], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    use serde::ser::SerializeSeq;
+    let mut seq = serializer.serialize_seq(Some(messages.len()))?;
+    for msg in messages {
+        let value = msg.to_openai_message();
+        seq.serialize_element(&value)?;
+    }
+    seq.end()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -671,11 +902,42 @@ impl LLMProviderTrait for OllamaClient {
     #[instrument(skip(self, messages), fields(provider = self.provider_name(), model = self.model()))]
     async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LLMError> {
         // Ollama uses slightly different format
+        // For multi-modal, we need to convert messages to serde_json::Value
+        // to handle the `images` array on user messages
         #[derive(Serialize)]
         struct OllamaRequest {
             model: String,
+            #[serde(serialize_with = "serialize_messages_ollama")]
             messages: Vec<ChatMessage>,
             stream: bool,
+        }
+
+        /// Serialize messages for Ollama API, handling multi-modal content.
+        fn serialize_messages_ollama<S>(
+            messages: &[ChatMessage],
+            serializer: S,
+        ) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            use serde::ser::SerializeSeq;
+            let mut seq = serializer.serialize_seq(Some(messages.len()))?;
+            for msg in messages {
+                let value = if let Some(images) = msg.ollama_images() {
+                    serde_json::json!({
+                        "role": msg.role,
+                        "content": msg.content,
+                        "images": images
+                    })
+                } else {
+                    serde_json::json!({
+                        "role": msg.role,
+                        "content": msg.content
+                    })
+                };
+                seq.serialize_element(&value)?;
+            }
+            seq.end()
         }
 
         let request = OllamaRequest {
@@ -780,17 +1042,29 @@ impl LLMProviderTrait for AnthropicClient {
         struct AnthropicRequest {
             model: String,
             max_tokens: u32,
-            messages: Vec<AnthropicMessage>,
+            #[serde(serialize_with = "serialize_anthropic_messages")]
+            messages: Vec<ChatMessage>,
             #[serde(skip_serializing_if = "Option::is_none")]
             system: Option<String>,
             #[serde(skip_serializing_if = "Option::is_none")]
             temperature: Option<f32>,
         }
 
-        #[derive(Serialize)]
-        struct AnthropicMessage {
-            role: String,
-            content: String,
+        /// Serialize messages for Anthropic API, handling multi-modal content.
+        fn serialize_anthropic_messages<S>(
+            messages: &[ChatMessage],
+            serializer: S,
+        ) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            use serde::ser::SerializeSeq;
+            let mut seq = serializer.serialize_seq(Some(messages.len()))?;
+            for msg in messages {
+                let value = msg.to_anthropic_message();
+                seq.serialize_element(&value)?;
+            }
+            seq.end()
         }
 
         // Extract system prompt if present
@@ -799,17 +1073,9 @@ impl LLMProviderTrait for AnthropicClient {
             .find(|m| m.role == "system")
             .map(|m| m.content.clone());
 
-        let anthropic_messages: Vec<AnthropicMessage> = messages
+        let anthropic_messages: Vec<ChatMessage> = messages
             .into_iter()
             .filter(|m| m.role != "system")
-            .map(|m| AnthropicMessage {
-                role: if m.role == "user" {
-                    "user".to_string()
-                } else {
-                    "assistant".to_string()
-                },
-                content: m.content,
-            })
             .collect();
 
         let request = AnthropicRequest {
@@ -919,6 +1185,7 @@ impl LLMProviderTrait for AnthropicClient {
                     message: ChatMessage {
                         role: "assistant".to_string(),
                         content,
+                        content_parts: None,
                     },
                     finish_reason: anthropic_resp.stop_reason,
                     tool_calls,
@@ -1101,14 +1368,8 @@ mod tests {
 
     fn make_chat_messages() -> Vec<ChatMessage> {
         vec![
-            ChatMessage {
-                role: "system".to_string(),
-                content: "You are helpful.".to_string(),
-            },
-            ChatMessage {
-                role: "user".to_string(),
-                content: "Hello!".to_string(),
-            },
+            ChatMessage::new("system", "You are helpful."),
+            ChatMessage::new("user", "Hello!"),
         ]
     }
 
@@ -2338,14 +2599,8 @@ mod tests {
         let request = ChatRequest {
             model: "gpt-4o-mini".to_string(),
             messages: vec![
-                ChatMessage {
-                    role: "system".to_string(),
-                    content: "You are a helpful assistant.".to_string(),
-                },
-                ChatMessage {
-                    role: "user".to_string(),
-                    content: "Hello!".to_string(),
-                },
+                ChatMessage::new("system", "You are a helpful assistant."),
+                ChatMessage::new("user", "Hello!"),
             ],
             temperature: Some(0.7),
             max_tokens: Some(2048),
@@ -2577,10 +2832,7 @@ mod tests {
     fn test_chat_request_no_temperature() {
         let request = ChatRequest {
             model: "gpt-4o-mini".to_string(),
-            messages: vec![ChatMessage {
-                role: "user".to_string(),
-                content: "Hello!".to_string(),
-            }],
+            messages: vec![ChatMessage::new("user", "Hello!")],
             temperature: None,
             max_tokens: None,
             stream: None,

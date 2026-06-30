@@ -1297,15 +1297,11 @@ impl SwarmOrchestrator {
             );
 
             let messages = vec![
-                ChatMessage {
-                    role: "system".to_string(),
-                    content: "You are a task analysis expert. Respond only with a comma-separated list of roles."
-                        .to_string(),
-                },
-                ChatMessage {
-                    role: "user".to_string(),
-                    content: analysis_prompt,
-                },
+                ChatMessage::new(
+                    "system",
+                    "You are a task analysis expert. Respond only with a comma-separated list of roles.",
+                ),
+                ChatMessage::new("user", analysis_prompt),
             ];
 
             match llm.chat(messages).await {

@@ -47,10 +47,7 @@
 //! let config = Config::load(None)?;
 //! let llm = create_client(&config.llm)?;
 //! let response = llm.chat(vec![
-//!     ravenclaws::llm::ChatMessage {
-//!         role: "user".to_string(),
-//!         content: "Hello!".to_string(),
-//!     },
+//!     ravenclaws::llm::ChatMessage::new("user", "Hello!"),
 //! ]).await?;
 //! println!("{}", response.choices[0].message.content);
 //! # Ok(())
@@ -109,7 +106,8 @@ pub mod tools;
 // ── Re-exports of commonly used types ──────────────────────────────────────
 
 pub use agent::{
-    delete_checkpoint, load_checkpoint, run_agent_loop, run_agent_loop_with_mcp,
+    delete_checkpoint, load_checkpoint, run_agent_loop, run_agent_loop_with_images,
+    run_agent_loop_with_mcp, run_agent_loop_with_mcp_and_images,
     run_agent_loop_with_mcp_and_registry, run_agent_loop_with_registry, save_checkpoint,
     AgentLoopConfig, CheckpointState, ConversationMemory,
 };
@@ -121,7 +119,10 @@ pub use config::{
 pub use error::RavenClawsError;
 pub use eval::EvalRunner;
 pub use heartbeat::HeartbeatAgent;
-pub use llm::{create_client, ChatMessage, ChatResponse, LLMProviderTrait, MultiModelManager};
+pub use llm::{
+    create_client, load_image, ChatMessage, ChatResponse, ContentPart, ImageUrlContent,
+    LLMProviderTrait, MultiModelManager,
+};
 pub use mcp::{McpClient, McpClientManager, McpServer, McpSseServer};
 pub use patterns::{
     run_debate, run_debate_multi, run_research_synthesize, run_research_synthesize_multi,

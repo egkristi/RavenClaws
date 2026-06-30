@@ -334,6 +334,7 @@ impl ConversationStore {
             .map(|m| crate::llm::ChatMessage {
                 role: m.role,
                 content: m.content,
+                content_parts: None,
             })
             .collect())
     }

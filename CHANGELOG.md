@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Multi-modal input support** — New `ContentPart` enum (`Text`, `ImageUrl`) enables attaching images alongside text in chat messages. Added `load_image()` utility that reads image files (PNG, JPEG, GIF, WebP) and produces data URIs. New `--image` / `-I` CLI flag accepts image file paths. Multi-modal serialization for all 5 providers: OpenAI-compatible APIs use `[{type, image_url, image_url: {url}}]`, Anthropic uses `[{type, image, source: {type, media_type, data}}]`, Ollama uses `images: [base64, ...]` array on messages. Agent loop integration via `run_agent_loop_with_images()` and `run_agent_loop_with_mcp_and_images()`. `ConversationMemory::add_user_message_with_images()` for persistent multi-turn conversations with images. Library exports include `ContentPart`, `ImageUrlContent`, `load_image`. 478 unit tests pass, clippy clean.
+
 ## [v1.0.1] — 2026-06-02
 
 ### Added

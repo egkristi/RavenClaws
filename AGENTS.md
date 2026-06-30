@@ -23,7 +23,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 1.0.1 (Simply the Best)
+- **Version:** 1.1.0 (Simply the Best)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io
@@ -41,7 +41,7 @@ src/
 ├── scheduler.rs — Scheduling & triggers (cron, webhook, file-watch activation for proactive 24/7 agents)
 ├── heartbeat.rs — Autonomous heartbeat agent (persistent assess→plan→act→persist→sleep loop, state persistence, resumability)
 ├── swarm.rs     — Swarm orchestration (self-provisioning sub-agents, recursive supervision, WorkerProfile, SwarmTopology, dynamic role assignment)
-├── llm.rs       — LLM provider abstraction (trait + 5 clients + multi-model manager + streaming)
+├── llm.rs       — LLM provider abstraction (trait + 5 clients + multi-model manager + streaming + multi-modal ContentPart)
 ├── config.rs    — Config structs, TOML/env loading, validation
 ├── error.rs     — Unified error types
 ├── tools.rs     — Tool abstraction (ToolImpl trait, ToolRegistry, ToolCall, ToolResult) + 5 built-in tools (shell, read/write file, web fetch, web search)
@@ -69,7 +69,7 @@ src/
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
 | Library crate (ravenclaws on crates.io) | ✅ Working — binary + library |
-| Verification suite (485 tests, 20 modules, 0 failures) | ✅ Working |
+| Verification suite (478 tests, 20 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -103,6 +103,7 @@ src/
 | WASM plugin system | ✅ v1.0.1 — `src/plugins.rs` with `WasmPlugin`, `WasmPluginManager`, Plugin ABI v1, 11 unit tests |
 | SQLite conversation persistence | ✅ v1.0.1 — `src/persistence.rs` with `ConversationStore`, retention policies, 15 unit tests |
 | Dockerfile.slim (Debian-based) | ✅ v1.0.1 — `Dockerfile.slim` for MCP client support with nodejs, npm, curl |
+| Multi-modal input | ✅ v1.1.0 — `ContentPart` enum (`Text`, `ImageUrl`), `load_image()`, `--image` CLI flag, multi-modal serialization for all 5 providers, agent loop integration, `ConversationMemory::add_user_message_with_images()`, library exports |
 | Pre-built binaries / releases | 📋 Wired, untagged — CI produces them on tag; none released yet |
 
 ---

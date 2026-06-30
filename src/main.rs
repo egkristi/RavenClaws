@@ -246,6 +246,11 @@ struct Args {
     #[arg(long, env = "RAVENCLAWS_REQUIRE_FINAL")]
     require_final: bool,
 
+    /// Image file(s) to attach to the user message (multi-modal input, v1.1.0).
+    /// Supported formats: PNG, JPEG, GIF, WebP. Can be specified multiple times.
+    #[arg(long = "image", short = 'I', env = "RAVENCLAWS_IMAGE")]
+    images: Vec<String>,
+
     // ── Multi-agent pattern flags (v0.9.13) ──
     /// Maximum debate rounds (default: 3)
     #[arg(long, env = "RAVENCLAWS_PATTERN_MAX_ROUNDS", default_value = "3")]
@@ -525,6 +530,20 @@ async fn main() -> anyhow::Result<()> {
         info!("RavenFabric not configured — remote execution disabled");
     }
 
+    // Load image attachments for multi-modal input (v1.1.0)
+    let image_data_uris: Vec<String> = if args.images.is_empty() {
+        Vec::new()
+    } else {
+        info!(count = args.images.len(), "Loading image attachments");
+        args.images
+            .iter()
+            .map(|path| {
+                llm::load_image(std::path::Path::new(path))
+                    .map_err(|e| anyhow::anyhow!("Failed to load image '{}': {}", path, e))
+            })
+            .collect::<anyhow::Result<Vec<String>>>()?
+    };
+
     // Handle --exec one-shot mode (uses agent loop for multi-step reasoning with security)
     if let Some(exec_prompt) = args.exec {
         info!("Running in --exec mode with security-integrated agent loop");
@@ -593,8 +612,36 @@ async fn main() -> anyhow::Result<()> {
         let response = if !config.llms.is_empty() {
             let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
             if let Some(client) = multi_llm.get_client(0) {
+                if image_data_uris.is_empty() {
+                    agent::run_agent_loop_with_mcp_and_registry(
+                        client.clone(),
+                        &exec_prompt,
+                        system_prompt,
+                        loop_config,
+                        mcp_client,
+                        tool_registry,
+                    )
+                    .await?
+                } else {
+                    agent::run_agent_loop_with_mcp_and_images(
+                        client.clone(),
+                        &exec_prompt,
+                        system_prompt,
+                        loop_config,
+                        mcp_client,
+                        tool_registry,
+                        image_data_uris.clone(),
+                    )
+                    .await?
+                }
+            } else {
+                anyhow::bail!("No LLM providers available for --exec mode");
+            }
+        } else {
+            let llm = llm::create_client(&config.llm)?;
+            if image_data_uris.is_empty() {
                 agent::run_agent_loop_with_mcp_and_registry(
-                    client.clone(),
+                    llm,
                     &exec_prompt,
                     system_prompt,
                     loop_config,
@@ -603,19 +650,17 @@ async fn main() -> anyhow::Result<()> {
                 )
                 .await?
             } else {
-                anyhow::bail!("No LLM providers available for --exec mode");
+                agent::run_agent_loop_with_mcp_and_images(
+                    llm,
+                    &exec_prompt,
+                    system_prompt,
+                    loop_config,
+                    mcp_client,
+                    tool_registry,
+                    image_data_uris.clone(),
+                )
+                .await?
             }
-        } else {
-            let llm = llm::create_client(&config.llm)?;
-            agent::run_agent_loop_with_mcp_and_registry(
-                llm,
-                &exec_prompt,
-                system_prompt,
-                loop_config,
-                mcp_client,
-                tool_registry,
-            )
-            .await?
         };
         println!("{}", response);
         info!("RavenClaws shutdown complete");

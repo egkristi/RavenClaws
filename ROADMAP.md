@@ -176,7 +176,7 @@ can't be added without breaking one, it doesn't ship in core.
 ## Current State
 
 **Version:** 1.0.1 — Simply the Best 🏆  
-**Stats:** 20 source modules (+lib.rs, +eval.rs, +ravenfabric.rs, +patterns.rs, +persistence.rs, +plugins.rs), ~18,500 LOC, 7 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **485 unit tests**, 119 verification tests across 13 modules (+vllm, +llamacpp, +mcp), multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--mcp-sse-server` CLI flag, MCP integration tests (stdio + SSE), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, **durable execution (checkpoint/resume)**, **multi-agent patterns (debate, review-loop, research-synthesize, voting)**, **Azure OpenAI adapter**, **agent loop deduplication**, **eval harness agent loop integration**, **token tracking wired to LLM responses**, **tool calls counter wired**, **`/ready` caching**, **MCP server optional params**, **RavenFabric pipe policy**, **vLLM docs + verification tests**, **llama.cpp docs + verification tests**, **distroless HTTP testing docs**, **SSE transport documentation**, published on crates.io as `ravenclaws` (binary + library crate).  
+**Stats:** 20 source modules (+lib.rs, +eval.rs, +ravenfabric.rs, +patterns.rs, +persistence.rs, +plugins.rs), ~18,500 LOC, 7 LLM providers (+ generic `openai-compatible`), 5 built-in tools (+web_search), **478 unit tests**, 119 verification tests across 13 modules (+vllm, +llamacpp, +mcp), **multi-modal input support** (`ContentPart` enum, `load_image()`, `--image` CLI flag), multi-arch CI with signed images + SBOM, official Helm chart, `zeroize` for secret material, prompt-injection defense, autonomous heartbeat agent, long-horizon task persistence, self-provisioning swarm orchestration, inter-agent communication bus, swarm health monitoring & telemetry, MCP SSE transport (client + server), `--mcp-sse-server` CLI flag, MCP integration tests (stdio + SSE), `--no-final-required` flag, agent loop response logging, **text-based tool call detection fallback**, **tool execution logging**, **configured web search endpoint**, **ToolRegistry wiring in agent loop**, **McpClientManager multi-MCP-client support**, **readiness LLM connectivity check**, **ProviderFallbackChain wired to agent loop**, **TokenBudget wired to agent loop**, **RavenFabricClient wired to agent loop**, **AgentMessageBus wired to swarm**, **SwarmHealthMonitor wired to swarm**, **configurable sandbox workdir**, **OTEL warning suppression**, **LiteLLM API key docs**, **community health files**, **heartbeat graceful shutdown**, **init container chown**, **`--exec` mode docs**, **migration docs v0.9.1→v0.9.2**, **UPX-compressed container image**, **K8s NetworkPolicy**, **Secret reference docs**, **graceful shutdown for all modes**, **durable execution (checkpoint/resume)**, **multi-agent patterns (debate, review-loop, research-synthesize, voting)**, **Azure OpenAI adapter**, **agent loop deduplication**, **eval harness agent loop integration**, **token tracking wired to LLM responses**, **tool calls counter wired**, **`/ready` caching**, **MCP server optional params**, **RavenFabric pipe policy**, **vLLM docs + verification tests**, **llama.cpp docs + verification tests**, **distroless HTTP testing docs**, **SSE transport documentation**, published on crates.io as `ravenclaws` (binary + library crate).  
 **Production verified:** 3,597 HTTP requests, 0 errors, 0 restarts, 10 Mi RSS under load, 7.5h uptime on rpi5 K3s (v0.9.11 audit).
 
 **rpi5 Deployment Verdict (v0.9.11):** All 13 resolved issues from feedback confirmed working. 10 critical bugs fixed. 4 documentation gaps closed. 4 feature requests documented for future versions. **All production hardening items completed.** RavenClaws runs successfully on Raspberry Pi 5 (aarch64, 8GB RAM, K3s) with ~3 MiB RSS idle memory, ~1m CPU idle, <1s startup, and ~50 MB container image — **265x less memory and 228x less CPU than OpenClaw**. **v1.0.1 closes the final 4 critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.**
@@ -255,7 +255,7 @@ can't be added without breaking one, it doesn't ship in core.
 | Structured function calling | ✅ Working | OpenAI Tools format for OpenAI/LiteLLM/OpenRouter/Anthropic |
 | **Human-in-the-loop approvals** | ✅ **v0.8** | `--require-approval` flag prompts for sensitive tool calls; audited |
 | **Prompt-injection defense** | ✅ **v0.8** | `InjectionDetector` with 50+ patterns, instruction-boundary enforcement, output schema validation; wired to both agent loops; audited |
-| Multi-modal input | ⚠️ Partial | AnthropicClient has image support structure, not wired to CLI *(v0.10)* |
+| Multi-modal input | ✅ **v1.1.0** | `ContentPart` enum, `load_image()`, `--image` CLI flag, multi-modal serialization for all 5 providers, agent loop integration, library exports |
 | Generic `openai-compatible` provider | ✅ **v0.9.3** | Unlocks vLLM, llama.cpp, LM Studio, TGI, Groq, Together AI, Fireworks, DeepInfra |
 | `--exec` mode `FINAL:` fallback | ✅ **v0.9.4** | `--no-final-required` flag lets any non-tool-call response complete the loop |
 | Agent loop response logging | ✅ **v0.9.4** | `debug!` log after each LLM response in both agent loops — shows length + preview |
@@ -471,7 +471,7 @@ simpler** — or deliberately not at all.
 | **Config hot-reload (SIGHUP)** | ✅ v0.9.6 | ✅ | ✅ | ❌ |
 | **NetworkPolicy docs** | ✅ **v0.9.10** | ✅ | ✅ | ❌ |
 | **Secret reference docs** | ✅ **v0.9.10** | ✅ | ✅ | ❌ |
-| Multi-modal input | ⚠️ (partial) | ⚠️ (v0.10) | ✅ | ✅ |
+| Multi-modal input | ✅ **v1.1.0** | ✅ | ✅ | ✅ |
 | Web search | ✅ | ✅ | ✅ | ✅ |
 | Browser automation | ❌ | ❌ (v0.10) | ✅ | ✅ |
 | Async background runs | ✅ | ✅ | ❌ | ✅ |
@@ -686,10 +686,10 @@ Agency with guardrails — the security differentiator.
   - Image input support (stubbed for future multi-modal expansion)
   - Full test coverage (4 unit tests + integration via factory)
 
-- [ ] **Multi-modal Input** ⚠️ **PARTIAL** — AnthropicClient has image support structure, not wired to CLI *(v0.10)*
-  - Image attachments in `ChatMessage` (base64 or URL)
-  - PDF/text document ingestion
-  - Provider-specific encoding (OpenAI vision, Anthropic images)
+- [x] **Multi-modal Input** ✅ **v1.1.0** — `ContentPart` enum (`Text`, `ImageUrl`), `load_image()` utility, `--image`/`-I` CLI flag, multi-modal serialization for all 5 providers (OpenAI, Anthropic, Ollama, LiteLLM, OpenRouter), agent loop integration, `ConversationMemory::add_user_message_with_images()`, library exports
+  - Image attachments in `ChatMessage` (base64 data URIs)
+  - Provider-specific encoding (OpenAI vision, Anthropic images, Ollama images array)
+  - 478 unit tests, clippy clean
 
 **Exit criteria:** ✅ COMPLETE (v0.5 core features)
 1. [x] Single run transparently fails over between providers
@@ -1208,7 +1208,7 @@ These were production pain points that have been addressed in v1.0.1.
 
 - [ ] **WASM plugin system** — Extend RavenClaws without recompiling. WASM-based plugins with a stable ABI, sandboxed execution, and capability-based security. Plugins can add tools, providers, and agent behaviors. **Rationale:** The #1 request from rpi5 feedback for extensibility without forking the codebase.
 - [x] **Conversation persistence (SQLite backend)** — New `src/persistence.rs` module with `ConversationStore` (SQLite-backed), `RetentionPolicy` (time-based, count-based, token-budget-based, unlimited), and full CRUD for sessions and messages. `import_memory()` bridges `ConversationMemory` to SQLite. 15 unit tests. ✅ **v1.0.1**
-- [ ] **Multi-modal input** — Wire AnthropicClient's image support structure to CLI. Image attachments in `ChatMessage` (base64 or URL), PDF/text document ingestion. **Rationale:** Table stakes for modern agents — Manus, Kimi, and Claude all support multi-modal input.
+- [x] **Multi-modal input** ✅ **v1.1.0** — `ContentPart` enum (`Text`, `ImageUrl`), `load_image()` utility, `--image`/`-I` CLI flag, multi-modal serialization for all 5 providers, agent loop integration, `ConversationMemory::add_user_message_with_images()`, library exports. **Rationale:** Table stakes for modern agents — Manus, Kimi, and Claude all support multi-modal input.
 - [ ] **Graceful degradation under load** — When resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow.
 - [ ] **Self-healing** — Failed agents are detected, replaced, and caught up. Supervisor re-assigns orphaned tasks. No single point of failure in mesh topologies.
 - [ ] **Advanced reasoning** — Tree-of-thought, self-reflection, uncertainty estimation / ask-for-help.
