@@ -8,6 +8,10 @@
 This folder is a self-contained static site (no build step) for **https://ravenclaws.io**,
 deployed to **Cloudflare** using **Workers Static Assets** via **Wrangler**.
 
+**Auto-deploy:** Cloudflare is connected to the GitHub repository. Pushing changes to
+the `master` branch automatically deploys `website/public/` to the edge. No manual
+`npm run deploy` needed for routine updates.
+
 Everything the browser needs lives in [`public/`](./public). Cloudflare uploads that
 directory to its edge and serves it directly — there is no bundler, framework, or
 runtime. This mirrors RavenClaws itself: small, simple, zero dependencies.
@@ -102,15 +106,18 @@ Repeat for `www.ravenclaws.io`. Cloudflare creates the DNS records and certifica
 
 ## 5. Redeploying
 
-Whenever you change anything under `public/`, redeploy with one command:
+The website is **auto-deployed by Cloudflare** via its Git integration. When changes
+are pushed to the `master` branch on GitHub, Cloudflare automatically pulls the
+`website/public/` directory and deploys it to the edge. No manual steps required.
+
+**Emergency manual deploy** (if Git integration is down):
 
 ```bash
 cd website
 npm run deploy        # = wrangler deploy
 ```
 
-Wrangler diffs the asset manifest and uploads only what changed. That's the whole
-workflow — no build step, no CI, no pipeline.
+Wrangler diffs the asset manifest and uploads only what changed.
 
 > **Prefer Cloudflare Pages?** The same `public/` folder deploys unchanged with
 > `npx wrangler pages deploy public --project-name ravenclaws-website`. Use whichever

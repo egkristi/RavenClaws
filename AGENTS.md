@@ -604,10 +604,11 @@ sed -i '' 's/"softwareVersion": "0\.[0-9]*\.[0-9]*"/"softwareVersion": "vX.Y.Z"/
 
 # 4. Preview locally
 cd website && npm run dev
-
-# 5. Deploy to production
-cd website && npm run deploy
 ```
+
+**No manual deploy needed:** Cloudflare auto-deploys from GitHub pushes. The website
+updates automatically when changes are pushed to `master`. Just commit the website
+changes and push — Cloudflare handles the rest.
 
 **When to skip:** If the release has no user-facing changes (e.g., internal refactoring only), the website deploy can be deferred. But version number and stats should still be updated.
 
@@ -632,13 +633,11 @@ Then clear the `[Unreleased]` section headers (keep the structure, remove old en
 
 ### Phase 4: Commit & Tag
 
-> **Important:** The website must be deployed BEFORE committing, so the release tag
-> points to a state where the website already reflects the new version.
+> **Important:** The website changes are included in the commit. Cloudflare
+auto-deploys from GitHub pushes, so the website updates automatically once the
+commit reaches `master`. No separate deploy step needed.
 
 ```bash
-# 0. Deploy website first (reflects new version on ravenclaws.io)
-cd website && npm run deploy && cd ..
-
 # Commit the version bump, changelog update, and website changes
 git add -A
 git commit -m "Release v0.1.0"
@@ -646,7 +645,7 @@ git commit -m "Release v0.1.0"
 # Tag the release (signed tag preferred)
 git tag -s v0.1.0 -m "RavenClaws v0.1.0"
 
-# Push everything (triggers CI/CD pipelines)
+# Push everything (triggers CI/CD pipelines + Cloudflare auto-deploy)
 git push --follow-tags
 ```
 
@@ -763,8 +762,7 @@ If any of the following occur during the release process, **abort immediately** 
 8. Multi-arch manifest is missing either linux/amd64 or linux/arm64
 9. Binary SHA256 checksums do not match after download
 10. GitHub Release is missing required assets
-11. **Website deploy fails** — `npm run deploy` exits with non-zero status
-12. **Website version mismatch** — `ravenclaws.io` shows old version after deploy
+11. **Website version mismatch** — `ravenclaws.io` shows old version after push (wait for Cloudflare auto-deploy to complete, then verify)
 
 **If aborting:** Delete the tag locally and remotely, fix the issue, then restart from Phase 1:
 
@@ -795,14 +793,14 @@ Copy this into a new issue or comment when starting a release:
 - [ ] Version number updated in `website/public/index.html` (JSON-LD + hero stats)
 - [ ] Feature descriptions updated if new capabilities added
 - [ ] Website previewed locally: `cd website && npm run dev`
-- [ ] Website deployed: `cd website && npm run deploy`
+- [ ] Website changes committed (Cloudflare auto-deploys from GitHub push)
 
 ### Phase 3: Changelog
 - [ ] `[Unreleased]` entries moved to `[vX.Y.Z]` section
 - [ ] Release date added
 
 ### Phase 4: Commit & Tag
-- [ ] Website deployed BEFORE committing (release tag points to state with live website)
+- [ ] Website changes included in commit (Cloudflare auto-deploys on push)
 - [ ] Commit pushed: `git push`
 - [ ] Tag pushed: `git push --follow-tags`
 
@@ -877,32 +875,32 @@ website/
 | **Single stylesheet** | `styles.css` used by every page — one theme, no duplication |
 | **Docs mirror repo guides** | `public/docs/*.html` mirrors `docs/guides/*.md` — keep in sync manually |
 | **No analytics** | Consistent with project's "no telemetry, ever" stance |
-| **No GitHub Actions** | Website deploys manually via `npm run deploy` — not part of CI/CD |
+| **Auto-deployed from GitHub** | Cloudflare Workers Git integration builds and deploys `public/` on every push to `master` — no manual `npm run deploy` needed |
 
 ### Deployment
 
-The website is **not** deployed via GitHub Actions. It's deployed manually from a
-developer's machine using Wrangler:
+The website is **auto-deployed by Cloudflare** via its Git integration. When changes
+are pushed to the `master` branch on GitHub, Cloudflare automatically pulls the
+`website/public/` directory and deploys it to the edge. No manual steps required.
 
-```bash
-cd website
-npm install              # one-time: install wrangler
-npx wrangler login       # one-time: authenticate with Cloudflare
-npm run deploy           # = wrangler deploy — uploads public/ to Cloudflare edge
-```
-
-**Prerequisites:**
-- Cloudflare account (free tier)
-- Node.js 18+
-- `ravenclaws.io` zone added to Cloudflare account
-
-**Custom domain:** Already configured in `wrangler.jsonc` via the `routes` block.
-On first deploy, Cloudflare provisions DNS records + TLS certificate automatically.
+**First-time setup (already done):**
+1. Cloudflare Workers connected to the `egkristi/RavenClaws` GitHub repository
+2. Build configured to serve `website/public/` as static assets
+3. Custom domain `ravenclaws.io` attached in the Cloudflare dashboard
 
 **Local preview:**
 ```bash
-npm run dev       # Cloudflare-accurate preview (honours _headers/_redirects)
-npm run preview   # plain static server (no Cloudflare features)
+cd website
+npm install              # one-time: install dependencies
+npm run dev              # Cloudflare-accurate preview (honours _headers/_redirects)
+npm run preview          # plain static server (no Cloudflare features)
+```
+
+**Manual deploy (emergency only):**
+```bash
+cd website
+npx wrangler login       # one-time: authenticate with Cloudflare
+npm run deploy           # = wrangler deploy — uploads public/ to Cloudflare edge
 ```
 
 ### Content Management
@@ -944,7 +942,7 @@ is no automated conversion from Markdown to HTML.
 2. Read the corresponding HTML page from `website/public/docs/`
 3. Update the HTML to reflect the guide changes, keeping the same header/footer/nav
 4. Preview locally with `npm run dev`
-5. Deploy with `npm run deploy`
+5. Deploy with `npm run deploy` (or push to GitHub — Cloudflare auto-deploys)
 
 #### Updating Assets
 
@@ -1000,7 +998,7 @@ Edit `website/public/sitemap.xml`. Currently includes 7 URLs (home + 6 docs page
 2. Add the page to the sidebar nav in all docs pages (`<aside class="docs-side">`)
 3. Add the URL to `website/public/sitemap.xml`
 4. Preview locally with `npm run dev`
-5. Deploy with `npm run deploy`
+5. Deploy with `npm run deploy` (or push to GitHub — Cloudflare auto-deploys)
 
 #### Updating the Version Number
 
@@ -1029,7 +1027,7 @@ The hero section shows key stats:
 - **Do not** add analytics, tracking pixels, or phone-home of any kind
 - **Do not** add third-party JavaScript (no CDN scripts, no embeds that require JS)
 - **Do not** commit API keys, tokens, or secrets in `wrangler.jsonc` or any website file
-- **Do not** add the website deploy to GitHub Actions — it's intentionally manual
+- **Do not** add the website deploy to GitHub Actions — Cloudflare auto-deploys from GitHub pushes
 - **Do not** use relative paths in `_headers` or `_redirects` — Cloudflare requires absolute paths
 - **Do not** remove the CSP or weaken security headers without security review
 
@@ -1049,7 +1047,8 @@ The hero section shows key stats:
 # Local preview (Cloudflare-accurate)
 cd website && npm run dev
 
-# Deploy to production
+# Website auto-deploys from GitHub pushes — no manual deploy needed
+# Emergency manual deploy:
 cd website && npm run deploy
 
 # First-time setup
