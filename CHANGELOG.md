@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-*(none)*
+- **asciinema demo script** — New `scripts/demo.sh` showcases 11 RavenClaws features in an automated terminal demo: version/help, binary profile, configuration, source modules, test suite, one-shot exec mode, HTTP server mode, MCP server mode, Docker & K8s deployment, website, and verification suite. Recorded demo available at https://asciinema.org/a/Qd8hCw6TVdrnNYLE. New `docs/guides/demo.md` documents how to record and share demos.
 
 ### Fixed
 *(none)*
