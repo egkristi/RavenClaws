@@ -11,6 +11,7 @@ mod error;
 mod eval;
 mod heartbeat;
 mod llm;
+mod load;
 mod mcp;
 mod patterns;
 mod policy;
@@ -587,6 +588,7 @@ async fn main() -> anyhow::Result<()> {
             checkpoint_dir: None,
             session_id: None,
             metrics_callback: None,
+            load_manager: None,
         };
 
         // Build a configured tool registry (respects web_search endpoint from config)

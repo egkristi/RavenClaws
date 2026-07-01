@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Interaction Modes · RavenClaws Docs</title>
+<meta name="description" content="All 17 ways to interact with RavenClaws — CLI flags, agent modes, multi-agent patterns, HTTP server, MCP, background tasks, heartbeat, scheduler, Docker, K8s, and library usage.">
+<link rel="canonical" href="https://ravenclaws.io/docs/interaction-modes">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws Interaction Modes">
+<meta property="og:description" content="Every way to run RavenClaws — from one-shot CLI to autonomous heartbeat agents.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/interaction-modes" class="active">Interaction modes</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <a href="/docs/server-mode">Server mode</a>
+      <a href="/docs/vllm">vLLM</a>
+      <a href="/docs/llamacpp">llama.cpp</a>
+      <a href="/docs/migration">Migration guide</a>
+      <h5>On this page</h5>
+      <a href="#cli-flags" data-spy>CLI flags</a>
+      <a href="#agent-modes" data-spy>Agent modes</a>
+      <a href="#patterns" data-spy>Multi-agent patterns</a>
+      <a href="#exec" data-spy>One-shot exec</a>
+      <a href="#repl" data-spy>REPL</a>
+      <a href="#server" data-spy>HTTP server</a>
+      <a href="#mcp-server" data-spy>MCP server</a>
+      <a href="#mcp-client" data-spy>MCP client</a>
+      <a href="#background" data-spy>Background tasks</a>
+      <a href="#scheduler" data-spy>Scheduler</a>
+      <a href="#heartbeat" data-spy>Heartbeat</a>
+      <a href="#eval" data-spy>Eval</a>
+      <a href="#config" data-spy>Config file</a>
+      <a href="#env" data-spy>Environment variables</a>
+      <a href="#docker" data-spy>Docker</a>
+      <a href="#kubernetes" data-spy>Kubernetes</a>
+      <a href="#library" data-spy>Library usage</a>
+      <a href="#multi-model" data-spy>Multi-model</a>
+      <a href="#multi-modal" data-spy>Multi-modal input</a>
+      <a href="#shutdown" data-spy>Graceful shutdown</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / Interaction modes</p>
+      <h1>Interaction modes</h1>
+      <p class="lead-box">RavenClaws offers <strong>17 distinct ways to interact</strong> — from one-shot CLI commands to long-running servers, autonomous agents, and library embedding. This guide covers every mode with examples.</p>
+
+      <h2 id="cli-flags">1. CLI flags overview</h2>
+      <p>All modes are accessed via the <code>ravenclaws</code> binary. Every flag can also be set via environment variable (see <a href="#env">§15</a>).</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Flag</th><th>Env var</th><th>Default</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>-c, --config</code></td><td><code>RAVENCLAWS_CONFIG</code></td><td>—</td><td>Config file path</td></tr>
+          <tr><td><code>-v, --verbose</code></td><td><code>RAVENCLAWS_VERBOSE</code></td><td><code>false</code></td><td>Enable debug logging</td></tr>
+          <tr><td><code>--mode</code></td><td>—</td><td><code>single</code></td><td>Agent mode: <code>single</code>, <code>swarm</code>, <code>supervisor</code>, <code>orchestrate</code>, <code>debate</code>, <code>review-loop</code>, <code>research-synthesize</code>, <code>voting</code></td></tr>
+          <tr><td><code>-e, --exec</code></td><td>—</td><td>—</td><td>One-shot command prompt</td></tr>
+          <tr><td><code>-R, --repl</code></td><td>—</td><td><code>false</code></td><td>Interactive REPL</td></tr>
+          <tr><td><code>--provider</code></td><td><code>RAVENCLAWS_PROVIDER</code></td><td>—</td><td>Override LLM provider</td></tr>
+          <tr><td><code>--endpoint</code></td><td><code>RAVENCLAWS_ENDPOINT</code></td><td>—</td><td>Override LLM endpoint</td></tr>
+          <tr><td><code>--model</code></td><td><code>RAVENCLAWS_MODEL</code></td><td>—</td><td>Override model name</td></tr>
+          <tr><td><code>--system-prompt</code></td><td><code>RAVENCLAWS_SYSTEM_PROMPT</code></td><td>—</td><td>Override system prompt</td></tr>
+          <tr><td><code>--require-approval</code></td><td><code>RAVENCLAWS_REQUIRE_APPROVAL</code></td><td><code>false</code></td><td>Human-in-the-loop for sensitive tools</td></tr>
+          <tr><td><code>--max-iterations</code></td><td><code>RAVENCLAWS_MAX_ITERATIONS</code></td><td><code>10</code></td><td>Max agent loop iterations</td></tr>
+          <tr><td><code>--token-budget</code></td><td><code>RAVENCLAWS_TOKEN_BUDGET</code></td><td>—</td><td>Max tokens per run</td></tr>
+          <tr><td><code>--retry-max</code></td><td><code>RAVENCLAWS_RETRY_MAX</code></td><td><code>3</code></td><td>Max retry attempts</td></tr>
+          <tr><td><code>--retry-base-delay-ms</code></td><td><code>RAVENCLAWS_RETRY_BASE_DELAY</code></td><td><code>100</code></td><td>Retry base delay (ms)</td></tr>
+          <tr><td><code>--fallback-chain</code></td><td><code>RAVENCLAWS_FALLBACK_CHAIN</code></td><td>—</td><td>Comma-separated provider fallback chain</td></tr>
+          <tr><td><code>--mcp-command</code></td><td><code>RAVENCLAWS_MCP_COMMAND</code></td><td>—</td><td>MCP server command (stdio)</td></tr>
+          <tr><td><code>--mcp-args</code></td><td><code>RAVENCLAWS_MCP_ARGS</code></td><td>—</td><td>MCP server arguments</td></tr>
+          <tr><td><code>--mcp-env</code></td><td><code>RAVENCLAWS_MCP_ENV</code></td><td>—</td><td>MCP server env vars (KEY=VALUE,...)</td></tr>
+          <tr><td><code>--mcp-server</code></td><td><code>RAVENCLAWS_MCP_SERVER</code></td><td><code>false</code></td><td>Run as MCP server (stdio)</td></tr>
+          <tr><td><code>--mcp-sse-server</code></td><td><code>RAVENCLAWS_MCP_SSE_SERVER</code></td><td><code>false</code></td><td>Run as MCP SSE server</td></tr>
+          <tr><td><code>--mcp-sse-host</code></td><td><code>RAVENCLAWS_MCP_SSE_HOST</code></td><td><code>0.0.0.0</code></td><td>MCP SSE server host</td></tr>
+          <tr><td><code>--mcp-sse-port</code></td><td><code>RAVENCLAWS_MCP_SSE_PORT</code></td><td><code>8081</code></td><td>MCP SSE server port</td></tr>
+          <tr><td><code>--serve</code></td><td><code>RAVENCLAWS_SERVE</code></td><td><code>false</code></td><td>Run as HTTP server</td></tr>
+          <tr><td><code>--server-host</code></td><td><code>RAVENCLAWS_SERVER_HOST</code></td><td>—</td><td>HTTP server host override</td></tr>
+          <tr><td><code>--server-port</code></td><td><code>RAVENCLAWS_SERVER_PORT</code></td><td>—</td><td>HTTP server port override</td></tr>
+          <tr><td><code>--otel-endpoint</code></td><td><code>RAVENCLAWS_OTEL_ENDPOINT</code></td><td>—</td><td>OTLP gRPC endpoint</td></tr>
+          <tr><td><code>--otel-service-name</code></td><td><code>RAVENCLAWS_OTEL_SERVICE_NAME</code></td><td>—</td><td>OTel service name</td></tr>
+          <tr><td><code>--otel-disabled</code></td><td><code>RAVENCLAWS_OTEL_DISABLED</code></td><td><code>false</code></td><td>Disable OTel tracing</td></tr>
+          <tr><td><code>--background</code></td><td><code>RAVENCLAWS_BACKGROUND</code></td><td><code>false</code></td><td>Submit background task</td></tr>
+          <tr><td><code>--task-status</code></td><td><code>RAVENCLAWS_TASK_STATUS</code></td><td>—</td><td>Check background task status</td></tr>
+          <tr><td><code>--task-list</code></td><td><code>RAVENCLAWS_TASK_LIST</code></td><td><code>false</code></td><td>List all background tasks</td></tr>
+          <tr><td><code>--task-cancel</code></td><td><code>RAVENCLAWS_TASK_CANCEL</code></td><td>—</td><td>Cancel a background task</td></tr>
+          <tr><td><code>--task-resume</code></td><td><code>RAVENCLAWS_TASK_RESUME</code></td><td><code>false</code></td><td>Resume incomplete tasks</td></tr>
+          <tr><td><code>--scheduler</code></td><td><code>RAVENCLAWS_SCHEDULER</code></td><td><code>false</code></td><td>Run scheduler with triggers</td></tr>
+          <tr><td><code>--webhook-port</code></td><td><code>RAVENCLAWS_WEBHOOK_PORT</code></td><td><code>9090</code></td><td>Webhook server port</td></tr>
+          <tr><td><code>--eval</code></td><td><code>RAVENCLAWS_EVAL</code></td><td>—</td><td>Run eval suite from config</td></tr>
+          <tr><td><code>--eval-json</code></td><td><code>RAVENCLAWS_EVAL_JSON</code></td><td><code>false</code></td><td>Output eval results as JSON</td></tr>
+          <tr><td><code>--heartbeat</code></td><td><code>RAVENCLAWS_HEARTBEAT</code></td><td><code>false</code></td><td>Autonomous heartbeat mode</td></tr>
+          <tr><td><code>--heartbeat-goal</code></td><td><code>RAVENCLAWS_HEARTBEAT_GOAL</code></td><td>—</td><td>Heartbeat goal prompt</td></tr>
+          <tr><td><code>--heartbeat-tick-interval</code></td><td><code>RAVENCLAWS_HEARTBEAT_TICK_INTERVAL</code></td><td><code>300</code></td><td>Heartbeat tick interval (s)</td></tr>
+          <tr><td><code>--heartbeat-max-ticks</code></td><td><code>RAVENCLAWS_HEARTBEAT_MAX_TICKS</code></td><td><code>0</code></td><td>Max heartbeat ticks (0=unlimited)</td></tr>
+          <tr><td><code>--heartbeat-session</code></td><td><code>RAVENCLAWS_HEARTBEAT_SESSION</code></td><td>—</td><td>Resume heartbeat session ID</td></tr>
+          <tr><td><code>--swarm-topology</code></td><td><code>RAVENCLAWS_SWARM_TOPOLOGY</code></td><td><code>star</code></td><td>Swarm topology</td></tr>
+          <tr><td><code>--swarm-max-depth</code></td><td><code>RAVENCLAWS_SWARM_MAX_DEPTH</code></td><td><code>3</code></td><td>Max swarm recursion depth</td></tr>
+          <tr><td><code>--swarm-max-workers</code></td><td><code>RAVENCLAWS_SWARM_MAX_WORKERS</code></td><td><code>100</code></td><td>Max swarm workers</td></tr>
+          <tr><td><code>--swarm-dynamic-roles</code></td><td><code>RAVENCLAWS_SWARM_DYNAMIC_ROLES</code></td><td><code>false</code></td><td>Enable dynamic role assignment</td></tr>
+          <tr><td><code>--swarm-profiles</code></td><td><code>RAVENCLAWS_SWARM_PROFILES</code></td><td>—</td><td>Worker profiles JSON file</td></tr>
+          <tr><td><code>--swarm-communication</code></td><td><code>RAVENCLAWS_SWARM_COMMUNICATION</code></td><td><code>false</code></td><td>Enable inter-agent communication</td></tr>
+          <tr><td><code>--swarm-health-monitoring</code></td><td><code>RAVENCLAWS_SWARM_HEALTH_MONITORING</code></td><td><code>false</code></td><td>Enable swarm health monitoring</td></tr>
+          <tr><td><code>--no-final-required</code></td><td><code>RAVENCLAWS_NO_FINAL_REQUIRED</code></td><td><code>false</code></td><td>Don't require FINAL: marker</td></tr>
+          <tr><td><code>--require-final</code></td><td><code>RAVENCLAWS_REQUIRE_FINAL</code></td><td><code>false</code></td><td>Require FINAL: marker</td></tr>
+          <tr><td><code>-I, --image</code></td><td><code>RAVENCLAWS_IMAGE</code></td><td>—</td><td>Attach image(s) to message</td></tr>
+          <tr><td><code>--pattern-max-rounds</code></td><td><code>RAVENCLAWS_PATTERN_MAX_ROUNDS</code></td><td><code>3</code></td><td>Max debate rounds</td></tr>
+          <tr><td><code>--pattern-max-review</code></td><td><code>RAVENCLAWS_PATTERN_MAX_REVIEW</code></td><td><code>3</code></td><td>Max review-loop iterations</td></tr>
+          <tr><td><code>--pattern-research-agents</code></td><td><code>RAVENCLAWS_PATTERN_RESEARCH_AGENTS</code></td><td><code>3</code></td><td>Number of research agents</td></tr>
+          <tr><td><code>--pattern-voters</code></td><td><code>RAVENCLAWS_PATTERN_VOTERS</code></td><td><code>3</code></td><td>Number of voters</td></tr>
+          <tr><td><code>--pattern-verbose</code></td><td><code>RAVENCLAWS_PATTERN_VERBOSE</code></td><td><code>false</code></td><td>Show verbose pattern results</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2 id="agent-modes">2. Agent modes (<code>--mode</code>)</h2>
+
+      <h3>2a. Single agent (default)</h3>
+      <p>One agent, one conversation. Reads a prompt from stdin, sends it to the LLM, prints the response.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span>
+<span class="tok-d">ravenclaws</span> --mode single</code></pre></div>
+
+      <h3>2b. Swarm mode</h3>
+      <p>Multiple parallel agents with different personas working on the same task. Supports 4 topologies: <code>star</code>, <code>mesh</code>, <code>hierarchical</code>, <code>hybrid</code>.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mode swarm
+<span class="tok-d">ravenclaws</span> --mode swarm --swarm-topology mesh --swarm-max-workers 50</code></pre></div>
+
+      <h3>2c. Supervisor mode</h3>
+      <p>A supervisor agent decomposes a task, spawns sub-agents, and aggregates results.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mode supervisor</code></pre></div>
+
+      <h3>2d. Orchestrate mode</h3>
+      <p>Full swarm orchestration with self-provisioning sub-agents, dynamic role assignment, and recursive supervision.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mode orchestrate
+<span class="tok-d">ravenclaws</span> --mode orchestrate --swarm-dynamic-roles --swarm-communication</code></pre></div>
+
+      <h2 id="patterns">3. Multi-agent patterns (<code>--mode</code>)</h2>
+      <p>Four built-in collaboration strategies, available in both single-provider and multi-model variants.</p>
+
+      <h3>3a. Debate</h3>
+      <p>Multiple agents debate a topic over several rounds, refining their positions.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mode debate
+<span class="tok-d">ravenclaws</span> --mode debate --pattern-max-rounds 5 --pattern-verbose</code></pre></div>
+
+      <h3>3b. Review loop</h3>
+      <p>An agent produces output, a reviewer critiques it, and the agent iterates.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mode review-loop
+<span class="tok-d">ravenclaws</span> --mode review-loop --pattern-max-review 5</code></pre></div>
+
+      <h3>3c. Research &amp; synthesize</h3>
+      <p>Multiple research agents gather information, then a synthesizer combines findings.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mode research-synthesize
+<span class="tok-d">ravenclaws</span> --mode research-synthesize --pattern-research-agents 5</code></pre></div>
+
+      <h3>3d. Voting</h3>
+      <p>Multiple agents vote on the best answer, with configurable voter count.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mode voting
+<span class="tok-d">ravenclaws</span> --mode voting --pattern-voters 5</code></pre></div>
+
+      <h2 id="exec">4. One-shot execution (<code>--exec</code>)</h2>
+      <p>Run a single prompt and print the response to stdout. Ideal for scripting and piping. The agent loop runs with tool-use enabled — the agent can call tools, browse the web, execute shell commands, etc.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --exec <span class="tok-s">"What is the capital of France?"</span>
+<span class="tok-d">echo</span> <span class="tok-s">"Summarize this text"</span> | <span class="tok-d">ravenclaws</span> --exec
+<span class="tok-d">ravenclaws</span> --exec <span class="tok-s">"Analyze this image"</span> --image photo.jpg</code></pre></div>
+
+      <h2 id="repl">5. Interactive REPL (<code>--repl</code>)</h2>
+      <p>Full interactive conversation with streaming token-by-token output. Type messages line by line. <kbd>Ctrl+C</kbd> or <kbd>Ctrl+D</kbd> to exit.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --repl
+<span class="tok-d">ravenclaws</span> --repl --image diagram.png</code></pre></div>
+
+      <h2 id="server">6. HTTP server (<code>--serve</code>)</h2>
+      <p>Long-running HTTP server with REST API endpoints for chat, background tasks, tools, health checks, and Prometheus metrics.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --serve
+<span class="tok-d">ravenclaws</span> --serve --server-host 0.0.0.0 --server-port 8080</code></pre></div>
+
+      <h3>Endpoints</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/health</code></td><td>Liveness probe — always 200 when server is running</td></tr>
+          <tr><td><code>GET</code></td><td><code>/ready</code></td><td>Readiness probe — 200 when initialized, 503 during startup</td></tr>
+          <tr><td><code>GET</code></td><td><code>/metrics</code></td><td>Prometheus-style metrics (requests, tokens, tool calls, errors, load)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/health/deep</code></td><td>Deep health check — verifies LLM connectivity</td></tr>
+          <tr><td><code>POST</code></td><td><code>/chat</code></td><td>Send a message, get an agent response (JSON or SSE streaming)</td></tr>
+          <tr><td><code>POST</code></td><td><code>/execute</code></td><td>Submit a background task, returns task ID immediately</td></tr>
+          <tr><td><code>GET</code></td><td><code>/tasks/{id}</code></td><td>Poll background task status and result</td></tr>
+          <tr><td><code>GET</code></td><td><code>/tools</code></td><td>List available tools with JSON schemas</td></tr>
+          <tr><td><code>GET</code></td><td><code>/tools/{name}</code></td><td>Get details of a specific tool</td></tr>
+          <tr><td><code>POST</code></td><td><code>/tools/{name}</code></td><td>Execute a specific tool by name</td></tr>
+          <tr><td><code>POST</code></td><td><code>/reload</code></td><td>Reload configuration (distroless-friendly SIGHUP alternative)</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Example usage</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Chat</span>
+<span class="tok-d">curl</span> -X POST http://localhost:8080/chat \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{"message": "Hello!"}'</span>
+
+<span class="tok-c"># Background task</span>
+<span class="tok-d">curl</span> -X POST http://localhost:8080/execute \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{"prompt": "Analyze this data"}'</span>
+
+<span class="tok-c"># List tools</span>
+<span class="tok-d">curl</span> http://localhost:8080/tools
+
+<span class="tok-c"># Execute a tool</span>
+<span class="tok-d">curl</span> -X POST http://localhost:8080/tools/web_fetch \
+  -H <span class="tok-s">"Content-Type: application/json"</span> \
+  -d <span class="tok-s">'{"url": "https://example.com"}'</span>
+
+<span class="tok-c"># Health &amp; metrics</span>
+<span class="tok-d">curl</span> http://localhost:8080/health
+<span class="tok-d">curl</span> http://localhost:8080/ready
+<span class="tok-d">curl</span> http://localhost:8080/metrics
+
+<span class="tok-c"># Reload config</span>
+<span class="tok-d">curl</span> -X POST http://localhost:8080/reload</code></pre></div>
+
+      <h2 id="mcp-server">7. MCP server (<code>--mcp-server</code>)</h2>
+      <p>Expose RavenClaws' built-in tools over stdio via the Model Context Protocol (MCP). Any MCP client (Claude Desktop, VS Code, etc.) can discover and call RavenClaws tools.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mcp-server</code></pre></div>
+      <p>The server speaks JSON-RPC 2.0 over stdio, supporting <code>initialize</code>, <code>tools/list</code>, and <code>tools/call</code>. All tool calls are policy-checked and audited.</p>
+
+      <h3>8. MCP SSE server (<code>--mcp-sse-server</code>)</h3>
+      <p>Same as MCP server but over HTTP with Server-Sent Events (SSE) transport.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mcp-sse-server
+<span class="tok-d">ravenclaws</span> --mcp-sse-server --mcp-sse-host 0.0.0.0 --mcp-sse-port 8081</code></pre></div>
+
+      <h2 id="mcp-client">9. MCP client (<code>--mcp-command</code>)</h2>
+      <p>Connect to external MCP servers and register their tools into the agent's tool registry. The agent can then call those tools alongside built-in tools.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --mcp-command <span class="tok-s">"npx -y @modelcontextprotocol/server-filesystem /tmp"</span>
+<span class="tok-d">ravenclaws</span> --mcp-command <span class="tok-s">"python mcp-server.py"</span> --mcp-args <span class="tok-s">"--port 9000"</span>
+<span class="tok-d">ravenclaws</span> --mcp-command <span class="tok-s">"my-server"</span> --mcp-env <span class="tok-s">"API_KEY=sk-..."</span></code></pre></div>
+      <p>Multiple MCP servers can also be configured in the TOML config file (see <a href="#config">§14</a>).</p>
+
+      <h2 id="background">10. Background tasks (<code>--background</code>)</h2>
+      <p>Submit a task and get an ID immediately. The task runs asynchronously and can be polled later. Tasks persist to disk and survive process restarts.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Submit a task</span>
+TASK_ID=<span class="tok-s">$(ravenclaws --background --exec "Analyze this data")</span>
+<span class="tok-d">echo</span> <span class="tok-s">"Task ID: $TASK_ID"</span>
+
+<span class="tok-c"># Check status</span>
+<span class="tok-d">ravenclaws</span> --task-status <span class="tok-s">"$TASK_ID"</span>
+
+<span class="tok-c"># List all tasks</span>
+<span class="tok-d">ravenclaws</span> --task-list
+
+<span class="tok-c"># Cancel a task</span>
+<span class="tok-d">ravenclaws</span> --task-cancel <span class="tok-s">"$TASK_ID"</span>
+
+<span class="tok-c"># Resume incomplete tasks on restart</span>
+<span class="tok-d">ravenclaws</span> --task-resume</code></pre></div>
+
+      <h2 id="scheduler">11. Scheduler (<code>--scheduler</code>)</h2>
+      <p>Run configured triggers (cron, webhook, file-watch) for proactive 24/7 agents.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --scheduler
+<span class="tok-d">ravenclaws</span> --scheduler --webhook-port 9090</code></pre></div>
+      <p>Configure triggers in <code>ravenclaws.toml</code>:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[scheduler]
+triggers = [
+  { type = "cron", schedule = "0 */6 * * *", prompt = "Daily system health check" },
+  { type = "webhook", endpoint = "/webhook/github", prompt = "Process GitHub event" },
+  { type = "file_watch", path = "/data/incoming", prompt = "Process new file" },
+]</code></pre></div>
+
+      <h2 id="heartbeat">12. Heartbeat mode (<code>--heartbeat</code>)</h2>
+      <p>Autonomous long-running agent that runs a persistent assess → plan → act → persist → sleep loop. The agent works independently over hours, days, or weeks. State is persisted to disk and survives restarts.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --heartbeat --heartbeat-goal <span class="tok-s">"Monitor system health and report anomalies"</span>
+<span class="tok-d">ravenclaws</span> --heartbeat \
+  --heartbeat-goal <span class="tok-s">"Watch for security threats"</span> \
+  --heartbeat-tick-interval 60 \
+  --heartbeat-max-ticks 100
+
+<span class="tok-c"># Resume a previous session</span>
+<span class="tok-d">ravenclaws</span> --heartbeat --heartbeat-session <span class="tok-s">"session-uuid"</span></code></pre></div>
+
+      <h2 id="eval">13. Eval mode (<code>--eval</code>)</h2>
+      <p>Run evaluation suites to test agent quality and behavior. Eval configs define assertions, run traces, and produce text or JSON reports.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --eval tests/eval/basic-suite.toml
+<span class="tok-d">ravenclaws</span> --eval tests/eval/security-suite.toml --eval-json</code></pre></div>
+
+      <h2 id="config">14. Configuration file</h2>
+      <p>RavenClaws uses TOML configuration files. By default it looks for <code>ravenclaws.toml</code> in the current directory, or you can specify a path with <code>-c</code>.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> -c /etc/ravenclaws/config.toml</code></pre></div>
+      <p>See the <a href="/docs/configuration">full configuration reference</a> for every section, key, and default.</p>
+
+      <h2 id="env">15. Environment variables</h2>
+      <p>Every config field can be overridden via environment variables using the <code>RAVENCLAWS__</code> prefix (double underscore for nested fields):</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">export</span> RAVENCLAWS__LLM__PROVIDER=<span class="tok-s">openai</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__ENDPOINT=<span class="tok-s">https://api.openai.com</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__API_KEY=<span class="tok-s">sk-...</span>
+<span class="tok-k">export</span> RAVENCLAWS__LLM__MODEL=<span class="tok-s">gpt-4o</span>
+<span class="tok-k">export</span> RAVENCLAWS__SECURITY__REQUIRE_TLS=<span class="tok-s">false</span>
+<span class="tok-k">export</span> RAVENCLAWS__RUNTIME__HOST=<span class="tok-s">0.0.0.0</span>
+<span class="tok-k">export</span> RAVENCLAWS__RUNTIME__PORT=<span class="tok-s">8080</span></code></pre></div>
+      <p>CLI-specific env vars use a flat naming convention like <code>RAVENCLAWS_PROVIDER</code>, <code>RAVENCLAWS_ENDPOINT</code>, etc. (see the table in <a href="#cli-flags">§1</a>).</p>
+
+      <h2 id="docker">16. Docker</h2>
+      <h3>Production (distroless)</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">docker</span> build -t ravenclaws:latest .
+<span class="tok-d">docker</span> run --rm ravenclaws:latest --version
+<span class="tok-d">docker</span> run --rm -p 8080:8080 ravenclaws:latest --serve</code></pre></div>
+      <p>The production image uses <code>gcr.io/distroless/cc-debian12:nonroot</code> — no shell, no package manager, runs as UID 65532.</p>
+
+      <h3>Development (with LiteLLM)</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">docker compose up</span>
+<span class="tok-c"># RavenClaws at http://localhost:8080</span>
+<span class="tok-c"># LiteLLM at http://localhost:4000</span></code></pre></div>
+
+      <h3>Slim (with MCP client support)</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">docker</span> build -f Dockerfile.slim -t ravenclaws:slim .
+<span class="tok-d">docker</span> run --rm ravenclaws:slim --mcp-command <span class="tok-s">"npx -y @modelcontextprotocol/server-filesystem /tmp"</span></code></pre></div>
+      <p>The slim image is Debian-based and includes <code>nodejs</code>, <code>npm</code>, and <code>curl</code>.</p>
+
+      <h2 id="kubernetes">17. Kubernetes</h2>
+      <h3>Quick deploy</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">kubectl</span> apply -f k8s/deployment.yaml</code></pre></div>
+
+      <h3>Helm chart</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">helm</span> install ravenclaws charts/ravenclaws/</code></pre></div>
+      <p>The Helm chart supports 11 configurable resources including ConfigMap, Secrets, Service, Ingress, NetworkPolicy, PDB, PVC, ServiceMonitor, and RBAC.</p>
+
+      <h2 id="library">18. Library usage</h2>
+      <p>RavenClaws is available as a library crate on <a href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">toml</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code>[dependencies]
+ravenclaws = "1.1"</code></pre></div>
+
+      <h3>Basic chat</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">use</span> ravenclaws::config::Config;
+<span class="tok-k">use</span> ravenclaws::llm::{create_client, ChatMessage, LLMProviderTrait};
+
+<span class="tok-k">let</span> config = Config::load(None)?;
+<span class="tok-k">let</span> llm = create_client(&amp;config.llm)?;
+<span class="tok-k">let</span> response = llm.chat(<span class="tok-n">vec!</span>[
+    ChatMessage::new(<span class="tok-s">"user"</span>, <span class="tok-s">"Hello!"</span>),
+]).await?;
+<span class="tok-n">println!</span>(<span class="tok-s">"{}"</span>, response.choices[0].message.content);</code></pre></div>
+
+      <h3>Agent loop with tools</h3>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">rust</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-k">use</span> ravenclaws::config::Config;
+<span class="tok-k">use</span> ravenclaws::llm::create_client;
+<span class="tok-k">use</span> ravenclaws::agent::{run_agent_loop, AgentLoopConfig};
+<span class="tok-k">use</span> ravenclaws::tools::ToolRegistry;
+
+<span class="tok-k">let</span> config = Config::load(None)?;
+<span class="tok-k">let</span> llm = create_client(&amp;config.llm)?;
+<span class="tok-k">let</span> tool_registry = ToolRegistry::with_config(&amp;config);
+<span class="tok-k">let</span> loop_config = AgentLoopConfig::default();
+<span class="tok-k">let</span> response = run_agent_loop(
+    llm,
+    <span class="tok-s">"Analyze this data"</span>,
+    &amp;config.llm.system_prompt,
+    loop_config,
+    None,
+    Some(tool_registry),
+).await?;
+<span class="tok-n">println!</span>(<span class="tok-s">"{}"</span>, response);</code></pre></div>
+
+      <h3>Full examples</h3>
+      <p>See the <code>examples/</code> directory in the repository for runnable programs:</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">cargo</span> run --example basic_chat
+<span class="tok-d">cargo</span> run --example agent_loop
+<span class="tok-d">cargo</span> run --example swarm
+<span class="tok-d">cargo</span> run --example mcp_client -- <span class="tok-s">"npx @modelcontextprotocol/server-filesystem /tmp"</span>
+<span class="tok-d">cargo</span> run --example heartbeat</code></pre></div>
+
+      <h2 id="multi-model">19. Multi-model mode</h2>
+      <p>When multiple <code>[[llms]]</code> sections are defined in config, RavenClaws enters multi-model mode. All agent modes have multi-model variants that round-robin across providers. Fallback chains are automatically built — if one provider fails, the next is tried.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># Uses all configured providers in rotation</span>
+<span class="tok-d">ravenclaws</span> --mode single
+<span class="tok-d">ravenclaws</span> --mode debate</code></pre></div>
+
+      <h2 id="multi-modal">20. Multi-modal input (<code>--image</code>)</h2>
+      <p>Attach images to your message (supported formats: PNG, JPEG, GIF, WebP). Works in <code>--exec</code>, <code>--repl</code>, and HTTP server modes.</p>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-d">ravenclaws</span> --exec <span class="tok-s">"Describe this image"</span> --image photo.jpg
+<span class="tok-d">ravenclaws</span> --repl --image diagram.png --image chart.png
+<span class="tok-d">ravenclaws</span> --exec <span class="tok-s">"Compare these images"</span> -I img1.jpg -I img2.jpg</code></pre></div>
+
+      <h2 id="shutdown">21. Graceful shutdown</h2>
+      <p>All long-running modes (server, heartbeat, scheduler, REPL) support graceful shutdown via SIGTERM or SIGINT (<kbd>Ctrl+C</kbd>). The shutdown sequence:</p>
+      <ol>
+        <li>Signal received → shutdown flag set</li>
+        <li>In-progress operations complete (with configurable timeout)</li>
+        <li>State is persisted (checkpoints, heartbeat state, background tasks)</li>
+        <li>Clean shutdown logged</li>
+      </ol>
+
+      <h2>Quick reference</h2>
+      <div class="code"><div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">shell</span><button class="code__copy" type="button">Copy</button></div>
+<pre><code><span class="tok-c"># One-shot</span>
+<span class="tok-d">ravenclaws</span> --exec <span class="tok-s">"Hello"</span>
+
+<span class="tok-c"># Interactive</span>
+<span class="tok-d">ravenclaws</span> --repl
+
+<span class="tok-c"># HTTP server</span>
+<span class="tok-d">ravenclaws</span> --serve
+
+<span class="tok-c"># MCP server</span>
+<span class="tok-d">ravenclaws</span> --mcp-server
+
+<span class="tok-c"># Background task</span>
+<span class="tok-d">ravenclaws</span> --background --exec <span class="tok-s">"Long task"</span>
+
+<span class="tok-c"># Autonomous agent</span>
+<span class="tok-d">ravenclaws</span> --heartbeat --heartbeat-goal <span class="tok-s">"Monitor system"</span>
+
+<span class="tok-c"># Swarm</span>
+<span class="tok-d">ravenclaws</span> --mode swarm
+
+<span class="tok-c"># Multi-agent patterns</span>
+<span class="tok-d">ravenclaws</span> --mode debate
+<span class="tok-d">ravenclaws</span> --mode review-loop
+<span class="tok-d">ravenclaws</span> --mode research-synthesize
+<span class="tok-d">ravenclaws</span> --mode voting
+
+<span class="tok-c"># Eval</span>
+<span class="tok-d">ravenclaws</span> --eval tests/eval/basic-suite.toml
+
+<span class="tok-c"># Scheduler</span>
+<span class="tok-d">ravenclaws</span> --scheduler
+
+<span class="tok-c"># With images</span>
+<span class="tok-d">ravenclaws</span> --exec <span class="tok-s">"Describe"</span> --image photo.jpg
+
+<span class="tok-c"># Docker</span>
+<span class="tok-d">docker</span> run --rm ravenclaws:latest --exec <span class="tok-s">"Hello"</span>
+
+<span class="tok-c"># Kubernetes</span>
+<span class="tok-d">kubectl</span> apply -f k8s/deployment.yaml</code></pre></div>
+
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p>RavenClaws — Small. Sleek. Secure. Supreme. 🐦‍⬛<br>
+    <a href="https://github.com/egkristi/RavenClaws">GitHub</a> · <a href="https://crates.io/crates/ravenclaws">crates.io</a> · <a href="https://docs.rs/ravenclaws">docs.rs</a> · AGPL-3.0-or-later + Commercial</p>
+  </div>
+</footer>
+
+<script src="/assets/main.js"></script>
+</body>
+</html>

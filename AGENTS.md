@@ -30,7 +30,7 @@ RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider
 - **Build:** `cargo build --release` (~5.2 MB stripped binary, ~5 ms startup)
 - **Library:** Available as `ravenclaws` on crates.io (binary + library crate)
 
-### Architecture (20 modules)
+### Architecture (21 modules)
 
 ```
 src/
@@ -55,7 +55,8 @@ src/
 ├── ravenfabric.rs— RavenFabric mesh client (health, list_agents, execute, broadcast)
 ├── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting)
 ├── persistence.rs — SQLite-backed conversation persistence with retention policies
-└── plugins.rs — WASM plugin system (Plugin ABI v1, WasmPlugin, WasmPluginManager)
+├── plugins.rs — WASM plugin system (Plugin ABI v1, WasmPlugin, WasmPluginManager)
+└── load.rs — Graceful degradation (LoadManager, TokenBucket, ErrorTracker, LoadConfig)
 ```
 
 ### Current State
@@ -69,7 +70,7 @@ src/
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
 | Library crate (ravenclaws on crates.io) | ✅ Working — binary + library |
-| Verification suite (478 tests, 20 modules, 0 failures) | ✅ Working |
+| Verification suite (507 tests, 21 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -104,6 +105,8 @@ src/
 | SQLite conversation persistence | ✅ v1.0.1 — `src/persistence.rs` with `ConversationStore`, retention policies, 15 unit tests |
 | Dockerfile.slim (Debian-based) | ✅ v1.0.1 — `Dockerfile.slim` for MCP client support with nodejs, npm, curl |
 | Multi-modal input | ✅ v1.1.0 — `ContentPart` enum (`Text`, `ImageUrl`), `load_image()`, `--image` CLI flag, multi-modal serialization for all 5 providers, agent loop integration, `ConversationMemory::add_user_message_with_images()`, library exports |
+| Browser automation tool | ✅ v1.1.0 — `BrowserTool` with 10 CDP actions, `BrowserConfig`, `ToolCategory::Browser`, 15 unit tests |
+| Graceful degradation under load | ✅ v1.1.0 — `src/load.rs` with `LoadManager`, `TokenBucket`, `ErrorTracker`, `LoadConfig`, wired to HTTP server + agent loop, 12 unit tests |
 | Pre-built binaries / releases | 📋 Wired, untagged — CI produces them on tag; none released yet |
 
 ---

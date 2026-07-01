@@ -277,6 +277,7 @@ impl BackgroundTaskManager {
             checkpoint_dir: Some(checkpoint_dir),
             session_id: Some(task_id.to_string()),
             metrics_callback: None,
+            load_manager: None,
         };
 
         let result = crate::agent::run_agent_loop(

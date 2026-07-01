@@ -1447,7 +1447,7 @@ mod server_tests {
         let registry = ToolRegistry::with_default_tools();
         let server = McpServer::new(registry);
 
-        // Check that all 5 built-in tools are registered
+        // Check that all 6 built-in tools are registered
         let defs = server.registry.definitions();
         let names: Vec<&str> = defs.iter().map(|d| d.name.as_str()).collect();
         assert!(names.contains(&"shell_exec"));
@@ -1455,7 +1455,8 @@ mod server_tests {
         assert!(names.contains(&"write_file"));
         assert!(names.contains(&"web_fetch"));
         assert!(names.contains(&"web_search"));
-        assert_eq!(defs.len(), 5);
+        assert!(names.contains(&"browser"));
+        assert_eq!(defs.len(), 6);
     }
 
     #[tokio::test]

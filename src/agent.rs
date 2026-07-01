@@ -299,6 +299,10 @@ pub struct AgentLoopConfig {
     /// Called with (tokens_used, tool_calls_count) after each iteration.
     /// This allows the HTTP server to wire ServerMetrics without coupling agent.rs to server.rs.
     pub metrics_callback: Option<Box<dyn Fn(u64, u64) + Send + Sync>>,
+
+    /// Optional load manager for graceful degradation.
+    /// When set, the agent loop checks admission before LLM calls and records outcomes.
+    pub load_manager: Option<Arc<crate::load::LoadManager>>,
 }
 
 impl Default for AgentLoopConfig {
@@ -316,6 +320,7 @@ impl Default for AgentLoopConfig {
             checkpoint_dir: None,
             session_id: None,
             metrics_callback: None,
+            load_manager: None,
         }
     }
 }
@@ -342,6 +347,10 @@ impl std::fmt::Debug for AgentLoopConfig {
                 "metrics_callback",
                 &self.metrics_callback.as_ref().map(|_| "Box<Fn>"),
             )
+            .field(
+                "load_manager",
+                &self.load_manager.as_ref().map(|_| "Arc<LoadManager>"),
+            )
             .finish()
     }
 }
@@ -363,6 +372,7 @@ impl Clone for AgentLoopConfig {
             checkpoint_dir: self.checkpoint_dir.clone(),
             session_id: self.session_id.clone(),
             metrics_callback: None,
+            load_manager: self.load_manager.clone(),
         }
     }
 }
@@ -632,9 +642,46 @@ async fn run_agent_loop_inner(
             }
         }
 
+        // Check admission control before LLM call
+        if let Some(ref load_manager) = config.load_manager {
+            let admission = load_manager.check_admission();
+            if !admission.is_allowed() {
+                warn!(
+                    ?admission,
+                    iteration = iteration,
+                    "Admission denied before LLM call"
+                );
+                let _ = audit_log.append(
+                    AuditEventType::Error,
+                    "load_manager",
+                    &format!("Admission denied: {:?}", admission),
+                    None,
+                );
+                load_manager.record_outcome(crate::load::RequestOutcome::Failure);
+                // Delete checkpoint on admission denial
+                if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                    delete_checkpoint(checkpoint_dir, &session_id);
+                }
+                return Err(crate::error::RavenClawsError::SecurityViolation(format!(
+                    "Admission denied: {:?}",
+                    admission
+                )));
+            }
+        }
+
         let response = match llm.chat(messages.clone()).await {
-            Ok(r) => r,
+            Ok(r) => {
+                // Record success
+                if let Some(ref load_manager) = config.load_manager {
+                    load_manager.record_outcome(crate::load::RequestOutcome::Success);
+                }
+                r
+            }
             Err(e) => {
+                // Record failure
+                if let Some(ref load_manager) = config.load_manager {
+                    load_manager.record_outcome(crate::load::RequestOutcome::Failure);
+                }
                 // Try fallback chain if available
                 if let Some(ref chain) = config.fallback_chain {
                     warn!(error = %e, "Primary LLM failed, trying fallback chain");
@@ -2280,6 +2327,7 @@ mod tests {
             checkpoint_dir: None,
             session_id: None,
             metrics_callback: None,
+            load_manager: None,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
@@ -2407,6 +2455,7 @@ mod tests {
             checkpoint_dir: None,
             session_id: None,
             metrics_callback: None,
+            load_manager: None,
         };
         assert_eq!(config.token_lifetime_secs, 0);
         // 0 means unlimited — no timeout enforced
@@ -2427,6 +2476,7 @@ mod tests {
             checkpoint_dir: None,
             session_id: None,
             metrics_callback: None,
+            load_manager: None,
         };
         assert_eq!(config.token_lifetime_secs, 3600);
     }

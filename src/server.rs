@@ -46,6 +46,7 @@ use crate::agent::{self, AgentLoopConfig};
 use crate::background::BackgroundTaskManager;
 use crate::config::Config;
 use crate::llm::{self, ChatMessage, LLMProviderTrait};
+use crate::load::{Admission, LoadManager};
 use crate::tools::{ToolCall, ToolRegistry};
 
 // ── Metrics ────────────────────────────────────────────────────────────────
@@ -152,10 +153,13 @@ pub struct ServerState {
     pub bg_manager: Option<BackgroundTaskManager>,
     /// MCP client manager for multi-server MCP tool access
     pub mcp_manager: Option<crate::mcp::McpClientManager>,
+    /// Load manager for graceful degradation (rate limiting, concurrency control, load shedding)
+    pub load_manager: Arc<LoadManager>,
 }
 
 impl ServerState {
     fn new(config: Config) -> Self {
+        let load_manager = Arc::new(LoadManager::new(config.load.clone()));
         Self {
             ready: AtomicBool::new(false),
             metrics: ServerMetrics::new(),
@@ -165,6 +169,7 @@ impl ServerState {
             tool_registry: None,
             bg_manager: None,
             mcp_manager: None,
+            load_manager,
         }
     }
 
@@ -251,7 +256,7 @@ async fn ready_response(state: &ServerState) -> (Vec<u8>, &'static str) {
 
 fn metrics_response(state: &ServerState) -> Vec<u8> {
     let metrics = &state.metrics;
-    format!(
+    let base = format!(
         "# HELP ravenclaws_requests_total Total HTTP requests served\n\
          # TYPE ravenclaws_requests_total counter\n\
          ravenclaws_requests_total {}\n\
@@ -286,8 +291,9 @@ fn metrics_response(state: &ServerState) -> Vec<u8> {
         metrics.tokens_total.load(Ordering::Relaxed),
         metrics.uptime_secs(),
         metrics.start_time.load(Ordering::Relaxed),
-    )
-    .into_bytes()
+    );
+    let load_metrics = state.load_manager.metrics().to_prometheus_text();
+    format!("{}\n{}", base, load_metrics).into_bytes()
 }
 
 // ── HTTP handler ───────────────────────────────────────────────────────────
@@ -339,6 +345,32 @@ async fn handle_connection(mut stream: tokio::net::TcpStream, state: Arc<ServerS
     }
 
     state.metrics.record_request();
+
+    // Check admission control (rate limiting, concurrency, load shedding)
+    let admission = state.load_manager.check_admission();
+    if !admission.is_allowed() {
+        let (status, body): (&str, Vec<u8>) = match admission {
+            Admission::RateLimited => ("429 Too Many Requests", b"Rate limited\n".to_vec()),
+            Admission::ConcurrencyLimited => (
+                "503 Service Unavailable",
+                b"Too many concurrent requests\n".to_vec(),
+            ),
+            Admission::LoadShed => (
+                "503 Service Unavailable",
+                b"Server is overloaded\n".to_vec(),
+            ),
+            _ => unreachable!(),
+        };
+        state.metrics.errors_total.fetch_add(1, Ordering::Relaxed);
+        let response = format!(
+            "HTTP/1.1 {}\r\nContent-Length: {}\r\nContent-Type: text/plain\r\nRetry-After: 1\r\nConnection: close\r\n\r\n{}",
+            status,
+            body.len(),
+            std::str::from_utf8(&body).unwrap_or(""),
+        );
+        let _ = stream.write_all(response.as_bytes()).await;
+        return;
+    }
 
     // Parse the request method and path
     let parts: Vec<&str> = request_line.split_whitespace().collect();
@@ -610,6 +642,7 @@ async fn handle_chat(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>
         .ok_or_else(|| anyhow::anyhow!("No user message found"))?;
 
     let metrics = state.metrics.clone();
+    let load_manager = Arc::clone(&state.load_manager);
     let loop_config = AgentLoopConfig {
         max_iterations: req.max_iterations.unwrap_or(10),
         enable_tools: true,
@@ -632,6 +665,7 @@ async fn handle_chat(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>
                     .fetch_add(tool_calls, Ordering::Relaxed);
             }
         })),
+        load_manager: Some(load_manager),
     };
 
     let tool_registry = state.tool_registry.clone();

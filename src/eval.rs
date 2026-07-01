@@ -379,6 +379,7 @@ impl EvalRunner {
             checkpoint_dir: None,
             session_id: None,
             metrics_callback: None,
+            load_manager: None,
         };
 
         // Run the full agent loop (ReAct + tools + security)

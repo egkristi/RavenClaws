@@ -380,6 +380,7 @@ impl HeartbeatAgent {
                                     checkpoint_dir: None,
                                     session_id: None,
                                     metrics_callback: None,
+                                    load_manager: None,
                                 };
 
                                 match crate::agent::run_agent_loop(

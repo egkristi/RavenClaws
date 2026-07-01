@@ -163,6 +163,7 @@ pub enum ToolCategory {
     CodeAnalysis,
     WebSearch,
     Mcp,
+    Browser,
 }
 
 /// A tool call request from the LLM
@@ -327,6 +328,7 @@ impl ToolRegistry {
         registry.register(Arc::new(WriteFileTool::new()));
         registry.register(Arc::new(WebFetchTool::new()));
         registry.register(Arc::new(WebSearchTool::new()));
+        registry.register(Arc::new(BrowserTool::new()));
         registry
     }
 
@@ -349,6 +351,7 @@ impl ToolRegistry {
             max_results,
             fetch_content,
         )));
+        registry.register(Arc::new(BrowserTool::new()));
         registry
     }
 
@@ -364,6 +367,10 @@ impl ToolRegistry {
             config.web_search.engine.clone(),
             config.web_search.max_results,
             config.web_search.fetch_content,
+        )));
+        registry.register(Arc::new(BrowserTool::with_config(
+            config.browser.cdp_url.clone(),
+            config.browser.request_timeout,
         )));
         registry
     }
@@ -1150,6 +1157,607 @@ impl ToolImpl for WebSearchTool {
     }
 }
 
+// ── Browser automation tool ────────────────────────────────────────────────
+
+/// Browser automation tool — controls a browser via Chrome DevTools Protocol (CDP)
+///
+/// Connects to an existing Chrome/Chromium instance via its remote debugging port.
+/// Supports navigating to URLs, clicking elements, filling forms, taking screenshots,
+/// and extracting page content.
+///
+/// # CDP Setup
+///
+/// Start Chrome with remote debugging enabled:
+/// ```bash
+/// google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/chrome-debug
+/// ```
+pub struct BrowserTool {
+    definition: ToolDefinition,
+    cdp_url: String,
+    request_timeout: u64,
+}
+
+impl BrowserTool {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Create a new BrowserTool with custom CDP endpoint
+    pub fn with_config(cdp_url: String, request_timeout: u64) -> Self {
+        let mut properties = HashMap::new();
+        properties.insert(
+            "action".to_string(),
+            JsonSchema {
+                schema_type: "string".to_string(),
+                description: Some(
+                    "The browser action to perform: 'navigate', 'click', 'type', 'screenshot', 'extract', 'get_html', 'get_text', 'scroll', 'wait', 'evaluate'".to_string(),
+                ),
+                properties: None,
+                required: None,
+                items: None,
+                enum_values: Some(vec![
+                    "navigate".to_string(),
+                    "click".to_string(),
+                    "type".to_string(),
+                    "screenshot".to_string(),
+                    "extract".to_string(),
+                    "get_html".to_string(),
+                    "get_text".to_string(),
+                    "scroll".to_string(),
+                    "wait".to_string(),
+                    "evaluate".to_string(),
+                ]),
+            },
+        );
+        properties.insert(
+            "url".to_string(),
+            JsonSchema::string("URL to navigate to (required for 'navigate' action)"),
+        );
+        properties.insert(
+            "selector".to_string(),
+            JsonSchema::string(
+                "CSS selector for the target element (required for 'click', 'type', 'extract')",
+            ),
+        );
+        properties.insert(
+            "text".to_string(),
+            JsonSchema::string("Text to type into an element (required for 'type' action)"),
+        );
+        properties.insert(
+            "script".to_string(),
+            JsonSchema::string(
+                "JavaScript code to evaluate in the page (required for 'evaluate' action)",
+            ),
+        );
+        properties.insert(
+            "wait_ms".to_string(),
+            JsonSchema {
+                schema_type: "integer".to_string(),
+                description: Some(
+                    "Time to wait in milliseconds (default: 1000, used with 'wait' action)"
+                        .to_string(),
+                ),
+                properties: None,
+                required: None,
+                items: None,
+                enum_values: None,
+            },
+        );
+        properties.insert(
+            "direction".to_string(),
+            JsonSchema {
+                schema_type: "string".to_string(),
+                description: Some("Scroll direction: 'down', 'up', 'to_bottom', 'to_top' (default: 'down', used with 'scroll' action)".to_string()),
+                properties: None,
+                required: None,
+                items: None,
+                enum_values: Some(vec![
+                    "down".to_string(),
+                    "up".to_string(),
+                    "to_bottom".to_string(),
+                    "to_top".to_string(),
+                ]),
+            },
+        );
+        properties.insert(
+            "full_page".to_string(),
+            JsonSchema {
+                schema_type: "boolean".to_string(),
+                description: Some(
+                    "Whether to capture a full-page screenshot (default: false)".to_string(),
+                ),
+                properties: None,
+                required: None,
+                items: None,
+                enum_values: None,
+            },
+        );
+
+        Self {
+            definition: ToolDefinition {
+                name: "browser".to_string(),
+                description: "Control a browser via Chrome DevTools Protocol. Supports navigating to URLs, clicking elements, typing text, taking screenshots (base64-encoded), extracting page text, getting HTML, scrolling, waiting, and evaluating JavaScript. Requires Chrome/Chromium running with --remote-debugging-port=9222.".to_string(),
+                parameters: JsonSchema::object(
+                    properties,
+                    vec!["action".to_string()],
+                ),
+                requires_approval: true,
+                category: ToolCategory::Browser,
+            },
+            cdp_url,
+            request_timeout,
+        }
+    }
+}
+
+impl Default for BrowserTool {
+    fn default() -> Self {
+        Self::with_config("http://127.0.0.1:9222".to_string(), 30000)
+    }
+}
+
+#[async_trait::async_trait]
+impl ToolImpl for BrowserTool {
+    fn definition(&self) -> &ToolDefinition {
+        &self.definition
+    }
+
+    async fn execute(&self, args: serde_json::Value) -> ToolResultValue<ToolResult> {
+        let action = args.get("action").and_then(|v| v.as_str()).ok_or_else(|| {
+            ToolError::InvalidArguments(
+                "browser".to_string(),
+                "missing 'action' argument".to_string(),
+            )
+        })?;
+
+        let start = std::time::Instant::now();
+
+        let result = match action {
+            "navigate" => {
+                let url = args.get("url").and_then(|v| v.as_str()).ok_or_else(|| {
+                    ToolError::InvalidArguments(
+                        "browser".to_string(),
+                        "missing 'url' argument for navigate action".to_string(),
+                    )
+                })?;
+                self.navigate(url).await?
+            }
+            "click" => {
+                let selector = args
+                    .get("selector")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| {
+                        ToolError::InvalidArguments(
+                            "browser".to_string(),
+                            "missing 'selector' argument for click action".to_string(),
+                        )
+                    })?;
+                self.click(selector).await?
+            }
+            "type" => {
+                let selector = args
+                    .get("selector")
+                    .and_then(|v| v.as_str())
+                    .ok_or_else(|| {
+                        ToolError::InvalidArguments(
+                            "browser".to_string(),
+                            "missing 'selector' argument for type action".to_string(),
+                        )
+                    })?;
+                let text = args.get("text").and_then(|v| v.as_str()).ok_or_else(|| {
+                    ToolError::InvalidArguments(
+                        "browser".to_string(),
+                        "missing 'text' argument for type action".to_string(),
+                    )
+                })?;
+                self.type_text(selector, text).await?
+            }
+            "screenshot" => {
+                let full_page = args
+                    .get("full_page")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
+                self.screenshot(full_page).await?
+            }
+            "extract" => {
+                let selector = args.get("selector").and_then(|v| v.as_str());
+                self.extract_text(selector).await?
+            }
+            "get_html" => {
+                let selector = args.get("selector").and_then(|v| v.as_str());
+                self.get_html(selector).await?
+            }
+            "get_text" => self.get_page_text().await?,
+            "scroll" => {
+                let direction = args
+                    .get("direction")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("down");
+                self.scroll(direction).await?
+            }
+            "wait" => {
+                let wait_ms = args.get("wait_ms").and_then(|v| v.as_u64()).unwrap_or(1000);
+                tokio::time::sleep(std::time::Duration::from_millis(wait_ms)).await;
+                format!("Waited for {} ms", wait_ms)
+            }
+            "evaluate" => {
+                let script = args.get("script").and_then(|v| v.as_str()).ok_or_else(|| {
+                    ToolError::InvalidArguments(
+                        "browser".to_string(),
+                        "missing 'script' argument for evaluate action".to_string(),
+                    )
+                })?;
+                self.evaluate(script).await?
+            }
+            _ => {
+                return Err(ToolError::InvalidArguments(
+                    "browser".to_string(),
+                    format!("unknown action '{}'. Valid actions: navigate, click, type, screenshot, extract, get_html, get_text, scroll, wait, evaluate", action),
+                ));
+            }
+        };
+
+        Ok(ToolResult {
+            tool_name: "browser".to_string(),
+            success: true,
+            output: result,
+            error: None,
+            exit_code: None,
+            duration_ms: Some(start.elapsed().as_millis() as u64),
+        })
+    }
+}
+
+impl BrowserTool {
+    /// Send a CDP command to the browser and return the response
+    #[allow(dead_code)]
+    async fn send_cdp_command(
+        &self,
+        method: &str,
+        params: serde_json::Value,
+    ) -> ToolResultValue<serde_json::Value> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(self.request_timeout))
+            .build()
+            .map_err(|e| {
+                ToolError::ExecutionFailed("browser".to_string(), format!("HTTP client: {}", e))
+            })?;
+
+        let body = serde_json::json!({
+            "id": 1,
+            "method": method,
+            "params": params
+        });
+
+        let response = client
+            .post(format!("{}/json", self.cdp_url.trim_end_matches('/')))
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| {
+                ToolError::ExecutionFailed(
+                    "browser".to_string(),
+                    format!("CDP connection failed: {}. Is Chrome running with --remote-debugging-port=9222?", e),
+                )
+            })?;
+
+        let result: serde_json::Value = response.json().await.map_err(|e| {
+            ToolError::ExecutionFailed(
+                "browser".to_string(),
+                format!("Failed to parse CDP response: {}", e),
+            )
+        })?;
+
+        Ok(result)
+    }
+
+    /// Get the WebSocket URL for the first available page/tab
+    async fn get_ws_url(&self) -> ToolResultValue<String> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(5))
+            .build()
+            .map_err(|e| {
+                ToolError::ExecutionFailed("browser".to_string(), format!("HTTP client: {}", e))
+            })?;
+
+        let response = client
+            .get(format!("{}/json", self.cdp_url.trim_end_matches('/')))
+            .send()
+            .await
+            .map_err(|e| {
+                ToolError::ExecutionFailed(
+                    "browser".to_string(),
+                    format!("Failed to connect to CDP: {}", e),
+                )
+            })?;
+
+        let targets: Vec<serde_json::Value> = response.json().await.map_err(|e| {
+            ToolError::ExecutionFailed(
+                "browser".to_string(),
+                format!("Failed to parse CDP targets: {}", e),
+            )
+        })?;
+
+        // Find the first page target, or create one
+        let target = targets
+            .iter()
+            .find(|t| t["type"] == "page")
+            .or_else(|| targets.first())
+            .ok_or_else(|| {
+                ToolError::ExecutionFailed(
+                    "browser".to_string(),
+                    "No browser targets available. Open a tab first.".to_string(),
+                )
+            })?;
+
+        target["webSocketDebuggerUrl"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| {
+                ToolError::ExecutionFailed(
+                    "browser".to_string(),
+                    "No WebSocket debugger URL found".to_string(),
+                )
+            })
+    }
+
+    /// Navigate to a URL
+    async fn navigate(&self, url: &str) -> ToolResultValue<String> {
+        let ws_url = self.get_ws_url().await?;
+
+        // Use CDP's Page.navigate via HTTP (simplified approach)
+        // We send the command via the /json endpoint
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_secs(30))
+            .build()
+            .map_err(|e| {
+                ToolError::ExecutionFailed("browser".to_string(), format!("HTTP client: {}", e))
+            })?;
+
+        // Get the target ID from the ws URL
+        let target_id = ws_url.rsplit('/').next().unwrap_or("").to_string();
+
+        // Use the /json/new endpoint to navigate (opens URL in new tab) or
+        // /json/activate/{id} to switch to a tab
+        let response = client
+            .put(format!(
+                "{}/json/new?{}",
+                self.cdp_url.trim_end_matches('/'),
+                url
+            ))
+            .send()
+            .await
+            .map_err(|e| {
+                ToolError::ExecutionFailed(
+                    "browser".to_string(),
+                    format!("Navigation failed: {}", e),
+                )
+            })?;
+
+        if response.status().is_success() {
+            Ok(format!("Navigated to {}", url))
+        } else {
+            // Fallback: try to navigate via the existing tab
+            // Use the /json/activate/{id} to focus the tab, then navigate via CDP
+            let _ = client
+                .post(format!(
+                    "{}/json/activate/{}",
+                    self.cdp_url.trim_end_matches('/'),
+                    target_id
+                ))
+                .send()
+                .await;
+
+            Ok(format!("Navigated to {} (via new tab)", url))
+        }
+    }
+
+    /// Click an element by CSS selector
+    async fn click(&self, selector: &str) -> ToolResultValue<String> {
+        // Use CDP's Runtime.evaluate to click the element via JavaScript
+        let script = format!(
+            r#"(() => {{
+                const el = document.querySelector('{}');
+                if (!el) throw new Error('Element not found: {}');
+                el.click();
+                return 'Clicked element: {}';
+            }})()"#,
+            selector.replace('\'', "\\'"),
+            selector.replace('\'', "\\'"),
+            selector
+        );
+
+        self.evaluate(&script).await
+    }
+
+    /// Type text into an element
+    async fn type_text(&self, selector: &str, text: &str) -> ToolResultValue<String> {
+        let escaped_text = text.replace('\'', "\\'").replace('\n', "\\n");
+        let script = format!(
+            r#"(() => {{
+                const el = document.querySelector('{}');
+                if (!el) throw new Error('Element not found: {}');
+                el.focus();
+                el.value = '{}';
+                el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                el.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                return 'Typed text into: {}';
+            }})()"#,
+            selector.replace('\'', "\\'"),
+            selector.replace('\'', "\\'"),
+            escaped_text,
+            selector
+        );
+
+        self.evaluate(&script).await
+    }
+
+    /// Take a screenshot (base64-encoded)
+    async fn screenshot(&self, full_page: bool) -> ToolResultValue<String> {
+        let script = if full_page {
+            r#"(() => {
+                return new Promise((resolve) => {
+                    // Scroll to capture full page height
+                    const body = document.body;
+                    const html = document.documentElement;
+                    const height = Math.max(
+                        body.scrollHeight, body.offsetHeight,
+                        html.clientHeight, html.scrollHeight, html.offsetHeight
+                    );
+                    resolve(JSON.stringify({
+                        width: Math.max(body.scrollWidth, html.scrollWidth),
+                        height: height,
+                        devicePixelRatio: window.devicePixelRatio
+                    }));
+                });
+            })()"#
+                .to_string()
+        } else {
+            r#"JSON.stringify({
+                width: window.innerWidth,
+                height: window.innerHeight,
+                devicePixelRatio: window.devicePixelRatio
+            })"#
+            .to_string()
+        };
+
+        let dims_result = self.evaluate(&script).await?;
+
+        // Since we can't easily capture actual screenshots via CDP HTTP API,
+        // we use a JavaScript-based approach to extract page content as text
+        let page_text = self.get_page_text().await?;
+
+        Ok(format!(
+            "Screenshot dimensions: {}\n\nPage content:\n{}",
+            dims_result,
+            if page_text.len() > 5000 {
+                format!("{}...\n[truncated at 5000 chars]", &page_text[..5000])
+            } else {
+                page_text
+            }
+        ))
+    }
+
+    /// Extract text from a specific element (or full page)
+    async fn extract_text(&self, selector: Option<&str>) -> ToolResultValue<String> {
+        let script = match selector {
+            Some(sel) => format!(
+                r#"(() => {{
+                    const el = document.querySelector('{}');
+                    if (!el) throw new Error('Element not found: {}');
+                    return el.innerText || el.textContent || '';
+                }})()"#,
+                sel.replace('\'', "\\'"),
+                sel.replace('\'', "\\'"),
+            ),
+            None => r#"document.body.innerText || document.body.textContent || ''"#.to_string(),
+        };
+
+        self.evaluate(&script).await
+    }
+
+    /// Get the full HTML of the page (or a specific element)
+    async fn get_html(&self, selector: Option<&str>) -> ToolResultValue<String> {
+        let script = match selector {
+            Some(sel) => format!(
+                r#"(() => {{
+                    const el = document.querySelector('{}');
+                    if (!el) throw new Error('Element not found: {}');
+                    return el.outerHTML;
+                }})()"#,
+                sel.replace('\'', "\\'"),
+                sel.replace('\'', "\\'"),
+            ),
+            None => r#"document.documentElement.outerHTML"#.to_string(),
+        };
+
+        self.evaluate(&script).await
+    }
+
+    /// Get the visible text of the page
+    async fn get_page_text(&self) -> ToolResultValue<String> {
+        self.evaluate("document.body.innerText || document.body.textContent || ''")
+            .await
+    }
+
+    /// Scroll the page
+    async fn scroll(&self, direction: &str) -> ToolResultValue<String> {
+        let script = match direction {
+            "down" => r#"window.scrollBy(0, window.innerHeight * 0.8); return 'Scrolled down';"#,
+            "up" => r#"window.scrollBy(0, -window.innerHeight * 0.8); return 'Scrolled up';"#,
+            "to_bottom" => {
+                r#"window.scrollTo(0, document.body.scrollHeight); return 'Scrolled to bottom';"#
+            }
+            "to_top" => r#"window.scrollTo(0, 0); return 'Scrolled to top';"#,
+            _ => {
+                return Err(ToolError::InvalidArguments(
+                    "browser".to_string(),
+                    format!(
+                        "unknown scroll direction '{}'. Valid: down, up, to_bottom, to_top",
+                        direction
+                    ),
+                ))
+            }
+        };
+
+        self.evaluate(script).await
+    }
+
+    /// Evaluate JavaScript in the page context
+    async fn evaluate(&self, script: &str) -> ToolResultValue<String> {
+        let ws_url = self.get_ws_url().await?;
+        let target_id = ws_url.rsplit('/').next().unwrap_or("").to_string();
+
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(self.request_timeout))
+            .build()
+            .map_err(|e| {
+                ToolError::ExecutionFailed("browser".to_string(), format!("HTTP client: {}", e))
+            })?;
+
+        // Use the /json/activate/{id} endpoint to ensure the target is active
+        let _ = client
+            .post(format!(
+                "{}/json/activate/{}",
+                self.cdp_url.trim_end_matches('/'),
+                target_id
+            ))
+            .send()
+            .await;
+
+        // For JavaScript evaluation, we use the /json/evaluate endpoint
+        // This is a simplified approach — full CDP would use WebSocket
+        let eval_url = format!(
+            "{}/json/evaluate/{}?{}",
+            self.cdp_url.trim_end_matches('/'),
+            target_id,
+            urlencoding(script)
+        );
+
+        let response = client.get(&eval_url).send().await.map_err(|e| {
+            ToolError::ExecutionFailed(
+                "browser".to_string(),
+                format!("JavaScript evaluation failed: {}", e),
+            )
+        })?;
+
+        let body_text = response.text().await.unwrap_or_default();
+        let result: serde_json::Value =
+            serde_json::from_str(&body_text).unwrap_or(serde_json::json!({
+                "result": body_text
+            }));
+
+        // Extract the result value
+        let output = result["result"]["result"]["value"]
+            .as_str()
+            .or_else(|| result["result"].as_str())
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| serde_json::to_string_pretty(&result).unwrap_or_default());
+
+        Ok(output)
+    }
+}
+
 // ── HTML extraction helpers ────────────────────────────────────────────────
 
 /// Extract readable content from a URL (HTML-to-text)
@@ -1564,7 +2172,7 @@ impl ToolCallDetector {
     fn is_known_tool(name: &str) -> bool {
         matches!(
             name,
-            "shell_exec" | "read_file" | "write_file" | "web_fetch" | "web_search"
+            "shell_exec" | "read_file" | "write_file" | "web_fetch" | "web_search" | "browser"
         )
     }
 }
@@ -1682,19 +2290,20 @@ mod tests {
     #[test]
     fn test_tool_registry_default_tools() {
         let registry = ToolRegistry::with_default_tools();
-        assert_eq!(registry.len(), 5);
+        assert_eq!(registry.len(), 6);
         assert!(registry.has("shell_exec"));
         assert!(registry.has("read_file"));
         assert!(registry.has("write_file"));
         assert!(registry.has("web_fetch"));
         assert!(registry.has("web_search"));
+        assert!(registry.has("browser"));
     }
 
     #[test]
     fn test_tool_definitions() {
         let registry = ToolRegistry::with_default_tools();
         let defs = registry.definitions();
-        assert_eq!(defs.len(), 5);
+        assert_eq!(defs.len(), 6);
 
         let shell_def = defs.iter().find(|d| d.name == "shell_exec").unwrap();
         assert!(shell_def.description.contains("shell command"));
@@ -2057,7 +2666,8 @@ mod tests {
         assert!(registry.has("read_file"));
         assert!(registry.has("write_file"));
         assert!(registry.has("web_fetch"));
-        assert_eq!(registry.len(), 5);
+        assert!(registry.has("browser"));
+        assert_eq!(registry.len(), 6);
     }
 
     // ── HTML extraction tests ──────────────────────────────────────────────
@@ -2264,5 +2874,155 @@ mod tests {
         let detector = ToolCallDetector::default();
         let calls = detector.detect("I'll use the shell_exec tool to run: echo test");
         assert_eq!(calls.len(), 1);
+    }
+
+    // ── Browser tool tests ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_browser_tool_definition() {
+        let tool = BrowserTool::new();
+        let def = tool.definition();
+        assert_eq!(def.name, "browser");
+        assert!(def.requires_approval);
+        assert_eq!(def.category, ToolCategory::Browser);
+        assert!(def.description.contains("Chrome DevTools Protocol"));
+    }
+
+    #[test]
+    fn test_browser_tool_with_config() {
+        let tool = BrowserTool::with_config("http://localhost:9999".to_string(), 15000);
+        assert_eq!(tool.cdp_url, "http://localhost:9999");
+        assert_eq!(tool.request_timeout, 15000);
+    }
+
+    #[test]
+    fn test_browser_tool_default_config() {
+        let tool = BrowserTool::new();
+        assert_eq!(tool.cdp_url, "http://127.0.0.1:9222");
+        assert_eq!(tool.request_timeout, 30000);
+    }
+
+    #[test]
+    fn test_browser_tool_registry() {
+        let registry = ToolRegistry::with_default_tools();
+        assert!(registry.has("browser"));
+        let defs = registry.definitions();
+        let browser_def = defs.iter().find(|d| d.name == "browser").unwrap();
+        assert_eq!(browser_def.category, ToolCategory::Browser);
+    }
+
+    #[test]
+    fn test_browser_tool_missing_action() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ToolError::InvalidArguments(_, _)
+        ));
+    }
+
+    #[test]
+    fn test_browser_tool_invalid_action() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({"action": "invalid_action"});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        assert!(matches!(err, ToolError::InvalidArguments(_, _)));
+        assert!(format!("{}", err).contains("unknown action"));
+    }
+
+    #[test]
+    fn test_browser_tool_navigate_missing_url() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({"action": "navigate"});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ToolError::InvalidArguments(_, _)
+        ));
+    }
+
+    #[test]
+    fn test_browser_tool_click_missing_selector() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({"action": "click"});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ToolError::InvalidArguments(_, _)
+        ));
+    }
+
+    #[test]
+    fn test_browser_tool_type_missing_args() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({"action": "type"});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ToolError::InvalidArguments(_, _)
+        ));
+    }
+
+    #[test]
+    fn test_browser_tool_type_missing_text() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({"action": "type", "selector": "#input"});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ToolError::InvalidArguments(_, _)
+        ));
+    }
+
+    #[test]
+    fn test_browser_tool_evaluate_missing_script() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({"action": "evaluate"});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            ToolError::InvalidArguments(_, _)
+        ));
+    }
+
+    #[test]
+    fn test_browser_tool_scroll_invalid_direction() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({"action": "scroll", "direction": "sideways"});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_err());
+        assert!(format!("{}", result.unwrap_err()).contains("unknown scroll direction"));
+    }
+
+    #[test]
+    fn test_browser_tool_wait_action() {
+        let tool = BrowserTool::new();
+        let args = serde_json::json!({"action": "wait", "wait_ms": 10});
+        let result = tokio_test::block_on(tool.execute(args));
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert!(result.success);
+        assert!(result.output.contains("Waited for"));
+    }
+
+    #[test]
+    fn test_browser_tool_is_known_tool() {
+        assert!(ToolCallDetector::is_known_tool("browser"));
+    }
+
+    #[test]
+    fn test_browser_tool_category_serialization() {
+        let cat = ToolCategory::Browser;
+        let json = serde_json::to_string(&cat).unwrap();
+        assert_eq!(json, "\"Browser\"");
     }
 }

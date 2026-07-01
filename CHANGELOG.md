@@ -8,7 +8,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+*(none)*
+
+### Fixed
+*(none)*
+
+### Changed
+*(none)*
+
+### Removed
+*(none)*
+
+## [v1.1.0] — 2026-07-02
+
+### Added
 - **Multi-modal input support** — New `ContentPart` enum (`Text`, `ImageUrl`) enables attaching images alongside text in chat messages. Added `load_image()` utility that reads image files (PNG, JPEG, GIF, WebP) and produces data URIs. New `--image` / `-I` CLI flag accepts image file paths. Multi-modal serialization for all 5 providers: OpenAI-compatible APIs use `[{type, image_url, image_url: {url}}]`, Anthropic uses `[{type, image, source: {type, media_type, data}}]`, Ollama uses `images: [base64, ...]` array on messages. Agent loop integration via `run_agent_loop_with_images()` and `run_agent_loop_with_mcp_and_images()`. `ConversationMemory::add_user_message_with_images()` for persistent multi-turn conversations with images. Library exports include `ContentPart`, `ImageUrlContent`, `load_image`. 478 unit tests pass, clippy clean.
+- **Browser automation tool** — New `BrowserTool` built-in tool that controls a browser via Chrome DevTools Protocol (CDP). Supports 10 actions: `navigate` (go to URL), `click` (click element by CSS selector), `type` (type text into element), `screenshot` (capture page content), `extract` (extract text from element), `get_html` (get page/element HTML), `get_text` (get visible page text), `scroll` (scroll down/up/to_bottom/to_top), `wait` (pause execution), `evaluate` (run JavaScript). Connects to Chrome/Chromium running with `--remote-debugging-port=9222`. New `BrowserConfig` struct in `config.rs` with `cdp_url` and `request_timeout` fields. New `ToolCategory::Browser` variant. Registered in all 3 registry methods (`with_default_tools`, `with_web_search_config`, `with_config`). 15 unit tests covering definition, config, registry, argument validation, and action dispatch. 500 unit tests pass, clippy clean.
+- **Graceful degradation under load** — New `src/load.rs` module with `LoadManager`, `TokenBucket` rate limiter, `ErrorTracker` sliding window, and `LoadConfig` configuration. Combines rate limiting, concurrency control (semaphore-based), and load shedding (queue depth + error rate thresholds) into a single admission control API. Wired to HTTP server (`ServerState.load_manager`) — admission checks in `handle_connection` return 429/503 on overload. Wired to agent loop (`AgentLoopConfig.load_manager`) — admission checks before LLM calls with outcome recording. Load metrics exposed via `/metrics` endpoint in Prometheus format. New `LoadConfig` struct in `config.rs` with 7 configurable fields. 12 unit tests covering token bucket, error tracker, admission control, metrics, and Prometheus formatting. 507 unit tests pass, clippy clean.
 
 ## [v1.0.1] — 2026-06-02
 

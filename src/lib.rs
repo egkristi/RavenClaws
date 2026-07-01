@@ -90,6 +90,7 @@ pub mod error;
 pub mod eval;
 pub mod heartbeat;
 pub mod llm;
+pub mod load;
 pub mod mcp;
 pub mod patterns;
 pub mod persistence;
@@ -123,6 +124,7 @@ pub use llm::{
     create_client, load_image, ChatMessage, ChatResponse, ContentPart, ImageUrlContent,
     LLMProviderTrait, MultiModelManager,
 };
+pub use load::{Admission, LoadConfig, LoadManager, LoadMetrics, RequestOutcome};
 pub use mcp::{McpClient, McpClientManager, McpServer, McpSseServer};
 pub use patterns::{
     run_debate, run_debate_multi, run_research_synthesize, run_research_synthesize_multi,

@@ -29,8 +29,8 @@ support. One static binary, zero runtime dependencies — no Python, no Node, no
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
 | **~5.2 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
-| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **472 unit tests + 114 verification checks** |
-| **Library crate** | **18 modules** | **crates.io** | **AGPLv3 + Commercial** |
+| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **507 unit tests + 114 verification checks** |
+| **Library crate** | **21 modules** | **crates.io** | **AGPLv3 + Commercial** |
 
 ---
 
@@ -83,7 +83,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ### Verified across every target
 
-- **452 Rust unit tests** across **18 modules** (incl. `mockito`-backed provider request/response/error paths for all 5 providers, plus RavenFabric, swarm, heartbeat, eval, and scheduler tests), runnable anywhere via `cargo test`.
+- **507 Rust unit tests** across **21 modules** (incl. `mockito`-backed provider request/response/error paths for all 5 providers, plus RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, and load tests), runnable anywhere via `cargo test`.
 - Plus a **114-check verification suite** (`scripts/verify.sh`) spanning **10 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security, performance, LLM quality, swarm, and eval checks.
 - *Note:* the 114 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
 
@@ -158,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The library exposes all 18 modules with a stable public API:
+The library exposes all 21 modules with a stable public API:
 
 | Module | Purpose |
 |---|---|
@@ -489,12 +489,12 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | CI/CD pipeline | ✅ Implemented | fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard |
 | Verification suite | ✅ Working | 114 system/integration checks · 10 modules · 4 targets (`scripts/verify.sh`)
-| Rust unit tests | ✅ Working | 452 tests across 18 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler |
+| Rust unit tests | ✅ Working | 507 tests across 21 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load |
 | Reproducible builds | ✅ Working | `Cargo.lock` committed (`--locked`), multi-arch Docker cross-linker, RavenFabric agent checksum-verified |
 | `--exec` one-shot mode | ✅ Working | Run a single task, then exit |
 | Interactive REPL | ✅ Working | `--repl` with `/exit`, `/reset` commands |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard |
-| Tool-use / function calling | ✅ Working | ToolImpl trait + ToolRegistry + 4 built-in tools + agent loop wiring |
+| Tool-use / function calling | ✅ Working | ToolImpl trait + ToolRegistry + 7 built-in tools (shell, read/write file, web fetch, web search, browser) + agent loop wiring |
 | Streaming responses | ✅ Working | SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working | `ConversationMemory` with configurable max history |
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt`, CLI `--system-prompt`, env var |
@@ -509,6 +509,9 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Sandboxed execution | ✅ Working | Workdir jail, resource limits, timeouts |
 | Tamper-evident audit log | ✅ Working | HMAC-SHA256 chained, structured JSON |
 | Multi-model routing | ✅ Working | `next_client()` round-robin wired into agent modes |
+| Multi-modal input | ✅ **v1.1.0** | `ContentPart` enum (`Text`, `ImageUrl`), `--image` CLI flag, multi-modal serialization for all 5 providers |
+| Browser automation | ✅ **v1.1.0** | `BrowserTool` with 10 CDP actions (navigate, click, type, screenshot, extract, scroll, wait, evaluate) |
+| Graceful degradation | ✅ **v1.1.0** | `LoadManager` with rate limiting, concurrency control, load shedding; 429/503 under overload |
 | RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |
 
 ## How RavenClaws intends to win

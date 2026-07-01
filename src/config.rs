@@ -97,6 +97,14 @@ pub struct Config {
     /// MCP server connections configuration (v0.9.6)
     #[serde(default)]
     pub mcp: McpConfig,
+
+    /// Browser automation configuration (v1.1.0)
+    #[serde(default)]
+    pub browser: BrowserConfig,
+
+    /// Load management / graceful degradation configuration (v1.1.0)
+    #[serde(default)]
+    pub load: crate::load::LoadConfig,
 }
 
 /// MCP server connections configuration (v0.9.6)
@@ -182,6 +190,42 @@ impl Default for WebSearchConfig {
             fetch_content: default_true(),
         }
     }
+}
+
+/// Browser automation configuration (v1.1.0)
+///
+/// Configures the CDP (Chrome DevTools Protocol) endpoint for browser automation.
+/// Requires Chrome/Chromium running with `--remote-debugging-port=9222`.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, Deserialize)]
+#[non_exhaustive]
+pub struct BrowserConfig {
+    /// CDP endpoint URL (e.g., "http://127.0.0.1:9222")
+    #[serde(default = "default_browser_cdp_url")]
+    pub cdp_url: String,
+
+    /// Request timeout in milliseconds for CDP commands
+    #[serde(default = "default_browser_timeout")]
+    pub request_timeout: u64,
+}
+
+impl Default for BrowserConfig {
+    fn default() -> Self {
+        Self {
+            cdp_url: default_browser_cdp_url(),
+            request_timeout: default_browser_timeout(),
+        }
+    }
+}
+
+fn default_browser_cdp_url() -> String {
+    "http://127.0.0.1:9222".to_string()
+}
+
+fn default_browser_timeout() -> u64 {
+    30000
 }
 
 fn default_search_endpoint() -> String {
@@ -725,6 +769,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -765,6 +811,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -803,6 +851,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -839,6 +889,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         // OpenAI doesn't need an endpoint, but the llm.endpoint is empty
@@ -879,6 +931,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -955,6 +1009,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
@@ -993,6 +1049,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1031,6 +1089,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1067,6 +1127,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1117,6 +1179,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1153,6 +1217,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1362,6 +1428,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1398,6 +1466,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1434,6 +1504,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1540,6 +1612,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1576,6 +1650,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
@@ -1612,6 +1688,8 @@ mod tests {
             heartbeat: crate::heartbeat::HeartbeatConfig::default(),
             mcp: McpConfig::default(),
             swarm: crate::swarm::SwarmConfig::default(),
+            browser: BrowserConfig::default(),
+            load: crate::load::LoadConfig::default(),
         };
 
         let result = config.validate();
