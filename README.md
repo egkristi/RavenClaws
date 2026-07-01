@@ -9,28 +9,26 @@
 [![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](docs/guides/verification.md)
 [![Binary](https://img.shields.io/badge/binary-~5.2MB-blue)]()
 [![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
-[![Status](https://img.shields.io/badge/status-v0.9.6-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v1.1.0-brightgreen)](ROADMAP.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v0.9.6 (2026-06-02).** HTTP agent execution API (`/chat`, `/execute`, `/tools`, `/tasks/{id}`, `/health/deep`),
-> MCP TOML config section (`[mcp]`), multi-MCP-client support via `[[mcp.servers]]`,
-> swarm profile TOML shorthand (`[swarm.profiles.name]`), config hot-reload (SIGHUP),
-> eval harness tool call assertions (`ToolCalled`, `ToolNotCalled`), server mode docs.
-> The provider layer (6 providers), one-shot execution (`--exec`),
-> reproducible multi-arch builds, verification + supply-chain pipeline, agent loop, tool-use, MCP client,
-> retry/fallback chains, token budgets, native Anthropic integration, **swarm mode**, **supervisor mode**,
-> **RavenFabric mesh client**, **MCP server**, **HTTP server mode**, **autonomous heartbeat agent**,
-> **long-horizon task persistence**, **scheduling/triggers**, **inter-agent communication bus**,
-> **swarm health & telemetry**, **library crate** (on crates.io), and **eval harness** all work today.
-> This README marks ✅ built vs. 📋 planned — honestly. Trust is a feature; we don't inflate it.
+> **Status: v1.1.0 "Simply the Best" (2026-07-02).** Multi-modal input (`ContentPart`, `--image` CLI flag),
+> browser automation tool (10 CDP actions), graceful degradation under load (`LoadManager`, `TokenBucket`),
+> WASM plugin system (Plugin ABI v1), SQLite conversation persistence, MCP SSE transport,
+> multi-agent patterns (debate, review-loop, research-synthesize, voting), durable execution with
+> iteration-level checkpoint/resume, self-provisioning swarm orchestration with 4 topologies,
+> inter-agent communication bus, swarm health & telemetry, autonomous heartbeat agent,
+> scheduling/triggers, HTTP server mode, MCP client & server, RavenFabric mesh client,
+> eval harness, library crate on crates.io, and verified supply chain all work today.
+> 507 unit tests, 114 verification checks, 7 LLM providers, 23 source modules.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
-| **~5.2 MB binary** | **Memory-safe Rust** | **5 providers** | **Binary · Docker · K8s** |
+| **~5.2 MB binary** | **Memory-safe Rust** | **7 providers** | **Binary · Docker · K8s** |
 | **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **507 unit tests + 114 verification checks** |
-| **Library crate** | **21 modules** | **crates.io** | **AGPLv3 + Commercial** |
+| **Library crate** | **23 modules** | **crates.io** | **AGPLv3 + Commercial** |
 
 ---
 
@@ -83,7 +81,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ### Verified across every target
 
-- **507 Rust unit tests** across **21 modules** (incl. `mockito`-backed provider request/response/error paths for all 5 providers, plus RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, and load tests), runnable anywhere via `cargo test`.
+- **507 Rust unit tests** across **23 modules** (incl. `mockito`-backed provider request/response/error paths for all 7 providers, plus RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, and load tests), runnable anywhere via `cargo test`.
 - Plus a **114-check verification suite** (`scripts/verify.sh`) spanning **10 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security, performance, LLM quality, swarm, and eval checks.
 - *Note:* the 114 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
 
@@ -158,14 +156,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The library exposes all 21 modules with a stable public API:
+The library exposes all 23 modules with a stable public API:
 
 | Module | Purpose |
 |---|---|
 | `ravenclaws::agent` | Agent implementations, agent loop, conversation memory |
-| `ravenclaws::llm` | LLM provider abstraction + 5 client implementations |
+| `ravenclaws::llm` | LLM provider abstraction + 7 client implementations |
 | `ravenclaws::config` | Configuration structs, TOML/env loading, validation |
-| `ravenclaws::tools` | Tool abstraction, registry, 5 built-in tools |
+| `ravenclaws::tools` | Tool abstraction, registry, 6 built-in tools |
 | `ravenclaws::policy` | Deny-by-default policy engine |
 | `ravenclaws::sandbox` | Sandboxed execution (workdir jail, resource limits) |
 | `ravenclaws::audit` | Tamper-evident audit log (HMAC-SHA256 chained) |
@@ -178,6 +176,10 @@ The library exposes all 21 modules with a stable public API:
 | `ravenclaws::telemetry` | OpenTelemetry tracing (OTLP gRPC/stdout) |
 | `ravenclaws::ravenfabric` | RavenFabric mesh client |
 | `ravenclaws::eval` | Eval harness with assertions, run traces, tool call assertions |
+| `ravenclaws::patterns` | Multi-agent patterns (debate, review-loop, research-synthesize, voting) |
+| `ravenclaws::persistence` | SQLite-backed conversation persistence with retention policies |
+| `ravenclaws::plugins` | WASM plugin system (Plugin ABI v1) |
+| `ravenclaws::load` | Graceful degradation (LoadManager, TokenBucket, ErrorTracker) |
 | `ravenclaws::error` | Unified error types |
 
 ### Docker
@@ -215,7 +217,7 @@ kubectl -n ravenclaws logs -l app.kubernetes.io/name=ravenclaws
 
 | Variable | Description | Default |
 |---|---|---|
-| `RAVENCLAWS__LLM__PROVIDER` | Provider: litellm, openrouter, ollama, openai, anthropic, openai-compatible | `litellm` |
+| `RAVENCLAWS__LLM__PROVIDER` | Provider: litellm, openrouter, ollama, openai, anthropic, openai-compatible, azure | `litellm` |
 | `RAVENCLAWS__LLM__ENDPOINT` | LLM endpoint URL | (provider-dependent) |
 | `RAVENCLAWS__LLM__MODEL` | Default model | `gpt-4o-mini` |
 | `LITELLM_API_KEY` | API key for LiteLLM/OpenRouter/OpenAI | (required for cloud) |
@@ -453,8 +455,11 @@ Container images target both `linux/amd64` and `linux/arm64`.
 │  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐   │    │
 │  │  │LiteLLM │ │ OpenAI │ │OpenRtr │ │ Ollama │   │    │
 │  │  └────────┘ └────────┘ └────────┘ └────────┘   │    │
-│  │  ┌──────────┐ ┌──────────────────────┐          │    │
-│  │  │Anthropic │ │ MultiModelManager    │          │    │
+│  │  ┌──────────┐ ┌──────────────┐ ┌────────┐      │    │
+│  │  │Anthropic │ │OpenAI-Compat │ │ Azure  │      │    │
+│  │  └──────────┘ └──────────────┘ └────────┘      │    │
+│  │  ┌──────────────────────┐                       │    │
+│  │  │ MultiModelManager    │                       │    │
 │  │  └──────────┘ │ round-robin · fallback│         │    │
 │  │               │ circuit breaker       │         │    │
 │  │               └──────────────────────┘          │    │
@@ -482,19 +487,19 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Component | Status | Details |
 |---|---|---|
 | Single agent (single + multi-model) | ✅ Working | Sends prompt(s), logs response(s) |
-| LLM providers (5) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama, Anthropic (unified trait) |
+| LLM providers (7) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama, Anthropic, OpenAI-Compatible, Azure (unified trait) |
 | CLI & env-var overrides | ✅ Working | `--provider`, `--endpoint`, `--model`; layered TOML→env→flags |
 | Config validation | ✅ Working | TLS enforcement, endpoint checks |
 | Container & K8s security | ✅ Working | Distroless, non-root, read-only FS, dropped caps, seccomp, RBAC |
 | CI/CD pipeline | ✅ Implemented | fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard |
 | Verification suite | ✅ Working | 114 system/integration checks · 10 modules · 4 targets (`scripts/verify.sh`)
-| Rust unit tests | ✅ Working | 507 tests across 21 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load |
+| Rust unit tests | ✅ Working | 507 tests across 23 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load |
 | Reproducible builds | ✅ Working | `Cargo.lock` committed (`--locked`), multi-arch Docker cross-linker, RavenFabric agent checksum-verified |
 | `--exec` one-shot mode | ✅ Working | Run a single task, then exit |
 | Interactive REPL | ✅ Working | `--repl` with `/exit`, `/reset` commands |
 | Agent loop / ReAct planning | ✅ Working | perceive→plan→act→observe with max-iteration guard |
-| Tool-use / function calling | ✅ Working | ToolImpl trait + ToolRegistry + 7 built-in tools (shell, read/write file, web fetch, web search, browser) + agent loop wiring |
+| Tool-use / function calling | ✅ Working | ToolImpl trait + ToolRegistry + 6 built-in tools (shell, read/write file, web fetch, web search, browser) + agent loop wiring |
 | Streaming responses | ✅ Working | SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working | `ConversationMemory` with configurable max history |
 | System prompt / persona | ✅ Working | `LLMConfig.system_prompt`, CLI `--system-prompt`, env var |
@@ -509,7 +514,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Sandboxed execution | ✅ Working | Workdir jail, resource limits, timeouts |
 | Tamper-evident audit log | ✅ Working | HMAC-SHA256 chained, structured JSON |
 | Multi-model routing | ✅ Working | `next_client()` round-robin wired into agent modes |
-| Multi-modal input | ✅ **v1.1.0** | `ContentPart` enum (`Text`, `ImageUrl`), `--image` CLI flag, multi-modal serialization for all 5 providers |
+| Multi-modal input | ✅ **v1.1.0** | `ContentPart` enum (`Text`, `ImageUrl`), `--image` CLI flag, multi-modal serialization for all 7 providers |
 | Browser automation | ✅ **v1.1.0** | `BrowserTool` with 10 CDP actions (navigate, click, type, screenshot, extract, scroll, wait, evaluate) |
 | Graceful degradation | ✅ **v1.1.0** | `LoadManager` with rate limiting, concurrency control, load shedding; 429/503 under overload |
 | RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |

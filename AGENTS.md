@@ -517,6 +517,7 @@ for r in data.get('workflow_runs',[])[:6]:
 - **Do not** change the distroless base image without security review
 - **Do not** remove the `readOnlyRootFilesystem: true` or `capabilities.drop: ["ALL"]` from K8s manifests
 - **Do not** make swarm/supervisor modes exit with error — keep the stub pattern until implemented
+- **Do not** create files >300 lines in a single `create_file` call — split into sequential sections (structs first, then impls, then tests) to avoid "Response too long" errors
 
 ### Do
 
@@ -531,6 +532,10 @@ for r in data.get('workflow_runs',[])[:6]:
 - **Do** run `.githooks/setup.sh` after cloning the repo to enable pre-commit/pre-push hooks
 - **Do** update `.githooks/` when adding new verification checks that should run before commits
 - **Do** use env vars for all secrets — never config files
+- **Do** split large work across multiple turns — if you've accumulated significant context, send your response and continue in the next turn to avoid hitting the ~60KB response limit
+- **Do** use `grep_search` and targeted `read_file` ranges instead of reading entire files — this keeps context small and avoids response-length errors
+- **Do** use ROADMAP.md as the canonical task list — add tasks there so they are not forgotten, then do one task at a time according to the roadmap, then move on to the next task. Do one task at a time really well.
+- **Do** send a response after reading/planning before starting implementation — don't try to do research + implementation in the same turn
 
 ---
 

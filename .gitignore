@@ -28,6 +28,9 @@ logs/
 config/local.toml
 config/*.local.toml
 
+# Wrangler (Cloudflare Workers local dev)
+website/.wrangler/
+
 # Kubernetes
 *.kubeconfig
 

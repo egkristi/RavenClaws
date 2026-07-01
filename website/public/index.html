@@ -111,7 +111,7 @@
           <div class="stat"><b>0</b><span>runtime deps</span></div>
           <div class="stat"><b>7</b><span>LLM providers</span></div>
           <div class="stat"><b>507</b><span>unit tests</span></div>
-          <div class="stat"><b>21</b><span>modules</span></div>
+          <div class="stat"><b>23</b><span>modules</span></div>
         </div>
       </div>
 
@@ -234,7 +234,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 5v14M15 5v14M5 19h14"/></svg></div>
         <h3>Library crate</h3>
-        <p>Use RavenClaws as a dependency — <code>ravenclaws</code> on crates.io exposes all 21 modules through a stable, semver-disciplined public API.</p>
+        <p>Use RavenClaws as a dependency — <code>ravenclaws</code> on crates.io exposes all 23 modules through a stable, semver-disciplined public API.</p>
       </div>
 
       <div class="card">
@@ -252,7 +252,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z"/><path d="M9 12h6M12 9v6"/></svg></div>
         <h3>Multi-modal input</h3>
-        <p>Attach images alongside text in chat messages — PNG, JPEG, GIF, WebP. Supported across all 5 providers via <code>--image</code> CLI flag or library API.</p>
+        <p>Attach images alongside text in chat messages — PNG, JPEG, GIF, WebP. Supported across all 7 providers via <code>--image</code> CLI flag or library API.</p>
       </div>
 
       <div class="card">
@@ -303,7 +303,7 @@
         <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">use as a library — Cargo.toml + main.rs</span><button class="code__copy" type="button">Copy</button></div>
 <pre><code><span class="tok-c"># Cargo.toml</span>
 [dependencies]
-ravenclaws = <span class="tok-s">"1.0"</span>
+ravenclaws = <span class="tok-s">"1.1"</span>
 
 <span class="tok-c">// main.rs</span>
 <span class="tok-k">use</span> ravenclaws::{Config, ChatMessage, create_client, LLMProviderTrait};
@@ -356,6 +356,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
       <div class="prov"><div class="badge">Ol</div><b>Ollama</b><span>local · air-gapped</span></div>
       <div class="prov"><div class="badge">An</div><b>Anthropic</b><span>native Claude tool use</span></div>
       <div class="prov"><div class="badge">OC</div><b>OpenAI-Compat</b><span>vLLM, Groq, TGI, …</span></div>
+      <div class="prov"><div class="badge">Az</div><b>Azure</b><span>Azure OpenAI</span></div>
     </div>
   </div>
 </section>
@@ -391,7 +392,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
         </tbody>
       </table>
     </div>
-    <p class="dim" style="margin-top:14px;font-size:.86rem">Self-reported from the project roadmap (v1.1.0). Capabilities of third-party tools vary by version and configuration.</p>
+    <p class="dim" style="margin-top:14px;font-size:.86rem">Self-reported from the project roadmap (v1.1.0). Capabilities of third-party tools vary by version and configuration. Azure provider added in v1.1.0.</p>
     <img src="/assets/raven-flock.webp" alt="A murder of ravens in flight, representing swarm orchestration" loading="lazy" width="1280" height="698" style="display:block;max-width:min(800px,100%);margin:32px auto 0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.35)">
   </div>
 </section>
@@ -431,7 +432,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
         <h3>AGPLv3 — Open source</h3>
         <p class="price">Free for personal use, OSS projects, and commercial use up to 50 agents / $5M revenue.</p>
         <ul>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Full agent runtime &amp; all 6 providers</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Full agent runtime &amp; all 7 providers</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Tools, MCP, sandbox, audit log</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Docker &amp; Kubernetes manifests</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Library crate &amp; the full source</li>

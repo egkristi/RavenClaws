@@ -12,6 +12,8 @@ This guide walks you through your first RavenClaws agent, from installation to r
   - [OpenRouter](https://openrouter.ai/)
   - [Ollama](https://ollama.ai/) (fully local, no API key needed)
   - [Anthropic](https://console.anthropic.com/)
+  - [Azure](https://azure.microsoft.com/en-us/products/ai-services/openai-service)
+  - Any OpenAI-compatible endpoint (vLLM, Groq, TGI, …)
 
 ## Installation
 
