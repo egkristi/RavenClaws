@@ -88,6 +88,7 @@ pub mod background;
 pub mod config;
 pub mod error;
 pub mod eval;
+pub mod healing;
 pub mod heartbeat;
 pub mod llm;
 pub mod load;
@@ -119,6 +120,7 @@ pub use config::{
 };
 pub use error::RavenClawsError;
 pub use eval::EvalRunner;
+pub use healing::{HealingCircuitBreaker, HealingCircuitState, HealingConfig, SelfHealingEngine};
 pub use heartbeat::HeartbeatAgent;
 pub use llm::{
     create_client, load_image, ChatMessage, ChatResponse, ContentPart, ImageUrlContent,

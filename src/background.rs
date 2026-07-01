@@ -21,6 +21,7 @@
 
 use crate::config::RuntimeConfig;
 use crate::error::{RavenClawsError, Result};
+use crate::healing::SelfHealingEngine;
 use crate::llm::LLMProviderTrait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -115,6 +116,8 @@ pub struct BackgroundTaskManager {
     tasks_dir: PathBuf,
     /// In-memory task index (id → task)
     tasks: Arc<RwLock<HashMap<String, BackgroundTask>>>,
+    /// Self-healing engine for automatic failure recovery and circuit breakers
+    healing_engine: Option<Arc<std::sync::Mutex<SelfHealingEngine>>>,
 }
 
 impl BackgroundTaskManager {
@@ -137,7 +140,11 @@ impl BackgroundTaskManager {
 
         let tasks = Arc::new(RwLock::new(HashMap::new()));
 
-        let mut manager = Self { tasks_dir, tasks };
+        let mut manager = Self {
+            tasks_dir,
+            tasks,
+            healing_engine: None,
+        };
 
         // Load existing tasks from disk
         let count = manager.load_tasks().await?;
@@ -259,6 +266,32 @@ impl BackgroundTaskManager {
             "Executing background task"
         );
 
+        // Check self-healing circuit breaker before execution
+        if let Some(ref healing) = self.healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy(task_id)
+            };
+            if !healthy {
+                let err_msg = format!(
+                    "Background task '{}' blocked by self-healing circuit breaker",
+                    task_id
+                );
+                warn!(task_id = %task_id, "{}", err_msg);
+
+                // Update task status to failed
+                let mut tasks = self.tasks.write().await;
+                if let Some(task) = tasks.get_mut(task_id) {
+                    task.status = TaskStatus::Failed;
+                    task.error = Some(err_msg.clone());
+                    task.updated_at = chrono::Utc::now().to_rfc3339();
+                    self.save_task(task)?;
+                }
+
+                return Err(RavenClawsError::HealingError(err_msg));
+            }
+        }
+
         // Determine checkpoint directory for durable execution
         let checkpoint_dir = self.tasks_dir.join("checkpoints");
         let _ = std::fs::create_dir_all(&checkpoint_dir);
@@ -279,6 +312,7 @@ impl BackgroundTaskManager {
             metrics_callback: None,
             load_manager: None,
             retry_config: None,
+            healing_engine: self.healing_engine.clone(),
         };
 
         let result = crate::agent::run_agent_loop(
@@ -315,6 +349,12 @@ impl BackgroundTaskManager {
                 task.error = Some(e.to_string());
                 task.updated_at = chrono::Utc::now().to_rfc3339();
                 self.save_task(task)?;
+
+                // Record failure in self-healing engine
+                if let Some(ref healing) = self.healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure(task_id, &e.to_string());
+                }
 
                 warn!(
                     task_id = %task_id,
@@ -374,6 +414,12 @@ impl BackgroundTaskManager {
                 task_id, task.status
             ))),
         }
+    }
+
+    /// Set the self-healing engine for automatic failure recovery.
+    #[allow(dead_code)]
+    pub fn set_healing_engine(&mut self, engine: Option<Arc<std::sync::Mutex<SelfHealingEngine>>>) {
+        self.healing_engine = engine;
     }
 
     /// Resume all incomplete tasks (Pending or Running) from disk.

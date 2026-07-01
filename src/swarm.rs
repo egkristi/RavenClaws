@@ -38,6 +38,7 @@
 use crate::agent::ConversationMemory;
 use crate::audit::{AuditEventType, AuditLog};
 use crate::error::{RavenClawsError, Result};
+use crate::healing::SelfHealingEngine;
 use crate::llm::{ChatMessage, LLMProviderTrait, MultiModelManager};
 use crate::policy::PolicyEngine;
 use crate::ravenfabric::RavenFabricClient;
@@ -1091,6 +1092,10 @@ pub struct SwarmOrchestrator {
     /// Swarm health monitor (active when enable_health_monitoring is true)
     /// Uses Arc<RwLock> for interior mutability since execute_with_profile takes &self
     health_monitor: Option<Arc<RwLock<SwarmHealthMonitor>>>,
+
+    /// Self-healing engine for automatic failure recovery and circuit breakers.
+    /// Shared across sub-orchestrators via Arc<RwLock>.
+    healing_engine: Option<Arc<std::sync::Mutex<SelfHealingEngine>>>,
 }
 
 impl SwarmOrchestrator {
@@ -1133,6 +1138,7 @@ impl SwarmOrchestrator {
             registry,
             message_bus,
             health_monitor,
+            healing_engine: None,
         }
     }
 
@@ -1173,6 +1179,7 @@ impl SwarmOrchestrator {
             registry,
             message_bus,
             health_monitor,
+            healing_engine: None,
         }
     }
 
@@ -1366,6 +1373,24 @@ impl SwarmOrchestrator {
             }
         }
 
+        // Check self-healing circuit breaker before executing
+        if let Some(ref healing) = self.healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy(role)
+            };
+            if !healthy {
+                warn!(
+                    role = %role,
+                    "Worker blocked by self-healing circuit breaker"
+                );
+                return Err(RavenClawsError::HealingError(format!(
+                    "Worker '{}' blocked by circuit breaker",
+                    role
+                )));
+            }
+        }
+
         let llm = self.llm.as_ref().ok_or_else(|| {
             RavenClawsError::CommandExecution("No LLM provider available for worker".to_string())
         })?;
@@ -1394,8 +1419,19 @@ impl SwarmOrchestrator {
                     hm_guard.task_failed(role);
                 }
             }
+            // Record failure in self-healing engine
+            if let Some(ref healing) = self.healing_engine {
+                let mut engine = healing.lock().unwrap();
+                engine.record_failure(role, &e.to_string());
+            }
             RavenClawsError::CommandExecution(format!("Worker {} failed: {}", role, e))
         })?;
+
+        // Record success in self-healing engine
+        if let Some(ref healing) = self.healing_engine {
+            let mut engine = healing.lock().unwrap();
+            engine.record_success(role);
+        }
 
         let content = response
             .choices
@@ -1473,6 +1509,20 @@ impl SwarmOrchestrator {
             )
         })?;
 
+        // Check self-healing circuit breaker before supervisor execution
+        if let Some(ref healing) = self.healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("supervisor")
+            };
+            if !healthy {
+                warn!("Supervisor blocked by self-healing circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "Supervisor blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
         // Register supervisor with health monitor
         if let Some(ref hm) = self.health_monitor {
             if let Ok(mut hm_guard) = hm.try_write() {
@@ -1528,9 +1578,21 @@ impl SwarmOrchestrator {
 
             let messages = memory.history().to_vec();
             let response = match llm.chat(messages).await {
-                Ok(r) => r,
+                Ok(r) => {
+                    // Record success in self-healing engine
+                    if let Some(ref healing) = self.healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success("supervisor");
+                    }
+                    r
+                }
                 Err(e) => {
                     warn!(error = %e, "Supervisor LLM request failed");
+                    // Record failure in self-healing engine
+                    if let Some(ref healing) = self.healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure("supervisor", &e.to_string());
+                    }
                     continue;
                 }
             };
@@ -1641,6 +1703,7 @@ impl SwarmOrchestrator {
                             let subtask = subtask_desc.to_string();
                             let message_bus = self.message_bus.clone();
                             let health_monitor = self.health_monitor.clone();
+                            let healing_engine = self.healing_engine.clone();
 
                             Box::pin(async move {
                                 let mut sub_orchestrator = SwarmOrchestrator {
@@ -1660,6 +1723,7 @@ impl SwarmOrchestrator {
                                     registry: ToolRegistry::with_default_tools(),
                                     message_bus,
                                     health_monitor,
+                                    healing_engine,
                                 };
 
                                 // Initialize sub-orchestrator sandbox

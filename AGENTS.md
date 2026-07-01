@@ -23,14 +23,14 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 1.2.0 (Self-Healing & Resilience)
+- **Version:** 1.2.0 (Self-Healing & Resilience) — self-healing engine with circuit breakers, failure tracking, and dead worker detection
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io
 - **Build:** `cargo build --release` (~5.2 MB stripped binary, ~5 ms startup)
 - **Library:** Available as `ravenclaws` on crates.io (binary + library crate)
 
-### Architecture (21 modules)
+### Architecture (22 modules)
 
 ```
 src/
@@ -56,7 +56,8 @@ src/
 ├── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting)
 ├── persistence.rs — SQLite-backed conversation persistence with retention policies
 ├── plugins.rs — WASM plugin system (Plugin ABI v1, WasmPlugin, WasmPluginManager)
-└── load.rs — Graceful degradation (LoadManager, TokenBucket, ErrorTracker, LoadConfig)
+├── load.rs — Graceful degradation (LoadManager, TokenBucket, ErrorTracker, LoadConfig)
+└── healing.rs — Self-healing engine (SelfHealingEngine, HealingCircuitBreaker, FailureRecord, exponential backoff)
 ```
 
 ### Current State
@@ -107,6 +108,7 @@ src/
 | Multi-modal input | ✅ v1.1.0 — `ContentPart` enum (`Text`, `ImageUrl`), `load_image()`, `--image` CLI flag, multi-modal serialization for all 5 providers, agent loop integration, `ConversationMemory::add_user_message_with_images()`, library exports |
 | Browser automation tool | ✅ v1.1.0 — `BrowserTool` with 10 CDP actions, `BrowserConfig`, `ToolCategory::Browser`, 15 unit tests |
 | Graceful degradation under load | ✅ v1.1.0 — `src/load.rs` with `LoadManager`, `TokenBucket`, `ErrorTracker`, `LoadConfig`, wired to HTTP server + agent loop, 12 unit tests |
+| Self-healing engine | ✅ v1.2.0 — `src/healing.rs` with `SelfHealingEngine`, `HealingCircuitBreaker`, `FailureRecord`, `HealingConfig`, circuit breaker (Closed/Open/HalfOpen), exponential backoff with jitter, dead worker detection, `is_transient()` error classification, 22 unit tests |
 | Pre-built binaries / releases | 📋 Wired, untagged — CI produces them on tag; none released yet |
 
 ---
@@ -221,6 +223,7 @@ If a feature cannot be tested (e.g., hardware-dependent), document the reason in
 | `policy.rs` | `PolicyEngine` with shell/path/network allow-lists | Tool execution, LLM calls |
 | `audit.rs` | `AuditLog` with HMAC-SHA256 chaining | Tool execution, policy decisions |
 | `sandbox.rs` | `Sandbox` with workdir jail, resource limits, timeouts | Tool execution, LLM calls |
+| `healing.rs` | `SelfHealingEngine`, `HealingCircuitBreaker`, `FailureRecord`, exponential backoff | Agent logic, LLM calls |
 
 ### Adding a New LLM Provider
 

@@ -9,6 +9,7 @@ mod background;
 mod config;
 mod error;
 mod eval;
+mod healing;
 mod heartbeat;
 mod llm;
 mod load;
@@ -590,6 +591,7 @@ async fn main() -> anyhow::Result<()> {
             metrics_callback: None,
             load_manager: None,
             retry_config: None,
+            healing_engine: None,
         };
 
         // Build a configured tool registry (respects web_search endpoint from config)
@@ -1042,7 +1044,7 @@ async fn main() -> anyhow::Result<()> {
                     verbose: args.pattern_verbose,
                 };
                 let mode_fut =
-                    patterns::run_debate_multi(multi_llm, config, ravenfabric, pattern_cfg);
+                    patterns::run_debate_multi(multi_llm, config, ravenfabric, pattern_cfg, None);
                 tokio::select! {
                     result = mode_fut => result?,
                     _ = wait_for_shutdown(&shutdown) => {
@@ -1062,8 +1064,13 @@ async fn main() -> anyhow::Result<()> {
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
                 };
-                let mode_fut =
-                    patterns::run_review_loop_multi(multi_llm, config, ravenfabric, pattern_cfg);
+                let mode_fut = patterns::run_review_loop_multi(
+                    multi_llm,
+                    config,
+                    ravenfabric,
+                    pattern_cfg,
+                    None,
+                );
                 tokio::select! {
                     result = mode_fut => result?,
                     _ = wait_for_shutdown(&shutdown) => {
@@ -1088,6 +1095,7 @@ async fn main() -> anyhow::Result<()> {
                     config,
                     ravenfabric,
                     pattern_cfg,
+                    None,
                 );
                 tokio::select! {
                     result = mode_fut => result?,
@@ -1109,7 +1117,7 @@ async fn main() -> anyhow::Result<()> {
                     verbose: args.pattern_verbose,
                 };
                 let mode_fut =
-                    patterns::run_voting_multi(multi_llm, config, ravenfabric, pattern_cfg);
+                    patterns::run_voting_multi(multi_llm, config, ravenfabric, pattern_cfg, None);
                 tokio::select! {
                     result = mode_fut => result?,
                     _ = wait_for_shutdown(&shutdown) => {
@@ -1216,7 +1224,7 @@ async fn main() -> anyhow::Result<()> {
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
                 };
-                let mode_fut = patterns::run_debate(llm, config, ravenfabric, pattern_cfg);
+                let mode_fut = patterns::run_debate(llm, config, ravenfabric, pattern_cfg, None);
                 tokio::select! {
                     result = mode_fut => result?,
                     _ = wait_for_shutdown(&shutdown) => {
@@ -1236,7 +1244,8 @@ async fn main() -> anyhow::Result<()> {
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
                 };
-                let mode_fut = patterns::run_review_loop(llm, config, ravenfabric, pattern_cfg);
+                let mode_fut =
+                    patterns::run_review_loop(llm, config, ravenfabric, pattern_cfg, None);
                 tokio::select! {
                     result = mode_fut => result?,
                     _ = wait_for_shutdown(&shutdown) => {
@@ -1257,7 +1266,7 @@ async fn main() -> anyhow::Result<()> {
                     verbose: args.pattern_verbose,
                 };
                 let mode_fut =
-                    patterns::run_research_synthesize(llm, config, ravenfabric, pattern_cfg);
+                    patterns::run_research_synthesize(llm, config, ravenfabric, pattern_cfg, None);
                 tokio::select! {
                     result = mode_fut => result?,
                     _ = wait_for_shutdown(&shutdown) => {
@@ -1277,7 +1286,7 @@ async fn main() -> anyhow::Result<()> {
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
                 };
-                let mode_fut = patterns::run_voting(llm, config, ravenfabric, pattern_cfg);
+                let mode_fut = patterns::run_voting(llm, config, ravenfabric, pattern_cfg, None);
                 tokio::select! {
                     result = mode_fut => result?,
                     _ = wait_for_shutdown(&shutdown) => {

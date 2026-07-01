@@ -111,6 +111,29 @@ pub enum LLMError {
     CircuitBreakerOpen(String),
 }
 
+impl LLMError {
+    /// Returns `true` if this error is transient and can be retried.
+    #[allow(dead_code)]
+    ///
+    /// Transient errors are those that may succeed on retry:
+    /// - `RequestFailed` — network issues, server errors
+    /// - `RateLimited` — back off and retry
+    /// - `CircuitBreakerOpen` — may close after recovery period
+    ///
+    /// Non-transient errors should NOT be retried:
+    /// - `AuthFailed` — credentials are wrong
+    /// - `TokenBudgetExceeded` — budget is exhausted
+    /// - `InvalidResponse` — response format is wrong
+    /// - `ProviderNotSupported` — wrong provider
+    /// - `AllProvidersFailed` — all providers have been tried
+    pub fn is_transient(&self) -> bool {
+        matches!(
+            self,
+            LLMError::RequestFailed(_) | LLMError::RateLimited | LLMError::CircuitBreakerOpen(_)
+        )
+    }
+}
+
 /// Retry configuration for LLM requests (v0.5)
 #[derive(Debug, Clone)]
 pub struct RetryConfig {

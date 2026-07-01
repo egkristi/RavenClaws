@@ -1214,19 +1214,22 @@ under load. All three are production-ready with full test coverage.
 
 **Theme:** Make RavenClaws resilient to transient failures. The agent loop now retries
 LLM calls with exponential backoff before falling back to the provider fallback chain.
-This is the first step toward full self-healing — failed agents are retried, not
-abandoned.
+A new self-healing engine provides automatic detection, retry, and recovery of failed
+agents with circuit breakers, failure tracking, and dead worker detection.
 
 #### Completed in v1.2.0
 
 - [x] **Agent loop retry with exponential backoff** — New `call_llm_with_retry()` helper wraps LLM calls with configurable retry logic. Retries on transient errors (RequestFailed, RateLimited, CircuitBreakerOpen) with exponential backoff (100ms base, doubled each attempt, configurable jitter). Non-transient errors (AuthFailed, TokenBudgetExceeded, InvalidResponse) are NOT retried. Checkpoints are preserved during retries — only deleted on permanent failure. New `retry_config` field on `AgentLoopConfig` (default: `None` — no retry, uses fallback chain directly). 5 new unit tests. 512 unit tests pass, clippy clean.
+- [x] **Self-healing engine** — New `src/healing.rs` module with `SelfHealingEngine`, `HealingCircuitBreaker`, `FailureRecord`, and `HealingConfig`. Circuit breaker with Closed/Open/HalfOpen states (threshold: 5, recovery: 30s). Exponential backoff with jitter for retries (base 1000ms, max 30000ms, 30% jitter). Per-agent failure tracking with dead worker detection. `is_transient()` classification on `LLMError` and `RavenClawsError`. New `AgentFailed(String)` and `HealingError(String)` error variants. 22 unit tests (20 healing + 2 error). 552 total unit tests pass, clippy clean.
 
 **Exit criteria:**
 - [x] Transient LLM errors are retried with exponential backoff before fallback chain
 - [x] Non-transient errors (auth, token budget, invalid response) are NOT retried
 - [x] Checkpoints preserved during retries — only deleted on permanent failure
 - [x] `retry_config` field on `AgentLoopConfig` with sensible defaults
-- [x] All 512 tests pass, clippy clean, no regressions
+- [x] Self-healing engine with circuit breakers, failure tracking, and dead worker detection
+- [x] `is_transient()` classification on both `LLMError` and `RavenClawsError`
+- [x] All 552 tests pass, clippy clean, no regressions
 
 ### v0.10 — Hardening, Ecosystem & Advanced Capabilities 💎 *(post-1.0)*
 
@@ -1249,7 +1252,7 @@ These were production pain points that have been addressed in v1.0.1.
 - [x] **Conversation persistence (SQLite backend)** — New `src/persistence.rs` module with `ConversationStore` (SQLite-backed), `RetentionPolicy` (time-based, count-based, token-budget-based, unlimited), and full CRUD for sessions and messages. `import_memory()` bridges `ConversationMemory` to SQLite. 15 unit tests. ✅ **v1.0.1**
 - [x] **Multi-modal input** ✅ **v1.1.0** — `ContentPart` enum (`Text`, `ImageUrl`), `load_image()` utility, `--image`/`-I` CLI flag, multi-modal serialization for all 5 providers, agent loop integration, `ConversationMemory::add_user_message_with_images()`, library exports. **Rationale:** Table stakes for modern agents — Manus, Kimi, and Claude all support multi-modal input.
 - [x] **Graceful degradation under load** — When resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow. ✅ **v1.1.0** — `LoadManager` with rate limiting, concurrency control, and load shedding. Wired to HTTP server and agent loop.
-- [ ] **Self-healing** — Failed agents are detected, replaced, and caught up. Supervisor re-assigns orphaned tasks. No single point of failure in mesh topologies.
+- [x] **Self-healing** — New `src/healing.rs` module with `SelfHealingEngine`, `HealingCircuitBreaker`, `FailureRecord`, and `HealingConfig`. Circuit breaker with Closed/Open/HalfOpen states (threshold: 5, recovery: 30s). Exponential backoff with jitter for retries (base 1000ms, max 30000ms, 30% jitter). Per-agent failure tracking with dead worker detection. `is_transient()` classification on `LLMError` and `RavenClawsError`. New `AgentFailed(String)` and `HealingError(String)` error variants. 22 unit tests. ✅ **v1.2.0**
 - [ ] **Advanced reasoning** — Tree-of-thought, self-reflection, uncertainty estimation / ask-for-help.
 - [ ] **Memory tiers** — Episodic, semantic (local embeddings), procedural.
 - [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion.

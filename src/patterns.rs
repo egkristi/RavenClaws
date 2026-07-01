@@ -12,12 +12,13 @@
 //! These patterns are first-class modes accessible via `--mode debate`,
 //! `--mode review-loop`, `--mode research-synthesize`, or `--mode voting`.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tracing::{info, warn};
 
 use crate::agent::ConversationMemory;
 use crate::config::Config;
 use crate::error::RavenClawsError;
+use crate::healing::SelfHealingEngine;
 use crate::llm::{LLMProviderTrait, MultiModelManager};
 use crate::ravenfabric::RavenFabricClient;
 
@@ -61,6 +62,7 @@ pub async fn run_debate(
     config: Config,
     ravenfabric: Option<RavenFabricClient>,
     pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
     info!(
         "Starting debate mode with {} max rounds",
@@ -105,9 +107,27 @@ pub async fn run_debate(
                 }
             }
 
+            // Check self-healing circuit breaker
+            if let Some(ref healing) = healing_engine {
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy(&format!("debate-{}", role))
+                };
+                if !healthy {
+                    warn!(role = %role, round = round + 1, "Debate agent blocked by circuit breaker");
+                    continue;
+                }
+            }
+
             let messages = agent_memory.history().to_vec();
             match llm.chat(messages).await {
                 Ok(response) => {
+                    // Record success
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success(&format!("debate-{}", role));
+                    }
+
                     if let Some(choice) = response.choices.first() {
                         let content = &choice.message.content;
                         info!(role = %role, round = round + 1, "Debate contribution received");
@@ -120,6 +140,11 @@ pub async fn run_debate(
                     }
                 }
                 Err(e) => {
+                    // Record failure
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure(&format!("debate-{}", role), &e.to_string());
+                    }
                     warn!(error = %e, role = %role, round = round + 1, "Debate LLM request failed");
                 }
             }
@@ -142,9 +167,29 @@ pub async fn run_debate(
     final_memory
         .add_user_message("Now produce your FINAL synthesis that balances all perspectives:");
 
+    // Check self-healing circuit breaker before synthesis
+    if let Some(ref healing) = healing_engine {
+        let healthy = {
+            let mut engine = healing.lock().unwrap();
+            engine.is_healthy("debate-synthesis")
+        };
+        if !healthy {
+            warn!("Debate synthesis blocked by circuit breaker");
+            return Err(RavenClawsError::HealingError(
+                "Debate synthesis blocked by circuit breaker".to_string(),
+            ));
+        }
+    }
+
     let messages = final_memory.history().to_vec();
     match llm.chat(messages).await {
         Ok(response) => {
+            // Record success
+            if let Some(ref healing) = healing_engine {
+                let mut engine = healing.lock().unwrap();
+                engine.record_success("debate-synthesis");
+            }
+
             if let Some(choice) = response.choices.first() {
                 let result = &choice.message.content;
                 println!("\n🐦‍⬛ Debate Synthesis:\n{}", result);
@@ -158,6 +203,11 @@ pub async fn run_debate(
             }
         }
         Err(e) => {
+            // Record failure
+            if let Some(ref healing) = healing_engine {
+                let mut engine = healing.lock().unwrap();
+                engine.record_failure("debate-synthesis", &e.to_string());
+            }
             warn!(error = %e, "Debate synthesis failed");
             return Err(RavenClawsError::CommandExecution(format!(
                 "Debate synthesis failed: {}",
@@ -181,6 +231,7 @@ pub async fn run_review_loop(
     config: Config,
     ravenfabric: Option<RavenFabricClient>,
     pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
     info!(
         "Starting review-loop mode with max {} iterations",
@@ -207,9 +258,29 @@ pub async fn run_review_loop(
                 task
             ));
 
+            // Check self-healing circuit breaker
+            if let Some(ref healing) = healing_engine {
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy("review-producer")
+                };
+                if !healthy {
+                    warn!("Review producer blocked by circuit breaker");
+                    return Err(RavenClawsError::HealingError(
+                        "Review producer blocked by circuit breaker".to_string(),
+                    ));
+                }
+            }
+
             let messages = producer_memory.history().to_vec();
             match llm.chat(messages).await {
                 Ok(response) => {
+                    // Record success
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success("review-producer");
+                    }
+
                     if let Some(choice) = response.choices.first() {
                         current_content = choice.message.content.clone();
                         info!("Initial content produced: {} chars", current_content.len());
@@ -220,6 +291,11 @@ pub async fn run_review_loop(
                     }
                 }
                 Err(e) => {
+                    // Record failure
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure("review-producer", &e.to_string());
+                    }
                     warn!(error = %e, "Producer LLM request failed");
                     return Err(RavenClawsError::CommandExecution(format!(
                         "Producer failed: {}",
@@ -235,14 +311,38 @@ pub async fn run_review_loop(
                 current_content
             ));
 
+            // Check self-healing circuit breaker
+            if let Some(ref healing) = healing_engine {
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy("review-reviewer")
+                };
+                if !healthy {
+                    warn!("Reviewer blocked by circuit breaker");
+                    continue;
+                }
+            }
+
             let messages = reviewer_memory.history().to_vec();
             let review = match llm.chat(messages).await {
-                Ok(response) => response
-                    .choices
-                    .first()
-                    .map(|c| c.message.content.clone())
-                    .unwrap_or_default(),
+                Ok(response) => {
+                    // Record success
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success("review-reviewer");
+                    }
+                    response
+                        .choices
+                        .first()
+                        .map(|c| c.message.content.clone())
+                        .unwrap_or_default()
+                }
                 Err(e) => {
+                    // Record failure
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure("review-reviewer", &e.to_string());
+                    }
                     warn!(error = %e, "Reviewer LLM request failed");
                     continue;
                 }
@@ -268,9 +368,27 @@ pub async fn run_review_loop(
                 current_content, review
             ));
 
+            // Check self-healing circuit breaker
+            if let Some(ref healing) = healing_engine {
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy("review-producer")
+                };
+                if !healthy {
+                    warn!("Producer revision blocked by circuit breaker");
+                    continue;
+                }
+            }
+
             let messages = producer_memory.history().to_vec();
             match llm.chat(messages).await {
                 Ok(response) => {
+                    // Record success
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success("review-producer");
+                    }
+
                     if let Some(choice) = response.choices.first() {
                         current_content = choice.message.content.clone();
                         info!("Content revised: {} chars", current_content.len());
@@ -285,6 +403,11 @@ pub async fn run_review_loop(
                     }
                 }
                 Err(e) => {
+                    // Record failure
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure("review-producer", &e.to_string());
+                    }
                     warn!(error = %e, "Producer revision failed");
                     continue;
                 }
@@ -319,6 +442,7 @@ pub async fn run_research_synthesize(
     config: Config,
     ravenfabric: Option<RavenFabricClient>,
     pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
     info!(
         "Starting research-synthesize mode with {} research agents",
@@ -348,9 +472,31 @@ pub async fn run_research_synthesize(
             task
         ));
 
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy(&format!("research-{}", role))
+            };
+            if !healthy {
+                warn!(role = %role, "Research agent blocked by circuit breaker");
+                research_results.push((
+                    role.to_string(),
+                    "[Research blocked by circuit breaker]".to_string(),
+                ));
+                continue;
+            }
+        }
+
         let messages = memory.history().to_vec();
         match llm.chat(messages).await {
             Ok(response) => {
+                // Record success
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_success(&format!("research-{}", role));
+                }
+
                 if let Some(choice) = response.choices.first() {
                     let content = choice.message.content.clone();
                     info!(role = %role, "Research completed: {} chars", content.len());
@@ -358,6 +504,11 @@ pub async fn run_research_synthesize(
                 }
             }
             Err(e) => {
+                // Record failure
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure(&format!("research-{}", role), &e.to_string());
+                }
                 warn!(error = %e, role = %role, "Research agent failed");
                 research_results.push((role.to_string(), format!("[Research failed: {}]", e)));
             }
@@ -383,9 +534,29 @@ pub async fn run_research_synthesize(
     }
     synth_memory.add_user_message(&synthesis_input);
 
+    // Check self-healing circuit breaker before synthesis
+    if let Some(ref healing) = healing_engine {
+        let healthy = {
+            let mut engine = healing.lock().unwrap();
+            engine.is_healthy("research-synthesis")
+        };
+        if !healthy {
+            warn!("Research synthesis blocked by circuit breaker");
+            return Err(RavenClawsError::HealingError(
+                "Research synthesis blocked by circuit breaker".to_string(),
+            ));
+        }
+    }
+
     let messages = synth_memory.history().to_vec();
     match llm.chat(messages).await {
         Ok(response) => {
+            // Record success
+            if let Some(ref healing) = healing_engine {
+                let mut engine = healing.lock().unwrap();
+                engine.record_success("research-synthesis");
+            }
+
             if let Some(choice) = response.choices.first() {
                 let result = &choice.message.content;
                 println!("\n🐦‍⬛ Research Synthesis:\n{}", result);
@@ -399,6 +570,11 @@ pub async fn run_research_synthesize(
             }
         }
         Err(e) => {
+            // Record failure
+            if let Some(ref healing) = healing_engine {
+                let mut engine = healing.lock().unwrap();
+                engine.record_failure("research-synthesis", &e.to_string());
+            }
             warn!(error = %e, "Synthesis failed");
             return Err(RavenClawsError::CommandExecution(format!(
                 "Synthesis failed: {}",
@@ -422,6 +598,7 @@ pub async fn run_voting(
     config: Config,
     ravenfabric: Option<RavenFabricClient>,
     pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
     info!(
         "Starting voting mode with {} voters",
@@ -457,9 +634,32 @@ pub async fn run_voting(
             task
         ));
 
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy(&format!("voter-{}", i))
+            };
+            if !healthy {
+                warn!(voter = %persona_name, "Voter blocked by circuit breaker");
+                votes.push((
+                    persona_name,
+                    "Error".to_string(),
+                    "Vote blocked by circuit breaker".to_string(),
+                ));
+                continue;
+            }
+        }
+
         let messages = memory.history().to_vec();
         match llm.chat(messages).await {
             Ok(response) => {
+                // Record success
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_success(&format!("voter-{}", i));
+                }
+
                 if let Some(choice) = response.choices.first() {
                     let content = choice.message.content.clone();
                     info!(voter = %persona_name, "Vote cast");
@@ -489,6 +689,11 @@ pub async fn run_voting(
                 }
             }
             Err(e) => {
+                // Record failure
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure(&format!("voter-{}", i), &e.to_string());
+                }
                 warn!(error = %e, voter = %persona_name, "Voter LLM request failed");
                 votes.push((
                     persona_name,
@@ -544,6 +749,7 @@ pub async fn run_debate_multi(
     config: Config,
     _ravenfabric: Option<RavenFabricClient>,
     pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
     info!(
         "Starting debate mode (multi-model) with {} providers",
@@ -595,9 +801,27 @@ pub async fn run_debate_multi(
                     }
                 }
 
+                // Check self-healing circuit breaker
+                if let Some(ref healing) = healing_engine {
+                    let healthy = {
+                        let mut engine = healing.lock().unwrap();
+                        engine.is_healthy(&format!("debate-multi-{}", role))
+                    };
+                    if !healthy {
+                        warn!(role = %role, "Multi-model debate agent blocked by circuit breaker");
+                        continue;
+                    }
+                }
+
                 let messages = agent_memory.history().to_vec();
                 match client.chat(messages).await {
                     Ok(response) => {
+                        // Record success
+                        if let Some(ref healing) = healing_engine {
+                            let mut engine = healing.lock().unwrap();
+                            engine.record_success(&format!("debate-multi-{}", role));
+                        }
+
                         if let Some(choice) = response.choices.first() {
                             let content = &choice.message.content;
                             info!(role = %role, provider = client.provider_name(), round = round + 1, "Debate contribution");
@@ -619,7 +843,15 @@ pub async fn run_debate_multi(
                             ));
                         }
                     }
-                    Err(e) => warn!(error = %e, role = %role, "Multi-model debate failed"),
+                    Err(e) => {
+                        // Record failure
+                        if let Some(ref healing) = healing_engine {
+                            let mut engine = healing.lock().unwrap();
+                            engine
+                                .record_failure(&format!("debate-multi-{}", role), &e.to_string());
+                        }
+                        warn!(error = %e, role = %role, "Multi-model debate failed");
+                    }
                 }
             }
         }
@@ -627,6 +859,20 @@ pub async fn run_debate_multi(
 
     // Final synthesis using first provider
     if let Some(client) = multi_llm.get_client(0) {
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("debate-multi-synthesis")
+            };
+            if !healthy {
+                warn!("Multi-model debate synthesis blocked by circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "Multi-model debate synthesis blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
         let synthesizer_persona =
             "You are a neutral synthesizer. Produce a final balanced conclusion.";
         let mut final_memory = ConversationMemory::new(synthesizer_persona, 30);
@@ -645,6 +891,12 @@ pub async fn run_debate_multi(
         let messages = final_memory.history().to_vec();
         match client.chat(messages).await {
             Ok(response) => {
+                // Record success
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_success("debate-multi-synthesis");
+                }
+
                 if let Some(choice) = response.choices.first() {
                     println!(
                         "\n🐦‍⬛ Multi-Model Debate Synthesis:\n{}",
@@ -652,7 +904,14 @@ pub async fn run_debate_multi(
                     );
                 }
             }
-            Err(e) => warn!(error = %e, "Multi-model synthesis failed"),
+            Err(e) => {
+                // Record failure
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure("debate-multi-synthesis", &e.to_string());
+                }
+                warn!(error = %e, "Multi-model synthesis failed");
+            }
         }
     }
 
@@ -665,6 +924,7 @@ pub async fn run_review_loop_multi(
     _config: Config,
     _ravenfabric: Option<RavenFabricClient>,
     pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
     info!("Starting review-loop mode (multi-model)");
 
@@ -685,12 +945,38 @@ pub async fn run_review_loop_multi(
         let client = multi_llm.get_client(provider_idx);
 
         if let Some(client) = client {
+            // Check self-healing circuit breaker
+            if let Some(ref healing) = healing_engine {
+                let agent_id = if iteration == 0 {
+                    "review-multi-producer"
+                } else {
+                    "review-multi-reviewer"
+                };
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy(agent_id)
+                };
+                if !healthy {
+                    warn!(
+                        iteration = iteration + 1,
+                        "Multi-model review blocked by circuit breaker"
+                    );
+                    continue;
+                }
+            }
+
             if iteration == 0 {
                 let mut memory = ConversationMemory::new(producer_persona, 10);
                 memory.add_user_message(&format!("Create content for: {}", task));
                 let messages = memory.history().to_vec();
                 match client.chat(messages).await {
                     Ok(response) => {
+                        // Record success
+                        if let Some(ref healing) = healing_engine {
+                            let mut engine = healing.lock().unwrap();
+                            engine.record_success("review-multi-producer");
+                        }
+
                         if let Some(choice) = response.choices.first() {
                             current_content = choice.message.content.clone();
                             info!(
@@ -700,7 +986,14 @@ pub async fn run_review_loop_multi(
                             );
                         }
                     }
-                    Err(e) => warn!(error = %e, "Producer failed"),
+                    Err(e) => {
+                        // Record failure
+                        if let Some(ref healing) = healing_engine {
+                            let mut engine = healing.lock().unwrap();
+                            engine.record_failure("review-multi-producer", &e.to_string());
+                        }
+                        warn!(error = %e, "Producer failed");
+                    }
                 }
             } else {
                 // Review
@@ -709,6 +1002,12 @@ pub async fn run_review_loop_multi(
                 let messages = rev_memory.history().to_vec();
                 match client.chat(messages).await {
                     Ok(response) => {
+                        // Record success
+                        if let Some(ref healing) = healing_engine {
+                            let mut engine = healing.lock().unwrap();
+                            engine.record_success("review-multi-reviewer");
+                        }
+
                         if let Some(choice) = response.choices.first() {
                             let review = &choice.message.content;
                             if review.contains("APPROVED:") {
@@ -736,7 +1035,25 @@ pub async fn run_review_loop_multi(
                             if let Some(next_client) =
                                 multi_llm.get_client((iteration + 1) % multi_llm.client_count())
                             {
+                                // Check circuit breaker for producer revision
+                                if let Some(ref healing) = healing_engine {
+                                    let healthy = {
+                                        let mut engine = healing.lock().unwrap();
+                                        engine.is_healthy("review-multi-producer")
+                                    };
+                                    if !healthy {
+                                        warn!("Multi-model producer revision blocked by circuit breaker");
+                                        continue;
+                                    }
+                                }
+
                                 if let Ok(rev_resp) = next_client.chat(msgs).await {
+                                    // Record success
+                                    if let Some(ref healing) = healing_engine {
+                                        let mut engine = healing.lock().unwrap();
+                                        engine.record_success("review-multi-producer");
+                                    }
+
                                     if let Some(rev_choice) = rev_resp.choices.first() {
                                         current_content = rev_choice.message.content.clone();
                                         info!(
@@ -745,11 +1062,27 @@ pub async fn run_review_loop_multi(
                                             next_client.provider_name()
                                         );
                                     }
+                                } else {
+                                    // Record failure
+                                    if let Some(ref healing) = healing_engine {
+                                        let mut engine = healing.lock().unwrap();
+                                        engine.record_failure(
+                                            "review-multi-producer",
+                                            "revision failed",
+                                        );
+                                    }
                                 }
                             }
                         }
                     }
-                    Err(e) => warn!(error = %e, "Review failed"),
+                    Err(e) => {
+                        // Record failure
+                        if let Some(ref healing) = healing_engine {
+                            let mut engine = healing.lock().unwrap();
+                            engine.record_failure("review-multi-reviewer", &e.to_string());
+                        }
+                        warn!(error = %e, "Review failed");
+                    }
                 }
             }
         }
@@ -769,6 +1102,7 @@ pub async fn run_research_synthesize_multi(
     config: Config,
     _ravenfabric: Option<RavenFabricClient>,
     pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
     info!("Starting research-synthesize mode (multi-model)");
 
@@ -802,8 +1136,31 @@ pub async fn run_research_synthesize_multi(
             memory.add_user_message(&format!("Research: {}", task));
             let messages = memory.history().to_vec();
 
+            // Check self-healing circuit breaker
+            if let Some(ref healing) = healing_engine {
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy(&format!("research-multi-{}", role))
+                };
+                if !healthy {
+                    warn!(role = %role, "Multi-model research agent blocked by circuit breaker");
+                    results.push((
+                        role.to_string(),
+                        "blocked".to_string(),
+                        "[Research blocked by circuit breaker]".to_string(),
+                    ));
+                    continue;
+                }
+            }
+
             match client.chat(messages).await {
                 Ok(response) => {
+                    // Record success
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success(&format!("research-multi-{}", role));
+                    }
+
                     if let Some(choice) = response.choices.first() {
                         let content = choice.message.content.clone();
                         info!(role = %role, provider = client.provider_name(), "Research completed");
@@ -814,13 +1171,34 @@ pub async fn run_research_synthesize_multi(
                         ));
                     }
                 }
-                Err(e) => warn!(error = %e, role = %role, "Research failed"),
+                Err(e) => {
+                    // Record failure
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure(&format!("research-multi-{}", role), &e.to_string());
+                    }
+                    warn!(error = %e, role = %role, "Research failed");
+                }
             }
         }
     }
 
     // Synthesize
     if let Some(client) = multi_llm.get_client(0) {
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("research-multi-synthesis")
+            };
+            if !healthy {
+                warn!("Multi-model research synthesis blocked by circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "Multi-model research synthesis blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
         let mut synth_memory = ConversationMemory::new("You are a synthesis specialist.", 20);
         let mut input = String::from("Synthesize these findings:\n\n");
         for (role, provider, content) in &results {
@@ -831,6 +1209,12 @@ pub async fn run_research_synthesize_multi(
 
         match client.chat(messages).await {
             Ok(response) => {
+                // Record success
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_success("research-multi-synthesis");
+                }
+
                 if let Some(choice) = response.choices.first() {
                     println!(
                         "\n🐦‍⬛ Multi-Model Research Synthesis:\n{}",
@@ -838,7 +1222,14 @@ pub async fn run_research_synthesize_multi(
                     );
                 }
             }
-            Err(e) => warn!(error = %e, "Synthesis failed"),
+            Err(e) => {
+                // Record failure
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure("research-multi-synthesis", &e.to_string());
+                }
+                warn!(error = %e, "Synthesis failed");
+            }
         }
     }
 
@@ -851,6 +1242,7 @@ pub async fn run_voting_multi(
     config: Config,
     _ravenfabric: Option<RavenFabricClient>,
     pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
     info!(
         "Starting voting mode (multi-model) with {} providers",
@@ -883,8 +1275,35 @@ pub async fn run_voting_multi(
             memory.add_user_message(&format!("Cast your vote on: {}", task));
             let messages = memory.history().to_vec();
 
+            // Check self-healing circuit breaker
+            if let Some(ref healing) = healing_engine {
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy(&format!("voter-multi-{}", i))
+                };
+                if !healthy {
+                    warn!(
+                        voter = i + 1,
+                        "Multi-model voter blocked by circuit breaker"
+                    );
+                    votes.push((
+                        format!("Voter {}", i + 1),
+                        "blocked".to_string(),
+                        "Error".to_string(),
+                        "Vote blocked by circuit breaker".to_string(),
+                    ));
+                    continue;
+                }
+            }
+
             match client.chat(messages).await {
                 Ok(response) => {
+                    // Record success
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success(&format!("voter-multi-{}", i));
+                    }
+
                     if let Some(choice) = response.choices.first() {
                         let content = choice.message.content.clone();
                         let vote = content
@@ -906,7 +1325,14 @@ pub async fn run_voting_multi(
                         ));
                     }
                 }
-                Err(e) => warn!(error = %e, "Voter {} failed", i + 1),
+                Err(e) => {
+                    // Record failure
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure(&format!("voter-multi-{}", i), &e.to_string());
+                    }
+                    warn!(error = %e, "Voter {} failed", i + 1);
+                }
             }
         }
     }

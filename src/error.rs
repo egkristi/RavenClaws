@@ -32,6 +32,25 @@ pub enum RavenClawsError {
     #[error("Security violation: {0}")]
     #[allow(dead_code)]
     SecurityViolation(String),
+
+    #[error("Agent failed: {0}")]
+    #[allow(dead_code)]
+    AgentFailed(String),
+
+    #[error("Self-healing error: {0}")]
+    #[allow(dead_code)]
+    HealingError(String),
+}
+
+impl RavenClawsError {
+    /// Returns `true` if this error is transient and may succeed on retry.
+    #[allow(dead_code)]
+    pub fn is_transient(&self) -> bool {
+        matches!(
+            self,
+            RavenClawsError::Llm(e) if e.is_transient(),
+        )
+    }
 }
 
 pub type Result<T> = std::result::Result<T, RavenClawsError>;
@@ -178,6 +197,82 @@ mod tests {
     fn test_security_violation_construction() {
         let err = RavenClawsError::SecurityViolation("invalid token".to_string());
         assert_eq!(format!("{}", err), "Security violation: invalid token");
+    }
+
+    #[test]
+    fn test_agent_failed_variant() {
+        let err = RavenClawsError::AgentFailed("worker-1 crashed".to_string());
+        assert_eq!(format!("{}", err), "Agent failed: worker-1 crashed");
+    }
+
+    #[test]
+    fn test_healing_error_variant() {
+        let err = RavenClawsError::HealingError("circuit breaker open".to_string());
+        assert_eq!(
+            format!("{}", err),
+            "Self-healing error: circuit breaker open"
+        );
+    }
+
+    #[test]
+    fn test_is_transient_llm_request_failed() {
+        let llm_err = crate::llm::LLMError::RequestFailed("timeout".to_string());
+        assert!(llm_err.is_transient());
+    }
+
+    #[test]
+    fn test_is_transient_llm_rate_limited() {
+        let llm_err = crate::llm::LLMError::RateLimited;
+        assert!(llm_err.is_transient());
+    }
+
+    #[test]
+    fn test_is_transient_llm_circuit_breaker() {
+        let llm_err = crate::llm::LLMError::CircuitBreakerOpen("openai".to_string());
+        assert!(llm_err.is_transient());
+    }
+
+    #[test]
+    fn test_is_not_transient_llm_auth_failed() {
+        let llm_err = crate::llm::LLMError::AuthFailed;
+        assert!(!llm_err.is_transient());
+    }
+
+    #[test]
+    fn test_is_not_transient_llm_invalid_response() {
+        let llm_err = crate::llm::LLMError::InvalidResponse("bad json".to_string());
+        assert!(!llm_err.is_transient());
+    }
+
+    #[test]
+    fn test_is_not_transient_llm_token_budget() {
+        let llm_err = crate::llm::LLMError::TokenBudgetExceeded;
+        assert!(!llm_err.is_transient());
+    }
+
+    #[test]
+    fn test_is_not_transient_llm_all_providers_failed() {
+        let llm_err = crate::llm::LLMError::AllProvidersFailed;
+        assert!(!llm_err.is_transient());
+    }
+
+    #[test]
+    fn test_ravenclaws_error_is_transient_via_llm() {
+        let llm_err = crate::llm::LLMError::RequestFailed("timeout".to_string());
+        let err = RavenClawsError::Llm(llm_err);
+        assert!(err.is_transient());
+    }
+
+    #[test]
+    fn test_ravenclaws_error_is_not_transient_for_non_llm() {
+        let err = RavenClawsError::CommandExecution("fail".to_string());
+        assert!(!err.is_transient());
+    }
+
+    #[test]
+    fn test_ravenclaws_error_is_not_transient_for_agent_failed() {
+        let err = RavenClawsError::AgentFailed("crashed".to_string());
+        assert!(!err.is_transient());
     }
 
     #[test]

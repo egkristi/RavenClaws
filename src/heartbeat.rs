@@ -33,6 +33,7 @@
 
 use crate::agent::AgentLoopConfig;
 use crate::error::{RavenClawsError, Result};
+use crate::healing::SelfHealingEngine;
 use crate::llm::LLMProviderTrait;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -169,6 +170,9 @@ pub struct HeartbeatAgent {
 
     /// Optional shutdown flag for graceful termination (v0.9.11)
     shutdown_flag: Option<Arc<AtomicBool>>,
+
+    /// Self-healing engine for automatic failure recovery and circuit breakers.
+    healing_engine: Option<Arc<std::sync::Mutex<SelfHealingEngine>>>,
 }
 
 impl HeartbeatAgent {
@@ -233,6 +237,7 @@ impl HeartbeatAgent {
             state,
             state_path,
             shutdown_flag: None,
+            healing_engine: None,
         })
     }
 
@@ -286,6 +291,28 @@ impl HeartbeatAgent {
 
             // ── Step 1: Assess progress ──────────────────────────────────
             let assessment_prompt = self.build_assessment_prompt();
+
+            // Check self-healing circuit breaker before assessment
+            if let Some(ref healing) = self.healing_engine {
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy("heartbeat")
+                };
+                if !healthy {
+                    warn!(
+                        tick = self.state.tick,
+                        "Heartbeat blocked by self-healing circuit breaker"
+                    );
+                    self.state.progress = format!(
+                        "{}\n\n## Tick {} (CIRCUIT BREAKER)\nHeartbeat blocked by circuit breaker",
+                        self.state.progress, self.state.tick
+                    );
+                    self.persist_state()?;
+                    // Still sleep and retry on next tick
+                    continue;
+                }
+            }
+
             match self
                 .llm
                 .chat(vec![
@@ -295,6 +322,12 @@ impl HeartbeatAgent {
                 .await
             {
                 Ok(response) => {
+                    // Record success in self-healing engine
+                    if let Some(ref healing) = self.healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success("heartbeat");
+                    }
+
                     let assessment = response
                         .choices
                         .first()
@@ -343,6 +376,12 @@ impl HeartbeatAgent {
                         .await
                     {
                         Ok(plan_response) => {
+                            // Record success in self-healing engine
+                            if let Some(ref healing) = self.healing_engine {
+                                let mut engine = healing.lock().unwrap();
+                                engine.record_success("heartbeat");
+                            }
+
                             let plan = plan_response
                                 .choices
                                 .first()
@@ -382,6 +421,7 @@ impl HeartbeatAgent {
                                     metrics_callback: None,
                                     load_manager: None,
                                     retry_config: None,
+                                    healing_engine: self.healing_engine.clone(),
                                 };
 
                                 match crate::agent::run_agent_loop(
@@ -413,6 +453,11 @@ impl HeartbeatAgent {
                                             error = %e,
                                             "Action execution failed"
                                         );
+                                        // Record failure in self-healing engine
+                                        if let Some(ref healing) = self.healing_engine {
+                                            let mut engine = healing.lock().unwrap();
+                                            engine.record_failure("heartbeat", &e.to_string());
+                                        }
                                         self.state.last_result = Some(format!("Error: {}", e));
                                         self.state.progress = format!(
                                             "{}\n\n## Tick {} (FAILED)\n**Assessment:** {}\n**Plan:** {}\n**Error:** {}",
@@ -439,6 +484,11 @@ impl HeartbeatAgent {
                                 error = %e,
                                 "Plan generation failed"
                             );
+                            // Record failure in self-healing engine
+                            if let Some(ref healing) = self.healing_engine {
+                                let mut engine = healing.lock().unwrap();
+                                engine.record_failure("heartbeat", &e.to_string());
+                            }
                             self.state.progress = format!(
                                 "{}\n\n## Tick {} (PLANNING FAILED)\n**Assessment:** {}\n**Error:** {}",
                                 self.state.progress, self.state.tick, assessment, e
@@ -452,6 +502,11 @@ impl HeartbeatAgent {
                         error = %e,
                         "Progress assessment failed"
                     );
+                    // Record failure in self-healing engine
+                    if let Some(ref healing) = self.healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure("heartbeat", &e.to_string());
+                    }
                     self.state.progress = format!(
                         "{}\n\n## Tick {} (ASSESSMENT FAILED)\n**Error:** {}",
                         self.state.progress, self.state.tick, e

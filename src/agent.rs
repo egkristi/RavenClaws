@@ -6,6 +6,7 @@
 use crate::audit::{AuditEventType, AuditLog};
 use crate::config::Config;
 use crate::error::Result;
+use crate::healing::SelfHealingEngine;
 use crate::llm::{
     ChatMessage, Choice, LLMProviderTrait, MultiModelManager, ProviderFallbackChain, RetryConfig,
     TokenBudget,
@@ -310,6 +311,12 @@ pub struct AgentLoopConfig {
     /// before falling back to the provider fallback chain.
     /// Default: None (no retry — uses fallback chain directly).
     pub retry_config: Option<RetryConfig>,
+
+    /// Optional self-healing engine for agent-level failure tracking and recovery.
+    /// When set, the agent loop records failures/successes in the healing engine
+    /// and checks circuit breaker health before LLM calls.
+    /// Default: None (no self-healing).
+    pub healing_engine: Option<Arc<std::sync::Mutex<SelfHealingEngine>>>,
 }
 
 impl Default for AgentLoopConfig {
@@ -329,6 +336,7 @@ impl Default for AgentLoopConfig {
             metrics_callback: None,
             load_manager: None,
             retry_config: None,
+            healing_engine: None,
         }
     }
 }
@@ -359,6 +367,13 @@ impl std::fmt::Debug for AgentLoopConfig {
                 "load_manager",
                 &self.load_manager.as_ref().map(|_| "Arc<LoadManager>"),
             )
+            .field(
+                "healing_engine",
+                &self
+                    .healing_engine
+                    .as_ref()
+                    .map(|_| "Arc<Mutex<SelfHealingEngine>>"),
+            )
             .finish()
     }
 }
@@ -382,6 +397,7 @@ impl Clone for AgentLoopConfig {
             metrics_callback: None,
             load_manager: self.load_manager.clone(),
             retry_config: self.retry_config.clone(),
+            healing_engine: self.healing_engine.clone(),
         }
     }
 }
@@ -797,6 +813,36 @@ async fn run_agent_loop_inner(
             }
         }
 
+        // Check self-healing circuit breaker before LLM call
+        if let Some(ref healing) = config.healing_engine {
+            let agent_id = llm.provider_name().to_string();
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy(&agent_id)
+            };
+            if !healthy {
+                warn!(
+                    agent_id = %agent_id,
+                    iteration = iteration,
+                    "Agent blocked by self-healing circuit breaker"
+                );
+                let _ = audit_log.append(
+                    AuditEventType::Error,
+                    "healing",
+                    &format!("Agent '{}' blocked by circuit breaker", agent_id),
+                    None,
+                );
+                // Delete checkpoint on circuit breaker block
+                if let Some(ref checkpoint_dir) = config.checkpoint_dir {
+                    delete_checkpoint(checkpoint_dir, &session_id);
+                }
+                return Err(crate::error::RavenClawsError::HealingError(format!(
+                    "Agent '{}' blocked by circuit breaker",
+                    agent_id
+                )));
+            }
+        }
+
         // ── LLM call with retry (exponential backoff) ──────────────────────
         // Retry handles transient errors (RequestFailed, RateLimited, CircuitBreakerOpen)
         // before falling back to the provider fallback chain.
@@ -812,16 +858,28 @@ async fn run_agent_loop_inner(
         .await
         {
             Ok(r) => {
-                // Record success
+                // Record success in load manager
                 if let Some(ref load_manager) = config.load_manager {
                     load_manager.record_outcome(crate::load::RequestOutcome::Success);
+                }
+                // Record success in self-healing engine
+                if let Some(ref healing) = config.healing_engine {
+                    let agent_id = llm.provider_name().to_string();
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_success(&agent_id);
                 }
                 r
             }
             Err(e) => {
-                // Record failure
+                // Record failure in load manager
                 if let Some(ref load_manager) = config.load_manager {
                     load_manager.record_outcome(crate::load::RequestOutcome::Failure);
+                }
+                // Record failure in self-healing engine
+                if let Some(ref healing) = config.healing_engine {
+                    let agent_id = llm.provider_name().to_string();
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure(&agent_id, &e.to_string());
                 }
                 // Try fallback chain if available
                 if let Some(ref chain) = config.fallback_chain {
@@ -841,6 +899,12 @@ async fn run_agent_loop_inner(
                     match temp_chain.chat_with_fallback(messages).await {
                         Ok(r) => {
                             info!("Fallback chain succeeded");
+                            // Record success in self-healing engine for fallback
+                            if let Some(ref healing) = config.healing_engine {
+                                let agent_id = llm.provider_name().to_string();
+                                let mut engine = healing.lock().unwrap();
+                                engine.record_success(&agent_id);
+                            }
                             // Record token usage from fallback response
                             if let Some(ref budget) = config.token_budget {
                                 if let Some(usage) = &r.usage {
@@ -2464,6 +2528,7 @@ mod tests {
             metrics_callback: None,
             load_manager: None,
             retry_config: None,
+            healing_engine: None,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
@@ -2593,6 +2658,7 @@ mod tests {
             metrics_callback: None,
             load_manager: None,
             retry_config: None,
+            healing_engine: None,
         };
         assert_eq!(config.token_lifetime_secs, 0);
         // 0 means unlimited — no timeout enforced
@@ -2615,6 +2681,7 @@ mod tests {
             metrics_callback: None,
             load_manager: None,
             retry_config: None,
+            healing_engine: None,
         };
         assert_eq!(config.token_lifetime_secs, 3600);
     }
@@ -2653,6 +2720,7 @@ mod tests {
                 max_delay_ms: 5000,
                 jitter: 0.1,
             }),
+            healing_engine: None,
         };
         assert!(config.retry_config.is_some());
         assert_eq!(config.retry_config.as_ref().unwrap().max_retries, 5);
