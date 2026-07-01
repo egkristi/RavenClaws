@@ -589,6 +589,7 @@ async fn main() -> anyhow::Result<()> {
             session_id: None,
             metrics_callback: None,
             load_manager: None,
+            retry_config: None,
         };
 
         // Build a configured tool registry (respects web_search endpoint from config)

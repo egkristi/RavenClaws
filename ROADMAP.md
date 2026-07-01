@@ -1210,6 +1210,24 @@ under load. All three are production-ready with full test coverage.
 - [x] Load metrics exposed via `/metrics` endpoint
 - [x] All 507 tests pass, clippy clean, no regressions
 
+### ✅ v1.2.0 — Self-Healing & Resilience 🛡️ *(current)*
+
+**Theme:** Make RavenClaws resilient to transient failures. The agent loop now retries
+LLM calls with exponential backoff before falling back to the provider fallback chain.
+This is the first step toward full self-healing — failed agents are retried, not
+abandoned.
+
+#### Completed in v1.2.0
+
+- [x] **Agent loop retry with exponential backoff** — New `call_llm_with_retry()` helper wraps LLM calls with configurable retry logic. Retries on transient errors (RequestFailed, RateLimited, CircuitBreakerOpen) with exponential backoff (100ms base, doubled each attempt, configurable jitter). Non-transient errors (AuthFailed, TokenBudgetExceeded, InvalidResponse) are NOT retried. Checkpoints are preserved during retries — only deleted on permanent failure. New `retry_config` field on `AgentLoopConfig` (default: `None` — no retry, uses fallback chain directly). 5 new unit tests. 512 unit tests pass, clippy clean.
+
+**Exit criteria:**
+- [x] Transient LLM errors are retried with exponential backoff before fallback chain
+- [x] Non-transient errors (auth, token budget, invalid response) are NOT retried
+- [x] Checkpoints preserved during retries — only deleted on permanent failure
+- [x] `retry_config` field on `AgentLoopConfig` with sensible defaults
+- [x] All 512 tests pass, clippy clean, no regressions
+
 ### v0.10 — Hardening, Ecosystem & Advanced Capabilities 💎 *(post-1.0)*
 
 These features are deferred to after the v1.0 stable release. They represent

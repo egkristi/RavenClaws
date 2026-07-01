@@ -23,7 +23,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 1.1.0 (Simply the Best)
+- **Version:** 1.2.0 (Self-Healing & Resilience)
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io

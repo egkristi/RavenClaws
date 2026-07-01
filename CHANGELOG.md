@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **asciinema demo script** — New `scripts/demo.sh` showcases 11 RavenClaws features in an automated terminal demo: version/help, binary profile, configuration, source modules, test suite, one-shot exec mode, HTTP server mode, MCP server mode, Docker & K8s deployment, website, and verification suite. Recorded demo available at https://asciinema.org/a/Qd8hCw6TVdrnNYLE. New `docs/guides/demo.md` documents how to record and share demos.
+- **Agent loop retry with exponential backoff** — New `call_llm_with_retry()` helper wraps LLM calls with configurable retry logic. Retries on transient errors (RequestFailed, RateLimited, CircuitBreakerOpen) with exponential backoff (100ms base, doubled each attempt, configurable jitter). Non-transient errors (AuthFailed, TokenBudgetExceeded, InvalidResponse) are NOT retried. Checkpoints are preserved during retries — only deleted on permanent failure. New `retry_config` field on `AgentLoopConfig` (default: `None` — no retry, uses fallback chain directly). 5 new unit tests covering config defaults, custom config, delay calculation, delay capping, and jitter. 512 unit tests pass, clippy clean.
 
 ### Fixed
 *(none)*

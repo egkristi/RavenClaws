@@ -7,7 +7,8 @@ use crate::audit::{AuditEventType, AuditLog};
 use crate::config::Config;
 use crate::error::Result;
 use crate::llm::{
-    ChatMessage, Choice, LLMProviderTrait, MultiModelManager, ProviderFallbackChain, TokenBudget,
+    ChatMessage, Choice, LLMProviderTrait, MultiModelManager, ProviderFallbackChain, RetryConfig,
+    TokenBudget,
 };
 use crate::mcp::McpClient;
 use crate::policy::{Decision, PolicyEngine};
@@ -303,6 +304,12 @@ pub struct AgentLoopConfig {
     /// Optional load manager for graceful degradation.
     /// When set, the agent loop checks admission before LLM calls and records outcomes.
     pub load_manager: Option<Arc<crate::load::LoadManager>>,
+
+    /// Optional retry configuration for LLM calls.
+    /// When set, transient LLM failures are retried with exponential backoff
+    /// before falling back to the provider fallback chain.
+    /// Default: None (no retry — uses fallback chain directly).
+    pub retry_config: Option<RetryConfig>,
 }
 
 impl Default for AgentLoopConfig {
@@ -321,6 +328,7 @@ impl Default for AgentLoopConfig {
             session_id: None,
             metrics_callback: None,
             load_manager: None,
+            retry_config: None,
         }
     }
 }
@@ -373,6 +381,7 @@ impl Clone for AgentLoopConfig {
             session_id: self.session_id.clone(),
             metrics_callback: None,
             load_manager: self.load_manager.clone(),
+            retry_config: self.retry_config.clone(),
         }
     }
 }
@@ -445,6 +454,125 @@ pub async fn run_agent_loop_with_images(
         image_data_uris,
     )
     .await
+}
+
+/// Call the LLM with retry logic (exponential backoff).
+///
+/// Retries on transient errors (RequestFailed, RateLimited, CircuitBreakerOpen)
+/// but NOT on non-transient errors (AuthFailed, TokenBudgetExceeded, InvalidResponse).
+/// Checkpoints are preserved during retries — only deleted on permanent failure.
+///
+/// # Parameters
+///
+/// * `llm` — The LLM provider to call.
+/// * `messages` — The message history to send.
+/// * `retry_config` — Optional retry configuration. If `None`, no retry is attempted.
+/// * `audit_log` — Audit log for recording retry events.
+/// * `session_id` — Session ID for checkpoint management.
+/// * `checkpoint_dir` — Optional checkpoint directory (checkpoints preserved during retries).
+/// * `iteration` — Current agent loop iteration (for logging).
+async fn call_llm_with_retry(
+    llm: &Arc<dyn LLMProviderTrait>,
+    messages: Vec<ChatMessage>,
+    retry_config: Option<&RetryConfig>,
+    audit_log: &AuditLog,
+    session_id: &str,
+    checkpoint_dir: &Option<PathBuf>,
+    iteration: usize,
+) -> std::result::Result<crate::llm::ChatResponse, crate::llm::LLMError> {
+    let max_attempts = match retry_config {
+        Some(cfg) => cfg.max_retries + 1, // +1 for the initial attempt
+        None => 1,
+    };
+
+    let mut last_error = None;
+
+    for attempt in 0..max_attempts {
+        if attempt > 0 {
+            let delay = retry_config.unwrap().delay_for_attempt(attempt - 1);
+            info!(
+                attempt = attempt + 1,
+                max_attempts = max_attempts,
+                delay_ms = delay.as_millis(),
+                iteration = iteration,
+                "Retrying LLM call after transient error"
+            );
+            tokio::time::sleep(delay).await;
+        }
+
+        match llm.chat(messages.clone()).await {
+            Ok(response) => {
+                if attempt > 0 {
+                    info!(
+                        attempt = attempt + 1,
+                        iteration = iteration,
+                        "LLM call succeeded on retry"
+                    );
+                    let _ = audit_log.append(
+                        AuditEventType::Custom("Info".to_string()),
+                        "llm_retry",
+                        &format!("LLM call succeeded on retry attempt {}", attempt + 1),
+                        None,
+                    );
+                }
+                return Ok(response);
+            }
+            Err(e) => {
+                let is_transient = matches!(
+                    &e,
+                    crate::llm::LLMError::RequestFailed(_)
+                        | crate::llm::LLMError::RateLimited
+                        | crate::llm::LLMError::CircuitBreakerOpen(_)
+                );
+
+                if is_transient && attempt + 1 < max_attempts {
+                    warn!(
+                        error = %e,
+                        attempt = attempt + 1,
+                        max_attempts = max_attempts,
+                        iteration = iteration,
+                        "Transient LLM error, will retry"
+                    );
+                    let _ = audit_log.append(
+                        AuditEventType::Error,
+                        "llm_retry",
+                        &format!("Transient LLM error on attempt {}: {}", attempt + 1, e),
+                        None,
+                    );
+                    last_error = Some(e);
+                    // Checkpoint is NOT deleted here — preserved for retry
+                    continue;
+                }
+
+                // Non-transient error, or out of retries
+                if attempt + 1 >= max_attempts && is_transient {
+                    warn!(
+                        error = %e,
+                        attempts = max_attempts,
+                        iteration = iteration,
+                        "All retry attempts exhausted"
+                    );
+                    let _ = audit_log.append(
+                        AuditEventType::Error,
+                        "llm_retry",
+                        &format!("All {} retry attempts exhausted: {}", max_attempts, e),
+                        None,
+                    );
+                }
+
+                // Delete checkpoint on permanent LLM failure
+                if let Some(ref cp_dir) = checkpoint_dir {
+                    delete_checkpoint(cp_dir, session_id);
+                }
+                return Err(e);
+            }
+        }
+    }
+
+    // Should not reach here, but handle gracefully
+    Err(last_error.unwrap_or(crate::llm::LLMError::RequestFailed(
+        "All retry attempts exhausted".to_string(),
+    )))
 }
 
 /// Shared inner agent loop — contains all iteration logic.
@@ -669,7 +797,20 @@ async fn run_agent_loop_inner(
             }
         }
 
-        let response = match llm.chat(messages.clone()).await {
+        // ── LLM call with retry (exponential backoff) ──────────────────────
+        // Retry handles transient errors (RequestFailed, RateLimited, CircuitBreakerOpen)
+        // before falling back to the provider fallback chain.
+        let response = match call_llm_with_retry(
+            &llm,
+            messages.clone(),
+            config.retry_config.as_ref(),
+            &audit_log,
+            &session_id,
+            &config.checkpoint_dir,
+            iteration,
+        )
+        .await
+        {
             Ok(r) => {
                 // Record success
                 if let Some(ref load_manager) = config.load_manager {
@@ -684,11 +825,11 @@ async fn run_agent_loop_inner(
                 }
                 // Try fallback chain if available
                 if let Some(ref chain) = config.fallback_chain {
-                    warn!(error = %e, "Primary LLM failed, trying fallback chain");
+                    warn!(error = %e, "Primary LLM failed after retries, trying fallback chain");
                     let _ = audit_log.append(
                         AuditEventType::Error,
                         "llm",
-                        &format!("Primary LLM failed, trying fallback: {}", e),
+                        &format!("Primary LLM failed after retries, trying fallback: {}", e),
                         None,
                     );
                     // Clone configs out of mutex to avoid holding MutexGuard across .await
@@ -717,25 +858,19 @@ async fn run_agent_loop_inner(
                                 &format!("All providers failed: {}", fallback_e),
                                 None,
                             );
-                            // Delete checkpoint on LLM failure
-                            if let Some(ref checkpoint_dir) = config.checkpoint_dir {
-                                delete_checkpoint(checkpoint_dir, &session_id);
-                            }
+                            // Checkpoint already deleted by call_llm_with_retry on permanent failure
                             return Err(crate::error::RavenClawsError::Llm(fallback_e));
                         }
                     }
                 } else {
-                    warn!(error = %e, "LLM request failed");
+                    warn!(error = %e, "LLM request failed after retries");
                     let _ = audit_log.append(
                         AuditEventType::Error,
                         "llm",
-                        &format!("LLM request failed: {}", e),
+                        &format!("LLM request failed after retries: {}", e),
                         None,
                     );
-                    // Delete checkpoint on LLM failure
-                    if let Some(ref checkpoint_dir) = config.checkpoint_dir {
-                        delete_checkpoint(checkpoint_dir, &session_id);
-                    }
+                    // Checkpoint already deleted by call_llm_with_retry on permanent failure
                     return Err(crate::error::RavenClawsError::Llm(e));
                 }
             }
@@ -2328,6 +2463,7 @@ mod tests {
             session_id: None,
             metrics_callback: None,
             load_manager: None,
+            retry_config: None,
         };
         assert_eq!(config.max_iterations, 5);
         assert!(config.enable_tools);
@@ -2456,6 +2592,7 @@ mod tests {
             session_id: None,
             metrics_callback: None,
             load_manager: None,
+            retry_config: None,
         };
         assert_eq!(config.token_lifetime_secs, 0);
         // 0 means unlimited — no timeout enforced
@@ -2477,6 +2614,7 @@ mod tests {
             session_id: None,
             metrics_callback: None,
             load_manager: None,
+            retry_config: None,
         };
         assert_eq!(config.token_lifetime_secs, 3600);
     }
@@ -2485,5 +2623,91 @@ mod tests {
     fn test_agent_loop_config_default_includes_token_lifetime() {
         let config = AgentLoopConfig::default();
         assert_eq!(config.token_lifetime_secs, 0);
+    }
+
+    #[test]
+    fn test_agent_loop_config_retry_config_default_none() {
+        let config = AgentLoopConfig::default();
+        assert!(config.retry_config.is_none());
+    }
+
+    #[test]
+    fn test_agent_loop_config_retry_config_custom() {
+        let config = AgentLoopConfig {
+            max_iterations: 10,
+            enable_tools: false,
+            require_approval: false,
+            prompt_injection_protection: false,
+            token_lifetime_secs: 0,
+            no_final_required: false,
+            fallback_chain: None,
+            token_budget: None,
+            ravenfabric: None,
+            checkpoint_dir: None,
+            session_id: None,
+            metrics_callback: None,
+            load_manager: None,
+            retry_config: Some(RetryConfig {
+                max_retries: 5,
+                base_delay_ms: 50,
+                max_delay_ms: 5000,
+                jitter: 0.1,
+            }),
+        };
+        assert!(config.retry_config.is_some());
+        assert_eq!(config.retry_config.as_ref().unwrap().max_retries, 5);
+        assert_eq!(config.retry_config.as_ref().unwrap().base_delay_ms, 50);
+    }
+
+    #[test]
+    fn test_retry_config_delay_calculation() {
+        let config = RetryConfig {
+            max_retries: 3,
+            base_delay_ms: 100,
+            max_delay_ms: 10000,
+            jitter: 0.0, // No jitter for deterministic test
+        };
+
+        // Attempt 0: 100ms * 2^0 = 100ms
+        let d0 = config.delay_for_attempt(0);
+        assert_eq!(d0.as_millis(), 100);
+
+        // Attempt 1: 100ms * 2^1 = 200ms
+        let d1 = config.delay_for_attempt(1);
+        assert_eq!(d1.as_millis(), 200);
+
+        // Attempt 2: 100ms * 2^2 = 400ms
+        let d2 = config.delay_for_attempt(2);
+        assert_eq!(d2.as_millis(), 400);
+    }
+
+    #[test]
+    fn test_retry_config_delay_capped() {
+        let config = RetryConfig {
+            max_retries: 10,
+            base_delay_ms: 1000,
+            max_delay_ms: 5000,
+            jitter: 0.0, // No jitter for deterministic test
+        };
+
+        // Attempt 5: 1000ms * 2^5 = 32000ms, capped at 5000ms
+        let d5 = config.delay_for_attempt(5);
+        assert_eq!(d5.as_millis(), 5000);
+    }
+
+    #[test]
+    fn test_retry_config_delay_with_jitter() {
+        let config = RetryConfig {
+            max_retries: 3,
+            base_delay_ms: 100,
+            max_delay_ms: 10000,
+            jitter: 0.5,
+        };
+
+        // With jitter, delay should be within [base, base*2 + jitter_range]
+        let d = config.delay_for_attempt(0);
+        assert!(d.as_millis() >= 100);
+        // Max possible: 100 + 50 = 150
+        assert!(d.as_millis() <= 150);
     }
 }

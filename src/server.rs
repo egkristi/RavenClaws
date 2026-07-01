@@ -666,6 +666,7 @@ async fn handle_chat(state: &ServerState, body: &[u8]) -> anyhow::Result<Vec<u8>
             }
         })),
         load_manager: Some(load_manager),
+        retry_config: None,
     };
 
     let tool_registry = state.tool_registry.clone();

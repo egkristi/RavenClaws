@@ -33,6 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         session_id: None,
         metrics_callback: None,
         load_manager: None,
+        retry_config: None,
     };
 
     // Run the agent loop

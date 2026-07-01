@@ -380,6 +380,7 @@ impl EvalRunner {
             session_id: None,
             metrics_callback: None,
             load_manager: None,
+            retry_config: None,
         };
 
         // Run the full agent loop (ReAct + tools + security)
