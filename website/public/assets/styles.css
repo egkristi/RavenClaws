@@ -252,6 +252,12 @@ h2.section-title { font-size: clamp(1.7rem, 3.4vw, 2.6rem); }
 .feature-media { overflow:hidden; }
 .feature-media img { max-width: 100%; height: auto; border-radius: var(--r); margin-top: 16px; }
 
+/* asciinema demo embed */
+.demo-embed iframe,
+.demo-embed .asciinema-player-wrapper { border-radius: 10px; overflow: hidden; }
+.demo-embed .asciinema-player { font-size: 13px; }
+.demo-embed .asciinema-player .title-bar { display: none; }
+
 /* ---------- code blocks ---------- */
 .code {
   position: relative;

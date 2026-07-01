@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo · RavenClaws Docs</title>
+<meta name="description" content="Watch an automated terminal demo of RavenClaws v1.1.0 — version info, binary profile, configuration, modules, tests, exec mode, HTTP server, MCP server, Docker/K8s, website, and verification suite.">
+<link rel="canonical" href="https://ravenclaws.io/docs/demo">
+<meta name="theme-color" content="#070a10">
+<meta property="og:title" content="RavenClaws Terminal Demo">
+<meta property="og:description" content="See RavenClaws in action — 11 sections showcasing the full agent framework in an automated asciinema recording.">
+<meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="/assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/assets/favicon-32.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="site-header">
+  <div class="wrap">
+    <nav class="nav" aria-label="Primary">
+      <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+      <div class="nav-links">
+        <a href="/#features">Features</a><a href="/#providers">Providers</a><a href="/#security">Security</a><a href="/docs/">Docs</a><a href="/#license">License</a>
+      </div>
+      <span class="nav-spacer"></span>
+      <div class="nav-cta">
+        <a class="ghost-pill" href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a class="btn btn--primary btn--sm" href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+      </div>
+      <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+<div class="wrap">
+  <div class="docs">
+    <aside class="docs-side">
+      <h5>Documentation</h5>
+      <a href="/docs/">Overview</a>
+      <a href="/docs/getting-started">Getting started</a>
+      <a href="/docs/configuration">Configuration</a>
+      <a href="/docs/interaction-modes">Interaction modes</a>
+      <a href="/docs/swarm-mode">Swarm mode</a>
+      <a href="/docs/mcp-integration">MCP integration</a>
+      <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      <a href="/docs/server-mode">Server mode</a>
+      <a href="/docs/vllm">vLLM</a>
+      <a href="/docs/llamacpp">llama.cpp</a>
+      <a href="/docs/demo" class="active">Demo</a>
+      <a href="/docs/migration">Migration guide</a>
+      <h5>On this page</h5>
+      <a href="#watch" data-spy>Watch the demo</a>
+      <a href="#sections" data-spy>Demo sections</a>
+      <a href="#run-locally" data-spy>Run locally</a>
+      <a href="#record" data-spy>Record your own</a>
+    </aside>
+
+    <article class="doc-body">
+      <p class="breadcrumb"><a href="/docs/">Docs</a> / Demo</p>
+      <h1>RavenClaws terminal demo</h1>
+      <p class="lead-box">Watch an automated walkthrough of RavenClaws v1.1.0 — from version info and binary profile through HTTP server mode, MCP, Docker/K8s deployment, and the verification suite.</p>
+
+      <h2 id="watch">Watch the demo</h2>
+      <p>The recording below is an automated asciinema session that runs the <code>scripts/demo.sh</code> script. It showcases 11 sections covering the full RavenClaws feature set.</p>
+
+      <div class="demo-embed">
+        <script id="asciicast-Qd8hCw6TVdrnNYLE" src="https://asciinema.org/a/Qd8hCw6TVdrnNYLE.js" async></script>
+        <noscript>
+          <p><a href="https://asciinema.org/a/Qd8hCw6TVdrnNYLE" rel="noopener">View the demo on asciinema.org</a></p>
+        </noscript>
+      </div>
+
+      <h2 id="sections">Demo sections</h2>
+      <p>The demo covers these 11 sections:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Section</th>
+            <th>What it shows</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td><strong>Version &amp; Help</strong></td>
+            <td><code>--version</code> and <code>--help</code> output with all CLI options</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td><strong>Binary Profile</strong></td>
+            <td>File size (5.6 MB), architecture (arm64), linked libraries (3 system libs)</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td><strong>Configuration</strong></td>
+            <td>Single-model and multi-model TOML config files</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td><strong>Source Modules</strong></td>
+            <td>24 <code>.rs</code> files, 27,843 lines of Rust, public API surface</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td><strong>Test Suite</strong></td>
+            <td><code>cargo test</code> results — 507+ unit tests, all passing</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td><strong>One-Shot Exec</strong></td>
+            <td><code>--exec</code> mode with LiteLLM — prompt and response</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td><strong>HTTP Server</strong></td>
+            <td><code>--serve</code> mode with <code>/health</code>, <code>/ready</code>, <code>/metrics</code> endpoints</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td><strong>MCP Server</strong></td>
+            <td><code>--mcp-server</code> mode for tool exposure over stdio</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td><strong>Docker &amp; K8s</strong></td>
+            <td>Multi-stage Dockerfile and Kubernetes deployment manifests</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td><strong>Website</strong></td>
+            <td>Landing page, styles, JS, security headers, version number</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td><strong>Verification Suite</strong></td>
+            <td>15 test modules and the <code>verify.sh</code> orchestrator</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="run-locally">Run the demo locally</h2>
+      <p>You can run the same demo script on your machine without recording:</p>
+
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">terminal</span><button class="code__copy" type="button">Copy</button></div>
+        <pre><code><span class="tok-c"># Prerequisites: Rust 1.86+, a built binary</span>
+<span class="tok-d">cargo</span> build --release
+
+<span class="tok-c"># Run the demo (no recording)</span>
+<span class="tok-d">./scripts/demo.sh</span></code></pre>
+      </div>
+
+      <p>For the <strong>one-shot exec</strong> section (section 6), you'll need an LLM provider running. The demo script auto-detects LiteLLM on <code>localhost:4000</code>. If no provider is available, it falls back to showing config validation.</p>
+
+      <h2 id="record">Record your own demo</h2>
+      <p>To record a new asciinema demo:</p>
+
+      <div class="code">
+        <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">terminal</span><button class="code__copy" type="button">Copy</button></div>
+        <pre><code><span class="tok-c"># Install asciinema</span>
+<span class="tok-d">pip3</span> install asciinema
+
+<span class="tok-c"># Record the demo</span>
+<span class="tok-d">asciinema</span> rec \
+  --title <span class="tok-s">"RavenClaws v1.1.0 Demo"</span> \
+  --command <span class="tok-s">"./scripts/demo.sh"</span> \
+  --overwrite demo.cast
+
+<span class="tok-c"># Upload to asciinema.org</span>
+<span class="tok-d">asciinema</span> upload demo.cast</code></pre>
+      </div>
+
+      <p>Unauthenticated uploads are automatically deleted after 7 days. To preserve recordings permanently, link the CLI to an asciinema.org account by following the authentication URL printed after upload.</p>
+
+      <h2 id="script">The demo script</h2>
+      <p>The demo is driven by <code>scripts/demo.sh</code> in the repository root. It uses simple shell helpers:</p>
+      <ul>
+        <li><code>section "TITLE"</code> — prints a section header</li>
+        <li><code>type_cmd command args...</code> — prints the command then runs it</li>
+        <li><code>sleep N</code> — pauses for readability in the recording</li>
+      </ul>
+      <p>The script is designed to be both a live demo and a recording source — it works identically in both modes.</p>
+
+    </article>
+  </div>
+</div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a class="brand" href="/"><img src="/assets/favicon-512.png" alt="" width="30" height="30"><span>Raven<b>Claws</b></span></a>
+        <p>The ultimate AI agentic worker. Secure · Small · Efficient · Robust · Simple. Built in Rust.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Product</h4>
+        <a href="/#features">Features</a>
+        <a href="/#providers">Providers</a>
+        <a href="/#security">Security</a>
+        <a href="/#license">License</a>
+      </div>
+      <div class="foot-col">
+        <h4>Docs</h4>
+        <a href="/docs/">Overview</a>
+        <a href="/docs/getting-started">Getting started</a>
+        <a href="/docs/interaction-modes">Interaction modes</a>
+        <a href="/docs/swarm-mode">Swarm mode</a>
+        <a href="/docs/mcp-integration">MCP integration</a>
+        <a href="/docs/heartbeat-mode">Heartbeat mode</a>
+      </div>
+      <div class="foot-col">
+        <h4>Project</h4>
+        <a href="https://github.com/egkristi/RavenClaws" rel="noopener">GitHub</a>
+        <a href="https://crates.io/crates/ravenclaws" rel="noopener">crates.io</a>
+        <a href="https://docs.rs/ravenclaws" rel="noopener">API docs</a>
+        <a href="https://github.com/egkristi/RavenClaws/releases" rel="noopener">Releases</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>© <span data-year>2026</span> RavenClaws · Erling G&nbsp;M Kristiansen · AGPL-3.0-or-later + Commercial</span>
+      <span class="made">Built in <b>Rust</b> 🦀 · Deployed on Cloudflare</span>
+    </div>
+  </div>
+</footer>
+
+<script src="/assets/main.js" defer></script>
+</body>
+</html>

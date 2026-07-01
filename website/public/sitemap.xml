@@ -59,4 +59,10 @@
     <loc>https://ravenclaws.io/docs/interaction-modes</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
-  </url></urlset>
+  </url>
+  <url>
+    <loc>https://ravenclaws.io/docs/demo</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>
