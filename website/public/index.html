@@ -346,19 +346,58 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
   <div class="wrap">
     <div class="section-head center">
       <p class="eyebrow">See it in action</p>
-      <h2 class="section-title">Watch the terminal demo.</h2>
-      <p class="section-lead">An automated walkthrough of RavenClaws v1.1.0 — 11 sections covering version info, binary profile, configuration, modules, tests, exec mode, HTTP server, MCP, Docker/K8s, website, and verification suite.</p>
+      <h2 class="section-title">Watch the demo suite.</h2>
+      <p class="section-lead">Five focused asciinema recordings showcasing RavenClaws v1.2.0 — from quickstart and architecture through server/MCP, resilience, and deployment.</p>
     </div>
-    <div class="demo-embed" style="max-width:780px;margin:0 auto;border-radius:12px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.4);background:#060910">
-      <script id="asciicast-Qd8hCw6TVdrnNYLE" src="https://asciinema.org/a/Qd8hCw6TVdrnNYLE.js" async></script>
-      <noscript>
-        <p style="text-align:center;padding:40px 20px;color:var(--text-mut)">
-          <a href="https://asciinema.org/a/Qd8hCw6TVdrnNYLE" rel="noopener">View the demo on asciinema.org</a>
-        </p>
-      </noscript>
+    <div class="demo-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:32px">
+      <div class="demo-card" style="background:var(--bg-card);border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);border:1px solid var(--border);transition:transform .2s,box-shadow .2s">
+        <div style="position:relative;padding-bottom:62.5%;background:#060910">
+          <script id="asciicast-GTnaQAo2EBfohVRJ" src="https://asciinema.org/a/GTnaQAo2EBfohVRJ.js" async data-rows="20" data-cols="80" data-autoplay="false" data-loop="false" data-preload="true" style="position:absolute;top:0;left:0;width:100%;height:100%"></script>
+        </div>
+        <div style="padding:16px 20px">
+          <h3 style="margin:0 0 4px;font-size:1rem">Quickstart</h3>
+          <p style="margin:0;font-size:.85rem;color:var(--text-mut)">Version, binary profile, config, exec mode — ~30s</p>
+        </div>
+      </div>
+      <div class="demo-card" style="background:var(--bg-card);border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);border:1px solid var(--border);transition:transform .2s,box-shadow .2s">
+        <div style="position:relative;padding-bottom:62.5%;background:#060910">
+          <script id="asciicast-S0AuroDlPXrQiysy" src="https://asciinema.org/a/S0AuroDlPXrQiysy.js" async data-rows="20" data-cols="80" data-autoplay="false" data-loop="false" data-preload="true" style="position:absolute;top:0;left:0;width:100%;height:100%"></script>
+        </div>
+        <div style="padding:16px 20px">
+          <h3 style="margin:0 0 4px;font-size:1rem">Architecture</h3>
+          <p style="margin:0;font-size:.85rem;color:var(--text-mut)">Modules, tests, patterns, healing, load — ~45s</p>
+        </div>
+      </div>
+      <div class="demo-card" style="background:var(--bg-card);border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);border:1px solid var(--border);transition:transform .2s,box-shadow .2s">
+        <div style="position:relative;padding-bottom:62.5%;background:#060910">
+          <script id="asciicast-WT48ceUWYHMI9pTZ" src="https://asciinema.org/a/WT48ceUWYHMI9pTZ.js" async data-rows="20" data-cols="80" data-autoplay="false" data-loop="false" data-preload="true" style="position:absolute;top:0;left:0;width:100%;height:100%"></script>
+        </div>
+        <div style="padding:16px 20px">
+          <h3 style="margin:0 0 4px;font-size:1rem">Server &amp; MCP</h3>
+          <p style="margin:0;font-size:.85rem;color:var(--text-mut)">HTTP server, MCP stdio, MCP SSE — ~40s</p>
+        </div>
+      </div>
+      <div class="demo-card" style="background:var(--bg-card);border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);border:1px solid var(--border);transition:transform .2s,box-shadow .2s">
+        <div style="position:relative;padding-bottom:62.5%;background:#060910">
+          <script id="asciicast-B3CYpEPzfCt1Aadb" src="https://asciinema.org/a/B3CYpEPzfCt1Aadb.js" async data-rows="20" data-cols="80" data-autoplay="false" data-loop="false" data-preload="true" style="position:absolute;top:0;left:0;width:100%;height:100%"></script>
+        </div>
+        <div style="padding:16px 20px">
+          <h3 style="margin:0 0 4px;font-size:1rem">Resilience</h3>
+          <p style="margin:0;font-size:.85rem;color:var(--text-mut)">Self-healing, circuit breakers, backoff — ~35s</p>
+        </div>
+      </div>
+      <div class="demo-card" style="background:var(--bg-card);border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);border:1px solid var(--border);transition:transform .2s,box-shadow .2s">
+        <div style="position:relative;padding-bottom:62.5%;background:#060910">
+          <script id="asciicast-UWMnW9N4as1kFayD" src="https://asciinema.org/a/UWMnW9N4as1kFayD.js" async data-rows="20" data-cols="80" data-autoplay="false" data-loop="false" data-preload="true" style="position:absolute;top:0;left:0;width:100%;height:100%"></script>
+        </div>
+        <div style="padding:16px 20px">
+          <h3 style="margin:0 0 4px;font-size:1rem">Deployment</h3>
+          <p style="margin:0;font-size:.85rem;color:var(--text-mut)">Docker, K8s, Helm, verification — ~40s</p>
+        </div>
+      </div>
     </div>
-    <p class="muted" style="margin-top:18px;text-align:center">
-      <a href="/docs/demo">Learn more about the demo →</a>
+    <p class="muted" style="margin-top:24px;text-align:center">
+      <a href="/docs/demo">Learn more about the demo suite →</a>
     </p>
   </div>
 </section>

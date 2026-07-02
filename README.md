@@ -9,20 +9,22 @@
 [![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](docs/guides/verification.md)
 [![Binary](https://img.shields.io/badge/binary-~5.2MB-blue)]()
 [![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
-[![Status](https://img.shields.io/badge/status-v1.1.0-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v1.2.0-brightgreen)](ROADMAP.md)
+[![Demo](https://img.shields.io/badge/demo-asciinema-ff69b4)](docs/guides/demo.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v1.1.0 "Simply the Best" (2026-07-02).** Multi-modal input (`ContentPart`, `--image` CLI flag),
-> browser automation tool (10 CDP actions), graceful degradation under load (`LoadManager`, `TokenBucket`),
-> WASM plugin system (Plugin ABI v1), SQLite conversation persistence, MCP SSE transport,
-> multi-agent patterns (debate, review-loop, research-synthesize, voting), durable execution with
-> iteration-level checkpoint/resume, self-provisioning swarm orchestration with 4 topologies,
-> inter-agent communication bus, swarm health & telemetry, autonomous heartbeat agent,
-> scheduling/triggers, HTTP server mode, MCP client & server, RavenFabric mesh client,
-> eval harness, library crate on crates.io, and verified supply chain all work today.
-> 507 unit tests, 114 verification checks, 7 LLM providers, 23 source modules.
+> **Status: v1.2.0 "Simply the Best" (2026-07-02).** Self-healing engine with circuit breakers,
+> failure tracking, and exponential backoff; graceful degradation with token bucket rate limiting
+> and concurrency control; multi-agent patterns (debate, review-loop, research-synthesize, voting);
+> multi-modal input (`ContentPart`, `--image` CLI flag); browser automation tool (10 CDP actions);
+> WASM plugin system (Plugin ABI v1); SQLite conversation persistence; MCP SSE transport;
+> durable execution with iteration-level checkpoint/resume; self-provisioning swarm orchestration
+> with 4 topologies; inter-agent communication bus; swarm health & telemetry; autonomous heartbeat
+> agent; scheduling/triggers; HTTP server mode; MCP client & server; RavenFabric mesh client;
+> eval harness; library crate on crates.io; and verified supply chain all work today.
+> 552 unit tests, 114 verification checks, 7 LLM providers, 25 source modules.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|

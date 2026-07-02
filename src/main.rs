@@ -273,6 +273,23 @@ struct Args {
     /// Show verbose intermediate results for patterns
     #[arg(long, env = "RAVENCLAWS_PATTERN_VERBOSE")]
     pattern_verbose: bool,
+
+    // ── Advanced reasoning flags (v1.3.0) ──
+    /// Tree-of-thought: number of branches per step (default: 3)
+    #[arg(long, env = "RAVENCLAWS_TOT_BRANCHES", default_value = "3")]
+    tot_branches: usize,
+
+    /// Tree-of-thought: maximum depth (default: 3)
+    #[arg(long, env = "RAVENCLAWS_TOT_DEPTH", default_value = "3")]
+    tot_depth: usize,
+
+    /// Tree-of-thought: top-k branches to keep after pruning (default: 2)
+    #[arg(long, env = "RAVENCLAWS_TOT_TOP_K", default_value = "2")]
+    tot_top_k: usize,
+
+    /// Self-reflection: number of reflection rounds (default: 2)
+    #[arg(long, env = "RAVENCLAWS_REFLECTION_ROUNDS", default_value = "2")]
+    reflection_rounds: usize,
 }
 
 /// A shared shutdown flag that can be checked by running modes.
@@ -1042,6 +1059,10 @@ async fn main() -> anyhow::Result<()> {
                     research_agent_count: args.pattern_research_agents,
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
                 };
                 let mode_fut =
                     patterns::run_debate_multi(multi_llm, config, ravenfabric, pattern_cfg, None);
@@ -1063,6 +1084,10 @@ async fn main() -> anyhow::Result<()> {
                     research_agent_count: args.pattern_research_agents,
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
                 };
                 let mode_fut = patterns::run_review_loop_multi(
                     multi_llm,
@@ -1089,6 +1114,10 @@ async fn main() -> anyhow::Result<()> {
                     research_agent_count: args.pattern_research_agents,
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
                 };
                 let mode_fut = patterns::run_research_synthesize_multi(
                     multi_llm,
@@ -1115,6 +1144,10 @@ async fn main() -> anyhow::Result<()> {
                     research_agent_count: args.pattern_research_agents,
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
                 };
                 let mode_fut =
                     patterns::run_voting_multi(multi_llm, config, ravenfabric, pattern_cfg, None);
@@ -1127,9 +1160,70 @@ async fn main() -> anyhow::Result<()> {
                 drop(guard);
                 Ok(())
             }
+            // ── Advanced reasoning patterns (v1.3.0) ──
+            "tree-of-thought" | "tree_of_thought" => {
+                let guard = ShutdownGuard::new("tree-of-thought (multi-model)");
+                info!("Running in tree-of-thought mode (multi-model)");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
+                };
+                let mode_fut = patterns::run_tree_of_thought_multi(
+                    multi_llm,
+                    config,
+                    ravenfabric,
+                    pattern_cfg,
+                    None,
+                );
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting tree-of-thought mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
+            "self-reflection" | "self_reflection" => {
+                let guard = ShutdownGuard::new("self-reflection (multi-model)");
+                info!("Running in self-reflection mode (multi-model)");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
+                };
+                let mode_fut = patterns::run_self_reflection_multi(
+                    multi_llm,
+                    config,
+                    ravenfabric,
+                    pattern_cfg,
+                    None,
+                );
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting self-reflection mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
             _ => {
                 anyhow::bail!(
-                    "Unknown mode: {}. Use: single, swarm, supervisor, orchestrate, debate, review-loop, research-synthesize, or voting",
+                    "Unknown mode: {}. Use: single, swarm, supervisor, orchestrate, debate, review-loop, research-synthesize, voting, tree-of-thought, or self-reflection",
                     args.mode
                 );
             }
@@ -1223,6 +1317,10 @@ async fn main() -> anyhow::Result<()> {
                     research_agent_count: args.pattern_research_agents,
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
                 };
                 let mode_fut = patterns::run_debate(llm, config, ravenfabric, pattern_cfg, None);
                 tokio::select! {
@@ -1243,6 +1341,10 @@ async fn main() -> anyhow::Result<()> {
                     research_agent_count: args.pattern_research_agents,
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
                 };
                 let mode_fut =
                     patterns::run_review_loop(llm, config, ravenfabric, pattern_cfg, None);
@@ -1264,6 +1366,10 @@ async fn main() -> anyhow::Result<()> {
                     research_agent_count: args.pattern_research_agents,
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
                 };
                 let mode_fut =
                     patterns::run_research_synthesize(llm, config, ravenfabric, pattern_cfg, None);
@@ -1285,6 +1391,10 @@ async fn main() -> anyhow::Result<()> {
                     research_agent_count: args.pattern_research_agents,
                     voter_count: args.pattern_voters,
                     verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
                 };
                 let mode_fut = patterns::run_voting(llm, config, ravenfabric, pattern_cfg, None);
                 tokio::select! {
@@ -1296,9 +1406,60 @@ async fn main() -> anyhow::Result<()> {
                 drop(guard);
                 Ok(())
             }
+            // ── Advanced reasoning patterns (v1.3.0) ──
+            "tree-of-thought" | "tree_of_thought" => {
+                let guard = ShutdownGuard::new("tree-of-thought");
+                info!("Running in tree-of-thought mode");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
+                };
+                let mode_fut =
+                    patterns::run_tree_of_thought(llm, config, ravenfabric, pattern_cfg, None);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting tree-of-thought mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
+            "self-reflection" | "self_reflection" => {
+                let guard = ShutdownGuard::new("self-reflection");
+                info!("Running in self-reflection mode");
+                let pattern_cfg = patterns::PatternConfig {
+                    max_rounds: args.pattern_max_rounds,
+                    max_review_iterations: args.pattern_max_review,
+                    research_agent_count: args.pattern_research_agents,
+                    voter_count: args.pattern_voters,
+                    verbose: args.pattern_verbose,
+                    tot_branches: args.tot_branches,
+                    tot_depth: args.tot_depth,
+                    tot_top_k: args.tot_top_k,
+                    reflection_rounds: args.reflection_rounds,
+                };
+                let mode_fut =
+                    patterns::run_self_reflection(llm, config, ravenfabric, pattern_cfg, None);
+                tokio::select! {
+                    result = mode_fut => result?,
+                    _ = wait_for_shutdown(&shutdown) => {
+                        info!("Shutdown signal received, exiting self-reflection mode");
+                    }
+                }
+                drop(guard);
+                Ok(())
+            }
             _ => {
                 anyhow::bail!(
-                    "Unknown mode: {}. Use: single, swarm, supervisor, orchestrate, debate, review-loop, research-synthesize, or voting",
+                    "Unknown mode: {}. Use: single, swarm, supervisor, orchestrate, debate, review-loop, research-synthesize, voting, tree-of-thought, or self-reflection",
                     args.mode
                 );
             }

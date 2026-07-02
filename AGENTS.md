@@ -23,7 +23,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider LLM support. It runs as a single binary with zero runtime dependencies.
 
 - **Language:** Rust (edition 2021)
-- **Version:** 1.2.0 (Self-Healing & Resilience) — self-healing engine with circuit breakers, failure tracking, and dead worker detection
+- **Version:** 1.3.0 (Advanced Reasoning) — tree-of-thought and self-reflection reasoning patterns
 - **License:** AGPL-3.0-or-later + Commercial
 - **Repository:** https://github.com/egkristi/RavenClaws
 - **Domain:** https://RavenClaws.io
@@ -53,7 +53,7 @@ src/
 ├── sandbox.rs   — Sandboxed execution (workdir jail, path resolution, resource limits, timeouts)
 ├── eval.rs      — Eval harness (assertions, run traces, text/JSON reports)
 ├── ravenfabric.rs— RavenFabric mesh client (health, list_agents, execute, broadcast)
-├── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting)
+├── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting, tree-of-thought, self-reflection)
 ├── persistence.rs — SQLite-backed conversation persistence with retention policies
 ├── plugins.rs — WASM plugin system (Plugin ABI v1, WasmPlugin, WasmPluginManager)
 ├── load.rs — Graceful degradation (LoadManager, TokenBucket, ErrorTracker, LoadConfig)
@@ -71,7 +71,7 @@ src/
 | OpenAI-compatible API support | ✅ Working — any `/v1/chat/completions` endpoint |
 | Container security (non-root, read-only FS, dropped caps) | ✅ Working |
 | Library crate (ravenclaws on crates.io) | ✅ Working — binary + library |
-| Verification suite (507 tests, 21 modules, 0 failures) | ✅ Working |
+| Verification suite (547 tests, 25 modules, 0 failures) | ✅ Working |
 | `--exec` mode | ✅ Working — one-shot command execution with response to stdout |
 | Streaming responses | ✅ Working — SSE streaming for LiteLLM, default fallback for others |
 | Conversation memory | ✅ Working — `ConversationMemory` struct with configurable max history |
@@ -109,6 +109,8 @@ src/
 | Browser automation tool | ✅ v1.1.0 — `BrowserTool` with 10 CDP actions, `BrowserConfig`, `ToolCategory::Browser`, 15 unit tests |
 | Graceful degradation under load | ✅ v1.1.0 — `src/load.rs` with `LoadManager`, `TokenBucket`, `ErrorTracker`, `LoadConfig`, wired to HTTP server + agent loop, 12 unit tests |
 | Self-healing engine | ✅ v1.2.0 — `src/healing.rs` with `SelfHealingEngine`, `HealingCircuitBreaker`, `FailureRecord`, `HealingConfig`, circuit breaker (Closed/Open/HalfOpen), exponential backoff with jitter, dead worker detection, `is_transient()` error classification, 22 unit tests |
+| Advanced reasoning (tree-of-thought) | ✅ v1.3.0 — `run_tree_of_thought()` explores N parallel reasoning branches per step, evaluates with confidence scoring, prunes to top-K, synthesizes final answer; configurable via `--tot-branches`, `--tot-depth`, `--tot-top-k` |
+| Advanced reasoning (self-reflection) | ✅ v1.3.0 — `run_self_reflection()` generates initial solution, then iterates reflection (critical review) and improvement phases; configurable via `--reflection-rounds` |
 | Pre-built binaries / releases | 📋 Wired, untagged — CI produces them on tag; none released yet |
 
 ---

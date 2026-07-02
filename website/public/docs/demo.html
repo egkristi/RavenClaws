@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Demo · RavenClaws Docs</title>
-<meta name="description" content="Watch an automated terminal demo of RavenClaws v1.1.0 — version info, binary profile, configuration, modules, tests, exec mode, HTTP server, MCP server, Docker/K8s, website, and verification suite.">
+<title>Demo Suite · RavenClaws Docs</title>
+<meta name="description" content="Watch five focused asciinema terminal demos of RavenClaws v1.2.0 — quickstart, architecture, server & MCP, resilience, and deployment.">
 <link rel="canonical" href="https://ravenclaws.io/docs/demo">
 <meta name="theme-color" content="#070a10">
-<meta property="og:title" content="RavenClaws Terminal Demo">
-<meta property="og:description" content="See RavenClaws in action — 11 sections showcasing the full agent framework in an automated asciinema recording.">
+<meta property="og:title" content="RavenClaws Demo Suite">
+<meta property="og:description" content="Five focused asciinema recordings showcasing RavenClaws v1.2.0 — from quickstart through deployment.">
 <meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="/assets/favicon.ico" sizes="any">
@@ -54,112 +54,91 @@
       <a href="/docs/demo" class="active">Demo</a>
       <a href="/docs/migration">Migration guide</a>
       <h5>On this page</h5>
-      <a href="#watch" data-spy>Watch the demo</a>
-      <a href="#sections" data-spy>Demo sections</a>
+      <a href="#demos" data-spy>The five demos</a>
+      <a href="#quickstart" data-spy>Quickstart</a>
+      <a href="#architecture" data-spy>Architecture</a>
+      <a href="#server-mcp" data-spy>Server &amp; MCP</a>
+      <a href="#resilience" data-spy>Resilience</a>
+      <a href="#deployment" data-spy>Deployment</a>
       <a href="#run-locally" data-spy>Run locally</a>
       <a href="#record" data-spy>Record your own</a>
     </aside>
 
     <article class="doc-body">
       <p class="breadcrumb"><a href="/docs/">Docs</a> / Demo</p>
-      <h1>RavenClaws terminal demo</h1>
-      <p class="lead-box">Watch an automated walkthrough of RavenClaws v1.1.0 — from version info and binary profile through HTTP server mode, MCP, Docker/K8s deployment, and the verification suite.</p>
+      <h1>RavenClaws demo suite</h1>
+      <p class="lead-box">Five focused asciinema recordings, each showcasing a different aspect of RavenClaws v1.2.0 — from a 30-second quickstart to a full deployment walkthrough.</p>
 
-      <h2 id="watch">Watch the demo</h2>
-      <p>The recording below is an automated asciinema session that runs the <code>scripts/demo.sh</code> script. It showcases 11 sections covering the full RavenClaws feature set.</p>
+      <h2 id="demos">The five demos</h2>
+      <p>Instead of one long recording, we split the walkthrough into five focused demos. Each targets a specific audience and can be watched independently.</p>
 
+      <h3 id="quickstart">1. Quickstart <span class="tag" style="font-size:.75rem;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;vertical-align:middle">~30s</span></h3>
+      <p><strong>Audience:</strong> New users. Shows version info, binary profile, configuration file, and one-shot <code>--exec</code> mode.</p>
       <div class="demo-embed">
-        <script id="asciicast-Qd8hCw6TVdrnNYLE" src="https://asciinema.org/a/Qd8hCw6TVdrnNYLE.js" async></script>
+        <script id="asciicast-GTnaQAo2EBfohVRJ" src="https://asciinema.org/a/GTnaQAo2EBfohVRJ.js" async></script>
         <noscript>
-          <p><a href="https://asciinema.org/a/Qd8hCw6TVdrnNYLE" rel="noopener">View the demo on asciinema.org</a></p>
+          <p><a href="https://asciinema.org/a/GTnaQAo2EBfohVRJ" rel="noopener">View on asciinema.org</a></p>
         </noscript>
       </div>
 
-      <h2 id="sections">Demo sections</h2>
-      <p>The demo covers these 11 sections:</p>
+      <h3 id="architecture">2. Architecture <span class="tag" style="font-size:.75rem;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;vertical-align:middle">~45s</span></h3>
+      <p><strong>Audience:</strong> Developers. Shows source modules, unit test suite, multi-agent patterns, self-healing engine, and graceful degradation.</p>
+      <div class="demo-embed">
+        <script id="asciicast-S0AuroDlPXrQiysy" src="https://asciinema.org/a/S0AuroDlPXrQiysy.js" async></script>
+        <noscript>
+          <p><a href="https://asciinema.org/a/S0AuroDlPXrQiysy" rel="noopener">View on asciinema.org</a></p>
+        </noscript>
+      </div>
 
-      <table>
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Section</th>
-            <th>What it shows</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>1</td>
-            <td><strong>Version &amp; Help</strong></td>
-            <td><code>--version</code> and <code>--help</code> output with all CLI options</td>
-          </tr>
-          <tr>
-            <td>2</td>
-            <td><strong>Binary Profile</strong></td>
-            <td>File size (5.6 MB), architecture (arm64), linked libraries (3 system libs)</td>
-          </tr>
-          <tr>
-            <td>3</td>
-            <td><strong>Configuration</strong></td>
-            <td>Single-model and multi-model TOML config files</td>
-          </tr>
-          <tr>
-            <td>4</td>
-            <td><strong>Source Modules</strong></td>
-            <td>24 <code>.rs</code> files, 27,843 lines of Rust, public API surface</td>
-          </tr>
-          <tr>
-            <td>5</td>
-            <td><strong>Test Suite</strong></td>
-            <td><code>cargo test</code> results — 507+ unit tests, all passing</td>
-          </tr>
-          <tr>
-            <td>6</td>
-            <td><strong>One-Shot Exec</strong></td>
-            <td><code>--exec</code> mode with LiteLLM — prompt and response</td>
-          </tr>
-          <tr>
-            <td>7</td>
-            <td><strong>HTTP Server</strong></td>
-            <td><code>--serve</code> mode with <code>/health</code>, <code>/ready</code>, <code>/metrics</code> endpoints</td>
-          </tr>
-          <tr>
-            <td>8</td>
-            <td><strong>MCP Server</strong></td>
-            <td><code>--mcp-server</code> mode for tool exposure over stdio</td>
-          </tr>
-          <tr>
-            <td>9</td>
-            <td><strong>Docker &amp; K8s</strong></td>
-            <td>Multi-stage Dockerfile and Kubernetes deployment manifests</td>
-          </tr>
-          <tr>
-            <td>10</td>
-            <td><strong>Website</strong></td>
-            <td>Landing page, styles, JS, security headers, version number</td>
-          </tr>
-          <tr>
-            <td>11</td>
-            <td><strong>Verification Suite</strong></td>
-            <td>15 test modules and the <code>verify.sh</code> orchestrator</td>
-          </tr>
-        </tbody>
-      </table>
+      <h3 id="server-mcp">3. Server &amp; MCP <span class="tag" style="font-size:.75rem;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;vertical-align:middle">~40s</span></h3>
+      <p><strong>Audience:</strong> Operators. Shows HTTP server mode (<code>/health</code>, <code>/ready</code>, <code>/metrics</code>), MCP stdio server, and MCP SSE server.</p>
+      <div class="demo-embed">
+        <script id="asciicast-WT48ceUWYHMI9pTZ" src="https://asciinema.org/a/WT48ceUWYHMI9pTZ.js" async></script>
+        <noscript>
+          <p><a href="https://asciinema.org/a/WT48ceUWYHMI9pTZ" rel="noopener">View on asciinema.org</a></p>
+        </noscript>
+      </div>
 
-      <h2 id="run-locally">Run the demo locally</h2>
-      <p>You can run the same demo script on your machine without recording:</p>
+      <h3 id="resilience">4. Resilience <span class="tag" style="font-size:.75rem;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;vertical-align:middle">~35s</span></h3>
+      <p><strong>Audience:</strong> SREs / platform engineers. Shows the self-healing engine, circuit breaker states (Closed → Open → Half-Open), exponential backoff with jitter, and failure tracking.</p>
+      <div class="demo-embed">
+        <script id="asciicast-B3CYpEPzfCt1Aadb" src="https://asciinema.org/a/B3CYpEPzfCt1Aadb.js" async></script>
+        <noscript>
+          <p><a href="https://asciinema.org/a/B3CYpEPzfCt1Aadb" rel="noopener">View on asciinema.org</a></p>
+        </noscript>
+      </div>
+
+      <h3 id="deployment">5. Deployment <span class="tag" style="font-size:.75rem;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;vertical-align:middle">~40s</span></h3>
+      <p><strong>Audience:</strong> DevOps. Shows Docker multi-stage build, distroless container, Kubernetes manifests, Helm chart, website, and verification suite.</p>
+      <div class="demo-embed">
+        <script id="asciicast-UWMnW9N4as1kFayD" src="https://asciinema.org/a/UWMnW9N4as1kFayD.js" async></script>
+        <noscript>
+          <p><a href="https://asciinema.org/a/UWMnW9N4as1kFayD" rel="noopener">View on asciinema.org</a></p>
+        </noscript>
+      </div>
+
+      <h2 id="run-locally">Run the demos locally</h2>
+      <p>Each demo is a standalone shell script in <code>scripts/demos/</code>. You can run them without recording:</p>
 
       <div class="code">
         <div class="code__bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="label">terminal</span><button class="code__copy" type="button">Copy</button></div>
         <pre><code><span class="tok-c"># Prerequisites: Rust 1.86+, a built binary</span>
 <span class="tok-d">cargo</span> build --release
 
-<span class="tok-c"># Run the demo (no recording)</span>
-<span class="tok-d">./scripts/demo.sh</span></code></pre>
+<span class="tok-c"># Run any demo (no recording)</span>
+<span class="tok-d">./scripts/demos/demo-quickstart.sh</span>
+<span class="tok-d">./scripts/demos/demo-architecture.sh</span>
+<span class="tok-d">./scripts/demos/demo-server-mcp.sh</span>
+<span class="tok-d">./scripts/demos/demo-resilience.sh</span>
+<span class="tok-d">./scripts/demos/demo-deployment.sh</span>
+
+<span class="tok-c"># Or run all demos sequentially</span>
+<span class="tok-d">for d in scripts/demos/demo-*.sh; do "$d"; done</span></code></pre>
       </div>
 
-      <p>For the <strong>one-shot exec</strong> section (section 6), you'll need an LLM provider running. The demo script auto-detects LiteLLM on <code>localhost:4000</code>. If no provider is available, it falls back to showing config validation.</p>
+      <p>For the <strong>quickstart</strong> demo's <code>--exec</code> section, you'll need an LLM provider running. The script auto-detects LiteLLM on <code>localhost:4000</code>. If no provider is available, it falls back to showing config validation.</p>
 
-      <h2 id="record">Record your own demo</h2>
+      <h2 id="record">Record your own demos</h2>
       <p>To record a new asciinema demo:</p>
 
       <div class="code">
@@ -167,26 +146,26 @@
         <pre><code><span class="tok-c"># Install asciinema</span>
 <span class="tok-d">pip3</span> install asciinema
 
-<span class="tok-c"># Record the demo</span>
+<span class="tok-c"># Record a single demo</span>
 <span class="tok-d">asciinema</span> rec \
-  --title <span class="tok-s">"RavenClaws v1.1.0 Demo"</span> \
-  --command <span class="tok-s">"./scripts/demo.sh"</span> \
-  --overwrite demo.cast
+  --title <span class="tok-s">"RavenClaws v1.2.0 — Quickstart"</span> \
+  --command <span class="tok-s">"./scripts/demos/demo-quickstart.sh"</span> \
+  --overwrite demo-quickstart.cast
 
 <span class="tok-c"># Upload to asciinema.org</span>
-<span class="tok-d">asciinema</span> upload demo.cast</code></pre>
+<span class="tok-d">asciinema</span> upload demo-quickstart.cast</code></pre>
       </div>
 
       <p>Unauthenticated uploads are automatically deleted after 7 days. To preserve recordings permanently, link the CLI to an asciinema.org account by following the authentication URL printed after upload.</p>
 
-      <h2 id="script">The demo script</h2>
-      <p>The demo is driven by <code>scripts/demo.sh</code> in the repository root. It uses simple shell helpers:</p>
+      <h2 id="scripts">The demo scripts</h2>
+      <p>Each demo is driven by a standalone shell script in <code>scripts/demos/</code>. They use simple helpers:</p>
       <ul>
         <li><code>section "TITLE"</code> — prints a section header</li>
         <li><code>type_cmd command args...</code> — prints the command then runs it</li>
         <li><code>sleep N</code> — pauses for readability in the recording</li>
       </ul>
-      <p>The script is designed to be both a live demo and a recording source — it works identically in both modes.</p>
+      <p>The scripts are designed to be both live demos and recording sources — they work identically in both modes. See <code>scripts/demos/README.md</code> for full documentation.</p>
 
     </article>
   </div>

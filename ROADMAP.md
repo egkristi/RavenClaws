@@ -1,10 +1,11 @@
 # 🐦‍⬛ RavenClaws Roadmap
 
 **Date:** 2026-07-02  
-**Version:** v1.1.0 — Simply the Best 🏆  
-**Previous Release:** v1.0.1 (2026-06-02) — WASM Plugin System + SQLite Persistence  
-**Current Commit:** (v1.1.0 — Multi-modal Input + Browser Automation + Graceful Degradation)
+**Version:** v1.3.0 — Advanced Reasoning 🧠  
+**Previous Release:** v1.2.0 (2026-07-02) — Self-Healing & Resilience  
+**Current Commit:** (v1.3.0 — Tree-of-Thought + Self-Reflection)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
+**Test Count:** 547 unit tests · 114 verification tests · 0 failures
 **v1.0 Hardening Progress:** v0.9.4–v0.9.16 all complete ✅. **v0.9.14 closed ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy` verification. **v0.9.15 closed ALL ecosystem expansion gaps** — vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers. **v0.9.16 closed the last v1.0 blocker** — SSE MCP ecosystem verification: `--mcp-sse-server` CLI flag wired, SSE transport for MCP client config, MCP integration tests (stdio + SSE), SSE transport documentation. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v1.0 is released — the stable release. All exit criteria are met.** **v1.0.1 fixes the 4 remaining critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.** **v1.0.1 also adds WASM plugin system (Plugin ABI v1, 11 unit tests) and SQLite conversation persistence (15 unit tests) — 485 total unit tests across 20 modules.**
 
 **Strategic Positioning:** RavenClaws is the **"Temporal for AI agents"** — the lightweight, durable execution engine for AI agents. Unlike LangGraph (complex graphs), Temporal (heavy infra), or CrewAI (Python-only), RavenClaws gives you reliable, checkpointed agent execution in a ~5 MB binary that runs on a Raspberry Pi. **Durable execution (checkpoint/resume) is implemented in v0.9.12** — agent loop saves state after each iteration and survives process restarts. **Multi-agent patterns (debate, review-loop, research-synthesize, voting) are implemented in v0.9.13.** **Production stability verified in v0.9.11 rpi5 audit: 3,597 requests, 0 errors, 10 Mi RSS, 0 restarts over 7.5 hours.**
@@ -1231,7 +1232,28 @@ agents with circuit breakers, failure tracking, and dead worker detection.
 - [x] `is_transient()` classification on both `LLMError` and `RavenClawsError`
 - [x] All 552 tests pass, clippy clean, no regressions
 
-### v0.10 — Hardening, Ecosystem & Advanced Capabilities 💎 *(post-1.0)*
+### ✅ v1.3.0 — Advanced Reasoning 🧠 *(current)*
+
+**Theme:** Make RavenClaws capable of advanced reasoning — exploring multiple reasoning
+paths (tree-of-thought) and iteratively improving its own outputs (self-reflection).
+These patterns enable more sophisticated problem-solving than single-pass generation.
+
+#### Completed in v1.3.0
+
+- [x] **Tree-of-thought reasoning** — New `run_tree_of_thought()` pattern in `src/patterns.rs` that explores N parallel reasoning branches per step, evaluates each with confidence scoring, prunes to top-K, and synthesizes a final answer. Configurable via `tot_branches` (default: 3), `tot_depth` (default: 2), and `tot_top_k` (default: 2). Multi-model variant uses `MultiModelManager` for provider diversity across branches. Self-healing circuit breaker checks between steps. RavenFabric broadcast on completion. 547 unit tests pass, clippy clean.
+- [x] **Self-reflection reasoning** — New `run_self_reflection()` pattern that generates an initial solution, then iterates through reflection (critical review) and improvement phases. Configurable via `reflection_rounds` (default: 2). Multi-model variant uses different providers for generation vs. reflection. Self-healing circuit breaker checks between rounds. RavenFabric broadcast on completion. 547 unit tests pass, clippy clean.
+- [x] **PatternConfig extended** — Added `tot_branches`, `tot_depth`, `tot_top_k`, and `reflection_rounds` fields to `PatternConfig`. All 8 existing PatternConfig constructors updated. CLI flags: `--tot-branches`, `--tot-depth`, `--tot-top-k`, `--reflection-rounds`.
+- [x] **CLI dispatch** — `--mode tree-of-thought` and `--mode self-reflection` dispatch blocks in `main.rs` with ShutdownGuard and tokio::select! for graceful shutdown. Both single-provider and multi-model variants supported.
+
+**Exit criteria:**
+- [x] Tree-of-thought explores multiple reasoning paths in parallel with confidence scoring
+- [x] Self-reflection generates, critiques, and improves solutions iteratively
+- [x] Both patterns support single-provider and multi-model variants
+- [x] Both patterns integrate with self-healing engine (circuit breaker checks)
+- [x] Both patterns broadcast results via RavenFabric
+- [x] All 547 tests pass, clippy clean, no regressions
+
+### v0.10 — Hardening, Ecosystem & Advanced Capabilities 💎 *(post-1.3)*
 
 These features are deferred to after the v1.0 stable release. They represent
 significant new capabilities that are not required for a production-ready 1.0.
@@ -1253,7 +1275,7 @@ These were production pain points that have been addressed in v1.0.1.
 - [x] **Multi-modal input** ✅ **v1.1.0** — `ContentPart` enum (`Text`, `ImageUrl`), `load_image()` utility, `--image`/`-I` CLI flag, multi-modal serialization for all 5 providers, agent loop integration, `ConversationMemory::add_user_message_with_images()`, library exports. **Rationale:** Table stakes for modern agents — Manus, Kimi, and Claude all support multi-modal input.
 - [x] **Graceful degradation under load** — When resources are constrained, swarm prioritizes critical tasks, scales down non-essential workers, and queues overflow. ✅ **v1.1.0** — `LoadManager` with rate limiting, concurrency control, and load shedding. Wired to HTTP server and agent loop.
 - [x] **Self-healing** — New `src/healing.rs` module with `SelfHealingEngine`, `HealingCircuitBreaker`, `FailureRecord`, and `HealingConfig`. Circuit breaker with Closed/Open/HalfOpen states (threshold: 5, recovery: 30s). Exponential backoff with jitter for retries (base 1000ms, max 30000ms, 30% jitter). Per-agent failure tracking with dead worker detection. `is_transient()` classification on `LLMError` and `RavenClawsError`. New `AgentFailed(String)` and `HealingError(String)` error variants. 22 unit tests. ✅ **v1.2.0**
-- [ ] **Advanced reasoning** — Tree-of-thought, self-reflection, uncertainty estimation / ask-for-help.
+- [x] **Advanced reasoning** — Tree-of-thought, self-reflection, uncertainty estimation / ask-for-help. ✅ **v1.3.0**
 - [ ] **Memory tiers** — Episodic, semantic (local embeddings), procedural.
 - [ ] **Connectors / integrations** — OAuth connectors for Google Drive, M365, Slack, GitHub, Notion.
 - [ ] **Skill / Plugin System** — Portable capability bundles: `skill.yaml` + scripts + resources, progressive disclosure, sandboxed skill execution.

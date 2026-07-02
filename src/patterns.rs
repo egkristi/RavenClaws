@@ -8,9 +8,12 @@
 //! - **Review-Loop** — One agent produces, another reviews, iterating to quality
 //! - **Research-Synthesize** — Parallel research agents feed a synthesizer
 //! - **Voting** — Multiple agents vote on options, majority decides
+//! - **Tree-of-Thought** — Multiple parallel reasoning paths with evaluation and pruning
+//! - **Self-Reflection** — Agent generates output, reflects, and improves iteratively
 //!
 //! These patterns are first-class modes accessible via `--mode debate`,
-//! `--mode review-loop`, `--mode research-synthesize`, or `--mode voting`.
+//! `--mode review-loop`, `--mode research-synthesize`, `--mode voting`,
+//! `--mode tree-of-thought`, or `--mode self-reflection`.
 
 use std::sync::{Arc, Mutex};
 use tracing::{info, warn};
@@ -37,6 +40,14 @@ pub struct PatternConfig {
     pub voter_count: usize,
     /// Whether to show intermediate results
     pub verbose: bool,
+    /// Tree-of-thought: number of branches per step (default: 3)
+    pub tot_branches: usize,
+    /// Tree-of-thought: maximum depth (default: 3)
+    pub tot_depth: usize,
+    /// Tree-of-thought: top-k branches to keep after pruning (default: 2)
+    pub tot_top_k: usize,
+    /// Self-reflection: number of reflection rounds (default: 2)
+    pub reflection_rounds: usize,
 }
 
 impl Default for PatternConfig {
@@ -47,6 +58,10 @@ impl Default for PatternConfig {
             research_agent_count: 3,
             voter_count: 3,
             verbose: false,
+            tot_branches: 3,
+            tot_depth: 3,
+            tot_top_k: 2,
+            reflection_rounds: 2,
         }
     }
 }
@@ -1363,6 +1378,870 @@ pub async fn run_voting_multi(
     Ok(())
 }
 
+// ── Pattern 5: Tree-of-Thought Reasoning ────────────────────────────────────
+
+/// Run tree-of-thought reasoning with multiple parallel branches.
+///
+/// At each step, the agent generates N candidate thoughts, evaluates each
+/// one's promise, prunes to the top-K, and continues exploring the most
+/// promising branches. Returns the best complete reasoning path.
+pub async fn run_tree_of_thought(
+    llm: Arc<dyn LLMProviderTrait>,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+    pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
+) -> crate::error::Result<()> {
+    info!(
+        "Starting tree-of-thought mode: {} branches, depth {}, top-k {}",
+        pattern_config.tot_branches, pattern_config.tot_depth, pattern_config.tot_top_k
+    );
+
+    let system_prompt = &config.llm.system_prompt;
+    let task = "Analyze the given task and provide your solution.";
+
+    // Each branch is a vector of thought strings (the reasoning path so far)
+    let mut branches: Vec<Vec<String>> = vec![Vec::new()];
+
+    for depth in 0..pattern_config.tot_depth {
+        info!(depth = depth + 1, branches = branches.len(), "ToT step");
+
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("tree-of-thought")
+            };
+            if !healthy {
+                warn!("Tree-of-thought blocked by circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "Tree-of-thought blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
+        let mut all_candidates: Vec<(Vec<String>, String, f64)> = Vec::new();
+
+        for (branch_idx, branch) in branches.iter().enumerate() {
+            let mut memory = ConversationMemory::new(
+                &format!("{}\n\nYou are a reasoning agent. Generate diverse candidate thoughts and evaluate them.", system_prompt),
+                30,
+            );
+            memory.add_user_message(&format!(
+                "Task: {}\n\nCurrent reasoning path (step {}/{}):\n{}\n\nGenerate {} distinct next-step thoughts. \
+                 For each thought, provide:\n1. The thought itself\n2. A confidence score (0.0 to 1.0)\n\n\
+                 Format each as:\nTHOUGHT: <your thought>\nCONFIDENCE: <0.0-1.0>",
+                task,
+                depth + 1,
+                pattern_config.tot_depth,
+                if branch.is_empty() {
+                    "No steps yet — start from scratch.".to_string()
+                } else {
+                    branch.join("\n")
+                },
+                pattern_config.tot_branches,
+            ));
+
+            let messages = memory.history().to_vec();
+            match llm.chat(messages).await {
+                Ok(response) => {
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success("tree-of-thought");
+                    }
+
+                    if let Some(choice) = response.choices.first() {
+                        let content = &choice.message.content;
+                        // Parse thoughts and confidences
+                        let mut current_thought = String::new();
+                        let mut current_confidence = 0.5;
+                        let mut parsing_thought = false;
+
+                        for line in content.lines() {
+                            let trimmed = line.trim();
+                            if trimmed.starts_with("THOUGHT:") {
+                                // Save previous thought if any
+                                if parsing_thought && !current_thought.is_empty() {
+                                    let mut new_branch = branch.clone();
+                                    new_branch.push(current_thought.clone());
+                                    all_candidates.push((
+                                        new_branch,
+                                        format!("Confidence: {:.2}", current_confidence),
+                                        current_confidence,
+                                    ));
+                                }
+                                current_thought = trimmed
+                                    .strip_prefix("THOUGHT:")
+                                    .unwrap_or("")
+                                    .trim()
+                                    .to_string();
+                                parsing_thought = true;
+                                current_confidence = 0.5;
+                            } else if trimmed.starts_with("CONFIDENCE:") {
+                                let val_str =
+                                    trimmed.strip_prefix("CONFIDENCE:").unwrap_or("0.5").trim();
+                                if let Ok(val) = val_str.parse::<f64>() {
+                                    current_confidence = val.clamp(0.0, 1.0);
+                                }
+                            } else if parsing_thought && !trimmed.is_empty() {
+                                current_thought.push(' ');
+                                current_thought.push_str(trimmed);
+                            }
+                        }
+                        // Save last thought
+                        if parsing_thought && !current_thought.is_empty() {
+                            let mut new_branch = branch.clone();
+                            new_branch.push(current_thought);
+                            all_candidates.push((
+                                new_branch,
+                                format!("Confidence: {:.2}", current_confidence),
+                                current_confidence,
+                            ));
+                        }
+                    }
+                }
+                Err(e) => {
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure("tree-of-thought", &e.to_string());
+                    }
+                    warn!(error = %e, "Tree-of-thought branch {} failed", branch_idx);
+                }
+            }
+        }
+
+        if all_candidates.is_empty() {
+            warn!("No candidates generated at depth {}", depth + 1);
+            break;
+        }
+
+        // Sort by confidence descending and keep top-k
+        all_candidates.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+        let top_k = pattern_config.tot_top_k.min(all_candidates.len());
+        branches = all_candidates
+            .into_iter()
+            .take(top_k)
+            .map(|(branch, _, _)| branch)
+            .collect();
+
+        if pattern_config.verbose {
+            println!(
+                "\n── ToT Depth {}/{} ──",
+                depth + 1,
+                pattern_config.tot_depth
+            );
+            for (i, branch) in branches.iter().enumerate() {
+                println!("Branch {} ({} steps):", i + 1, branch.len());
+                for (j, thought) in branch.iter().enumerate() {
+                    println!("  Step {}: {}", j + 1, thought);
+                }
+                println!();
+            }
+        }
+    }
+
+    // Final synthesis: pick the best branch and produce a final answer
+    let best_branch = branches.into_iter().next().unwrap_or_default();
+    let mut final_memory = ConversationMemory::new(
+        &format!(
+            "{}\n\nYou are a synthesizer. Produce a final answer based on the best reasoning path.",
+            system_prompt
+        ),
+        20,
+    );
+    final_memory.add_user_message(&format!(
+        "Task: {}\n\nBest reasoning path:\n{}\n\nProduce a final, well-reasoned answer:",
+        task,
+        best_branch.join("\n→ "),
+    ));
+
+    let messages = final_memory.history().to_vec();
+    match llm.chat(messages).await {
+        Ok(response) => {
+            if let Some(ref healing) = healing_engine {
+                let mut engine = healing.lock().unwrap();
+                engine.record_success("tree-of-thought-synthesis");
+            }
+
+            if let Some(choice) = response.choices.first() {
+                println!(
+                    "\n🐦‍⬛ Tree-of-Thought Final Answer:\n{}",
+                    choice.message.content
+                );
+
+                if let Some(ref rf) = ravenfabric {
+                    if rf.is_enabled() {
+                        let summary = format!(
+                            "Tree-of-Thought completed: depth {}, branches explored",
+                            pattern_config.tot_depth
+                        );
+                        let _ = rf.broadcast(&summary, 30).await;
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            if let Some(ref healing) = healing_engine {
+                let mut engine = healing.lock().unwrap();
+                engine.record_failure("tree-of-thought-synthesis", &e.to_string());
+            }
+            warn!(error = %e, "Tree-of-thought synthesis failed");
+        }
+    }
+
+    Ok(())
+}
+
+/// Run tree-of-thought with multiple LLM providers (round-robin per depth level)
+pub async fn run_tree_of_thought_multi(
+    multi_llm: MultiModelManager,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+    pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
+) -> crate::error::Result<()> {
+    info!(
+        "Starting tree-of-thought mode (multi-model): {} branches, depth {}, top-k {}",
+        pattern_config.tot_branches, pattern_config.tot_depth, pattern_config.tot_top_k
+    );
+
+    let system_prompt = &config.llm.system_prompt;
+    let task = "Analyze the given task and provide your solution.";
+
+    let mut branches: Vec<Vec<String>> = vec![Vec::new()];
+
+    for depth in 0..pattern_config.tot_depth {
+        info!(
+            depth = depth + 1,
+            branches = branches.len(),
+            "ToT multi step"
+        );
+
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("tree-of-thought-multi")
+            };
+            if !healthy {
+                warn!("Tree-of-thought (multi) blocked by circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "Tree-of-thought (multi) blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
+        let mut all_candidates: Vec<(Vec<String>, String, f64)> = Vec::new();
+
+        for (branch_idx, branch) in branches.iter().enumerate() {
+            let provider_idx = (depth * branches.len() + branch_idx) % multi_llm.client_count();
+            let client = multi_llm.get_client(provider_idx);
+
+            if let Some(client) = client {
+                let mut memory = ConversationMemory::new(
+                    &format!("{}\n\nYou are a reasoning agent. Generate diverse candidate thoughts and evaluate them.", system_prompt),
+                    30,
+                );
+                memory.add_user_message(&format!(
+                    "Task: {}\n\nCurrent reasoning path (step {}/{}):\n{}\n\nGenerate {} distinct next-step thoughts. \
+                     For each thought, provide:\n1. The thought itself\n2. A confidence score (0.0 to 1.0)\n\n\
+                     Format each as:\nTHOUGHT: <your thought>\nCONFIDENCE: <0.0-1.0>",
+                    task,
+                    depth + 1,
+                    pattern_config.tot_depth,
+                    if branch.is_empty() {
+                        "No steps yet — start from scratch.".to_string()
+                    } else {
+                        branch.join("\n")
+                    },
+                    pattern_config.tot_branches,
+                ));
+
+                let messages = memory.history().to_vec();
+                match client.chat(messages).await {
+                    Ok(response) => {
+                        if let Some(ref healing) = healing_engine {
+                            let mut engine = healing.lock().unwrap();
+                            engine.record_success("tree-of-thought-multi");
+                        }
+
+                        if let Some(choice) = response.choices.first() {
+                            let content = &choice.message.content;
+                            let mut current_thought = String::new();
+                            let mut current_confidence = 0.5;
+                            let mut parsing_thought = false;
+
+                            for line in content.lines() {
+                                let trimmed = line.trim();
+                                if trimmed.starts_with("THOUGHT:") {
+                                    if parsing_thought && !current_thought.is_empty() {
+                                        let mut new_branch = branch.clone();
+                                        new_branch.push(current_thought.clone());
+                                        all_candidates.push((
+                                            new_branch,
+                                            format!("Confidence: {:.2}", current_confidence),
+                                            current_confidence,
+                                        ));
+                                    }
+                                    current_thought = trimmed
+                                        .strip_prefix("THOUGHT:")
+                                        .unwrap_or("")
+                                        .trim()
+                                        .to_string();
+                                    parsing_thought = true;
+                                    current_confidence = 0.5;
+                                } else if trimmed.starts_with("CONFIDENCE:") {
+                                    let val_str =
+                                        trimmed.strip_prefix("CONFIDENCE:").unwrap_or("0.5").trim();
+                                    if let Ok(val) = val_str.parse::<f64>() {
+                                        current_confidence = val.clamp(0.0, 1.0);
+                                    }
+                                } else if parsing_thought && !trimmed.is_empty() {
+                                    current_thought.push(' ');
+                                    current_thought.push_str(trimmed);
+                                }
+                            }
+                            if parsing_thought && !current_thought.is_empty() {
+                                let mut new_branch = branch.clone();
+                                new_branch.push(current_thought);
+                                all_candidates.push((
+                                    new_branch,
+                                    format!("Confidence: {:.2}", current_confidence),
+                                    current_confidence,
+                                ));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        if let Some(ref healing) = healing_engine {
+                            let mut engine = healing.lock().unwrap();
+                            engine.record_failure("tree-of-thought-multi", &e.to_string());
+                        }
+                        warn!(error = %e, "ToT multi branch {} failed", branch_idx);
+                    }
+                }
+            }
+        }
+
+        if all_candidates.is_empty() {
+            warn!("No candidates generated at depth {}", depth + 1);
+            break;
+        }
+
+        all_candidates.sort_by(|a, b| b.2.partial_cmp(&a.2).unwrap_or(std::cmp::Ordering::Equal));
+        let top_k = pattern_config.tot_top_k.min(all_candidates.len());
+        branches = all_candidates
+            .into_iter()
+            .take(top_k)
+            .map(|(branch, _, _)| branch)
+            .collect();
+
+        if pattern_config.verbose {
+            println!(
+                "\n── ToT Multi Depth {}/{} ──",
+                depth + 1,
+                pattern_config.tot_depth
+            );
+            for (i, branch) in branches.iter().enumerate() {
+                println!("Branch {} ({} steps):", i + 1, branch.len());
+                for (j, thought) in branch.iter().enumerate() {
+                    println!("  Step {}: {}", j + 1, thought);
+                }
+                println!();
+            }
+        }
+    }
+
+    // Final synthesis using first provider
+    let best_branch = branches.into_iter().next().unwrap_or_default();
+    if let Some(client) = multi_llm.get_client(0) {
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("tree-of-thought-multi-synthesis")
+            };
+            if !healthy {
+                warn!("ToT multi synthesis blocked by circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "ToT multi synthesis blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
+        let mut final_memory = ConversationMemory::new(
+            &format!("{}\n\nYou are a synthesizer. Produce a final answer based on the best reasoning path.", system_prompt),
+            20,
+        );
+        final_memory.add_user_message(&format!(
+            "Task: {}\n\nBest reasoning path:\n{}\n\nProduce a final, well-reasoned answer:",
+            task,
+            best_branch.join("\n→ "),
+        ));
+
+        let messages = final_memory.history().to_vec();
+        match client.chat(messages).await {
+            Ok(response) => {
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_success("tree-of-thought-multi-synthesis");
+                }
+
+                if let Some(choice) = response.choices.first() {
+                    println!(
+                        "\n🐦‍⬛ Tree-of-Thought (Multi) Final Answer:\n{}",
+                        choice.message.content
+                    );
+
+                    if let Some(ref rf) = ravenfabric {
+                        if rf.is_enabled() {
+                            let summary = format!(
+                                "Tree-of-Thought (multi) completed: depth {}, branches explored",
+                                pattern_config.tot_depth
+                            );
+                            let _ = rf.broadcast(&summary, 30).await;
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure("tree-of-thought-multi-synthesis", &e.to_string());
+                }
+                warn!(error = %e, "ToT multi synthesis failed");
+            }
+        }
+    }
+
+    Ok(())
+}
+
+// ── Pattern 6: Self-Reflection ─────────────────────────────────────────────
+
+/// Run self-reflection reasoning.
+///
+/// The agent generates an initial solution, then reflects on it to identify
+/// gaps, errors, or weaknesses, and produces an improved version. This
+/// iterates for configurable rounds of reflection.
+pub async fn run_self_reflection(
+    llm: Arc<dyn LLMProviderTrait>,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+    pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
+) -> crate::error::Result<()> {
+    info!(
+        "Starting self-reflection mode with {} reflection rounds",
+        pattern_config.reflection_rounds
+    );
+
+    let system_prompt = &config.llm.system_prompt;
+    let task = "Analyze the given task and provide your solution.";
+
+    // Phase 1: Generate initial solution
+    let mut current_solution = String::new();
+
+    {
+        let mut memory = ConversationMemory::new(
+            &format!(
+                "{}\n\nYou are a problem solver. Generate a thorough solution.",
+                system_prompt
+            ),
+            10,
+        );
+        memory.add_user_message(&format!("Task: {}\n\nProvide your solution:", task));
+        let messages = memory.history().to_vec();
+
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("self-reflection-generate")
+            };
+            if !healthy {
+                warn!("Self-reflection generation blocked by circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "Self-reflection generation blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
+        match llm.chat(messages).await {
+            Ok(response) => {
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_success("self-reflection-generate");
+                }
+
+                if let Some(choice) = response.choices.first() {
+                    current_solution = choice.message.content.clone();
+                    info!("Initial solution: {} chars", current_solution.len());
+                    if pattern_config.verbose {
+                        println!(
+                            "\n── Self-Reflection: Initial Solution ──\n{}",
+                            current_solution
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure("self-reflection-generate", &e.to_string());
+                }
+                warn!(error = %e, "Initial solution generation failed");
+                return Err(RavenClawsError::Llm(crate::llm::LLMError::RequestFailed(
+                    format!("Initial solution generation failed: {}", e),
+                )));
+            }
+        }
+    }
+
+    // Phase 2: Reflect and improve
+    for round in 0..pattern_config.reflection_rounds {
+        info!(round = round + 1, "Self-reflection round");
+
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy(&format!("self-reflection-round-{}", round))
+            };
+            if !healthy {
+                warn!(
+                    round = round + 1,
+                    "Self-reflection round blocked by circuit breaker"
+                );
+                break;
+            }
+        }
+
+        // Step A: Reflect on the current solution
+        let mut reflection = String::new();
+        {
+            let mut reflect_memory = ConversationMemory::new(
+                "You are a critical reviewer. Analyze solutions for gaps, errors, logical flaws, \
+                 missing edge cases, and opportunities for improvement. Be thorough and constructive.",
+                10,
+            );
+            reflect_memory.add_user_message(&format!(
+                "Review this solution critically:\n\n{}\n\nIdentify:\n1. Gaps or missing elements\n\
+                 2. Logical flaws or errors\n3. Edge cases not handled\n4. Opportunities for improvement\n\
+                 5. Overall quality assessment",
+                current_solution
+            ));
+            let messages = reflect_memory.history().to_vec();
+
+            match llm.chat(messages).await {
+                Ok(response) => {
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success(&format!("self-reflection-round-{}", round));
+                    }
+
+                    if let Some(choice) = response.choices.first() {
+                        reflection = choice.message.content.clone();
+                        if pattern_config.verbose {
+                            println!(
+                                "\n── Self-Reflection Round {}/{}: Reflection ──\n{}",
+                                round + 1,
+                                pattern_config.reflection_rounds,
+                                reflection
+                            );
+                        }
+                    }
+                }
+                Err(e) => {
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure(
+                            &format!("self-reflection-round-{}", round),
+                            &e.to_string(),
+                        );
+                    }
+                    warn!(error = %e, round = round + 1, "Reflection failed");
+                    continue;
+                }
+            }
+        }
+
+        // Step B: Improve based on reflection
+        if !reflection.is_empty() {
+            let mut improve_memory = ConversationMemory::new(
+                &format!(
+                    "{}\n\nYou are an improver. Take feedback and produce a better version.",
+                    system_prompt
+                ),
+                10,
+            );
+            improve_memory.add_user_message(&format!(
+                "Original solution:\n{}\n\nFeedback received:\n{}\n\n\
+                 Produce an improved solution that addresses all feedback. \
+                 Mark your response with IMPROVED: at the start.",
+                current_solution, reflection
+            ));
+            let messages = improve_memory.history().to_vec();
+
+            match llm.chat(messages).await {
+                Ok(response) => {
+                    if let Some(choice) = response.choices.first() {
+                        let improved = choice.message.content.clone();
+                        let improved_clean = improved
+                            .strip_prefix("IMPROVED:")
+                            .unwrap_or(&improved)
+                            .trim()
+                            .to_string();
+                        current_solution = improved_clean;
+                        info!(
+                            round = round + 1,
+                            "Solution improved: {} chars",
+                            current_solution.len()
+                        );
+                    }
+                }
+                Err(e) => {
+                    warn!(error = %e, round = round + 1, "Improvement failed");
+                }
+            }
+        }
+    }
+
+    println!(
+        "\n🐦‍⬛ Self-Reflection Final Solution (after {} rounds):\n{}",
+        pattern_config.reflection_rounds, current_solution
+    );
+
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            let summary = format!(
+                "Self-reflection completed: {} rounds, final solution {} chars",
+                pattern_config.reflection_rounds,
+                current_solution.len()
+            );
+            let _ = rf.broadcast(&summary, 30).await;
+        }
+    }
+
+    Ok(())
+}
+
+/// Run self-reflection with multiple LLM providers (alternating roles)
+pub async fn run_self_reflection_multi(
+    multi_llm: MultiModelManager,
+    config: Config,
+    ravenfabric: Option<RavenFabricClient>,
+    pattern_config: PatternConfig,
+    healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
+) -> crate::error::Result<()> {
+    info!(
+        "Starting self-reflection mode (multi-model) with {} rounds",
+        pattern_config.reflection_rounds
+    );
+
+    let system_prompt = &config.llm.system_prompt;
+    let task = "Analyze the given task and provide your solution.";
+
+    // Phase 1: Generate initial solution using first provider
+    let mut current_solution = String::new();
+
+    if let Some(client) = multi_llm.get_client(0) {
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("self-reflection-multi-generate")
+            };
+            if !healthy {
+                warn!("Self-reflection multi generation blocked by circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "Self-reflection multi generation blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
+        let mut memory = ConversationMemory::new(
+            &format!(
+                "{}\n\nYou are a problem solver. Generate a thorough solution.",
+                system_prompt
+            ),
+            10,
+        );
+        memory.add_user_message(&format!("Task: {}\n\nProvide your solution:", task));
+        let messages = memory.history().to_vec();
+
+        match client.chat(messages).await {
+            Ok(response) => {
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_success("self-reflection-multi-generate");
+                }
+
+                if let Some(choice) = response.choices.first() {
+                    current_solution = choice.message.content.clone();
+                    info!(
+                        "Initial solution: {} chars via {}",
+                        current_solution.len(),
+                        client.provider_name()
+                    );
+                    if pattern_config.verbose {
+                        println!(
+                            "\n── Self-Reflection Multi: Initial Solution ──\n{}",
+                            current_solution
+                        );
+                    }
+                }
+            }
+            Err(e) => {
+                if let Some(ref healing) = healing_engine {
+                    let mut engine = healing.lock().unwrap();
+                    engine.record_failure("self-reflection-multi-generate", &e.to_string());
+                }
+                warn!(error = %e, "Multi initial solution generation failed");
+                return Err(RavenClawsError::Llm(crate::llm::LLMError::RequestFailed(
+                    format!("Multi initial solution generation failed: {}", e),
+                )));
+            }
+        }
+    }
+
+    // Phase 2: Reflect and improve using alternating providers
+    for round in 0..pattern_config.reflection_rounds {
+        info!(round = round + 1, "Self-reflection multi round");
+
+        // Use different providers for reflection vs improvement
+        let reflector_idx = (round * 2 + 1) % multi_llm.client_count();
+        let improver_idx = (round * 2 + 2) % multi_llm.client_count();
+
+        // Check self-healing circuit breaker
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy(&format!("self-reflection-multi-round-{}", round))
+            };
+            if !healthy {
+                warn!(
+                    round = round + 1,
+                    "Self-reflection multi round blocked by circuit breaker"
+                );
+                break;
+            }
+        }
+
+        // Step A: Reflect using one provider
+        let mut reflection = String::new();
+        if let Some(reflector) = multi_llm.get_client(reflector_idx) {
+            let mut reflect_memory = ConversationMemory::new(
+                "You are a critical reviewer. Analyze solutions for gaps, errors, logical flaws, \
+                 missing edge cases, and opportunities for improvement. Be thorough and constructive.",
+                10,
+            );
+            reflect_memory.add_user_message(&format!(
+                "Review this solution critically:\n\n{}\n\nIdentify:\n1. Gaps or missing elements\n\
+                 2. Logical flaws or errors\n3. Edge cases not handled\n4. Opportunities for improvement\n\
+                 5. Overall quality assessment",
+                current_solution
+            ));
+            let messages = reflect_memory.history().to_vec();
+
+            match reflector.chat(messages).await {
+                Ok(response) => {
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success(&format!("self-reflection-multi-round-{}", round));
+                    }
+
+                    if let Some(choice) = response.choices.first() {
+                        reflection = choice.message.content.clone();
+                        if pattern_config.verbose {
+                            println!(
+                                "\n── Self-Reflection Multi Round {}/{}: Reflection ({} via {}) ──\n{}",
+                                round + 1,
+                                pattern_config.reflection_rounds,
+                                reflector.provider_name(),
+                                reflector.model(),
+                                reflection
+                            );
+                        }
+                    }
+                }
+                Err(e) => {
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure(
+                            &format!("self-reflection-multi-round-{}", round),
+                            &e.to_string(),
+                        );
+                    }
+                    warn!(error = %e, round = round + 1, "Multi reflection failed");
+                    continue;
+                }
+            }
+        }
+
+        // Step B: Improve using a different provider
+        if !reflection.is_empty() {
+            if let Some(improver) = multi_llm.get_client(improver_idx) {
+                let mut improve_memory = ConversationMemory::new(
+                    &format!(
+                        "{}\n\nYou are an improver. Take feedback and produce a better version.",
+                        system_prompt
+                    ),
+                    10,
+                );
+                improve_memory.add_user_message(&format!(
+                    "Original solution:\n{}\n\nFeedback received:\n{}\n\n\
+                     Produce an improved solution that addresses all feedback. \
+                     Mark your response with IMPROVED: at the start.",
+                    current_solution, reflection
+                ));
+                let messages = improve_memory.history().to_vec();
+
+                match improver.chat(messages).await {
+                    Ok(response) => {
+                        if let Some(choice) = response.choices.first() {
+                            let improved = choice.message.content.clone();
+                            let improved_clean = improved
+                                .strip_prefix("IMPROVED:")
+                                .unwrap_or(&improved)
+                                .trim()
+                                .to_string();
+                            current_solution = improved_clean;
+                            info!(
+                                round = round + 1,
+                                "Solution improved via {}: {} chars",
+                                improver.provider_name(),
+                                current_solution.len()
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        warn!(error = %e, round = round + 1, "Multi improvement failed");
+                    }
+                }
+            }
+        }
+    }
+
+    println!(
+        "\n🐦‍⬛ Self-Reflection (Multi) Final Solution (after {} rounds):\n{}",
+        pattern_config.reflection_rounds, current_solution
+    );
+
+    if let Some(ref rf) = ravenfabric {
+        if rf.is_enabled() {
+            let summary = format!(
+                "Self-reflection (multi) completed: {} rounds, final solution {} chars",
+                pattern_config.reflection_rounds,
+                current_solution.len()
+            );
+            let _ = rf.broadcast(&summary, 30).await;
+        }
+    }
+
+    Ok(())
+}
+
+// ── Tests ──────────────────────────────────────────────────────────────────
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1375,6 +2254,10 @@ mod tests {
         assert_eq!(cfg.research_agent_count, 3);
         assert_eq!(cfg.voter_count, 3);
         assert!(!cfg.verbose);
+        assert_eq!(cfg.tot_branches, 3);
+        assert_eq!(cfg.tot_depth, 3);
+        assert_eq!(cfg.tot_top_k, 2);
+        assert_eq!(cfg.reflection_rounds, 2);
     }
 
     #[test]
@@ -1385,10 +2268,18 @@ mod tests {
             research_agent_count: 5,
             voter_count: 7,
             verbose: true,
+            tot_branches: 4,
+            tot_depth: 5,
+            tot_top_k: 3,
+            reflection_rounds: 4,
         };
         assert_eq!(cfg.max_rounds, 5);
         assert_eq!(cfg.voter_count, 7);
         assert!(cfg.verbose);
+        assert_eq!(cfg.tot_branches, 4);
+        assert_eq!(cfg.tot_depth, 5);
+        assert_eq!(cfg.tot_top_k, 3);
+        assert_eq!(cfg.reflection_rounds, 4);
     }
 
     #[test]
@@ -1413,5 +2304,19 @@ mod tests {
     fn test_voting_function_exists() {
         let cfg = PatternConfig::default();
         assert_eq!(cfg.voter_count, 3);
+    }
+
+    #[test]
+    fn test_tree_of_thought_config() {
+        let cfg = PatternConfig::default();
+        assert_eq!(cfg.tot_branches, 3);
+        assert_eq!(cfg.tot_depth, 3);
+        assert_eq!(cfg.tot_top_k, 2);
+    }
+
+    #[test]
+    fn test_self_reflection_config() {
+        let cfg = PatternConfig::default();
+        assert_eq!(cfg.reflection_rounds, 2);
     }
 }
