@@ -133,7 +133,9 @@ pub use patterns::{
     run_debate, run_debate_multi, run_research_synthesize, run_research_synthesize_multi,
     run_review_loop, run_review_loop_multi, run_voting, run_voting_multi, PatternConfig,
 };
-pub use persistence::{ConversationStore, RetentionPolicy, StoredMessage, StoredSession};
+pub use persistence::{
+    ConversationStore, MemoryEntry, MemoryStore, RetentionPolicy, StoredMessage, StoredSession,
+};
 pub use plugins::{PluginError, PluginTool, WasmPlugin, WasmPluginManager};
 pub use policy::PolicyEngine;
 pub use ravenfabric::RavenFabricClient;

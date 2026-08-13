@@ -25,7 +25,7 @@
 //! # }
 //! ```
 
-use rusqlite::{params, Connection, Result as SqlResult};
+use rusqlite::{params, Connection, OptionalExtension, Result as SqlResult};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -48,6 +48,8 @@ pub struct StoredMessage {
 pub struct StoredSession {
     /// Unique session identifier
     pub session_id: String,
+    /// Human-readable title (auto-generated or user-set)
+    pub title: String,
     /// System prompt used for this session
     pub system_prompt: String,
     /// Unix timestamp when the session was created
@@ -136,6 +138,7 @@ impl ConversationStore {
             "
             CREATE TABLE IF NOT EXISTS sessions (
                 session_id   TEXT PRIMARY KEY,
+                title        TEXT NOT NULL DEFAULT '',
                 system_prompt TEXT NOT NULL DEFAULT '',
                 created_at   INTEGER NOT NULL,
                 updated_at   INTEGER NOT NULL,
@@ -191,18 +194,19 @@ impl ConversationStore {
     /// List all sessions, ordered by most recently updated first
     pub fn list_sessions(&self) -> SqlResult<Vec<StoredSession>> {
         let mut stmt = self.conn.prepare(
-            "SELECT session_id, system_prompt, created_at, updated_at, total_tokens, message_count
+            "SELECT session_id, title, system_prompt, created_at, updated_at, total_tokens, message_count
              FROM sessions ORDER BY updated_at DESC",
         )?;
         let sessions = stmt
             .query_map([], |row| {
                 Ok(StoredSession {
                     session_id: row.get(0)?,
-                    system_prompt: row.get(1)?,
-                    created_at: row.get(2)?,
-                    updated_at: row.get(3)?,
-                    total_tokens: row.get(4)?,
-                    message_count: row.get(5)?,
+                    title: row.get(1)?,
+                    system_prompt: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                    total_tokens: row.get(5)?,
+                    message_count: row.get(6)?,
                 })
             })?
             .collect::<SqlResult<Vec<_>>>()?;
@@ -353,6 +357,242 @@ impl ConversationStore {
         }
 
         Ok(())
+    }
+
+    /// Set an explicit title for a session.
+    pub fn set_title(&self, session_id: &str, title: &str) -> SqlResult<()> {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        self.conn.execute(
+            "UPDATE sessions SET title = ?1, updated_at = ?2 WHERE session_id = ?3",
+            params![title, now, session_id],
+        )?;
+        Ok(())
+    }
+
+    /// Get the title of a session (empty string if untitled).
+    pub fn get_title(&self, session_id: &str) -> SqlResult<String> {
+        let title: String = self
+            .conn
+            .query_row(
+                "SELECT title FROM sessions WHERE session_id = ?1",
+                params![session_id],
+                |row| row.get(0),
+            )
+            .unwrap_or_default();
+        Ok(title)
+    }
+
+    /// Auto-title a session from its first user message (truncated to `max_len`).
+    ///
+    /// Returns the assigned title, or `None` if the session has no user message.
+    pub fn auto_title(&self, session_id: &str, max_len: usize) -> SqlResult<Option<String>> {
+        let first: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT content FROM messages WHERE session_id = ?1 AND role = 'user'
+                 ORDER BY created_at ASC LIMIT 1",
+                params![session_id],
+                |row| row.get(0),
+            )
+            .optional()?;
+
+        let Some(first) = first else {
+            return Ok(None);
+        };
+
+        let title = truncate_to_char_boundary(&first, max_len);
+        self.set_title(session_id, &title)?;
+        Ok(Some(title))
+    }
+
+    /// Search conversations by keyword across titles, system prompts, and message
+    /// content. Returns matching session IDs (deduplicated), most recently
+    /// updated first.
+    pub fn search_conversations(&self, query: &str) -> SqlResult<Vec<StoredSession>> {
+        let pattern = format!("%{}%", query);
+        let mut stmt = self.conn.prepare(
+            "SELECT DISTINCT s.session_id, s.title, s.system_prompt, s.created_at, s.updated_at,
+                    s.total_tokens, s.message_count
+             FROM sessions s
+             LEFT JOIN messages m ON m.session_id = s.session_id
+             WHERE s.title LIKE ?1 COLLATE NOCASE
+                OR s.system_prompt LIKE ?1 COLLATE NOCASE
+                OR m.content LIKE ?1 COLLATE NOCASE
+             ORDER BY s.updated_at DESC",
+        )?;
+
+        let results = stmt
+            .query_map(params![pattern], |row| {
+                Ok(StoredSession {
+                    session_id: row.get(0)?,
+                    title: row.get(1)?,
+                    system_prompt: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                    total_tokens: row.get(5)?,
+                    message_count: row.get(6)?,
+                })
+            })?
+            .collect::<SqlResult<Vec<_>>>()?;
+        Ok(results)
+    }
+}
+
+/// Truncate a string to at most `max_len` bytes, breaking on a UTF-8 character
+/// boundary (never splitting a multi-byte character).
+fn truncate_to_char_boundary(s: &str, max_len: usize) -> String {
+    if s.len() <= max_len {
+        return s.to_string();
+    }
+    let mut end = max_len;
+    while end > 0 && !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    s[..end].to_string()
+}
+
+/// A single long-term memory entry (key-value store).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MemoryEntry {
+    /// Memory key (unique within its scope)
+    pub key: String,
+    /// Memory value
+    pub value: String,
+    /// Scope (e.g. "user", "global", "project:<id>")
+    pub scope: String,
+    /// Unix timestamp when the memory was created
+    pub created_at: u64,
+    /// Unix timestamp of the last update
+    pub updated_at: u64,
+}
+
+/// Long-term memory store backed by SQLite.
+///
+/// Provides key-value persistence with upsert semantics and scoping, so agents
+/// can retain durable facts about users and projects across sessions — the
+/// "long-term memory" primitive used by OpenClaw/Manus-style assistants.
+///
+/// # Usage
+///
+/// ```rust,no_run
+/// use ravenclaws::persistence::MemoryStore;
+///
+/// let store = MemoryStore::open(":memory:").expect("open memory store");
+/// store.set("user", "favorite_color", "blue").expect("set");
+/// assert_eq!(store.get("user", "favorite_color").unwrap(), Some("blue".to_string()));
+/// ```
+#[derive(Debug)]
+pub struct MemoryStore {
+    conn: Connection,
+}
+
+impl MemoryStore {
+    /// Open or create a SQLite database at the given path for memory storage.
+    /// Use `:memory:` for an in-memory database (useful for testing).
+    pub fn open<P: AsRef<Path>>(path: P) -> SqlResult<Self> {
+        let conn = Connection::open(path)?;
+        let store = Self { conn };
+        store.initialize_tables()?;
+        Ok(store)
+    }
+
+    fn initialize_tables(&self) -> SqlResult<()> {
+        self.conn.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS memories (
+                key        TEXT NOT NULL,
+                scope      TEXT NOT NULL,
+                value      TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                updated_at INTEGER NOT NULL,
+                PRIMARY KEY (scope, key)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_memories_scope ON memories(scope);
+            ",
+        )?;
+        Ok(())
+    }
+
+    /// Set (upsert) a memory value for a key within a scope.
+    pub fn set(&self, scope: &str, key: &str, value: &str) -> SqlResult<()> {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        self.conn.execute(
+            "INSERT INTO memories (key, scope, value, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?4)
+             ON CONFLICT(scope, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
+            params![key, scope, value, now],
+        )?;
+        Ok(())
+    }
+
+    /// Get a memory value for a key within a scope.
+    pub fn get(&self, scope: &str, key: &str) -> SqlResult<Option<String>> {
+        let value: Option<String> = self
+            .conn
+            .query_row(
+                "SELECT value FROM memories WHERE scope = ?1 AND key = ?2",
+                params![scope, key],
+                |row| row.get(0),
+            )
+            .optional()?;
+        Ok(value)
+    }
+
+    /// Delete a memory entry.
+    pub fn delete(&self, scope: &str, key: &str) -> SqlResult<()> {
+        self.conn.execute(
+            "DELETE FROM memories WHERE scope = ?1 AND key = ?2",
+            params![scope, key],
+        )?;
+        Ok(())
+    }
+
+    /// List all memories in a scope (optionally all scopes if `scope` is `None`).
+    pub fn list(&self, scope: Option<&str>) -> SqlResult<Vec<MemoryEntry>> {
+        let mut stmt = if scope.is_some() {
+            self.conn.prepare(
+                "SELECT key, value, scope, created_at, updated_at
+                 FROM memories WHERE scope = ?1 ORDER BY updated_at DESC",
+            )?
+        } else {
+            self.conn.prepare(
+                "SELECT key, value, scope, created_at, updated_at
+                 FROM memories ORDER BY scope, updated_at DESC",
+            )?
+        };
+
+        let entries = if scope.is_some() {
+            stmt.query_map(params![scope], |row| {
+                Ok(MemoryEntry {
+                    key: row.get(0)?,
+                    value: row.get(1)?,
+                    scope: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                })
+            })?
+            .collect::<SqlResult<Vec<_>>>()?
+        } else {
+            stmt.query_map([], |row| {
+                Ok(MemoryEntry {
+                    key: row.get(0)?,
+                    value: row.get(1)?,
+                    scope: row.get(2)?,
+                    created_at: row.get(3)?,
+                    updated_at: row.get(4)?,
+                })
+            })?
+            .collect::<SqlResult<Vec<_>>>()?
+        };
+
+        Ok(entries)
     }
 }
 
@@ -613,5 +853,153 @@ mod tests {
         assert!(history.is_empty());
         assert_eq!(store.message_count("nonexistent").unwrap(), 0);
         assert_eq!(store.total_tokens("nonexistent").unwrap(), 0);
+    }
+
+    // ── Auto-title tests ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_auto_title_from_first_user_message() {
+        let store = create_test_store();
+        store.create_session("s1", "System.").unwrap();
+        store
+            .add_message("s1", "user", "Hello there friend", None)
+            .unwrap();
+        store.add_message("s1", "assistant", "Hi!", None).unwrap();
+
+        let title = store.auto_title("s1", 40).unwrap().unwrap();
+        assert_eq!(title, "Hello there friend");
+        assert_eq!(store.get_title("s1").unwrap(), "Hello there friend");
+    }
+
+    #[test]
+    fn test_auto_title_truncates_to_max_len() {
+        let store = create_test_store();
+        store.create_session("s1", "System.").unwrap();
+        store
+            .add_message("s1", "user", "This is a very long first message", None)
+            .unwrap();
+
+        let title = store.auto_title("s1", 10).unwrap().unwrap();
+        assert_eq!(title, "This is a ");
+        assert_eq!(store.get_title("s1").unwrap(), "This is a ");
+    }
+
+    #[test]
+    fn test_auto_title_no_user_message_returns_none() {
+        let store = create_test_store();
+        store.create_session("s1", "System.").unwrap();
+        assert!(store.auto_title("s1", 40).unwrap().is_none());
+    }
+
+    #[test]
+    fn test_set_and_get_title() {
+        let store = create_test_store();
+        store.create_session("s1", "System.").unwrap();
+        store.set_title("s1", "My custom title").unwrap();
+        assert_eq!(store.get_title("s1").unwrap(), "My custom title");
+    }
+
+    // ── Search tests ───────────────────────────────────────────────────────
+
+    #[test]
+    fn test_search_by_message_content() {
+        let store = create_test_store();
+        store.create_session("s1", "System.").unwrap();
+        store
+            .add_message("s1", "user", "The capital of Norway", None)
+            .unwrap();
+        store.create_session("s2", "System.").unwrap();
+        store
+            .add_message("s2", "user", "Something unrelated", None)
+            .unwrap();
+
+        let results = store.search_conversations("Norway").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].session_id, "s1");
+    }
+
+    #[test]
+    fn test_search_by_title() {
+        let store = create_test_store();
+        store.create_session("s1", "System.").unwrap();
+        store.set_title("s1", "Deployment checklist").unwrap();
+        store.create_session("s2", "System.").unwrap();
+
+        let results = store.search_conversations("deployment").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].session_id, "s1");
+    }
+
+    #[test]
+    fn test_search_no_match_returns_empty() {
+        let store = create_test_store();
+        store.create_session("s1", "System.").unwrap();
+        store.add_message("s1", "user", "hello", None).unwrap();
+
+        let results = store.search_conversations("zzzzz").unwrap();
+        assert!(results.is_empty());
+    }
+
+    // ── MemoryStore tests ──────────────────────────────────────────────────
+
+    fn create_test_memory_store() -> MemoryStore {
+        MemoryStore::open(":memory:").expect("Failed to create in-memory memory store")
+    }
+
+    #[test]
+    fn test_memory_set_and_get() {
+        let store = create_test_memory_store();
+        store.set("user", "name", "Alice").unwrap();
+        assert_eq!(
+            store.get("user", "name").unwrap(),
+            Some("Alice".to_string())
+        );
+        assert_eq!(store.get("user", "missing").unwrap(), None);
+    }
+
+    #[test]
+    fn test_memory_upsert() {
+        let store = create_test_memory_store();
+        store.set("user", "name", "Alice").unwrap();
+        store.set("user", "name", "Bob").unwrap();
+        assert_eq!(store.get("user", "name").unwrap(), Some("Bob".to_string()));
+    }
+
+    #[test]
+    fn test_memory_scoped() {
+        let store = create_test_memory_store();
+        store.set("user", "name", "Alice").unwrap();
+        store.set("project:1", "name", "Bob").unwrap();
+        // Same key, different scopes are independent
+        assert_eq!(
+            store.get("user", "name").unwrap(),
+            Some("Alice".to_string())
+        );
+        assert_eq!(
+            store.get("project:1", "name").unwrap(),
+            Some("Bob".to_string())
+        );
+    }
+
+    #[test]
+    fn test_memory_delete() {
+        let store = create_test_memory_store();
+        store.set("user", "name", "Alice").unwrap();
+        store.delete("user", "name").unwrap();
+        assert_eq!(store.get("user", "name").unwrap(), None);
+    }
+
+    #[test]
+    fn test_memory_list() {
+        let store = create_test_memory_store();
+        store.set("user", "a", "1").unwrap();
+        store.set("user", "b", "2").unwrap();
+        store.set("global", "c", "3").unwrap();
+
+        let user_entries = store.list(Some("user")).unwrap();
+        assert_eq!(user_entries.len(), 2);
+
+        let all_entries = store.list(None).unwrap();
+        assert_eq!(all_entries.len(), 3);
     }
 }

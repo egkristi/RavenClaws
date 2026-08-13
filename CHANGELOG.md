@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Web access policy (domain-level)** — New `src/web_policy.rs` module with `WebAccessPolicy`, `WebCategory`, `RateLimiter`, and `extract_domain()`. Category-based allowlist/blocklist/permission rules for web-facing tools (`web_fetch`, `web_search`, `browser`), complementary to the resource-level `PolicyEngine`. Wired into `WebFetchTool` and `WebSearchTool` (they consult the policy before any network request), and into `ToolRegistry::with_config()`. New `web_policy` config section (`[web_policy]`) in `config.rs`, disabled by default so existing deployments are unaffected. 11 new unit tests. Re-exported from the library crate.
+- **Long-term memory + conversation search + auto-title** — Extended `src/persistence.rs` with a `MemoryStore` (scoped key-value persistence with upsert semantics), `search_conversations()` (keyword search across titles, system prompts, and message content), and auto-titling (`set_title`/`get_title`/`auto_title`). Added a `title` column to the `sessions` table and a `title` field to `StoredSession`. 16 new unit tests. Re-exported from the library crate.
 
 ### Fixed
 - **Stale Helm `appVersion`** — `charts/ravenclaws/Chart.yaml` `appVersion` bumped from `0.7.2` to `1.3.0` to match the released binary.
