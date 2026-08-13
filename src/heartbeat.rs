@@ -626,6 +626,11 @@ impl HeartbeatAgent {
 
         Ok(())
     }
+
+    /// Save the current state to disk
+    fn save_state(&self) -> Result<()> {
+        self.persist_state()
+    }
 }
 
 impl Drop for HeartbeatAgent {
