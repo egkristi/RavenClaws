@@ -8,11 +8,11 @@
 > `RAVENCLAWS-MERGE.md` / `RAVENCLAWS-IMPROVEMENTS.md`).
 
 **Date:** 2026-07-02 *(re-analyzed 2026-08-13)*  
-**Version:** v1.3.0 — Advanced Reasoning 🧠  
-**Previous Release:** v1.2.0 (2026-07-02) — Self-Healing & Resilience  
-**Current Commit:** (v1.3.0 — Tree-of-Thought + Self-Reflection)
+**Version:** v1.4.0 — Universal Parity: The Merge Phase 🐦‍⬛  
+**Previous Release:** v1.3.0 (2026-07-02) — Advanced Reasoning  
+**Current Commit:** (v1.4.0 — K8s operator + web policy + memory tiers + messaging)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
-**Test Count:** 547 unit tests · 114 verification tests · 0 failures
+**Test Count:** 587 unit tests · 114 verification tests · 0 failures
 **v1.0 Hardening Progress:** v0.9.4–v0.9.16 all complete ✅. **v0.9.14 closed ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy` verification. **v0.9.15 closed ALL ecosystem expansion gaps** — vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers. **v0.9.16 closed the last v1.0 blocker** — SSE MCP ecosystem verification: `--mcp-sse-server` CLI flag wired, SSE transport for MCP client config, MCP integration tests (stdio + SSE), SSE transport documentation. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v1.0 is released — the stable release. All exit criteria are met.** **v1.0.1 fixes the 4 remaining critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.** **v1.0.1 also adds WASM plugin system (Plugin ABI v1, 11 unit tests) and SQLite conversation persistence (15 unit tests) — 485 total unit tests across 20 modules.**
 
 **Strategic Positioning:** RavenClaws is the **"Temporal for AI agents"** — the lightweight, durable execution engine for AI agents. Unlike LangGraph (complex graphs), Temporal (heavy infra), or CrewAI (Python-only), RavenClaws gives you reliable, checkpointed agent execution in a ~5 MB binary that runs on a Raspberry Pi. **Durable execution (checkpoint/resume) is implemented in v0.9.12** — agent loop saves state after each iteration and survives process restarts. **Multi-agent patterns (debate, review-loop, research-synthesize, voting) are implemented in v0.9.13.** **Production stability verified in v0.9.11 rpi5 audit: 3,597 requests, 0 errors, 10 Mi RSS, 0 restarts over 7.5 hours.**
