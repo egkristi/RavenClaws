@@ -459,146 +459,147 @@ pub async fn run_research_synthesize(
     pattern_config: PatternConfig,
     healing_engine: Option<Arc<Mutex<SelfHealingEngine>>>,
 ) -> crate::error::Result<()> {
-    info!(
-        "Starting research-synthesize mode with {} research agents",
-        pattern_config.research_agent_count
-    );
+        info!(
+            "Starting research-synthesize mode with {} research agents",
+            pattern_config.research_agent_count
+        );
 
-    let _system_prompt = &config.llm.system_prompt;
-    let task = "Analyze the given task and provide your solution.";
+        let _system_prompt = &config.llm.system_prompt;
+        let task = "Analyze the given task and provide your solution.";
 
-    // Define research perspectives
-    let perspectives = [
-        ("Fact-Finder", "You are a fact-finding researcher. Focus on verifiable facts, data, statistics, and concrete evidence. Cite specific sources and numbers."),
-        ("Analyst", "You are an analytical researcher. Focus on patterns, trends, cause-and-effect relationships, and strategic implications."),
-        ("Innovator", "You are an innovative researcher. Focus on novel approaches, emerging trends, creative solutions, and future possibilities."),
-    ];
+        // Define research perspectives
+        let perspectives = [
+            ("Fact-Finder", "You are a fact-finding researcher. Focus on verifiable facts, data, statistics, and concrete evidence. Cite specific sources and numbers."),
+            ("Analyst", "You are an analytical researcher. Focus on patterns, trends, cause-and-effect relationships, and strategic implications."),
+            ("Innovator", "You are an innovative researcher. Focus on novel approaches, emerging trends, creative solutions, and future possibilities."),
+        ];
 
-    let agent_count = pattern_config.research_agent_count.min(perspectives.len());
-    let mut research_results: Vec<(String, String)> = Vec::new();
+        let agent_count = pattern_config.research_agent_count.min(perspectives.len());
+        let mut research_results: Vec<(String, String)> = Vec::new();
 
-    // Phase 1: Parallel research
-    for (role, persona) in perspectives.iter().take(agent_count) {
-        info!(role = %role, "Research agent starting");
+        // Phase 1: Parallel research
+        for (role, persona) in perspectives.iter().take(agent_count) {
+            info!(role = %role, "Research agent starting");
 
-        let mut memory = ConversationMemory::new(persona, 10);
-        memory.add_user_message(&format!(
-            "Research the following topic from your perspective:\n\n{}",
-            task
-        ));
+            let mut memory = ConversationMemory::new(persona, 10);
+            memory.add_user_message(&format!(
+                "Research the following topic from your perspective:\n\n{}",
+                task
+            ));
 
-        // Check self-healing circuit breaker
-        if let Some(ref healing) = healing_engine {
-            let healthy = {
-                let mut engine = healing.lock().unwrap();
-                engine.is_healthy(&format!("research-{}", role))
-            };
-            if !healthy {
-                warn!(role = %role, "Research agent blocked by circuit breaker");
-                research_results.push((
-                    role.to_string(),
-                    "[Research blocked by circuit breaker]".to_string(),
-                ));
-                continue;
+            // Check self-healing circuit breaker
+            if let Some(ref healing) = healing_engine {
+                let healthy = {
+                    let mut engine = healing.lock().unwrap();
+                    engine.is_healthy(&format!("research-{}", role))
+                };
+                if !healthy {
+                    warn!(role = %role, "Research agent blocked by circuit breaker");
+                    research_results.push((
+                        role.to_string(),
+                        "[Research blocked by circuit breaker]".to_string(),
+                    ));
+                    continue;
+                }
+            }
+
+            let messages = memory.history().to_vec();
+            match llm.chat(messages).await {
+                Ok(response) => {
+                    // Record success
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_success(&format!("research-{}", role));
+                    }
+
+                    if let Some(choice) = response.choices.first() {
+                        let content = choice.message.content.clone();
+                        info!(role = %role, "Research completed: {} chars", content.len());
+                        research_results.push((role.to_string(), content));
+                    }
+                }
+                Err(e) => {
+                    // Record failure
+                    if let Some(ref healing) = healing_engine {
+                        let mut engine = healing.lock().unwrap();
+                        engine.record_failure(&format!("research-{}", role), &e.to_string());
+                    }
+                    warn!(error = %e, role = %role, "Research agent failed");
+                    research_results.push((role.to_string(), format!("[Research failed: {}]", e)));
+                }
             }
         }
 
-        let messages = memory.history().to_vec();
+        // Print intermediate research if verbose
+        if pattern_config.verbose {
+            println!("\n── Research Findings ──");
+            for (role, content) in &research_results {
+                println!("\n--- {} ---\n{}", role, content);
+            }
+        }
+
+        // Phase 2: Synthesis
+        let synthesizer_persona = "You are a synthesis specialist. Combine multiple research perspectives into a coherent, well-structured report. Identify common themes, resolve contradictions, and present a unified analysis.";
+        let mut synth_memory = ConversationMemory::new(synthesizer_persona, 20);
+
+        let mut synthesis_input =
+            String::from("Synthesize the following research findings into a comprehensive report:\n\n");
+        for (role, content) in &research_results {
+            synthesis_input.push_str(&format!("\n=== {} ===\n{}\n", role, content));
+        }
+        synth_memory.add_user_message(&synthesis_input);
+
+        // Check self-healing circuit breaker before synthesis
+        if let Some(ref healing) = healing_engine {
+            let healthy = {
+                let mut engine = healing.lock().unwrap();
+                engine.is_healthy("research-synthesis")
+            };
+            if !healthy {
+                warn!("Research synthesis blocked by circuit breaker");
+                return Err(RavenClawsError::HealingError(
+                    "Research synthesis blocked by circuit breaker".to_string(),
+                ));
+            }
+        }
+
+        let messages = synth_memory.history().to_vec();
         match llm.chat(messages).await {
             Ok(response) => {
                 // Record success
                 if let Some(ref healing) = healing_engine {
                     let mut engine = healing.lock().unwrap();
-                    engine.record_success(&format!("research-{}", role));
+                    engine.record_success("research-synthesis");
                 }
 
                 if let Some(choice) = response.choices.first() {
-                    let content = choice.message.content.clone();
-                    info!(role = %role, "Research completed: {} chars", content.len());
-                    research_results.push((role.to_string(), content));
+                    let result = &choice.message.content;
+                    println!("\n🐦‍⬛ Research Synthesis:\n{}", result);
+
+                    if let Some(ref rf) = ravenfabric {
+                        if rf.is_enabled() {
+                            let preview = result.chars().take(500).collect::<String>();
+                            let _ = rf.broadcast(&preview, 30).await;
+                        }
+                    }
                 }
             }
             Err(e) => {
                 // Record failure
                 if let Some(ref healing) = healing_engine {
                     let mut engine = healing.lock().unwrap();
-                    engine.record_failure(&format!("research-{}", role), &e.to_string());
+                    engine.record_failure("research-synthesis", &e.to_string());
                 }
-                warn!(error = %e, role = %role, "Research agent failed");
-                research_results.push((role.to_string(), format!("[Research failed: {}]", e)));
+                warn!(error = %e, "Synthesis failed");
+                return Err(RavenClawsError::CommandExecution(format!(
+                    "Synthesis failed: {}",
+                    e
+                )));
             }
         }
+
+        Ok(())
     }
-
-    // Print intermediate research if verbose
-    if pattern_config.verbose {
-        println!("\n── Research Findings ──");
-        for (role, content) in &research_results {
-            println!("\n--- {} ---\n{}", role, content);
-        }
-    }
-
-    // Phase 2: Synthesis
-    let synthesizer_persona = "You are a synthesis specialist. Combine multiple research perspectives into a coherent, well-structured report. Identify common themes, resolve contradictions, and present a unified analysis.";
-    let mut synth_memory = ConversationMemory::new(synthesizer_persona, 20);
-
-    let mut synthesis_input =
-        String::from("Synthesize the following research findings into a comprehensive report:\n\n");
-    for (role, content) in &research_results {
-        synthesis_input.push_str(&format!("\n=== {} ===\n{}\n", role, content));
-    }
-    synth_memory.add_user_message(&synthesis_input);
-
-    // Check self-healing circuit breaker before synthesis
-    if let Some(ref healing) = healing_engine {
-        let healthy = {
-            let mut engine = healing.lock().unwrap();
-            engine.is_healthy("research-synthesis")
-        };
-        if !healthy {
-            warn!("Research synthesis blocked by circuit breaker");
-            return Err(RavenClawsError::HealingError(
-                "Research synthesis blocked by circuit breaker".to_string(),
-            ));
-        }
-    }
-
-    let messages = synth_memory.history().to_vec();
-    match llm.chat(messages).await {
-        Ok(response) => {
-            // Record success
-            if let Some(ref healing) = healing_engine {
-                let mut engine = healing.lock().unwrap();
-                engine.record_success("research-synthesis");
-            }
-
-            if let Some(choice) = response.choices.first() {
-                let result = &choice.message.content;
-                println!("\n🐦‍⬛ Research Synthesis:\n{}", result);
-
-                if let Some(ref rf) = ravenfabric {
-                    if rf.is_enabled() {
-                        let preview = result.chars().take(500).collect::<String>();
-                        let _ = rf.broadcast(&preview, 30).await;
-                    }
-                }
-            }
-        }
-        Err(e) => {
-            // Record failure
-            if let Some(ref healing) = healing_engine {
-                let mut engine = healing.lock().unwrap();
-                engine.record_failure("research-synthesis", &e.to_string());
-            }
-            warn!(error = %e, "Synthesis failed");
-            return Err(RavenClawsError::CommandExecution(format!(
-                "Synthesis failed: {}",
-                e
-            )));
-        }
-    }
-
-    Ok(())
 }
 
 // ── Pattern 4: Voting ──────────────────────────────────────────────────────

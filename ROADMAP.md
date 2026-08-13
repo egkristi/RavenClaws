@@ -434,7 +434,6 @@ simpler** — or deliberately not at all.
 | **LLM response content logging** | ✅ v0.9.4 | ✅ | ✅ | ✅ |
 | **`--exec` mode docs** | ✅ **v0.9.10** | ✅ | ✅ | ✅ |
 | **Agent loop deduplication** | ✅ **v0.9.11** | ✅ | ✅ | ✅ |
-| **Eval harness agent loop integration** | ✅ **v0.9.11** | ✅ | ✅ | ✅ |
 | **Azure OpenAI adapter** | ✅ **v0.9.11** | ✅ | ✅ | ✅ |
 | **vLLM docs + tests** | ✅ **v0.9.15** | ✅ | ✅ | ✅ |
 | **llama.cpp docs + tests** | ✅ **v0.9.15** | ✅ | ✅ | ✅ |
@@ -752,3 +751,21 @@ Per `RAVENCLAWS-MERGE.md`, the merge candidates were:
 - [x] Default ~5 MB binary unaffected (`k8s` optional feature)
 - [x] Each feature committed and pushed individually
 - [x] ROADMAP.md deduplicated (removed ~2,048 lines of accidental checklist duplication)
+
+## [Unreleased]
+
+### Added
+- Feature 1: Description of the first feature to be implemented.
+- Feature 2: Description of the second feature to be implemented.
+
+// ...existing code...
+
+### Added
+- Enhance Security Auditing: Implement more comprehensive security auditing features to track potential vulnerabilities.
+- Security Feature X: Description of a new security feature to be implemented.
+
+- Cross-Platform Compatibility: Ensure binary compatibility with Windows, macOS, Linux, and ARM architectures. Provide pre-built binaries for all platforms.
+- Containerization Improvements: Optimize Docker images and support other container orchestration systems.
+- Performance Optimizations: Profile code for optimization and implement lazy loading and asynchronous processing.
+- User Experience Enhancements: Improve CLI and develop a graphical user interface (GUI).
+- Documentation and Onboarding: Create comprehensive guides and offer video tutorials.
