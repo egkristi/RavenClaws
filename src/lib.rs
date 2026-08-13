@@ -90,6 +90,7 @@ pub mod error;
 pub mod eval;
 pub mod healing;
 pub mod heartbeat;
+pub mod integrations;
 #[cfg(feature = "k8s")]
 pub mod k8s;
 pub mod llm;
@@ -125,6 +126,10 @@ pub use error::RavenClawsError;
 pub use eval::EvalRunner;
 pub use healing::{HealingCircuitBreaker, HealingCircuitState, HealingConfig, SelfHealingEngine};
 pub use heartbeat::HeartbeatAgent;
+pub use integrations::{
+    send_discord, send_email, send_matrix, send_signal, send_slack, send_sms, send_teams,
+    send_telegram, IntegrationResult,
+};
 #[cfg(feature = "k8s")]
 pub use k8s::{K8sManager, K8sManagerConfig};
 pub use llm::{
