@@ -30,7 +30,7 @@ RavenClaws is a **lightweight, secure Rust agent framework** with multi-provider
 - **Build:** `cargo build --release` (~5.2 MB stripped binary, ~5 ms startup)
 - **Library:** Available as `ravenclaws` on crates.io (binary + library crate)
 
-### Architecture (22 modules)
+### Architecture (25 modules)
 
 ```
 src/
@@ -54,10 +54,13 @@ src/
 ├── eval.rs      — Eval harness (assertions, run traces, text/JSON reports)
 ├── ravenfabric.rs— RavenFabric mesh client (health, list_agents, execute, broadcast)
 ├── patterns.rs — Multi-agent patterns (debate, review-loop, research-synthesize, voting, tree-of-thought, self-reflection)
-├── persistence.rs — SQLite-backed conversation persistence with retention policies
+├── persistence.rs — SQLite-backed conversation persistence with retention policies + long-term memory + search + auto-title
 ├── plugins.rs — WASM plugin system (Plugin ABI v1, WasmPlugin, WasmPluginManager)
 ├── load.rs — Graceful degradation (LoadManager, TokenBucket, ErrorTracker, LoadConfig)
-└── healing.rs — Self-healing engine (SelfHealingEngine, HealingCircuitBreaker, FailureRecord, exponential backoff)
+├── healing.rs — Self-healing engine (SelfHealingEngine, HealingCircuitBreaker, FailureRecord, exponential backoff)
+├── web_policy.rs — Domain-level web access policy (WebAccessPolicy, WebCategory, RateLimiter, extract_domain)
+├── integrations.rs — Messaging & connector integrations (Slack, Discord, Teams, Signal, Matrix, Telegram, Email, SMS)
+└── k8s.rs — Kubernetes operator support (feature `k8s`: K8sManager, programmatic pod lifecycle)
 ```
 
 ### Current State

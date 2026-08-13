@@ -5,6 +5,31 @@ Items are ordered by severity/impact.
 
 ---
 
+## ✅ v1.4 Milestone — Merge Phase (2026-08-13)
+
+**Universal-parity merge from RavenAssistant01 shipped.** Four components merged,
+two issues resolved:
+
+| Issue | Severity | Status |
+|---|---|---|
+| Stale Helm `appVersion` (`0.7.2` vs binary `1.3.0`) | 🔴 Critical | ✅ Fixed — `charts/ravenclaws/Chart.yaml` bumped to `1.3.0` |
+| K8s init container `chown-workspace` runs as root, breaking `runAsNonRoot` policy (`CreateContainerConfigError`) | 🔴 Critical | ✅ Fixed — removed the root-running init container; `fsGroup: 65532` already makes the workspace writable |
+| `ROADMAP.md` contained ~2,048 lines of accidental checklist duplication | 🟡 Medium | ✅ Fixed — deduplicated (2762 → ~752 lines) |
+
+**New modules shipped (from `RAVENCLAWS-MERGE.md`):**
+
+| Module | Details |
+|---|---|
+| `src/web_policy.rs` | `WebAccessPolicy` domain-level allow/block/permission policy, wired into web tools. 11 tests. |
+| `src/persistence.rs` (extended) | `MemoryStore` + `search_conversations()` + auto-title. 16 tests. |
+| `src/k8s.rs` (feature `k8s`) | `K8sManager` programmatic pod lifecycle. 4 tests. |
+| `src/integrations.rs` | Slack/Discord/Teams/Signal/Matrix/Telegram/Email/SMS outbound notifications. 10 tests. |
+
+**Verification:** 587 unit tests pass (up from 547), `clippy -D warnings` clean,
+`cargo fmt --check` clean. All four commits pushed to `master`.
+
+---
+
 ## ✅ v0.9.1 Milestone — Released (2026-06-23)
 
 **Self-provisioning sub-agents & swarm orchestration shipped:**
