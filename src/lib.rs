@@ -90,6 +90,8 @@ pub mod error;
 pub mod eval;
 pub mod healing;
 pub mod heartbeat;
+#[cfg(feature = "k8s")]
+pub mod k8s;
 pub mod llm;
 pub mod load;
 pub mod mcp;
@@ -123,6 +125,8 @@ pub use error::RavenClawsError;
 pub use eval::EvalRunner;
 pub use healing::{HealingCircuitBreaker, HealingCircuitState, HealingConfig, SelfHealingEngine};
 pub use heartbeat::HeartbeatAgent;
+#[cfg(feature = "k8s")]
+pub use k8s::{K8sManager, K8sManagerConfig};
 pub use llm::{
     create_client, load_image, ChatMessage, ChatResponse, ContentPart, ImageUrlContent,
     LLMProviderTrait, MultiModelManager,

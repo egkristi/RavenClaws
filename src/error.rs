@@ -40,6 +40,10 @@ pub enum RavenClawsError {
     #[error("Self-healing error: {0}")]
     #[allow(dead_code)]
     HealingError(String),
+
+    #[error("Kubernetes error: {0}")]
+    #[allow(dead_code)]
+    K8s(String),
 }
 
 impl RavenClawsError {

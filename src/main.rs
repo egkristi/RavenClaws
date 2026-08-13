@@ -11,6 +11,8 @@ mod error;
 mod eval;
 mod healing;
 mod heartbeat;
+#[cfg(feature = "k8s")]
+mod k8s;
 mod llm;
 mod load;
 mod mcp;

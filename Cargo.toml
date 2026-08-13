@@ -34,6 +34,9 @@ path = "src/main.rs"
 default = ["otel-grpc"]
 otel-grpc = ["opentelemetry-otlp"]
 otel-stdout = ["opentelemetry-stdout"]
+# Kubernetes operator support (programmatic pod lifecycle) — optional to keep the
+# default binary small. Enabled with `--features k8s`.
+k8s = ["dep:kube", "dep:k8s-openapi"]
 
 [dependencies]
 # Async runtime
@@ -117,6 +120,10 @@ wasmtime = { version = "28", default-features = false, features = ["cranelift", 
 
 # Base64 encoding for multi-modal image support (v1.1.0)
 base64 = "0.22"
+
+# Kubernetes operator support (v1.4.0, optional via `k8s` feature)
+kube = { version = "0.92", features = ["runtime", "derive"], optional = true }
+k8s-openapi = { version = "0.22", features = ["v1_30"], optional = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
