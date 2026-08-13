@@ -361,13 +361,17 @@ impl ToolRegistry {
         registry.register(Arc::new(ShellTool::new()));
         registry.register(Arc::new(ReadFileTool::new()));
         registry.register(Arc::new(WriteFileTool::new()));
-        registry.register(Arc::new(WebFetchTool::new()));
-        registry.register(Arc::new(WebSearchTool::with_config(
+        registry.register(Arc::new(WebFetchTool::with_policy(
+            config.web_policy.clone(),
+        )));
+        let mut search_tool = WebSearchTool::with_config(
             config.web_search.endpoint.clone(),
             config.web_search.engine.clone(),
             config.web_search.max_results,
             config.web_search.fetch_content,
-        )));
+        );
+        search_tool.policy = Some(config.web_policy.clone());
+        registry.register(Arc::new(search_tool));
         registry.register(Arc::new(BrowserTool::with_config(
             config.browser.cdp_url.clone(),
             config.browser.request_timeout,
@@ -709,11 +713,21 @@ impl ToolImpl for WriteFileTool {
 /// Web fetch tool — fetches a URL and returns the content
 pub struct WebFetchTool {
     definition: ToolDefinition,
+    policy: Option<crate::web_policy::WebAccessPolicy>,
 }
 
 impl WebFetchTool {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Create a web fetch tool that consults the given domain policy before
+    /// performing any network request.
+    pub fn with_policy(policy: crate::web_policy::WebAccessPolicy) -> Self {
+        Self {
+            policy: Some(policy),
+            ..Self::default()
+        }
     }
 }
 
@@ -744,6 +758,7 @@ impl Default for WebFetchTool {
                 requires_approval: false,
                 category: ToolCategory::Network,
             },
+            policy: None,
         }
     }
 }
@@ -761,6 +776,22 @@ impl ToolImpl for WebFetchTool {
                 "missing 'url' argument".to_string(),
             )
         })?;
+
+        // Enforce domain policy before any network request.
+        if let Some(policy) = &self.policy {
+            let domain = crate::web_policy::extract_domain(url);
+            let (allowed, reason) = policy.is_allowed(&domain);
+            if !allowed {
+                return Ok(ToolResult {
+                    tool_name: "web_fetch".to_string(),
+                    success: false,
+                    output: format!("Access denied by web policy: {}", reason),
+                    error: Some(format!("web policy denied {}: {}", domain, reason)),
+                    exit_code: Some(403),
+                    duration_ms: None,
+                });
+            }
+        }
 
         let max_bytes = args
             .get("max_bytes")
@@ -831,6 +862,7 @@ pub struct WebSearchTool {
     search_engine: String,
     max_results: usize,
     fetch_content: bool,
+    policy: Option<crate::web_policy::WebAccessPolicy>,
 }
 
 impl WebSearchTool {
@@ -889,6 +921,7 @@ impl WebSearchTool {
             search_engine: engine,
             max_results,
             fetch_content,
+            policy: None,
         }
     }
 }
@@ -1106,6 +1139,22 @@ impl ToolImpl for WebSearchTool {
             .and_then(|v| v.as_bool())
             .unwrap_or(self.fetch_content);
 
+        // Enforce domain policy on the search backend endpoint.
+        if let Some(policy) = &self.policy {
+            let domain = crate::web_policy::extract_domain(&self.search_endpoint);
+            let (allowed, reason) = policy.is_allowed(&domain);
+            if !allowed {
+                return Ok(ToolResult {
+                    tool_name: "web_search".to_string(),
+                    success: false,
+                    output: format!("Access denied by web policy: {}", reason),
+                    error: Some(format!("web policy denied {}: {}", domain, reason)),
+                    exit_code: Some(403),
+                    duration_ms: None,
+                });
+            }
+        }
+
         // Perform the search
         let results = match self.search_engine.as_str() {
             "searxng" => self.search_searxng(query, max_results).await?,
@@ -1135,6 +1184,15 @@ impl ToolImpl for WebSearchTool {
             ));
 
             if fetch_content && !result.url.is_empty() {
+                // Skip results blocked by the domain policy.
+                if let Some(policy) = &self.policy {
+                    let domain = crate::web_policy::extract_domain(&result.url);
+                    let (allowed, _reason) = policy.is_allowed(&domain);
+                    if !allowed {
+                        output.push_str("    Content: (skipped by web policy)\n");
+                        continue;
+                    }
+                }
                 match fetch_and_extract_content(&result.url, 8192).await {
                     Ok(content) => {
                         output.push_str(&format!("    Content: {}\n", content));

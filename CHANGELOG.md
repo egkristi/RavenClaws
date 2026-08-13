@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-*(none)*
+- **Web access policy (domain-level)** — New `src/web_policy.rs` module with `WebAccessPolicy`, `WebCategory`, `RateLimiter`, and `extract_domain()`. Category-based allowlist/blocklist/permission rules for web-facing tools (`web_fetch`, `web_search`, `browser`), complementary to the resource-level `PolicyEngine`. Wired into `WebFetchTool` and `WebSearchTool` (they consult the policy before any network request), and into `ToolRegistry::with_config()`. New `web_policy` config section (`[web_policy]`) in `config.rs`, disabled by default so existing deployments are unaffected. 11 new unit tests. Re-exported from the library crate.
 
 ### Fixed
-*(none)*
+- **Stale Helm `appVersion`** — `charts/ravenclaws/Chart.yaml` `appVersion` bumped from `0.7.2` to `1.3.0` to match the released binary.
+- **Pre-existing clippy warnings** — Removed a redundant `&` in `format!` (`src/eval.rs`) and switched a map iteration to `.values()` (`src/mcp.rs`) so `clippy -D warnings` is fully clean.
 
 ### Changed
 *(none)*

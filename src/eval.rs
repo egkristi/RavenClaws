@@ -672,7 +672,7 @@ impl EvalReport {
         output.push_str(&format!("{:-^60}\n", ""));
         output.push_str(&format!(
             "Ran at:       {}\n",
-            &self.ran_at[..19].replace('T', " ")
+            self.ran_at[..19].replace('T', " ")
         ));
         output.push_str(&format!("Duration:     {} ms\n", self.duration_ms));
         output.push_str(&format!(

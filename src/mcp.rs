@@ -1900,7 +1900,7 @@ impl McpSseServer {
         // Also broadcast the response to all connected SSE clients
         let response_json = serde_json::to_string(&response)?;
         let clients_guard = clients.read().await;
-        for (_, tx) in clients_guard.iter() {
+        for tx in clients_guard.values() {
             let _ = tx.send(response_json.clone());
         }
 

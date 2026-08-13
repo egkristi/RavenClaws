@@ -105,6 +105,10 @@ pub struct Config {
     /// Load management / graceful degradation configuration (v1.1.0)
     #[serde(default)]
     pub load: crate::load::LoadConfig,
+
+    /// Web access (domain-level) policy configuration (v1.4.0)
+    #[serde(default = "default_web_policy")]
+    pub web_policy: crate::web_policy::WebAccessPolicy,
 }
 
 /// MCP server connections configuration (v0.9.6)
@@ -226,6 +230,12 @@ fn default_browser_cdp_url() -> String {
 
 fn default_browser_timeout() -> u64 {
     30000
+}
+
+fn default_web_policy() -> crate::web_policy::WebAccessPolicy {
+    // Disabled by default — existing deployments are unaffected until they
+    // explicitly enable domain-level filtering.
+    crate::web_policy::WebAccessPolicy::disabled()
 }
 
 fn default_search_endpoint() -> String {
@@ -771,6 +781,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -813,6 +824,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -853,6 +865,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -891,6 +904,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         // OpenAI doesn't need an endpoint, but the llm.endpoint is empty
@@ -933,6 +947,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1011,6 +1026,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         // OpenRouter doesn't need an endpoint, but llm.endpoint is empty
@@ -1051,6 +1067,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1091,6 +1108,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1129,6 +1147,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1181,6 +1200,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1219,6 +1239,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1430,6 +1451,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1468,6 +1490,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1506,6 +1529,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1614,6 +1638,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1652,6 +1677,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();
@@ -1690,6 +1716,7 @@ mod tests {
             swarm: crate::swarm::SwarmConfig::default(),
             browser: BrowserConfig::default(),
             load: crate::load::LoadConfig::default(),
+            web_policy: crate::web_policy::WebAccessPolicy::default(),
         };
 
         let result = config.validate();

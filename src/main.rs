@@ -23,6 +23,7 @@ mod server;
 mod swarm;
 mod telemetry;
 mod tools;
+mod web_policy;
 
 use clap::Parser;
 use std::sync::Arc;

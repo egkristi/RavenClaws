@@ -104,6 +104,7 @@ pub mod server;
 pub mod swarm;
 pub mod telemetry;
 pub mod tools;
+pub mod web_policy;
 
 // ── Re-exports of commonly used types ──────────────────────────────────────
 
@@ -142,3 +143,4 @@ pub use server::run_server;
 pub use swarm::SwarmOrchestrator;
 pub use telemetry::TelemetryGuard;
 pub use tools::{ToolCall, ToolImpl, ToolRegistry, ToolResult};
+pub use web_policy::{extract_domain, RateLimiter, WebAccessPolicy, WebCategory};
