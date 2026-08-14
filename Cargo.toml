@@ -116,7 +116,8 @@ zeroize = { version = "1.8", features = ["zeroize_derive"] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 
 # WASM runtime for plugin system (v1.0.1)
-wasmtime = { version = "28", default-features = false, features = ["cranelift", "runtime"] }
+# v47 clears all RUSTSEC advisories (incl. 2 CRITICAL sandbox escapes in <36).
+wasmtime = { version = "47", default-features = false, features = ["cranelift", "runtime"] }
 
 # Base64 encoding for multi-modal image support (v1.1.0)
 base64 = "0.22"

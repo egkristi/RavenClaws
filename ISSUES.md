@@ -17,20 +17,17 @@ wrapper in `src/heartbeat.rs` (dead-code warning). **568 tests pass, clippy clea
 
 - **Severity:** 🔴 Critical → ✅ Resolved
 
-### 2. `wasmtime` has 2 CRITICAL sandbox-escape vulnerabilities
+### 2. ✅ `wasmtime` critical sandbox-escape vulnerabilities — FIXED (2026-08-14)
 
-`cargo audit` reports `wasmtime = 28.0.1` is affected by two **CRITICAL**
-sandbox escapes (plus 10+ lower-severity issues). Because WASM plugins are a
-remote-code-execution surface, an escape is project-critical.
+`cargo audit` reported `wasmtime = 28.0.1` with two **CRITICAL** sandbox escapes
+(plus 10+ lower-severity issues). Upgraded the full wasmtime crate family to
+**47.0.3** (clears every advisory, incl. RUSTSEC-2026-0095/0096 and 0222), and
+fixed the one API breakage (`Memory::grow` now returns `wasmtime::Error`; converted
+via `anyhow!("{e}")`). `cargo audit` now reports only 4 "unmaintained" transitive
+warnings (no vulnerabilities). 587 + 568 tests pass, clippy clean.
 
-- **Severity:** 🔴 Critical (security)
-- **Crates:** `wasmtime` 28.0.1
-- **Notable advisories:**
-  - Miscompiled guest heap access → sandbox escape on aarch64 Cranelift (9.0)
-  - Winch compiler backend sandbox-escaping memory access (9.0)
-  - Guest-controlled resource exhaustion in WASI (6.9)
-  - OOB read/write transcoding component model strings (6.1–6.9)
-- **Fix:** upgrade to `>=24.0.12` / `>=36.0.13` / `>=46.0.2`
+- **Severity:** 🔴 Critical → ✅ Resolved
+- **Crates:** `wasmtime` 28.0.1 → 47.0.3
 
 ---
 

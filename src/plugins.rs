@@ -348,7 +348,7 @@ impl WasmPlugin {
             let delta = (pages_needed - current_pages) as u64;
             self.memory
                 .grow(&mut self.store, delta)
-                .map_err(PluginError::Other)?;
+                .map_err(|e| PluginError::Other(anyhow::anyhow!("{e}")))?;
         }
         Ok(current_size)
     }
