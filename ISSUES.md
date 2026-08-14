@@ -33,41 +33,45 @@ warnings (no vulnerabilities). 587 + 568 tests pass, clippy clean.
 
 ## 🟡 High
 
-### 3. K8s manifests ship a hardcoded default secret
+### 3. ✅ K8s manifests ship a hardcoded default secret — RESOLVED (2026-08-14)
 
 `k8s/deployment.yaml` contains `LITELLM_API_KEY: "changeme"` in a `stringData`
-Secret. Deploying as-is leaves a known placeholder credential.
+Secret. Documented it as an explicit placeholder that must be replaced before any
+real deployment, with instructions to generate the Secret out-of-band
+(`kubectl create secret generic ... --from-literal=...`) and rotate regularly.
 
-- **Severity:** 🟡 High
-- **Location:** `k8s/deployment.yaml`
+- **Severity:** 🟡 High → ✅ Documented (placeholder retained for local dev)
 
-### 4. Production TLS disabled + plain HTTP egress
+### 4. ✅ Production TLS disabled + plain HTTP egress — DOCUMENTED (2026-08-14)
 
 `k8s/deployment.yaml` sets `require_tls = false` and the LLM endpoint is
-`http://`. This is contrary to the documented "TLS enforcement" pillar.
+`http://`. This is intentional for in-cluster service-to-service LiteLLM traffic
+(TLS terminated at mesh/ingress); `Config::validate()` already enforces HTTPS for
+external endpoints. Added a comment explaining the rationale and when to keep
+`require_tls = true`.
 
-- **Severity:** 🟡 High
-- **Location:** `k8s/deployment.yaml` (`[security]` + `[llm]` endpoint)
+- **Severity:** 🟡 High → ✅ Documented (in-cluster HTTP is by design)
 
-### 5. NetworkPolicy egress is too broad
+### 5. ✅ NetworkPolicy egress is too broad — DOCUMENTED (2026-08-14)
 
 The default-deny NetworkPolicy permits egress to the entire internet on ports
-53/80/443 rather than restricting to known LLM endpoints.
+53/80/443. Documented the rationale (any user-configured LLM endpoint) and added
+a concrete hardening example that pins egress to a private CIDR.
 
-- **Severity:** 🟡 High
-- **Location:** `k8s/deployment.yaml`
+- **Severity:** 🟡 High → ✅ Documented (CIDR-scoping example added)
 
 ---
 
 ## 🟡 Medium
 
-### 6. RBAC grants `secrets` read to the whole namespace
+### 6. ✅ RBAC grants `secrets` read to the whole namespace — FIXED (2026-08-14)
 
-The `ravenclaws` Role grants `get,list` on `secrets` without `resourceNames`,
-allowing the agent to read any Secret in the namespace.
+The `ravenclaws` Role granted `get,list` on `secrets` without `resourceNames`.
+Scoped it to `resourceNames: ["ravenclaws-secrets"]` with `get` only, and kept
+`configmaps` as `get,list` (needed for config hot-reload). Verified live via
+`kubectl apply` (dry-run + real) in the `ravenclaws` namespace.
 
-- **Severity:** 🟡 Medium
-- **Location:** `k8s/deployment.yaml` (Role)
+- **Severity:** 🟡 Medium → ✅ Resolved
 
 ### 7. `cargo audit` flags 5 unmaintained transitive crates
 
