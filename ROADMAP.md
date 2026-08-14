@@ -754,18 +754,128 @@ Per `RAVENCLAWS-MERGE.md`, the merge candidates were:
 
 ## [Unreleased]
 
-### Added
-- Feature 1: Description of the first feature to be implemented.
-- Feature 2: Description of the second feature to be implemented.
+### 🔴 Critical — Fix Now (blocking)
 
-// ...existing code...
+- [ ] **Fix `src/patterns.rs` compile error** — `run_research_synthesize()` has
+  unmatched indentation/delimiters (`unexpected closing delimiter` at line 603).
+  The crate **does not compile** (`cargo build --locked` fails). This blocks all
+  CI, all releases, and every downstream feature. *Confirmed 2026-08-14.*
 
-### Added
-- Enhance Security Auditing: Implement more comprehensive security auditing features to track potential vulnerabilities.
-- Security Feature X: Description of a new security feature to be implemented.
+### 🔴 Critical — Dependency Vulnerabilities (security)
 
-- Cross-Platform Compatibility: Ensure binary compatibility with Windows, macOS, Linux, and ARM architectures. Provide pre-built binaries for all platforms.
-- Containerization Improvements: Optimize Docker images and support other container orchestration systems.
-- Performance Optimizations: Profile code for optimization and implement lazy loading and asynchronous processing.
-- User Experience Enhancements: Improve CLI and develop a graphical user interface (GUI).
-- Documentation and Onboarding: Create comprehensive guides and offer video tutorials.
+`cargo audit` reports **16 vulnerabilities**, including **2 CRITICAL** in the
+`wasmtime = 28.0.1` WASM plugin runtime (both are **sandbox escapes**):
+
+- **`wasmtime` — Miscompiled guest heap access enables sandbox escape on aarch64
+  Cranelift** (RUSTSEC, 9.0 CRITICAL)
+- **`wasmtime` — Winch compiler backend may allow a sandbox-escaping memory access**
+  (RUSTSEC, 9.0 CRITICAL)
+- **`wasmtime` — Guest-controlled resource exhaustion in WASI** (6.9 medium)
+- **`wasmtime` — OOB read/write when transcoding component model strings**
+  (6.1–6.9 medium) + 10 more low/medium
+
+**Fix:** upgrade `wasmtime` to a patched line (`>=24.0.12` / `>=36.0.13` /
+`>=46.0.2`). The WASM plugin feature is a direct **remote-code-execution** surface,
+so a sandbox escape is a project-critical risk.
+
+### 🟡 Medium — Dependency Hygiene
+
+`cargo audit` also flags 5 **unmaintained** crates (transitive):
+
+- `backoff` 0.4.0 (RUSTSEC-2025-0012)
+- `derivative` 2.2.0 (RUSTSEC-2024-0388)
+- `instant` 0.1.13 (RUSTSEC-2024-0384)
+- `paste` 1.0.15 (RUSTSEC-2024-0436)
+- `rustls-pemfile` 2.2.0 (RUSTSEC-2025-0134)
+
+Evaluate replacements or pin + document rationale.
+
+### 🟡 Medium — Security Hardening
+
+- [ ] **K8s: hardcoded default secret** — `k8s/deployment.yaml` ships
+  `LITELLM_API_KEY: "changeme"` in a `stringData` Secret. Enforce a non-placeholder
+  value (fail-closed) and document rotation.
+- [ ] **K8s: TLS disabled** — production manifest sets `require_tls = false` and
+  uses plain HTTP egress. Recommend `require_tls = true` + in-cluster TLS.
+- [ ] **K8s: NetworkPolicy egress too broad** — allows all `:443`/`:80`/`:53`
+  egress to the entire internet. Restrict to known LLM CIDR/FQDN ranges.
+- [ ] **RBAC least-privilege** — `ravenclaws` Role grants `get,list` on `secrets`
+  cluster-wide. Scope to only the specific `ravenclaws-secrets` Secret via
+  `resourceNames`.
+- [ ] **HMAC audit key** — confirm audit HMAC secret is sourced from env/Secret
+  (not a default constant) so tamper-evidence cannot be trivially forged.
+- [ ] **`.unwrap()` on poisoned mutexes** — ~249 `unwrap()`/`expect()` calls; many
+  on `Mutex::lock()` (e.g. `patterns.rs`, `agent.rs`). Convert to graceful error
+  propagation to avoid panics under contention/cancellation.
+- [ ] **`unsafe` in dependency** — `Cargo.lock` includes `security-framework`
+  (macOS). Verify no first-party `unsafe` and add a `#![forbid(unsafe_code)]` lint.
+
+### 🟢 Low — Platform & Polish
+
+- [ ] **Windows support** — CI builds macOS (x86_64/aarch64) + Linux, but **no
+  Windows** target. Add `x86_64-pc-windows-msvc`/`-gnu` to the build matrix.
+- [ ] **`SECURITY.md` version table is stale** — still lists "0.9.x supported";
+  update to 1.x.
+- [ ] **Container size regression risk** — default binary grew beyond the ~5 MB
+  goal with optional features; verify `k8s`/`wasmtime` stay feature-gated.
+- [ ] **Threat model / fuzzing** — the "1.0 hardening roadmap" lists an external
+  security review + fuzzing + published threat model as outstanding.
+
+---
+
+## 🎯 NemoClaw Competitive Analysis (2026-08-14)
+
+NVIDIA **NemoClaw** (22.1k★, TypeScript, ~198 contributors) is the strongest
+technical competitor in the "secure agent runtime" category. It is a **reference
+stack** that runs OpenClaw / Hermes / LangChain Deep Agents inside NVIDIA
+OpenShell sandboxes. Its headline capabilities are:
+
+| NemoClaw capability | What it actually is |
+|---|---|
+| **Managed inference + model router** | Routes each request to a model by **task complexity** (not round-robin), with GPU/local inference paths (Podman GPU, DGX Spark, llama.cpp, Ollama) |
+| **Network policy + operator approval flow** | Egress control with **human-in-the-loop approval**, static + dynamic presets |
+| **Sandbox snapshots** | Capture/rollback of sandbox filesystem state |
+| **Blueprint lifecycle** | Declarative, reusable agent blueprints |
+| **Guided onboarding / installer** | Interactive express-install, platform presets |
+| **Managed integrations** | Curated connector onboarding |
+| **Security posture profiles** | Formal controls reference, risk framework, posture profiles, internal security reviews |
+| **Supervisor gateway** | Supervisor with gateway recovery + portable authority |
+| **CUA (computer use)** | Gated computer-use-agent readiness |
+
+### Where RavenClaws already wins
+
+- **Footprint:** ~5 MB single Rust binary vs a TypeScript+Python+Shell multi-stack
+  that requires Node.js + (optionally) a GPU.
+- **Durable execution:** checkpoint/resume is unique; NemoClaw snapshots but does
+  not checkpoint the *agent loop*.
+- **Multi-agent patterns** (debate/review/research/voting) ship as primitives.
+- **Self-hosted + air-gappable + no telemetry** — no NVIDIA/OpenShell dependency.
+
+### 🎯 Where RavenClaws must catch up (new roadmap items)
+
+1. **Complexity-based model routing** — replace pure round-robin with a router
+   that classifies task complexity and selects provider/model + cost/quality
+   policy. *(NemoClaw's "model router with complexity-based routing".)*
+2. **Human-in-the-loop approval flow** — a first-class `approve/deny` gate for
+   high-risk tool calls and network egress (not just a static allow-list).
+   *(NemoClaw's "operator approval flow".)*
+3. **Sandbox filesystem snapshots** — capture/restore workdir state around tool
+   execution, complementing the existing agent-loop checkpoints.
+4. **Declarative agent blueprints** — a `[blueprint]` config that fully describes
+   persona + tools + policy + providers, shareable and reusable.
+5. **Interactive installer** — `install.sh` with platform presets (DGX/WSL/macOS/
+   rpi5) and guided onboarding, replacing docs-only setup.
+6. **Security posture profiles** — publish a threat model + controls reference +
+   per-profile hardening presets (dev vs prod vs air-gapped).
+7. **GPU/local inference management** — first-class llama.cpp/Ollama/vLLM
+   provisioning (device discovery, model warmup) on constrained + GPU hosts.
+8. **Computer-use agent (CUA)** — extend `BrowserTool` (CDP) into a full CUA loop
+   with screenshot → plan → act and gated readiness.
+
+### 🟢 Strategic note
+
+NemoClaw is a *stack that hosts other agents*; RavenClaws is *the agent itself*.
+The wedge is not to copy NemoClaw's hosting model but to ship its **security
+controls** (approval flows, snapshots, posture profiles) as first-class, in-core
+features — in a 5 MB binary that needs no NVIDIA hardware. Every item above is a
+"better, smaller, self-hosted" implementation of a NemoClaw strength.

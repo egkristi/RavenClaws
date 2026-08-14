@@ -1,9 +1,188 @@
 # Known Issues
 
-All current issues have been reviewed and resolved. No outstanding issues at this time.
-
 This document tracks known problems in RavenClaws that are not yet resolved.
 Items are ordered by severity/impact.
+
+---
+
+## 🔴 Critical (2026-08-14 security & build audit)
+
+### 1. ✅ `src/patterns.rs` does not compile — FIXED (2026-08-14)
+
+`cargo build --locked` failed with `error: unexpected closing delimiter` at
+`src/patterns.rs:603`. The `run_research_synthesize()` function had an extra
+closing brace (and double-indented body). Removed the stray brace and normalized
+indentation with `cargo fmt`. Also removed the redundant unused `save_state`
+wrapper in `src/heartbeat.rs` (dead-code warning). **568 tests pass, clippy clean.**
+
+- **Severity:** 🔴 Critical → ✅ Resolved
+
+### 2. `wasmtime` has 2 CRITICAL sandbox-escape vulnerabilities
+
+`cargo audit` reports `wasmtime = 28.0.1` is affected by two **CRITICAL**
+sandbox escapes (plus 10+ lower-severity issues). Because WASM plugins are a
+remote-code-execution surface, an escape is project-critical.
+
+- **Severity:** 🔴 Critical (security)
+- **Crates:** `wasmtime` 28.0.1
+- **Notable advisories:**
+  - Miscompiled guest heap access → sandbox escape on aarch64 Cranelift (9.0)
+  - Winch compiler backend sandbox-escaping memory access (9.0)
+  - Guest-controlled resource exhaustion in WASI (6.9)
+  - OOB read/write transcoding component model strings (6.1–6.9)
+- **Fix:** upgrade to `>=24.0.12` / `>=36.0.13` / `>=46.0.2`
+
+---
+
+## 🟡 High
+
+### 3. K8s manifests ship a hardcoded default secret
+
+`k8s/deployment.yaml` contains `LITELLM_API_KEY: "changeme"` in a `stringData`
+Secret. Deploying as-is leaves a known placeholder credential.
+
+- **Severity:** 🟡 High
+- **Location:** `k8s/deployment.yaml`
+
+### 4. Production TLS disabled + plain HTTP egress
+
+`k8s/deployment.yaml` sets `require_tls = false` and the LLM endpoint is
+`http://`. This is contrary to the documented "TLS enforcement" pillar.
+
+- **Severity:** 🟡 High
+- **Location:** `k8s/deployment.yaml` (`[security]` + `[llm]` endpoint)
+
+### 5. NetworkPolicy egress is too broad
+
+The default-deny NetworkPolicy permits egress to the entire internet on ports
+53/80/443 rather than restricting to known LLM endpoints.
+
+- **Severity:** 🟡 High
+- **Location:** `k8s/deployment.yaml`
+
+---
+
+## 🟡 Medium
+
+### 6. RBAC grants `secrets` read to the whole namespace
+
+The `ravenclaws` Role grants `get,list` on `secrets` without `resourceNames`,
+allowing the agent to read any Secret in the namespace.
+
+- **Severity:** 🟡 Medium
+- **Location:** `k8s/deployment.yaml` (Role)
+
+### 7. `cargo audit` flags 5 unmaintained transitive crates
+
+- `backoff` 0.4.0 (RUSTSEC-2025-0012)
+- `derivative` 2.2.0 (RUSTSEC-2024-0388)
+- `instant` 0.1.13 (RUSTSEC-2024-0384)
+- `paste` 1.0.15 (RUSTSEC-2024-0436)
+- `rustls-pemfile` 2.2.0 (RUSTSEC-2025-0134)
+
+- **Severity:** 🟡 Medium
+
+### 8. ~249 `unwrap()`/`expect()` calls, many on `Mutex::lock()`
+
+Poisoned-mutex panics (`healing.lock().unwrap()`, `budget.lock().unwrap()`,
+etc.) in the agent loop and patterns can crash the process under contention or
+cancellation instead of failing gracefully.
+
+- **Severity:** 🟡 Medium
+- **Locations:** `src/patterns.rs`, `src/agent.rs`, `src/mcp.rs`, `src/tools.rs`
+
+### 9. `SECURITY.md` supported-versions table is stale
+
+Still lists "0.9.x" as the supported line; should reflect 1.x.
+
+- **Severity:** 🟡 Medium
+- **Location:** `SECURITY.md`
+
+---
+
+## 🟢 Low
+
+### 10. No Windows CI build target
+
+CI builds macOS (x86_64/aarch64) + Linux only. Add `x86_64-pc-windows-msvc`.
+
+### 11. HMAC audit key source not documented
+
+Confirm the audit-log HMAC secret is sourced from env/Secret rather than a
+default constant, and document rotation.
+
+### 12. External security review + fuzzing + threat model outstanding
+
+The v1.0 hardening roadmap lists these as still to be done.
+
+---
+
+## 🎯 Competitive Gap Analysis — NVIDIA NemoClaw (2026-08-14)
+
+Analysis of **NVIDIA/NemoClaw** (22.1k★, TypeScript, ~198 contributors), a
+reference stack for running OpenClaw / Hermes / LangChain Deep Agents inside
+OpenShell sandboxes. The following are NemoClaw capabilities RavenClaws lacks and
+should implement (each registered as a feature gap; see ROADMAP.md "NemoClaw
+Competitive Analysis"):
+
+### 13. Complexity-based model routing (vs. round-robin)
+
+RavenClaws' `MultiModelManager` routes round-robin; NemoClaw routes by **task
+complexity**. Implement a complexity classifier + cost/quality routing policy.
+
+- **Severity:** 🟡 High (feature gap)
+- **Location:** `src/llm.rs` (`MultiModelManager`)
+
+### 14. Human-in-the-loop approval flow
+
+NemoClaw has an "operator approval flow" for network egress and sensitive actions.
+RavenClaws' policy engine is a static allow-list only. Add an `approve/deny` gate.
+
+- **Severity:** 🟡 High (feature gap)
+- **Location:** `src/policy.rs`, `src/agent.rs`
+
+### 15. Sandbox filesystem snapshots
+
+NemoClaw captures/rolls back sandbox state. RavenClaws has agent-loop checkpoints
+but no workdir snapshot/restore around tool execution.
+
+- **Severity:** 🟡 Medium
+- **Location:** `src/sandbox.rs`
+
+### 16. Declarative agent blueprints
+
+NemoClaw's blueprint lifecycle; RavenClaws lacks a reusable `[blueprint]` config.
+
+- **Severity:** 🟡 Medium
+- **Location:** `src/config.rs`
+
+### 17. Interactive installer + platform presets
+
+NemoClaw's guided express-install; RavenClaws relies on docs-only setup.
+
+- **Severity:** 🟢 Low
+- **Location:** repo root (`install.sh`)
+
+### 18. Security posture profiles + published threat model
+
+NemoClaw publishes controls reference, risk framework, and posture profiles.
+
+- **Severity:** 🟡 Medium
+- **Location:** `SECURITY.md`, `docs/`
+
+### 19. GPU / local inference management
+
+NemoClaw manages Podman GPU, DGX Spark, llama.cpp, Ollama device discovery.
+
+- **Severity:** 🟢 Low
+- **Location:** `src/llm.rs`, provider paths
+
+### 20. Computer-use agent (CUA) loop
+
+NemoClaw's gated CUA readiness; RavenClaws has raw `BrowserTool` (CDP) only.
+
+- **Severity:** 🟢 Low
+- **Location:** `src/tools.rs` (`BrowserTool`)
 
 ---
 
