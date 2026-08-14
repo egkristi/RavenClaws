@@ -57,6 +57,14 @@ jobs:
             os: macos-latest
             output: ravenclaws-aarch64-apple-darwin
             archive: tar.gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            output: ravenclaws-x86_64-pc-windows-msvc.exe
+            archive: zip
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            output: ravenclaws-aarch64-pc-windows-msvc.exe
+            archive: zip
 
     runs-on: ${{ matrix.os }}
     steps:

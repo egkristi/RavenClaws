@@ -113,9 +113,18 @@ Updated the supported-versions table to reflect 1.x as actively supported,
 
 ## 🟢 Low
 
-### 10. No Windows CI build target
+### 10. ✅ No Windows CI build target — FIXED (2026-08-14)
 
-CI builds macOS (x86_64/aarch64) + Linux only. Add `x86_64-pc-windows-msvc`.
+Added `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc` to the
+`build-binaries` matrix in `.github/workflows/build.yml`. Also made `main.rs`
+shutdown-signal handling cross-platform (`#[cfg(unix)]` SIGTERM/SIGINT vs a
+`#[cfg(not(unix))]` Ctrl+C fallback), removing the last unconditional
+`tokio::signal::unix` usage that would have broken the Windows build. 587+568
+tests pass, clippy clean, fmt clean. (Full Windows build needs MSVC `lib.exe`,
+available on `windows-latest` in CI, but not in this sandbox.)
+
+- **Severity:** 🟢 Low → ✅ Resolved
+- **Files:** `.github/workflows/build.yml`, `src/main.rs`
 
 ### 11. ✅ HMAC audit key source — CLARIFIED (2026-08-14)
 

@@ -321,29 +321,40 @@ impl ShutdownFlag {
         let flag = Self::new();
         let flag_clone = flag.clone();
         tokio::spawn(async move {
-            // Use a stream to handle both SIGTERM and SIGINT
-            let sigterm = signal::unix::signal(signal::unix::SignalKind::terminate());
-            let sigint = signal::unix::signal(signal::unix::SignalKind::interrupt());
-
-            let signal_name = match (sigterm, sigint) {
-                (Ok(mut term), Ok(mut int)) => {
-                    tokio::select! {
-                        _ = term.recv() => "SIGTERM",
-                        _ = int.recv() => "SIGINT",
-                    }
-                }
-                _ => {
-                    // Fallback: Ctrl+C only (Windows or permission-denied)
-                    let _ = signal::ctrl_c().await;
-                    "SIGINT"
-                }
-            };
-
+            let signal_name = wait_for_shutdown_signal().await;
             info!(signal = %signal_name, "Shutdown signal received, initiating graceful shutdown");
             flag_clone.triggered.store(true, Ordering::Relaxed);
         });
         flag
     }
+}
+
+/// Wait for a shutdown signal (SIGTERM/SIGINT on Unix, Ctrl+C on Windows).
+/// Returns the name of the signal received.
+#[cfg(unix)]
+async fn wait_for_shutdown_signal() -> &'static str {
+    let sigterm = signal::unix::signal(signal::unix::SignalKind::terminate());
+    let sigint = signal::unix::signal(signal::unix::SignalKind::interrupt());
+
+    match (sigterm, sigint) {
+        (Ok(mut term), Ok(mut int)) => {
+            tokio::select! {
+                _ = term.recv() => "SIGTERM",
+                _ = int.recv() => "SIGINT",
+            }
+        }
+        _ => {
+            let _ = signal::ctrl_c().await;
+            "SIGINT"
+        }
+    }
+}
+
+/// Windows: only Ctrl+C is available.
+#[cfg(not(unix))]
+async fn wait_for_shutdown_signal() -> &'static str {
+    let _ = signal::ctrl_c().await;
+    "SIGINT"
 }
 
 /// A guard that logs a shutdown message on drop.
