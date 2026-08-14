@@ -4,7 +4,8 @@
 
 | Version | Supported |
 |---|---|
-| 0.9.x | ✅ Active development — security fixes in next release |
+| 1.x | ✅ Active development — security fixes in next release |
+| 0.9.x | ⚠️ Maintenance only — security fixes backported on request |
 | < 0.9 | ❌ No longer supported |
 
 ## Reporting a Vulnerability

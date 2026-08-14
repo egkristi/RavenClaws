@@ -92,11 +92,12 @@ cancellation instead of failing gracefully.
 - **Severity:** 🟡 Medium
 - **Locations:** `src/patterns.rs`, `src/agent.rs`, `src/mcp.rs`, `src/tools.rs`
 
-### 9. `SECURITY.md` supported-versions table is stale
+### 9. ✅ `SECURITY.md` supported-versions table is stale — FIXED (2026-08-14)
 
-Still lists "0.9.x" as the supported line; should reflect 1.x.
+Updated the supported-versions table to reflect 1.x as actively supported,
+0.9.x as maintenance-only, and <0.9 unsupported.
 
-- **Severity:** 🟡 Medium
+- **Severity:** 🟡 Medium → ✅ Resolved
 - **Location:** `SECURITY.md`
 
 ---
@@ -107,10 +108,16 @@ Still lists "0.9.x" as the supported line; should reflect 1.x.
 
 CI builds macOS (x86_64/aarch64) + Linux only. Add `x86_64-pc-windows-msvc`.
 
-### 11. HMAC audit key source not documented
+### 11. ✅ HMAC audit key source — CLARIFIED (2026-08-14)
 
-Confirm the audit-log HMAC secret is sourced from env/Secret rather than a
-default constant, and document rotation.
+Verified `src/audit.rs`: the HMAC key is generated via `rand::rngs::OsRng`
+(cryptographically secure, **not** a hardcoded default) and zeroized on drop via
+`zeroize`. It is, however, **ephemeral** — a fresh random key per process means the
+tamper-evidence chain cannot be verified across restarts. This is acceptable for
+in-memory audit but should be documented (and optionally persisted via env/Secret)
+if cross-restart verification is required.
+
+- **Severity:** 🟢 Low → ✅ Clarified (no hardcoded key; ephemeral by design)
 
 ### 12. External security review + fuzzing + threat model outstanding
 
