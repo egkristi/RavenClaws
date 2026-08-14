@@ -5,6 +5,36 @@ All notable changes to RavenClaws are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Complexity-based model routing** — `MultiModelManager::route_by_complexity()`
+  with `classify_complexity()` and `ComplexityTier` in `src/llm.rs`. Deterministic
+  heuristic (Trivial/Simple/Complex) routes prompts to the most appropriate
+  provider/model, with round-robin/index-0 fallback. 4 new unit tests. Library API.
+- **Windows CI targets** — `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc`
+  added to the `build-binaries` matrix in `.github/workflows/build.yml`.
+
+### Fixed
+- **`src/patterns.rs` compile error** — removed a stray closing brace in
+  `run_research_synthesize()` and normalized indentation (`cargo fmt`); the crate
+  compiles again (587+ tests pass).
+- **Critical `wasmtime` CVEs** — upgraded `wasmtime` 28.0.1 → 47.0.3, clearing two
+  CRITICAL sandbox-escape advisories (RUSTSEC-2026-0095/0096) and 10+ lower issues;
+  fixed the `Memory::grow` error-conversion API change.
+- **Poisoned-mutex panics** — replaced 94 `std::sync::Mutex::lock().unwrap()` sites
+  with `.lock().unwrap_or_else(|p| p.into_inner())` across 6 modules.
+- **K8s RBAC least-privilege** — scoped the `ravenclaws` Role's `secrets` access to
+  `resourceNames: ["ravenclaws-secrets"]` with `get` only.
+- **Cross-platform shutdown signals** — `main.rs` now gates SIGTERM/SIGINT behind
+  `#[cfg(unix)]` with a Windows Ctrl+C fallback (was the last Windows-blocking code).
+- **Stale `SECURITY.md` version table** — updated to reflect 1.x support.
+
+### Changed
+- **K8s manifest documentation** — documented the `changeme` secret placeholder +
+  rotation guidance, the in-cluster HTTP TLS rationale, and a NetworkPolicy
+  CIDR-scoping hardening example.
+
 ## [v1.4.0] — 2026-08-13
 
 ### Added
