@@ -1376,7 +1376,7 @@ impl SwarmOrchestrator {
         // Check self-healing circuit breaker before executing
         if let Some(ref healing) = self.healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy(role)
             };
             if !healthy {
@@ -1421,7 +1421,7 @@ impl SwarmOrchestrator {
             }
             // Record failure in self-healing engine
             if let Some(ref healing) = self.healing_engine {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.record_failure(role, &e.to_string());
             }
             RavenClawsError::CommandExecution(format!("Worker {} failed: {}", role, e))
@@ -1429,7 +1429,7 @@ impl SwarmOrchestrator {
 
         // Record success in self-healing engine
         if let Some(ref healing) = self.healing_engine {
-            let mut engine = healing.lock().unwrap();
+            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
             engine.record_success(role);
         }
 
@@ -1512,7 +1512,7 @@ impl SwarmOrchestrator {
         // Check self-healing circuit breaker before supervisor execution
         if let Some(ref healing) = self.healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy("supervisor")
             };
             if !healthy {
@@ -1581,7 +1581,7 @@ impl SwarmOrchestrator {
                 Ok(r) => {
                     // Record success in self-healing engine
                     if let Some(ref healing) = self.healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success("supervisor");
                     }
                     r
@@ -1590,7 +1590,7 @@ impl SwarmOrchestrator {
                     warn!(error = %e, "Supervisor LLM request failed");
                     // Record failure in self-healing engine
                     if let Some(ref healing) = self.healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure("supervisor", &e.to_string());
                     }
                     continue;

@@ -759,7 +759,7 @@ async fn run_agent_loop_inner(
 
         // Check token budget before making LLM call
         if let Some(ref budget) = config.token_budget {
-            let budget = budget.lock().unwrap();
+            let budget = budget.lock().unwrap_or_else(|p| p.into_inner());
             if budget.remaining() < 100 {
                 warn!(
                     iteration = iteration,
@@ -817,7 +817,7 @@ async fn run_agent_loop_inner(
         if let Some(ref healing) = config.healing_engine {
             let agent_id = llm.provider_name().to_string();
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy(&agent_id)
             };
             if !healthy {
@@ -865,7 +865,7 @@ async fn run_agent_loop_inner(
                 // Record success in self-healing engine
                 if let Some(ref healing) = config.healing_engine {
                     let agent_id = llm.provider_name().to_string();
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_success(&agent_id);
                 }
                 r
@@ -878,7 +878,7 @@ async fn run_agent_loop_inner(
                 // Record failure in self-healing engine
                 if let Some(ref healing) = config.healing_engine {
                     let agent_id = llm.provider_name().to_string();
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure(&agent_id, &e.to_string());
                 }
                 // Try fallback chain if available
@@ -892,7 +892,7 @@ async fn run_agent_loop_inner(
                     );
                     // Clone configs out of mutex to avoid holding MutexGuard across .await
                     let configs = {
-                        let c = chain.lock().unwrap();
+                        let c = chain.lock().unwrap_or_else(|p| p.into_inner());
                         c.configs.clone()
                     };
                     let mut temp_chain = ProviderFallbackChain::new(configs);
@@ -902,13 +902,13 @@ async fn run_agent_loop_inner(
                             // Record success in self-healing engine for fallback
                             if let Some(ref healing) = config.healing_engine {
                                 let agent_id = llm.provider_name().to_string();
-                                let mut engine = healing.lock().unwrap();
+                                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                                 engine.record_success(&agent_id);
                             }
                             // Record token usage from fallback response
                             if let Some(ref budget) = config.token_budget {
                                 if let Some(usage) = &r.usage {
-                                    let mut b = budget.lock().unwrap();
+                                    let mut b = budget.lock().unwrap_or_else(|p| p.into_inner());
                                     b.record_usage(usage.total_tokens);
                                 }
                             }
@@ -944,7 +944,7 @@ async fn run_agent_loop_inner(
         let mut iteration_tokens: u64 = 0;
         if let Some(ref budget) = config.token_budget {
             if let Some(usage) = &response.usage {
-                let mut b = budget.lock().unwrap();
+                let mut b = budget.lock().unwrap_or_else(|p| p.into_inner());
                 b.record_usage(usage.total_tokens);
                 iteration_tokens = usage.total_tokens as u64;
                 debug!(

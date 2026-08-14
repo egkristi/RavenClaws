@@ -125,7 +125,7 @@ pub async fn run_debate(
             // Check self-healing circuit breaker
             if let Some(ref healing) = healing_engine {
                 let healthy = {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.is_healthy(&format!("debate-{}", role))
                 };
                 if !healthy {
@@ -139,7 +139,7 @@ pub async fn run_debate(
                 Ok(response) => {
                     // Record success
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success(&format!("debate-{}", role));
                     }
 
@@ -157,7 +157,7 @@ pub async fn run_debate(
                 Err(e) => {
                     // Record failure
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure(&format!("debate-{}", role), &e.to_string());
                     }
                     warn!(error = %e, role = %role, round = round + 1, "Debate LLM request failed");
@@ -185,7 +185,7 @@ pub async fn run_debate(
     // Check self-healing circuit breaker before synthesis
     if let Some(ref healing) = healing_engine {
         let healthy = {
-            let mut engine = healing.lock().unwrap();
+            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
             engine.is_healthy("debate-synthesis")
         };
         if !healthy {
@@ -201,7 +201,7 @@ pub async fn run_debate(
         Ok(response) => {
             // Record success
             if let Some(ref healing) = healing_engine {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.record_success("debate-synthesis");
             }
 
@@ -220,7 +220,7 @@ pub async fn run_debate(
         Err(e) => {
             // Record failure
             if let Some(ref healing) = healing_engine {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.record_failure("debate-synthesis", &e.to_string());
             }
             warn!(error = %e, "Debate synthesis failed");
@@ -276,7 +276,7 @@ pub async fn run_review_loop(
             // Check self-healing circuit breaker
             if let Some(ref healing) = healing_engine {
                 let healthy = {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.is_healthy("review-producer")
                 };
                 if !healthy {
@@ -292,7 +292,7 @@ pub async fn run_review_loop(
                 Ok(response) => {
                     // Record success
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success("review-producer");
                     }
 
@@ -308,7 +308,7 @@ pub async fn run_review_loop(
                 Err(e) => {
                     // Record failure
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure("review-producer", &e.to_string());
                     }
                     warn!(error = %e, "Producer LLM request failed");
@@ -329,7 +329,7 @@ pub async fn run_review_loop(
             // Check self-healing circuit breaker
             if let Some(ref healing) = healing_engine {
                 let healthy = {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.is_healthy("review-reviewer")
                 };
                 if !healthy {
@@ -343,7 +343,7 @@ pub async fn run_review_loop(
                 Ok(response) => {
                     // Record success
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success("review-reviewer");
                     }
                     response
@@ -355,7 +355,7 @@ pub async fn run_review_loop(
                 Err(e) => {
                     // Record failure
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure("review-reviewer", &e.to_string());
                     }
                     warn!(error = %e, "Reviewer LLM request failed");
@@ -386,7 +386,7 @@ pub async fn run_review_loop(
             // Check self-healing circuit breaker
             if let Some(ref healing) = healing_engine {
                 let healthy = {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.is_healthy("review-producer")
                 };
                 if !healthy {
@@ -400,7 +400,7 @@ pub async fn run_review_loop(
                 Ok(response) => {
                     // Record success
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success("review-producer");
                     }
 
@@ -420,7 +420,7 @@ pub async fn run_review_loop(
                 Err(e) => {
                     // Record failure
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure("review-producer", &e.to_string());
                     }
                     warn!(error = %e, "Producer revision failed");
@@ -490,7 +490,7 @@ pub async fn run_research_synthesize(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy(&format!("research-{}", role))
             };
             if !healthy {
@@ -508,7 +508,7 @@ pub async fn run_research_synthesize(
             Ok(response) => {
                 // Record success
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_success(&format!("research-{}", role));
                 }
 
@@ -521,7 +521,7 @@ pub async fn run_research_synthesize(
             Err(e) => {
                 // Record failure
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure(&format!("research-{}", role), &e.to_string());
                 }
                 warn!(error = %e, role = %role, "Research agent failed");
@@ -552,7 +552,7 @@ pub async fn run_research_synthesize(
     // Check self-healing circuit breaker before synthesis
     if let Some(ref healing) = healing_engine {
         let healthy = {
-            let mut engine = healing.lock().unwrap();
+            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
             engine.is_healthy("research-synthesis")
         };
         if !healthy {
@@ -568,7 +568,7 @@ pub async fn run_research_synthesize(
         Ok(response) => {
             // Record success
             if let Some(ref healing) = healing_engine {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.record_success("research-synthesis");
             }
 
@@ -587,7 +587,7 @@ pub async fn run_research_synthesize(
         Err(e) => {
             // Record failure
             if let Some(ref healing) = healing_engine {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.record_failure("research-synthesis", &e.to_string());
             }
             warn!(error = %e, "Synthesis failed");
@@ -652,7 +652,7 @@ pub async fn run_voting(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy(&format!("voter-{}", i))
             };
             if !healthy {
@@ -671,7 +671,7 @@ pub async fn run_voting(
             Ok(response) => {
                 // Record success
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_success(&format!("voter-{}", i));
                 }
 
@@ -706,7 +706,7 @@ pub async fn run_voting(
             Err(e) => {
                 // Record failure
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure(&format!("voter-{}", i), &e.to_string());
                 }
                 warn!(error = %e, voter = %persona_name, "Voter LLM request failed");
@@ -819,7 +819,7 @@ pub async fn run_debate_multi(
                 // Check self-healing circuit breaker
                 if let Some(ref healing) = healing_engine {
                     let healthy = {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.is_healthy(&format!("debate-multi-{}", role))
                     };
                     if !healthy {
@@ -833,7 +833,7 @@ pub async fn run_debate_multi(
                     Ok(response) => {
                         // Record success
                         if let Some(ref healing) = healing_engine {
-                            let mut engine = healing.lock().unwrap();
+                            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                             engine.record_success(&format!("debate-multi-{}", role));
                         }
 
@@ -861,7 +861,7 @@ pub async fn run_debate_multi(
                     Err(e) => {
                         // Record failure
                         if let Some(ref healing) = healing_engine {
-                            let mut engine = healing.lock().unwrap();
+                            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                             engine
                                 .record_failure(&format!("debate-multi-{}", role), &e.to_string());
                         }
@@ -877,7 +877,7 @@ pub async fn run_debate_multi(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy("debate-multi-synthesis")
             };
             if !healthy {
@@ -908,7 +908,7 @@ pub async fn run_debate_multi(
             Ok(response) => {
                 // Record success
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_success("debate-multi-synthesis");
                 }
 
@@ -922,7 +922,7 @@ pub async fn run_debate_multi(
             Err(e) => {
                 // Record failure
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure("debate-multi-synthesis", &e.to_string());
                 }
                 warn!(error = %e, "Multi-model synthesis failed");
@@ -968,7 +968,7 @@ pub async fn run_review_loop_multi(
                     "review-multi-reviewer"
                 };
                 let healthy = {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.is_healthy(agent_id)
                 };
                 if !healthy {
@@ -988,7 +988,7 @@ pub async fn run_review_loop_multi(
                     Ok(response) => {
                         // Record success
                         if let Some(ref healing) = healing_engine {
-                            let mut engine = healing.lock().unwrap();
+                            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                             engine.record_success("review-multi-producer");
                         }
 
@@ -1004,7 +1004,7 @@ pub async fn run_review_loop_multi(
                     Err(e) => {
                         // Record failure
                         if let Some(ref healing) = healing_engine {
-                            let mut engine = healing.lock().unwrap();
+                            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                             engine.record_failure("review-multi-producer", &e.to_string());
                         }
                         warn!(error = %e, "Producer failed");
@@ -1019,7 +1019,7 @@ pub async fn run_review_loop_multi(
                     Ok(response) => {
                         // Record success
                         if let Some(ref healing) = healing_engine {
-                            let mut engine = healing.lock().unwrap();
+                            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                             engine.record_success("review-multi-reviewer");
                         }
 
@@ -1053,7 +1053,8 @@ pub async fn run_review_loop_multi(
                                 // Check circuit breaker for producer revision
                                 if let Some(ref healing) = healing_engine {
                                     let healthy = {
-                                        let mut engine = healing.lock().unwrap();
+                                        let mut engine =
+                                            healing.lock().unwrap_or_else(|p| p.into_inner());
                                         engine.is_healthy("review-multi-producer")
                                     };
                                     if !healthy {
@@ -1065,7 +1066,8 @@ pub async fn run_review_loop_multi(
                                 if let Ok(rev_resp) = next_client.chat(msgs).await {
                                     // Record success
                                     if let Some(ref healing) = healing_engine {
-                                        let mut engine = healing.lock().unwrap();
+                                        let mut engine =
+                                            healing.lock().unwrap_or_else(|p| p.into_inner());
                                         engine.record_success("review-multi-producer");
                                     }
 
@@ -1080,7 +1082,8 @@ pub async fn run_review_loop_multi(
                                 } else {
                                     // Record failure
                                     if let Some(ref healing) = healing_engine {
-                                        let mut engine = healing.lock().unwrap();
+                                        let mut engine =
+                                            healing.lock().unwrap_or_else(|p| p.into_inner());
                                         engine.record_failure(
                                             "review-multi-producer",
                                             "revision failed",
@@ -1093,7 +1096,7 @@ pub async fn run_review_loop_multi(
                     Err(e) => {
                         // Record failure
                         if let Some(ref healing) = healing_engine {
-                            let mut engine = healing.lock().unwrap();
+                            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                             engine.record_failure("review-multi-reviewer", &e.to_string());
                         }
                         warn!(error = %e, "Review failed");
@@ -1154,7 +1157,7 @@ pub async fn run_research_synthesize_multi(
             // Check self-healing circuit breaker
             if let Some(ref healing) = healing_engine {
                 let healthy = {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.is_healthy(&format!("research-multi-{}", role))
                 };
                 if !healthy {
@@ -1172,7 +1175,7 @@ pub async fn run_research_synthesize_multi(
                 Ok(response) => {
                     // Record success
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success(&format!("research-multi-{}", role));
                     }
 
@@ -1189,7 +1192,7 @@ pub async fn run_research_synthesize_multi(
                 Err(e) => {
                     // Record failure
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure(&format!("research-multi-{}", role), &e.to_string());
                     }
                     warn!(error = %e, role = %role, "Research failed");
@@ -1203,7 +1206,7 @@ pub async fn run_research_synthesize_multi(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy("research-multi-synthesis")
             };
             if !healthy {
@@ -1226,7 +1229,7 @@ pub async fn run_research_synthesize_multi(
             Ok(response) => {
                 // Record success
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_success("research-multi-synthesis");
                 }
 
@@ -1240,7 +1243,7 @@ pub async fn run_research_synthesize_multi(
             Err(e) => {
                 // Record failure
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure("research-multi-synthesis", &e.to_string());
                 }
                 warn!(error = %e, "Synthesis failed");
@@ -1293,7 +1296,7 @@ pub async fn run_voting_multi(
             // Check self-healing circuit breaker
             if let Some(ref healing) = healing_engine {
                 let healthy = {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.is_healthy(&format!("voter-multi-{}", i))
                 };
                 if !healthy {
@@ -1315,7 +1318,7 @@ pub async fn run_voting_multi(
                 Ok(response) => {
                     // Record success
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success(&format!("voter-multi-{}", i));
                     }
 
@@ -1343,7 +1346,7 @@ pub async fn run_voting_multi(
                 Err(e) => {
                     // Record failure
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure(&format!("voter-multi-{}", i), &e.to_string());
                     }
                     warn!(error = %e, "Voter {} failed", i + 1);
@@ -1409,7 +1412,7 @@ pub async fn run_tree_of_thought(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy("tree-of-thought")
             };
             if !healthy {
@@ -1446,7 +1449,7 @@ pub async fn run_tree_of_thought(
             match llm.chat(messages).await {
                 Ok(response) => {
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success("tree-of-thought");
                     }
 
@@ -1502,7 +1505,7 @@ pub async fn run_tree_of_thought(
                 }
                 Err(e) => {
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure("tree-of-thought", &e.to_string());
                     }
                     warn!(error = %e, "Tree-of-thought branch {} failed", branch_idx);
@@ -1559,7 +1562,7 @@ pub async fn run_tree_of_thought(
     match llm.chat(messages).await {
         Ok(response) => {
             if let Some(ref healing) = healing_engine {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.record_success("tree-of-thought-synthesis");
             }
 
@@ -1582,7 +1585,7 @@ pub async fn run_tree_of_thought(
         }
         Err(e) => {
             if let Some(ref healing) = healing_engine {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.record_failure("tree-of-thought-synthesis", &e.to_string());
             }
             warn!(error = %e, "Tree-of-thought synthesis failed");
@@ -1620,7 +1623,7 @@ pub async fn run_tree_of_thought_multi(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy("tree-of-thought-multi")
             };
             if !healthy {
@@ -1661,7 +1664,7 @@ pub async fn run_tree_of_thought_multi(
                 match client.chat(messages).await {
                     Ok(response) => {
                         if let Some(ref healing) = healing_engine {
-                            let mut engine = healing.lock().unwrap();
+                            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                             engine.record_success("tree-of-thought-multi");
                         }
 
@@ -1714,7 +1717,7 @@ pub async fn run_tree_of_thought_multi(
                     }
                     Err(e) => {
                         if let Some(ref healing) = healing_engine {
-                            let mut engine = healing.lock().unwrap();
+                            let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                             engine.record_failure("tree-of-thought-multi", &e.to_string());
                         }
                         warn!(error = %e, "ToT multi branch {} failed", branch_idx);
@@ -1757,7 +1760,7 @@ pub async fn run_tree_of_thought_multi(
     if let Some(client) = multi_llm.get_client(0) {
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy("tree-of-thought-multi-synthesis")
             };
             if !healthy {
@@ -1782,7 +1785,7 @@ pub async fn run_tree_of_thought_multi(
         match client.chat(messages).await {
             Ok(response) => {
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_success("tree-of-thought-multi-synthesis");
                 }
 
@@ -1805,7 +1808,7 @@ pub async fn run_tree_of_thought_multi(
             }
             Err(e) => {
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure("tree-of-thought-multi-synthesis", &e.to_string());
                 }
                 warn!(error = %e, "ToT multi synthesis failed");
@@ -1855,7 +1858,7 @@ pub async fn run_self_reflection(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy("self-reflection-generate")
             };
             if !healthy {
@@ -1869,7 +1872,7 @@ pub async fn run_self_reflection(
         match llm.chat(messages).await {
             Ok(response) => {
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_success("self-reflection-generate");
                 }
 
@@ -1886,7 +1889,7 @@ pub async fn run_self_reflection(
             }
             Err(e) => {
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure("self-reflection-generate", &e.to_string());
                 }
                 warn!(error = %e, "Initial solution generation failed");
@@ -1904,7 +1907,7 @@ pub async fn run_self_reflection(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy(&format!("self-reflection-round-{}", round))
             };
             if !healthy {
@@ -1935,7 +1938,7 @@ pub async fn run_self_reflection(
             match llm.chat(messages).await {
                 Ok(response) => {
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success(&format!("self-reflection-round-{}", round));
                     }
 
@@ -1953,7 +1956,7 @@ pub async fn run_self_reflection(
                 }
                 Err(e) => {
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure(
                             &format!("self-reflection-round-{}", round),
                             &e.to_string(),
@@ -2047,7 +2050,7 @@ pub async fn run_self_reflection_multi(
     if let Some(client) = multi_llm.get_client(0) {
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy("self-reflection-multi-generate")
             };
             if !healthy {
@@ -2071,7 +2074,7 @@ pub async fn run_self_reflection_multi(
         match client.chat(messages).await {
             Ok(response) => {
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_success("self-reflection-multi-generate");
                 }
 
@@ -2092,7 +2095,7 @@ pub async fn run_self_reflection_multi(
             }
             Err(e) => {
                 if let Some(ref healing) = healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure("self-reflection-multi-generate", &e.to_string());
                 }
                 warn!(error = %e, "Multi initial solution generation failed");
@@ -2114,7 +2117,7 @@ pub async fn run_self_reflection_multi(
         // Check self-healing circuit breaker
         if let Some(ref healing) = healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy(&format!("self-reflection-multi-round-{}", round))
             };
             if !healthy {
@@ -2145,7 +2148,7 @@ pub async fn run_self_reflection_multi(
             match reflector.chat(messages).await {
                 Ok(response) => {
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success(&format!("self-reflection-multi-round-{}", round));
                     }
 
@@ -2165,7 +2168,7 @@ pub async fn run_self_reflection_multi(
                 }
                 Err(e) => {
                     if let Some(ref healing) = healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure(
                             &format!("self-reflection-multi-round-{}", round),
                             &e.to_string(),

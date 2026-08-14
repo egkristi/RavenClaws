@@ -83,14 +83,18 @@ Scoped it to `resourceNames: ["ravenclaws-secrets"]` with `get` only, and kept
 
 - **Severity:** 🟡 Medium
 
-### 8. ~249 `unwrap()`/`expect()` calls, many on `Mutex::lock()`
+### 8. ✅ ~94 `Mutex::lock().unwrap()` calls — FIXED (2026-08-14)
 
-Poisoned-mutex panics (`healing.lock().unwrap()`, `budget.lock().unwrap()`,
-etc.) in the agent loop and patterns can crash the process under contention or
-cancellation instead of failing gracefully.
+Poisoned-mutex panics (`healing.lock().unwrap()`, `budget.lock().unwrap()`, etc.)
+in the agent loop and patterns could crash the process under contention or
+cancellation. Replaced all 94 `std::sync::Mutex` `.lock().unwrap()` sites with
+`.lock().unwrap_or_else(|p| p.into_inner())` across `agent.rs`, `audit.rs`,
+`background.rs`, `heartbeat.rs`, `patterns.rs`, and `swarm.rs`. This recovers the
+guard's data instead of panicking on a poisoned mutex. 587 + 568 tests pass,
+clippy clean, `cargo fmt --check` clean.
 
-- **Severity:** 🟡 Medium
-- **Locations:** `src/patterns.rs`, `src/agent.rs`, `src/mcp.rs`, `src/tools.rs`
+- **Severity:** 🟡 Medium → ✅ Resolved
+- **Files:** `src/agent.rs`, `src/audit.rs`, `src/background.rs`, `src/heartbeat.rs`, `src/patterns.rs`, `src/swarm.rs`
 
 ### 9. ✅ `SECURITY.md` supported-versions table is stale — FIXED (2026-08-14)
 

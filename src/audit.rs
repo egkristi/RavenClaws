@@ -535,7 +535,7 @@ mod tests {
 
         // Tamper with the second entry
         {
-            let mut entries = log.entries.lock().unwrap();
+            let mut entries = log.entries.lock().unwrap_or_else(|p| p.into_inner());
             entries[1].description = "Tampered!".to_string();
         }
 
@@ -742,7 +742,7 @@ mod tests {
 
         // Tamper with entry 3
         {
-            let mut entries = log.entries.lock().unwrap();
+            let mut entries = log.entries.lock().unwrap_or_else(|p| p.into_inner());
             entries[3].description = "MODIFIED".to_string();
         }
 

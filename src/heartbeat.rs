@@ -295,7 +295,7 @@ impl HeartbeatAgent {
             // Check self-healing circuit breaker before assessment
             if let Some(ref healing) = self.healing_engine {
                 let healthy = {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.is_healthy("heartbeat")
                 };
                 if !healthy {
@@ -324,7 +324,7 @@ impl HeartbeatAgent {
                 Ok(response) => {
                     // Record success in self-healing engine
                     if let Some(ref healing) = self.healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_success("heartbeat");
                     }
 
@@ -378,7 +378,7 @@ impl HeartbeatAgent {
                         Ok(plan_response) => {
                             // Record success in self-healing engine
                             if let Some(ref healing) = self.healing_engine {
-                                let mut engine = healing.lock().unwrap();
+                                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                                 engine.record_success("heartbeat");
                             }
 
@@ -455,7 +455,8 @@ impl HeartbeatAgent {
                                         );
                                         // Record failure in self-healing engine
                                         if let Some(ref healing) = self.healing_engine {
-                                            let mut engine = healing.lock().unwrap();
+                                            let mut engine =
+                                                healing.lock().unwrap_or_else(|p| p.into_inner());
                                             engine.record_failure("heartbeat", &e.to_string());
                                         }
                                         self.state.last_result = Some(format!("Error: {}", e));
@@ -486,7 +487,7 @@ impl HeartbeatAgent {
                             );
                             // Record failure in self-healing engine
                             if let Some(ref healing) = self.healing_engine {
-                                let mut engine = healing.lock().unwrap();
+                                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                                 engine.record_failure("heartbeat", &e.to_string());
                             }
                             self.state.progress = format!(
@@ -504,7 +505,7 @@ impl HeartbeatAgent {
                     );
                     // Record failure in self-healing engine
                     if let Some(ref healing) = self.healing_engine {
-                        let mut engine = healing.lock().unwrap();
+                        let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                         engine.record_failure("heartbeat", &e.to_string());
                     }
                     self.state.progress = format!(

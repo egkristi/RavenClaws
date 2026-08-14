@@ -269,7 +269,7 @@ impl BackgroundTaskManager {
         // Check self-healing circuit breaker before execution
         if let Some(ref healing) = self.healing_engine {
             let healthy = {
-                let mut engine = healing.lock().unwrap();
+                let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                 engine.is_healthy(task_id)
             };
             if !healthy {
@@ -352,7 +352,7 @@ impl BackgroundTaskManager {
 
                 // Record failure in self-healing engine
                 if let Some(ref healing) = self.healing_engine {
-                    let mut engine = healing.lock().unwrap();
+                    let mut engine = healing.lock().unwrap_or_else(|p| p.into_inner());
                     engine.record_failure(task_id, &e.to_string());
                 }
 
