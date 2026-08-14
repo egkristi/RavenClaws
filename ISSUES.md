@@ -73,15 +73,20 @@ Scoped it to `resourceNames: ["ravenclaws-secrets"]` with `get` only, and kept
 
 - **Severity:** 🟡 Medium → ✅ Resolved
 
-### 7. `cargo audit` flags 5 unmaintained transitive crates
+### 7. ✅ `cargo audit` "unmaintained" transitive crates — REDUCED & TRIAGED (2026-08-14)
 
-- `backoff` 0.4.0 (RUSTSEC-2025-0012)
-- `derivative` 2.2.0 (RUSTSEC-2024-0388)
-- `instant` 0.1.13 (RUSTSEC-2024-0384)
-- `paste` 1.0.15 (RUSTSEC-2024-0436)
-- `rustls-pemfile` 2.2.0 (RUSTSEC-2025-0134)
+The wasmtime 47 upgrade **removed `paste`** entirely. The remaining 4 are
+"unmaintained" warnings (NOT vulnerabilities) — stable crates whose maintainers
+stopped publishing, but still widely used:
 
-- **Severity:** 🟡 Medium
+- `backoff` 0.4.0, `derivative` 2.2.0, `rustls-pemfile` 2.2.0 — transitive via
+  `kube-runtime`/`kube-client` (the **optional `k8s` feature** only).
+- `instant` 0.1.13 — transitive via `notify` (file-watch scheduler).
+
+These are not exploitable and are acceptable to keep; re-evaluate if/when a
+security advisory (not just "unmaintained") is published against them.
+
+- **Severity:** 🟡 Medium → ✅ Triaged (accepted risk; no action required)
 
 ### 8. ✅ ~94 `Mutex::lock().unwrap()` calls — FIXED (2026-08-14)
 
