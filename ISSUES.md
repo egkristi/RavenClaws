@@ -151,12 +151,18 @@ OpenShell sandboxes. The following are NemoClaw capabilities RavenClaws lacks an
 should implement (each registered as a feature gap; see ROADMAP.md "NemoClaw
 Competitive Analysis"):
 
-### 13. Complexity-based model routing (vs. round-robin)
+### 13. ✅ Complexity-based model routing (vs. round-robin) — IMPLEMENTED (2026-08-14)
 
-RavenClaws' `MultiModelManager` routes round-robin; NemoClaw routes by **task
-complexity**. Implement a complexity classifier + cost/quality routing policy.
+Added `MultiModelManager::route_by_complexity()` + `classify_complexity()` +
+`ComplexityTier` to `src/llm.rs`. A deterministic heuristic classifies prompts
+into Trivial/Simple/Complex (greetings, local/fast model preference, or
+code/long/"hard" markers) and routes to the most appropriate provider/model,
+falling back to round-robin/index-0 when no preference matches. 4 new tests.
+This is a library API (embedders wire it into their selection path); the binary's
+`run_single_multi` intentionally still fans out to all providers. A full LLM-based
+complexity classifier + cost/quality policy remains a future enhancement.
 
-- **Severity:** 🟡 High (feature gap)
+- **Severity:** 🟡 High → ✅ Implemented (heuristic v1)
 - **Location:** `src/llm.rs` (`MultiModelManager`)
 
 ### 14. Human-in-the-loop approval flow

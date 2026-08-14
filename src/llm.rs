@@ -1298,6 +1298,97 @@ impl MultiModelManager {
         let next = (last_index + 1) % self.clients.len();
         Some(&self.clients[next])
     }
+
+    /// Complexity-aware routing — select the best provider/model for a prompt.
+    ///
+    /// Classifies the prompt into a complexity tier using a deterministic
+    /// heuristic (no LLM round-trip) and routes accordingly:
+    ///
+    /// - **Trivial** (greetings, very short): any provider (index 0).
+    /// - **Simple**: prefers a fast/cheap local model when present (Ollama or a
+    ///   model name containing `small`/`mini`/`tiny`/`flash`), else index 0.
+    /// - **Complex** (code, long context, or "hard" markers): prefers a
+    ///   large/capable model (name containing `gpt-4`, `gpt-5`, `opus`, `sonnet`,
+    ///   `deepseek`, `large`, `pro`), else index 0.
+    ///
+    /// Falls back to index 0 when no preference matches. This is a heuristic —
+    /// a full complexity classifier + cost/quality policy is a future enhancement.
+    ///
+    /// Library-only API: exposed for embedders who want complexity-based routing
+    /// (the binary's `run_single_multi` fans out to *all* providers instead of
+    /// selecting one). Not called by the default binary.
+    #[allow(dead_code)]
+    pub fn route_by_complexity(&self, prompt: &str) -> Option<&Arc<dyn LLMProviderTrait>> {
+        if self.clients.is_empty() {
+            return None;
+        }
+        let tier = Self::classify_complexity(prompt);
+
+        let preferred: Option<usize> = match tier {
+            ComplexityTier::Trivial => Some(0),
+            ComplexityTier::Simple => self.clients.iter().position(|c| {
+                let m = c.model().to_lowercase();
+                c.provider_name().eq_ignore_ascii_case("ollama")
+                    || ["small", "mini", "tiny", "flash", "nano"]
+                        .iter()
+                        .any(|k| m.contains(k))
+            }),
+            ComplexityTier::Complex => self.clients.iter().position(|c| {
+                let m = c.model().to_lowercase();
+                ["gpt-4", "gpt-5", "opus", "sonnet", "deepseek", "large", "pro", "claude"]
+                    .iter()
+                    .any(|k| m.contains(k))
+            }),
+        };
+
+        let index = preferred.unwrap_or(0);
+        Some(&self.clients[index])
+    }
+
+    /// Classify a prompt into a complexity tier using a deterministic heuristic.
+    #[allow(dead_code)]
+    fn classify_complexity(prompt: &str) -> ComplexityTier {
+        let trimmed = prompt.trim();
+        let len = trimmed.chars().count();
+
+        // Trivial: very short greetings / single words
+        if len < 12 {
+            let lower = trimmed.to_lowercase();
+            if ["hi", "hello", "hey", "thanks", "ok", "yes", "no", "?"]
+                .iter()
+                .any(|g| lower == *g)
+            {
+                return ComplexityTier::Trivial;
+            }
+        }
+
+        // Complex: code, long context, or explicit "hard" markers
+        let has_code = trimmed.contains("fn ")
+            || trimmed.contains("def ")
+            || trimmed.contains("class ")
+            || trimmed.contains("import ")
+            || trimmed.contains("```")
+            || trimmed.contains("->");
+        let has_complex_marker = trimmed.contains("analyze")
+            || trimmed.contains("explain in depth")
+            || trimmed.contains("write a detailed")
+            || trimmed.contains("architecture");
+
+        if len > 500 || has_code || has_complex_marker {
+            return ComplexityTier::Complex;
+        }
+
+        ComplexityTier::Simple
+    }
+}
+
+/// Complexity tier used for model routing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
+enum ComplexityTier {
+    Trivial,
+    Simple,
+    Complex,
 }
 
 /// Provider fallback chain (v0.5) — tries providers in order until one succeeds
@@ -2615,6 +2706,130 @@ mod tests {
         // Next after index 1 wraps to index 0
         let next = manager.next_client(1).unwrap();
         assert_eq!(next.provider_name(), "litellm");
+    }
+
+    #[test]
+    fn test_complexity_routing_trivial_uses_first() {
+        let manager = MultiModelManager::new(vec![
+            LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://localhost:4000".to_string(),
+                model: "gpt-4o-mini".to_string(),
+                api_key: Some("test".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+            LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+        ])
+        .unwrap();
+
+        // "hi" is trivial → index 0
+        assert_eq!(
+            manager.route_by_complexity("hi").unwrap().provider_name(),
+            "litellm"
+        );
+    }
+
+    #[test]
+    fn test_complexity_routing_simple_prefers_local() {
+        let manager = MultiModelManager::new(vec![
+            LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://localhost:4000".to_string(),
+                model: "gpt-4o".to_string(),
+                api_key: Some("test".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+            LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+        ])
+        .unwrap();
+
+        // A short non-trivial prompt is "simple" → prefers the Ollama (local) client
+        assert_eq!(
+            manager
+                .route_by_complexity("Summarize the weather today")
+                .unwrap()
+                .provider_name(),
+            "ollama"
+        );
+    }
+
+    #[test]
+    fn test_complexity_routing_complex_prefers_capable_model() {
+        let manager = MultiModelManager::new(vec![
+            LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+            LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://localhost:4000".to_string(),
+                model: "gpt-4o".to_string(),
+                api_key: Some("test".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+        ])
+        .unwrap();
+
+        // A code prompt is "complex" → prefers the capable gpt-4o model (index 1)
+        let prompt = "fn main() { println!(\"hello\"); } explain this code in depth";
+        assert_eq!(
+            manager
+                .route_by_complexity(prompt)
+                .unwrap()
+                .provider_name(),
+            "litellm"
+        );
+    }
+
+    #[test]
+    fn test_complexity_routing_empty_manager() {
+        let manager = MultiModelManager::new(Vec::<LLMConfig>::new()).unwrap();
+        assert!(manager.route_by_complexity("any prompt").is_none());
     }
 
     #[test]
