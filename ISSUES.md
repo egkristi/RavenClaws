@@ -251,6 +251,16 @@ NemoClaw's gated CUA readiness; RavenClaws has raw `BrowserTool` (CDP) only.
 
 ## 🔴 New — 2026-08-19
 
+### 22. ✅ `h2` unbounded empty DATA frames — FIXED (2026-08-20)
+
+`cargo audit` surfaced RUSTSEC-2026-0258 (`h2` 0.4.15, published 2026-08-17) — a
+transitive dep of `hyper` (via `reqwest`/`tonic`). Upgraded `h2` 0.4.15 → 0.4.16
+(patch release). `cargo audit` is back to 0 vulnerabilities (only 4 accepted
+"unmaintained" warnings). 595 tests pass.
+
+- **Severity:** 🔴 Critical (new advisory) → ✅ Resolved
+- **Crate:** `h2` 0.4.15 → 0.4.16
+
 ### 21. Binary size ~7.6 MiB exceeds the ~5 MB "Small" pillar goal — TRIAGED (2026-08-19)
 
 The release binary is ~7.6 MiB (7,958,136 bytes), above the ~5 MB target. This is
