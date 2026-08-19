@@ -835,23 +835,21 @@ OpenShell sandboxes. Its headline capabilities are:
 
 ### 🎯 Where RavenClaws must catch up (new roadmap items)
 
-1. **Complexity-based model routing** — replace pure round-robin with a router
-   that classifies task complexity and selects provider/model + cost/quality
-   policy. *(NemoClaw's "model router with complexity-based routing".)*
-2. **Human-in-the-loop approval flow** — a first-class `approve/deny` gate for
-   high-risk tool calls and network egress (not just a static allow-list).
-   *(NemoClaw's "operator approval flow".)*
-3. **Sandbox filesystem snapshots** — capture/restore workdir state around tool
+1. ✅ **Complexity-based model routing** — DONE (2026-08-14) — `route_by_complexity()`
+   heuristic in `src/llm.rs`.
+2. ✅ **Human-in-the-loop approval flow** — PARTIAL — tool-call HITL exists (v0.8);
+   network-egress operator approval deferred.
+3. ⏳ **Sandbox filesystem snapshots** — capture/restore workdir state around tool
    execution, complementing the existing agent-loop checkpoints.
-4. **Declarative agent blueprints** — a `[blueprint]` config that fully describes
-   persona + tools + policy + providers, shareable and reusable.
-5. **Interactive installer** — `install.sh` with platform presets (DGX/WSL/macOS/
+4. ✅ **Declarative agent blueprints** — DONE (2026-08-19) — `src/blueprint.rs` +
+   `--blueprint` CLI flag.
+5. ⏳ **Interactive installer** — `install.sh` with platform presets (DGX/WSL/macOS/
    rpi5) and guided onboarding, replacing docs-only setup.
-6. **Security posture profiles** — publish a threat model + controls reference +
-   per-profile hardening presets (dev vs prod vs air-gapped).
-7. **GPU/local inference management** — first-class llama.cpp/Ollama/vLLM
+6. ✅ **Security posture profiles** — DONE (2026-08-19) — threat model + dev/prod/airgap
+   profiles in `SECURITY.md`.
+7. ⏳ **GPU/local inference management** — first-class llama.cpp/Ollama/vLLM
    provisioning (device discovery, model warmup) on constrained + GPU hosts.
-8. **Computer-use agent (CUA)** — extend `BrowserTool` (CDP) into a full CUA loop
+8. ⏳ **Computer-use agent (CUA)** — extend `BrowserTool` (CDP) into a full CUA loop
    with screenshot → plan → act and gated readiness.
 
 ### 🟢 Strategic note

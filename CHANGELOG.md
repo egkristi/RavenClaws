@@ -44,6 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **WASM plugin feature gating** — `wasmtime` + `src/plugins.rs` moved behind an
   optional `plugins` cargo feature (matches the existing `k8s` pattern), keeping the
   dependency graph honest and the default build lean.
+- **Threat model + security posture profiles** — added a full threat model
+  (trust boundaries, threat-actor/mitigation matrix, residual risks) and three
+  posture profiles (`dev`/`prod`/`airgap`) to `SECURITY.md`.
+- **Deterministic fuzz-style test** — `test_policy_engine_never_panics_on_adversarial_input`
+  hammers `PolicyEngine` with 10,000 adversarial inputs (fixed-seed LCG, no deps).
 
 ## [v1.4.0] — 2026-08-13
 
