@@ -846,8 +846,9 @@ OpenShell sandboxes. Its headline capabilities are:
    presets + verification module.
 6. ✅ **Security posture profiles** — DONE (2026-08-19) — threat model + dev/prod/airgap
    profiles in `SECURITY.md`.
-7. ⏳ **GPU/local inference management** — first-class llama.cpp/Ollama/vLLM
-   provisioning (device discovery, model warmup) on constrained + GPU hosts.
+7. 🟡 **GPU/local inference management** — PARTIAL (2026-08-20) — `LocalInference`
+   discovery probes Ollama/llama.cpp/vLLM endpoints; full provisioning (model
+   warmup, GPU scheduling) deferred.
 8. ⏳ **Computer-use agent (CUA)** — extend `BrowserTool` (CDP) into a full CUA loop
    with screenshot → plan → act and gated readiness.
 

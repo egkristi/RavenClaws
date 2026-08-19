@@ -27,6 +27,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Network-egress operator approval** — `Decision::RequireApproval` +
   `NetworkPolicy::approve_unknown_hosts` for human-in-the-loop egress approval.
   3 unit tests.
+- **Local inference discovery** — `LocalInference` + `LocalInferenceServer` +
+  `LocalInferenceKind` in `src/llm.rs`. Probes Ollama (`/api/tags`) and
+  OpenAI-compatible (`/v1/models`) local endpoints (llama.cpp, vLLM, LM Studio, TGI)
+  for "device discovery". 4 unit tests. Library API.
 
 ### Fixed
 - **`src/patterns.rs` compile error** — removed a stray closing brace in
