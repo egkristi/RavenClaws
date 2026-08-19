@@ -1143,4 +1143,71 @@ mod tests {
         assert!(policy.network.allowed_hosts.contains(&"*".to_string()));
         assert!(policy.network.allow_private_networks);
     }
+
+    /// Deterministic fuzz-style test: hammer the policy engine with a wide
+    /// variety of adversarial inputs and assert it never panics and always
+    /// returns a well-formed `Decision`. Uses a fixed-seed LCG so it is
+    /// reproducible and has no external dependencies.
+    #[test]
+    fn test_policy_engine_never_panics_on_adversarial_input() {
+        let engine = PolicyEngine::default_secure();
+
+        // Fixed-seed LCG (Numerical Recipes constants) for reproducibility.
+        struct Lcg(u64);
+        impl Lcg {
+            fn next(&mut self) -> u64 {
+                self.0 = self
+                    .0
+                    .wrapping_mul(6364136223846793005)
+                    .wrapping_add(1442695040888963407);
+                self.0
+            }
+        }
+        let mut rng = Lcg(0x853c_49e6_748f_ea9b);
+
+        // Random-looking ASCII alphabet for command/URL/path strings.
+        let alphabet: Vec<char> = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ./:-_|&;()[]{}\"'*?$#@%^\\".chars().collect();
+
+        let random_string = |rng: &mut Lcg, max_len: usize| {
+            let len = (rng.next() as usize) % max_len;
+            (0..len)
+                .map(|_| alphabet[(rng.next() as usize) % alphabet.len()])
+                .collect::<String>()
+        };
+
+        let urlish = |rng: &mut Lcg, max_len: usize| {
+            let host = random_string(rng, max_len.min(24));
+            format!("http://{}", host.replace(' ', "."))
+        };
+
+        for _ in 0..10_000 {
+            // Shell command fuzzing
+            let cmd = random_string(&mut rng, 64);
+            let _ = engine.check_shell_command(&serde_json::json!({ "command": cmd }));
+
+            // Network URL fuzzing
+            let url = urlish(&mut rng, 64);
+            let _ = engine.check_network_request(&serde_json::json!({ "url": url }));
+
+            // File path fuzzing (read + write)
+            let path = random_string(&mut rng, 48);
+            let _ = engine.check_file_operation("read_file", &serde_json::json!({ "path": path }));
+            let content = random_string(&mut rng, 256);
+            let _ = engine.check_file_operation(
+                "write_file",
+                &serde_json::json!({ "path": path, "content": content }),
+            );
+
+            // Full tool-call dispatch
+            let tool = ["shell_exec", "read_file", "write_file", "web_fetch", "unknown_tool"]
+                [(rng.next() as usize) % 5];
+            let cmd = random_string(&mut rng, 32);
+            let url = urlish(&mut rng, 32);
+            let path = random_string(&mut rng, 32);
+            let _ = engine.check_tool_call(
+                tool,
+                &serde_json::json!({ "command": cmd, "url": url, "path": path }),
+            );
+        }
+    }
 }

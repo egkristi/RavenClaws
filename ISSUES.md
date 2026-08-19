@@ -137,11 +137,16 @@ if cross-restart verification is required.
 
 - **Severity:** 🟢 Low → ✅ Clarified (no hardcoded key; ephemeral by design)
 
-### 12. External security review + fuzzing + threat model outstanding
+### 12. ✅ External security review + fuzzing + threat model — PARTIALLY DONE (2026-08-19)
 
-**Partially resolved 2026-08-19:** added `#![forbid(unsafe_code)]` to both crate
-roots (no first-party `unsafe` exists). Remaining: fuzzing targets and a published
-threat model (see #18).
+- **`#![forbid(unsafe_code)]`** ✅ added to both crate roots (no first-party `unsafe`).
+- **Threat model** ✅ published in `SECURITY.md` (see #18).
+- **Fuzzing** ✅ added a deterministic fuzz-style test
+  (`test_policy_engine_never_panics_on_adversarial_input`) that hammers
+  `PolicyEngine` with 10,000 adversarial inputs per run (fixed-seed LCG, no
+  external deps). A formal `cargo-fuzz`/`libFuzzer` harness remains future work.
+
+- **Severity:** 🟢 Low → ✅ Partially done (fuzzing test in-repo; external review deferred)
 
 ---
 
@@ -167,13 +172,19 @@ complexity classifier + cost/quality policy remains a future enhancement.
 - **Severity:** 🟡 High → ✅ Implemented (heuristic v1)
 - **Location:** `src/llm.rs` (`MultiModelManager`)
 
-### 14. Human-in-the-loop approval flow
+### 14. ✅ Human-in-the-loop approval flow — RE-TRIAGED (2026-08-19)
 
-NemoClaw has an "operator approval flow" for network egress and sensitive actions.
-RavenClaws' policy engine is a static allow-list only. Add an `approve/deny` gate.
+**Tool-call HITL already exists** (shipped v0.8): `--require-approval` flag,
+`PolicyEngine::requires_approval()`, `prompt_for_approval()` (stdin gate with
+deny-by-default on non-TTY), audit logging of approval requests/decisions, and
+unit tests. The premise "static allow-list only" is outdated.
 
-- **Severity:** 🟡 High (feature gap)
-- **Location:** `src/policy.rs`, `src/agent.rs`
+The *genuine* remaining NemoClaw-parity gap is **network-egress operator approval**
+— currently unknown hosts are flatly denied rather than routed to an approval flow.
+Deferred as a distinct, lower-priority enhancement (would add a
+`Decision::RequireApproval` variant + update 3 match sites).
+
+- **Severity:** 🟡 High → ✅ Partially resolved (tool-call HITL exists; egress approval deferred)
 
 ### 15. Sandbox filesystem snapshots
 
