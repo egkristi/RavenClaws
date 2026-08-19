@@ -101,6 +101,7 @@ pub mod load;
 pub mod mcp;
 pub mod patterns;
 pub mod persistence;
+#[cfg(feature = "plugins")]
 pub mod plugins;
 pub mod policy;
 pub mod ravenfabric;
@@ -148,6 +149,7 @@ pub use patterns::{
 pub use persistence::{
     ConversationStore, MemoryEntry, MemoryStore, RetentionPolicy, StoredMessage, StoredSession,
 };
+#[cfg(feature = "plugins")]
 pub use plugins::{PluginError, PluginTool, WasmPlugin, WasmPluginManager};
 pub use policy::PolicyEngine;
 pub use ravenfabric::RavenFabricClient;

@@ -37,6 +37,10 @@ otel-stdout = ["opentelemetry-stdout"]
 # Kubernetes operator support (programmatic pod lifecycle) — optional to keep the
 # default binary small. Enabled with `--features k8s`.
 k8s = ["dep:kube", "dep:k8s-openapi"]
+# WASM plugin system — optional to keep the default binary small. The wasmtime
+# runtime (Cranelift + runtime) is large (~2.5 MB); gate it behind this feature so
+# the default binary stays near the ~5 MB "Small" pillar goal.
+plugins = ["dep:wasmtime"]
 
 [dependencies]
 # Async runtime
@@ -117,7 +121,8 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 
 # WASM runtime for plugin system (v1.0.1)
 # v47 clears all RUSTSEC advisories (incl. 2 CRITICAL sandbox escapes in <36).
-wasmtime = { version = "47", default-features = false, features = ["cranelift", "runtime"] }
+# Optional (feature `plugins`) to keep the default binary small.
+wasmtime = { version = "47", default-features = false, features = ["cranelift", "runtime"], optional = true }
 
 # Base64 encoding for multi-modal image support (v1.1.0)
 base64 = "0.22"

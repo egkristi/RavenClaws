@@ -220,6 +220,23 @@ NemoClaw's gated CUA readiness; RavenClaws has raw `BrowserTool` (CDP) only.
 
 ---
 
+## 🔴 New — 2026-08-19
+
+### 21. Binary size ~7.6 MiB exceeds the ~5 MB "Small" pillar goal — TRIAGED (2026-08-19)
+
+The release binary is ~7.6 MiB (7,958,136 bytes), above the ~5 MB target. This is
+driven by the aggregate of v1.x features (SQLite `rusqlite` bundled, OpenTelemetry,
+`reqwest` + rustls, multi-modal base64, browser CDP), not by `wasmtime` (LTO already
+dead-code-eliminates the unused plugin runtime — gating it behind the new optional
+`plugins` feature changed the binary size by <0.1%). The `plugins` feature gating
+was still applied as correct dependency hygiene (wasmtime now correctly excluded
+from the default dependency tree). The size itself remains an accepted, documented
+tradeoff of v1.x feature breadth; re-evaluate dependency consolidation (e.g.
+dropping OpenTelemetry from default, or `rusqlite` `bundled`→system) before a 2.0.
+
+- **Severity:** 🟢 Low (accepted tradeoff; hygiene improved)
+- **Location:** `Cargo.toml`, `src/lib.rs`
+
 ## ✅ v1.4 Milestone — Merge Phase (2026-08-13)
 
 **Universal-parity merge from RavenAssistant01 shipped.** Four components merged,
