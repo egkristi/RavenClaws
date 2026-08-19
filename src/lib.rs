@@ -140,7 +140,7 @@ pub use integrations::{
 pub use k8s::{K8sManager, K8sManagerConfig};
 pub use llm::{
     create_client, load_image, ChatMessage, ChatResponse, ContentPart, ImageUrlContent,
-    LLMProviderTrait, MultiModelManager,
+    LLMProviderTrait, LocalInference, LocalInferenceKind, LocalInferenceServer, MultiModelManager,
 };
 pub use load::{Admission, LoadConfig, LoadManager, LoadMetrics, RequestOutcome};
 pub use mcp::{McpClient, McpClientManager, McpServer, McpSseServer};

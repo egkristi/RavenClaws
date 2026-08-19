@@ -1270,6 +1270,157 @@ pub fn create_client(config: &LLMConfig) -> Result<Arc<dyn LLMProviderTrait>, LL
     }
 }
 
+// ── Local inference discovery ─────────────────────────────────────────────
+
+/// A discovered local inference server.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+#[allow(dead_code)] // library API; exercised in tests
+pub struct LocalInferenceServer {
+    /// The base endpoint (e.g. `http://localhost:11434`).
+    pub endpoint: String,
+    /// The inferred server kind.
+    pub kind: LocalInferenceKind,
+    /// Models advertised by the server (may be empty if the probe couldn't
+    /// enumerate models but the server still responded).
+    pub models: Vec<String>,
+}
+
+/// The kind of local inference server detected.
+///
+/// # Stability
+/// This enum is `#[non_exhaustive]` — new variants may be added in minor releases.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+#[allow(dead_code)] // library API; exercised in tests
+pub enum LocalInferenceKind {
+    /// Ollama (native `/api/tags` endpoint).
+    Ollama,
+    /// An OpenAI-compatible server (llama.cpp, vLLM, LM Studio, TGI, etc. via `/v1/models`).
+    OpenAiCompatible,
+    /// Responded, but we couldn't classify the kind.
+    Unknown,
+}
+
+/// Discovery of local inference servers (Ollama / llama.cpp / vLLM / LM Studio).
+///
+/// Probes a configurable list of candidate endpoints using short HTTP requests.
+/// This is the "device discovery" foundation for local/GPU inference management —
+/// it finds what's running so the agent can route to it, without requiring any
+/// GPU-specific libraries or hardware.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use ravenclaws::llm::{LocalInference, LocalInferenceKind};
+///
+/// # async fn example() {
+/// let found = LocalInference::default().discover().await;
+/// for server in found {
+///     println!("{} ({:?}): {:?}", server.endpoint, server.kind, server.models);
+/// }
+/// # }
+/// ```
+#[allow(dead_code)] // library API; exercised in tests
+pub struct LocalInference {
+    /// Candidate endpoints to probe, in order.
+    pub endpoints: Vec<String>,
+    /// Probe timeout in milliseconds.
+    pub timeout_ms: u64,
+}
+
+impl Default for LocalInference {
+    fn default() -> Self {
+        Self {
+            endpoints: vec![
+                "http://localhost:11434".to_string(), // Ollama
+                "http://127.0.0.1:11434".to_string(),
+                "http://localhost:8080".to_string(),  // llama.cpp / vLLM
+                "http://localhost:8000".to_string(),  // vLLM / LM Studio / TGI
+                "http://localhost:1234".to_string(),  // LM Studio
+            ],
+            timeout_ms: 500,
+        }
+    }
+}
+
+#[allow(dead_code)] // library API; exercised in tests
+impl LocalInference {
+    /// Probe all candidate endpoints and return the servers that responded.
+    pub async fn discover(&self) -> Vec<LocalInferenceServer> {
+        let mut found = Vec::new();
+        for endpoint in &self.endpoints {
+            if let Some(server) = self.probe(endpoint).await {
+                found.push(server);
+            }
+        }
+        found
+    }
+
+    /// Probe a single endpoint. Returns `None` if the server did not respond.
+    pub async fn probe(&self, endpoint: &str) -> Option<LocalInferenceServer> {
+        let client = reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(self.timeout_ms))
+            .build()
+            .ok()?;
+
+        let base = endpoint.trim_end_matches('/');
+
+        // 1) Try Ollama's native `/api/tags` endpoint.
+        if let Ok(resp) = client.get(format!("{}/api/tags", base)).send().await {
+            if resp.status().is_success() {
+                let models = resp
+                    .json::<serde_json::Value>()
+                    .await
+                    .ok()
+                    .and_then(|v| v.get("models").cloned())
+                    .and_then(|models| {
+                        models.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|m| m.get("name").and_then(|n| n.as_str()).map(String::from))
+                                .collect()
+                        })
+                    })
+                    .unwrap_or_default();
+                return Some(LocalInferenceServer {
+                    endpoint: base.to_string(),
+                    kind: LocalInferenceKind::Ollama,
+                    models,
+                });
+            }
+        }
+
+        // 2) Try the OpenAI-compatible `/v1/models` endpoint (llama.cpp, vLLM, etc.).
+        if let Ok(resp) = client.get(format!("{}/v1/models", base)).send().await {
+            if resp.status().is_success() {
+                let models = resp
+                    .json::<serde_json::Value>()
+                    .await
+                    .ok()
+                    .and_then(|v| v.get("data").cloned())
+                    .and_then(|data| {
+                        data.as_array().map(|arr| {
+                            arr.iter()
+                                .filter_map(|m| m.get("id").and_then(|n| n.as_str()).map(String::from))
+                                .collect()
+                        })
+                    })
+                    .unwrap_or_default();
+                return Some(LocalInferenceServer {
+                    endpoint: base.to_string(),
+                    kind: LocalInferenceKind::OpenAiCompatible,
+                    models,
+                });
+            }
+        }
+
+        None
+    }
+}
+
 /// Multi-model manager for handling multiple providers simultaneously
 #[derive(Clone)]
 pub struct MultiModelManager {
@@ -3213,5 +3364,82 @@ mod tests {
         // With one client, next_client wraps to index 0
         let next = manager.next_client(0).unwrap();
         assert_eq!(next.provider_name(), "litellm");
+    }
+
+    // ── Local inference discovery tests ─────────────────────────────────
+
+    #[test]
+    fn test_local_inference_discovers_ollama() {
+        let mut server = Server::new();
+        let m = server
+            .mock("GET", "/api/tags")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"models":[{"name":"llama3.1"},{"name":"mistral"}]}"#)
+            .create();
+
+        let discovery = LocalInference {
+            endpoints: vec![server.url()],
+            timeout_ms: 1000,
+        };
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let found = rt.block_on(discovery.discover());
+
+        m.assert();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].kind, LocalInferenceKind::Ollama);
+        assert_eq!(found[0].models, vec!["llama3.1", "mistral"]);
+        assert_eq!(found[0].endpoint, server.url());
+    }
+
+    #[test]
+    fn test_local_inference_discovers_openai_compatible() {
+        let mut server = Server::new();
+        // /api/tags returns 404 (not Ollama), /v1/models succeeds.
+        let _tags = server
+            .mock("GET", "/api/tags")
+            .with_status(404)
+            .create();
+        let models = server
+            .mock("GET", "/v1/models")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"data":[{"id":"llama.cpp-model"},{"id":"qwen2.5"}]}"#)
+            .create();
+
+        let discovery = LocalInference {
+            endpoints: vec![server.url()],
+            timeout_ms: 1000,
+        };
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let found = rt.block_on(discovery.discover());
+
+        models.assert();
+        assert_eq!(found.len(), 1);
+        assert_eq!(found[0].kind, LocalInferenceKind::OpenAiCompatible);
+        assert_eq!(found[0].models, vec!["llama.cpp-model", "qwen2.5"]);
+    }
+
+    #[test]
+    fn test_local_inference_ignores_unreachable() {
+        // A closed port (mockito server that returns nothing) → no discovery.
+        let discovery = LocalInference {
+            endpoints: vec!["http://127.0.0.1:1".to_string()], // port 1 is almost always closed
+            timeout_ms: 300,
+        };
+
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let found = rt.block_on(discovery.discover());
+
+        assert!(found.is_empty());
+    }
+
+    #[test]
+    fn test_local_inference_default_endpoints() {
+        let d = LocalInference::default();
+        assert!(d.endpoints.contains(&"http://localhost:11434".to_string()));
+        assert!(d.endpoints.contains(&"http://localhost:8000".to_string()));
     }
 }

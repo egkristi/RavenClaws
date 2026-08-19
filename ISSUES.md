@@ -233,12 +233,17 @@ guide. Updated the hardening roadmap table.
 - **Severity:** 🟡 Medium → ✅ Done
 - **Location:** `SECURITY.md`
 
-### 19. GPU / local inference management
+### 19. ✅ GPU / local inference management — PARTIAL (discovery added 2026-08-20)
 
-NemoClaw manages Podman GPU, DGX Spark, llama.cpp, Ollama device discovery.
+Added `LocalInference` + `LocalInferenceServer` + `LocalInferenceKind` to
+`src/llm.rs` — the "device discovery" foundation. Probes Ollama's `/api/tags` and
+OpenAI-compatible `/v1/models` endpoints (llama.cpp, vLLM, LM Studio, TGI) across
+a configurable endpoint list with short timeouts, and returns discovered servers
+with their models. 4 unit tests. Full device provisioning (model warmup, GPU
+scheduling) remains future work.
 
-- **Severity:** 🟢 Low
-- **Location:** `src/llm.rs`, provider paths
+- **Severity:** 🟢 Low → ✅ Partially done (discovery shipped; provisioning deferred)
+- **Location:** `src/llm.rs` (`LocalInference`)
 
 ### 20. Computer-use agent (CUA) loop
 
