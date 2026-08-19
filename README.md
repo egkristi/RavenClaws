@@ -7,30 +7,30 @@
 [![License](https://img.shields.io/badge/license-AGPLv3%20%2B%20Commercial-blue.svg)](LICENSING.md)
 [![CI](https://github.com/egkristi/RavenClaws/actions/workflows/build.yml/badge.svg)](.github/workflows/build.yml)
 [![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](docs/guides/verification.md)
-[![Binary](https://img.shields.io/badge/binary-~5.2MB-blue)]()
+[![Binary](https://img.shields.io/badge/binary-~7.7MB-blue)]()
 [![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
-[![Status](https://img.shields.io/badge/status-v1.2.0-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v1.4.0-brightgreen)](ROADMAP.md)
 [![Demo](https://img.shields.io/badge/demo-asciinema-ff69b4)](docs/guides/demo.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v1.2.0 "Simply the Best" (2026-07-02).** Self-healing engine with circuit breakers,
-> failure tracking, and exponential backoff; graceful degradation with token bucket rate limiting
-> and concurrency control; multi-agent patterns (debate, review-loop, research-synthesize, voting);
-> multi-modal input (`ContentPart`, `--image` CLI flag); browser automation tool (10 CDP actions);
-> WASM plugin system (Plugin ABI v1); SQLite conversation persistence; MCP SSE transport;
-> durable execution with iteration-level checkpoint/resume; self-provisioning swarm orchestration
-> with 4 topologies; inter-agent communication bus; swarm health & telemetry; autonomous heartbeat
-> agent; scheduling/triggers; HTTP server mode; MCP client & server; RavenFabric mesh client;
-> eval harness; library crate on crates.io; and verified supply chain all work today.
-> 552 unit tests, 114 verification checks, 7 LLM providers, 25 source modules.
+> **Status: v1.4.0 "Universal Parity" (2026-08-20).** Declarative agent blueprints
+> (`--blueprint`); complexity-based model routing; sandbox filesystem snapshots; network-egress
+> operator approval; local inference discovery (Ollama/llama.cpp/vLLM); an interactive installer
+> (`install.sh`); and Windows CI targets — on top of everything shipped through v1.3: self-healing
+> engine, graceful degradation, multi-agent patterns (debate, review-loop, research-synthesize,
+> voting), multi-modal input, browser automation, WASM plugins, SQLite persistence, MCP SSE,
+> durable execution (checkpoint/resume), self-provisioning swarms, autonomous heartbeat,
+> scheduling, HTTP server, MCP client/server, RavenFabric mesh, eval harness, library crate,
+> and a verified supply chain.
+> **601 unit tests**, 114 verification checks, 7 LLM providers, 26 source modules.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
-| **~5.2 MB binary** | **Memory-safe Rust** | **7 providers** | **Binary · Docker · K8s** |
-| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **507 unit tests + 114 verification checks** |
-| **Library crate** | **23 modules** | **crates.io** | **AGPLv3 + Commercial** |
+| **~7.7 MB binary** | **Memory-safe Rust** | **7 providers** | **Binary · Docker · K8s** |
+| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **601 unit tests + 114 verification checks** |
+| **Library crate** | **26 modules** | **crates.io** | **AGPLv3 + Commercial** |
 
 ---
 
@@ -57,20 +57,23 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ### Small & efficient
 
-- **~5.2 MB** stripped release binary (measured) — no interpreter, no runtime image baggage.
+- **~7.7 MB** stripped release binary (measured) — no interpreter, no runtime image baggage.
 - **Single static binary** — no Python, no Node, no JVM, zero runtime dependencies.
-- Native Rust with `lto` + `panic=abort`. Design targets (benchmarked toward v1.0 via the [verification suite](docs/guides/verification.md)): **< 50 ms** cold start, **< 20 MB** RSS, **< 15 MB** binary across all targets.
+- Native Rust with `lto` + `panic=abort`. Design targets (benchmarked via the [verification suite](docs/guides/verification.md)): **< 50 ms** cold start, **< 20 MB** RSS.
+- **Optional feature gating** — the WASM plugin runtime (`plugins`) and Kubernetes operator (`k8s`) are optional cargo features, keeping the default dependency tree lean.
 
 ### Secure & trustworthy
 
-- **Memory-safe Rust** — whole classes of memory-corruption bugs eliminated at compile time.
-- **No credentials in config** — environment variables and Kubernetes Secrets only.
+- **Memory-safe Rust** — `#![forbid(unsafe_code)]` at the crate root; whole classes of memory-corruption bugs eliminated at compile time.
+- **No credentials in config** — environment variables and Kubernetes Secrets only, zeroized on drop via `zeroize`.
 - **Hardened containers** — distroless, non-root, read-only root filesystem, dropped capabilities, seccomp.
 - **Verified supply chain** — multi-arch images signed with **Cosign**, **SBOM** (Syft) and build **provenance** attestation, plus **CodeQL**, **cargo-audit**, **cargo-deny**, **Trivy**, **Hadolint**, **Kubescape**, and **OSSF Scorecard** in CI.
 - **TLS enforced** by default for non-local endpoints.
 - **Deny-by-default tool policy** — `PolicyEngine` validates all tool calls against shell/path/network allow-lists.
-- **Sandboxed tool execution** — workdir jail, resource limits, and timeouts via `Sandbox`.
+- **Human-in-the-loop approval** — `--require-approval` for sensitive tool calls, plus network-egress operator approval (`Decision::RequireApproval`).
+- **Sandboxed tool execution** — workdir jail, resource limits, timeouts, and filesystem snapshots via `Sandbox`.
 - **Tamper-evident audit log** — HMAC-SHA256 chained, structured JSON trail of every tool call.
+- **Threat model & posture profiles** — published in [`SECURITY.md`](SECURITY.md) with `dev`/`prod`/`airgap` hardening presets.
 
 ### Multi-provider, multi-model
 
@@ -79,12 +82,13 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 - **OpenRouter** — unified API for many hosted models.
 - **Ollama** — local, private, air-gapped models.
 - **Anthropic** — direct Claude API (Sonnet, Opus, Haiku) with native tool use.
-- **Multi-model mode** — round-robin + intelligent fallback chains with circuit breaker (v0.5.1+).
+- **Multi-model mode** — complexity-based routing (`route_by_complexity()`) plus round-robin and intelligent fallback chains with circuit breaker.
+- **Local inference discovery** — `LocalInference` probes Ollama (`/api/tags`) and OpenAI-compatible (`/v1/models`) endpoints (llama.cpp, vLLM, LM Studio, TGI) for device discovery.
 
 ### Verified across every target
 
-- **507 Rust unit tests** across **23 modules** (incl. `mockito`-backed provider request/response/error paths for all 7 providers, plus RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, and load tests), runnable anywhere via `cargo test`.
-- Plus a **114-check verification suite** (`scripts/verify.sh`) spanning **10 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security, performance, LLM quality, swarm, and eval checks.
+- **601 Rust unit tests** across **26 modules** (incl. `mockito`-backed provider request/response/error paths for all 7 providers, plus RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load, blueprint, and local-inference tests), runnable anywhere via `cargo test`.
+- Plus a **114-check verification suite** (`scripts/verify.sh`) spanning **13 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security, performance, LLM quality, swarm, eval, MCP, and installer checks.
 - *Note:* the 114 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
 
 ---
@@ -122,6 +126,46 @@ export RAVENCLAWS__LLM__ENDPOINT="http://localhost:4000"
 
 > **Note:** Pre-built binaries publish automatically on tagged releases. See the [GitHub Releases](https://github.com/egkristi/RavenClaws/releases) page for downloads.
 
+### Installer (interactive)
+
+Prefer a guided install? The installer detects your platform and writes a starter
+config with a security posture preset:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/egkristi/RavenClaws/master/install.sh -o install.sh
+chmod +x install.sh
+./install.sh                # interactive: choose dev / prod / airgap
+./install.sh --preset prod  # non-interactive
+./install.sh --from-source  # build with cargo instead of downloading a prebuilt binary
+```
+
+### Agent blueprints
+
+Define reusable agents as TOML/JSON and run them with `--blueprint`:
+
+```toml
+# researcher.toml
+name = "researcher"
+description = "Fetches and summarizes web sources"
+
+[persona]
+system_prompt = "You are a thorough research assistant."
+
+[llm]
+provider = "openai-compatible"
+endpoint = "http://localhost:11434"
+model = "llama3.1"
+
+tools = ["web_fetch", "web_search"]
+max_iterations = 5
+```
+
+```bash
+./target/release/ravenclaws --blueprint researcher.toml --exec "Summarize the RavenClaws README"
+```
+
+See `examples/blueprints/researcher.toml` for a complete example.
+
 ### Use as a library
 
 RavenClaws is published on [crates.io](https://crates.io/crates/ravenclaws) as both a binary and library crate.
@@ -129,7 +173,7 @@ Add it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ravenclaws = "0.9"
+ravenclaws = "1.4"
 ```
 
 Then use the library API in your Rust project:
@@ -158,18 +202,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The library exposes all 23 modules with a stable public API:
+The library exposes all 26 modules with a stable public API:
 
 | Module | Purpose |
 |---|---|
 | `ravenclaws::agent` | Agent implementations, agent loop, conversation memory |
-| `ravenclaws::llm` | LLM provider abstraction + 7 client implementations |
+| `ravenclaws::blueprint` | Declarative agent blueprints (persona + LLM + tools + security) |
+| `ravenclaws::llm` | LLM provider abstraction + 7 client implementations + local inference discovery |
 | `ravenclaws::config` | Configuration structs, TOML/env loading, validation |
-| `ravenclaws::tools` | Tool abstraction, registry, 6 built-in tools |
-| `ravenclaws::policy` | Deny-by-default policy engine |
-| `ravenclaws::sandbox` | Sandboxed execution (workdir jail, resource limits) |
+| `ravenclaws::tools` | Tool abstraction, registry, 6 built-in tools + browser (CDP) |
+| `ravenclaws::policy` | Deny-by-default policy engine (incl. network-egress approval) |
+| `ravenclaws::sandbox` | Sandboxed execution (workdir jail, resource limits, snapshots) |
 | `ravenclaws::audit` | Tamper-evident audit log (HMAC-SHA256 chained) |
-| `ravenclaws::mcp` | MCP client + server (JSON-RPC 2.0 over stdio) |
+| `ravenclaws::mcp` | MCP client + server (JSON-RPC 2.0 over stdio + SSE) |
 | `ravenclaws::swarm` | Swarm orchestration, worker profiles, health monitoring |
 | `ravenclaws::heartbeat` | Autonomous heartbeat agent |
 | `ravenclaws::background` | Background task manager with disk persistence |
@@ -180,7 +225,7 @@ The library exposes all 23 modules with a stable public API:
 | `ravenclaws::eval` | Eval harness with assertions, run traces, tool call assertions |
 | `ravenclaws::patterns` | Multi-agent patterns (debate, review-loop, research-synthesize, voting) |
 | `ravenclaws::persistence` | SQLite-backed conversation persistence with retention policies |
-| `ravenclaws::plugins` | WASM plugin system (Plugin ABI v1) |
+| `ravenclaws::plugins` | WASM plugin system (Plugin ABI v1, optional `plugins` feature) |
 | `ravenclaws::load` | Graceful degradation (LoadManager, TokenBucket, ErrorTracker) |
 | `ravenclaws::error` | Unified error types |
 
@@ -432,6 +477,8 @@ docker buildx build \
 | Linux ARM64 | `aarch64-unknown-linux-gnu` |
 | Linux x86_64 (glibc) | `x86_64-unknown-linux-gnu` |
 | Linux x86_64 (musl/static) | `x86_64-unknown-linux-musl` |
+| Windows x86_64 | `x86_64-pc-windows-msvc` |
+| Windows ARM64 | `aarch64-pc-windows-msvc` |
 
 Container images target both `linux/amd64` and `linux/arm64`.
 
@@ -495,8 +542,8 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Container & K8s security | ✅ Working | Distroless, non-root, read-only FS, dropped caps, seccomp, RBAC |
 | CI/CD pipeline | ✅ Implemented | fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard |
-| Verification suite | ✅ Working | 114 system/integration checks · 10 modules · 4 targets (`scripts/verify.sh`)
-| Rust unit tests | ✅ Working | 507 tests across 23 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load |
+| Verification suite | ✅ Working | 114 system/integration checks · 13 modules · 4 targets (`scripts/verify.sh`)
+| Rust unit tests | ✅ Working | 601 tests across 26 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load, blueprint, local inference |
 | Reproducible builds | ✅ Working | `Cargo.lock` committed (`--locked`), multi-arch Docker cross-linker, RavenFabric agent checksum-verified |
 | `--exec` one-shot mode | ✅ Working | Run a single task, then exit |
 | Interactive REPL | ✅ Working | `--repl` with `/exit`, `/reset` commands |
@@ -520,6 +567,14 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Browser automation | ✅ **v1.1.0** | `BrowserTool` with 10 CDP actions (navigate, click, type, screenshot, extract, scroll, wait, evaluate) |
 | Graceful degradation | ✅ **v1.1.0** | `LoadManager` with rate limiting, concurrency control, load shedding; 429/503 under overload |
 | RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |
+| Declarative agent blueprints | ✅ **v1.5.0** | `AgentBlueprint` + `--blueprint` CLI flag; TOML/JSON persona+LLM+tools+security definitions |
+| Complexity-based model routing | ✅ **v1.5.0** | `MultiModelManager::route_by_complexity()` heuristic (Trivial/Simple/Complex) |
+| Sandbox filesystem snapshots | ✅ **v1.5.0** | `Sandbox::snapshot()/restore()` workdir capture/rollback |
+| Network-egress approval | ✅ **v1.5.0** | `Decision::RequireApproval` + `approve_unknown_hosts` for HITL egress |
+| Local inference discovery | ✅ **v1.5.0** | `LocalInference` probes Ollama/llama.cpp/vLLM endpoints |
+| CUA readiness gate | ✅ **v1.5.0** | `BrowserTool::check_availability()` gated computer-use readiness |
+| Interactive installer | ✅ **v1.5.0** | `install.sh` with dev/prod/airgap posture presets + verification |
+| Windows CI | ✅ **v1.5.0** | `x86_64`/`aarch64-pc-windows-msvc` in the build matrix |
 
 ## How RavenClaws intends to win
 
@@ -534,7 +589,7 @@ and Vellum — by category:
 | Our commitment | How we back it |
 |---|---|
 | Memory-safe core | Rust with `unsafe` forbidden |
-| Tiny footprint | ~5.2 MB binary, distroless image, 0 runtime deps |
+| Tiny footprint | ~7.7 MB binary, distroless image, 0 runtime deps |
 | Trustworthy releases | Cosign signing · SBOM · provenance · CodeQL · Trivy · OSSF Scorecard |
 | Runs anywhere, privately | Self-hostable, air-gappable, no telemetry |
 | Honest about status | ✅/📋 markers everywhere; benchmarks published, not asserted |
@@ -575,7 +630,7 @@ scheduling (v0.7) · RavenFabric distributed execution (v0.6.1).
 
 ### What makes RavenClaws different from other agent frameworks?
 
-RavenClaws is a **single static binary** (~5.2 MB) with zero runtime dependencies — no Python, no Node.js, no JVM. It's designed to be embedded, shipped, and forgotten. Most agent frameworks are SDKs or services you integrate; RavenClaws is a tool you run.
+RavenClaws is a **single static binary** (~7.7 MB) with zero runtime dependencies — no Python, no Node.js, no JVM. It's designed to be embedded, shipped, and forgotten. Most agent frameworks are SDKs or services you integrate; RavenClaws is a tool you run.
 
 ### Do I need an API key?
 
@@ -602,7 +657,7 @@ RavenClaws uses a **deny-by-default** security model:
 
 ### Can I use RavenClaws as a library in my Rust project?
 
-Yes. RavenClaws is published on [crates.io](https://crates.io/crates/ravenclaws) as both a binary and library crate. Add `ravenclaws = "0.9"` to your `Cargo.toml` and use the public API via `use ravenclaws::...`. See the [examples](examples/README.md) directory for runnable code samples.
+Yes. RavenClaws is published on [crates.io](https://crates.io/crates/ravenclaws) as both a binary and library crate. Add `ravenclaws = "1.4"` to your `Cargo.toml` and use the public API via `use ravenclaws::...`. See the [examples](examples/README.md) directory for runnable code samples.
 
 ### How do I upgrade from an older version?
 
