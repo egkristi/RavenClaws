@@ -45,12 +45,20 @@ pub enum Decision {
     Allow,
     /// Deny the operation with a reason
     Deny(String),
+    /// The operation is not allow-listed but may proceed after operator approval
+    /// (human-in-the-loop). The payload is the reason/description for the prompt.
+    RequireApproval(String),
 }
 
 #[allow(dead_code)]
 impl Decision {
     pub fn is_allowed(&self) -> bool {
         matches!(self, Decision::Allow)
+    }
+
+    /// Returns `true` if this decision requires operator approval before execution.
+    pub fn requires_approval(&self) -> bool {
+        matches!(self, Decision::RequireApproval(_))
     }
 }
 
@@ -187,6 +195,11 @@ pub struct NetworkPolicy {
     /// If true, allow connections to private IP ranges
     #[serde(default)]
     pub allow_private_networks: bool,
+    /// If true, requests to hosts that are neither allowed nor denied return
+    /// `Decision::RequireApproval` instead of a hard `Deny` — enabling an
+    /// operator-approval (human-in-the-loop) flow for network egress.
+    #[serde(default)]
+    pub approve_unknown_hosts: bool,
 }
 
 impl Default for NetworkPolicy {
@@ -207,6 +220,7 @@ impl Default for NetworkPolicy {
             denied_hosts: vec![],
             allow_localhost: true,
             allow_private_networks: false,
+            approve_unknown_hosts: false,
         }
     }
 }
@@ -292,6 +306,7 @@ impl PolicyEngine {
                     denied_hosts: vec![],
                     allow_localhost: true,
                     allow_private_networks: true,
+                    approve_unknown_hosts: false,
                 },
             },
         }
@@ -521,6 +536,12 @@ impl PolicyEngine {
         });
 
         if !is_allowed {
+            if policy.approve_unknown_hosts {
+                return Decision::RequireApproval(format!(
+                    "Host '{}' is not in the allowed hosts list",
+                    host
+                ));
+            }
             return Decision::Deny(format!("Host '{}' is not in the allowed hosts list", host));
         }
 
@@ -1034,6 +1055,48 @@ mod tests {
         assert!(engine.requires_approval("shell_exec"));
         assert!(engine.requires_approval("read_file"));
         assert!(engine.requires_approval("web_fetch"));
+    }
+
+    #[test]
+    fn test_egress_approval_unknown_host() {
+        let policy = SecurityPolicy {
+            network: NetworkPolicy {
+                approve_unknown_hosts: true,
+                ..NetworkPolicy::default()
+            },
+            ..SecurityPolicy::default()
+        };
+        let engine = PolicyEngine::new(policy);
+        let args = serde_json::json!({"url": "https://some-random-domain.example"});
+        let decision = engine.check_network_request(&args);
+        assert!(decision.requires_approval());
+        assert!(!decision.is_allowed());
+    }
+
+    #[test]
+    fn test_egress_deny_unknown_host_by_default() {
+        let engine = PolicyEngine::default_secure();
+        let args = serde_json::json!({"url": "https://some-random-domain.example"});
+        let decision = engine.check_network_request(&args);
+        // Default: unknown hosts are denied, not routed to approval.
+        assert!(!decision.requires_approval());
+        assert!(matches!(decision, Decision::Deny(_)));
+    }
+
+    #[test]
+    fn test_egress_allowlisted_host_still_allowed() {
+        let policy = SecurityPolicy {
+            network: NetworkPolicy {
+                approve_unknown_hosts: true,
+                ..NetworkPolicy::default()
+            },
+            ..SecurityPolicy::default()
+        };
+        let engine = PolicyEngine::new(policy);
+        let args = serde_json::json!({"url": "https://github.com"});
+        let decision = engine.check_network_request(&args);
+        assert!(decision.is_allowed());
+        assert!(!decision.requires_approval());
     }
 
     #[test]

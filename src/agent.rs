@@ -1463,6 +1463,38 @@ async fn execute_parsed_tool_call(
                 duration_ms: None,
             });
         }
+        Decision::RequireApproval(reason) => {
+            let _ = audit_log.policy_decision(&tool_name, false, Some(reason));
+            // Route to the HITL approval flow. `require_approval` here indicates
+            // whether this execution context enables interactive prompting.
+            if require_approval {
+                let granted = prompt_for_approval(&tool_name, &args).await;
+                if !granted {
+                    let _ = audit_log.approval(&tool_name, false, Some("Denied by user"));
+                    warn!(tool = %tool_name, "Tool call denied by user (egress approval)");
+                    return Some(ToolResult {
+                        tool_name: tool_name.clone(),
+                        success: false,
+                        output: String::new(),
+                        error: Some(format!("Approval denied by user for tool: {}", tool_name)),
+                        exit_code: Some(-1),
+                        duration_ms: None,
+                    });
+                }
+                let _ = audit_log.approval(&tool_name, true, Some("Approved by user"));
+            } else {
+                // No interactive approval available — fail closed.
+                warn!(tool = %tool_name, reason = %reason, "Tool call requires approval but no interactive prompt available");
+                return Some(ToolResult {
+                    tool_name: tool_name.clone(),
+                    success: false,
+                    output: String::new(),
+                    error: Some(format!("Approval required: {}", reason)),
+                    exit_code: Some(-1),
+                    duration_ms: None,
+                });
+            }
+        }
     }
 
     // Execute tool

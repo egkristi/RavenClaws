@@ -172,19 +172,19 @@ complexity classifier + cost/quality policy remains a future enhancement.
 - **Severity:** 🟡 High → ✅ Implemented (heuristic v1)
 - **Location:** `src/llm.rs` (`MultiModelManager`)
 
-### 14. ✅ Human-in-the-loop approval flow — RE-TRIAGED (2026-08-19)
+### 14. ✅ Human-in-the-loop approval flow — FULLY RESOLVED (2026-08-20)
 
-**Tool-call HITL already exists** (shipped v0.8): `--require-approval` flag,
-`PolicyEngine::requires_approval()`, `prompt_for_approval()` (stdin gate with
-deny-by-default on non-TTY), audit logging of approval requests/decisions, and
-unit tests. The premise "static allow-list only" is outdated.
+**Tool-call HITL already exists** (v0.8): `--require-approval`, `requires_approval()`,
+`prompt_for_approval()`, audit logging, tests.
 
-The *genuine* remaining NemoClaw-parity gap is **network-egress operator approval**
-— currently unknown hosts are flatly denied rather than routed to an approval flow.
-Deferred as a distinct, lower-priority enhancement (would add a
-`Decision::RequireApproval` variant + update 3 match sites).
+**Network-egress operator approval now added** (2026-08-20): new
+`Decision::RequireApproval(String)` variant + `NetworkPolicy::approve_unknown_hosts`
+flag. When enabled, unknown hosts return `RequireApproval` instead of a hard `Deny`;
+the agent loop routes it through `prompt_for_approval()` (fail-closed when no
+interactive prompt); MCP/SSE paths fail closed with a clear message. 3 new tests.
 
-- **Severity:** 🟡 High → ✅ Partially resolved (tool-call HITL exists; egress approval deferred)
+- **Severity:** 🟡 High → ✅ Fully resolved
+- **Location:** `src/policy.rs`, `src/agent.rs`, `src/mcp.rs`
 
 ### 15. ✅ Sandbox filesystem snapshots — IMPLEMENTED (2026-08-20)
 

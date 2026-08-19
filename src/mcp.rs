@@ -1341,6 +1341,21 @@ impl McpServer {
                     "id": request_id
                 });
             }
+            crate::policy::Decision::RequireApproval(reason) => {
+                // MCP has no interactive prompt — fail closed.
+                warn!(tool = %name, reason = %reason, "MCP tool call requires approval; no interactive prompt available");
+                return serde_json::json!({
+                    "jsonrpc": "2.0",
+                    "result": {
+                        "content": [{
+                            "type": "text",
+                            "text": format!("Approval required: {}", reason)
+                        }],
+                        "isError": true
+                    },
+                    "id": request_id
+                });
+            }
             crate::policy::Decision::Allow => {
                 // Audit: tool call
                 let _ = self.audit_log.tool_call(&name, &arguments);
@@ -2016,6 +2031,21 @@ impl McpSseServer {
                                 "content": [{
                                     "type": "text",
                                     "text": format!("Policy denied: {}", reason)
+                                }],
+                                "isError": true
+                            },
+                            "id": request_id
+                        });
+                    }
+                    crate::policy::Decision::RequireApproval(reason) => {
+                        // MCP SSE has no interactive prompt — fail closed.
+                        warn!(tool = %name, reason = %reason, "MCP SSE tool call requires approval; no interactive prompt available");
+                        return serde_json::json!({
+                            "jsonrpc": "2.0",
+                            "result": {
+                                "content": [{
+                                    "type": "text",
+                                    "text": format!("Approval required: {}", reason)
                                 }],
                                 "isError": true
                             },
