@@ -798,10 +798,14 @@ Per `RAVENCLAWS-MERGE.md`, the merge candidates were:
   to CI; `main.rs` shutdown signals made cross-platform.
 - [x] **`SECURITY.md` version table is stale** ✅ **DONE (2026-08-14)** — updated
   to 1.x.
-- [ ] **Container size regression risk** — default binary grew beyond the ~5 MB
-  goal with optional features; verify `k8s`/`wasmtime` stay feature-gated.
-- [ ] **Threat model / fuzzing** — the "1.0 hardening roadmap" lists an external
-  security review + fuzzing + published threat model as outstanding.
+- [x] **Container size regression risk** ✅ **TRIAGED (2026-08-19)** — binary is
+  ~7.7 MB; driven by v1.x feature breadth (SQLite, OpenTelemetry, reqwest), not
+  `wasmtime` (LTO eliminates unused plugin runtime). `plugins`/`k8s` remain
+  feature-gated. Accepted tradeoff; re-evaluate dependency consolidation pre-2.0.
+- [x] **Threat model / fuzzing** ✅ **DONE (2026-08-19/20)** — threat model +
+  posture profiles published in `SECURITY.md`; deterministic fuzz-style test
+  added (`test_policy_engine_never_panics_on_adversarial_input`, 10k inputs).
+  Formal `cargo-fuzz`/libFuzzer harness remains future work.
 
 ---
 
