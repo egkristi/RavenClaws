@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RavenClaws — The Ultimate AI Agentic Worker · Secure Rust agent framework</title>
-<meta name="description" content="RavenClaws is a lightweight, secure Rust AI-agent framework. One static ~5.2 MB binary, zero runtime dependencies, 7 LLM providers, swarm & autonomous heartbeat modes, MCP client/server, and a verified supply chain. Self-hostable and air-gappable.">
+<meta name="description" content="RavenClaws is a lightweight, secure Rust AI-agent framework. One static ~7.7 MB binary, zero runtime dependencies, 7 LLM providers, swarm & autonomous heartbeat modes, MCP client/server, and a verified supply chain. Self-hostable and air-gappable.">
 <link rel="canonical" href="https://ravenclaws.io/">
 <meta name="theme-color" content="#070a10">
 
@@ -12,14 +12,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="RavenClaws">
 <meta property="og:title" content="RavenClaws — The Ultimate AI Agentic Worker">
-<meta property="og:description" content="Secure AI agents in a single ~5 MB Rust binary. Zero runtime deps, 7 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain. Self-hostable & air-gappable.">
+<meta property="og:description" content="Secure AI agents in a single ~7.7 MB Rust binary. Zero runtime deps, 7 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain. Self-hostable & air-gappable.">
 <meta property="og:url" content="https://ravenclaws.io/">
 <meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="RavenClaws — The Ultimate AI Agentic Worker">
-<meta name="twitter:description" content="Secure AI agents in a single ~5 MB Rust binary. Zero runtime deps, 7 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain.">
+<meta name="twitter:description" content="Secure AI agents in a single ~7.7 MB Rust binary. Zero runtime deps, 7 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain.">
 <meta name="twitter:image" content="https://ravenclaws.io/assets/og-image.png">
 
 <link rel="icon" href="/assets/favicon.ico" sizes="any">
@@ -41,7 +41,7 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
   "url": "https://ravenclaws.io",
   "downloadUrl": "https://github.com/egkristi/RavenClaws/releases",
-  "softwareVersion": "1.3.0",
+  "softwareVersion": "1.4.0",
   "description": "Lightweight, secure Rust agent framework with multi-provider LLM support.",
   "license": "https://www.gnu.org/licenses/agpl-3.0.html"
 }
@@ -90,7 +90,7 @@
     <div class="hero-grid">
       <div class="hero-copy">
         <p class="eyebrow">Secure · Small · Efficient · Robust · Simple</p>
-        <h1>Secure AI agents in a single <span class="grad-text">~5&nbsp;MB binary</span>.</h1>
+        <h1>Secure AI agents in a single <span class="grad-text">~7.7&nbsp;MB binary</span>.</h1>
         <p class="lead">RavenClaws is a lightweight, memory-safe <strong>Rust</strong> agent framework with
           multi-provider LLM support. One static binary. Zero runtime dependencies — no Python, no Node, no JVM.</p>
         <p class="sub">Self-hostable and air-gappable. Your data and tool calls never leave infrastructure you control — and there is no phone-home.</p>
@@ -107,11 +107,11 @@
         </div>
 
         <div class="stat-row">
-          <div class="stat"><b>~5.2<span class="u">MB</span></b><span>stripped binary</span></div>
+          <div class="stat"><b>~7.7<span class="u">MB</span></b><span>stripped binary</span></div>
           <div class="stat"><b>0</b><span>runtime deps</span></div>
           <div class="stat"><b>7</b><span>LLM providers</span></div>
-          <div class="stat"><b>507</b><span>unit tests</span></div>
-          <div class="stat"><b>23</b><span>modules</span></div>
+          <div class="stat"><b>601</b><span>unit tests</span></div>
+          <div class="stat"><b>26</b><span>modules</span></div>
         </div>
       </div>
 
@@ -203,7 +203,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
         <h3>Multi-provider routing</h3>
-        <p>Seven providers behind one trait, with round-robin, intelligent fallback chains, a circuit breaker, and token budgets.</p>
+        <p>Seven providers behind one trait, with complexity-based routing, round-robin, intelligent fallback chains, a circuit breaker, and token budgets.</p>
       </div>
 
       <div class="card col-span-2">
@@ -234,7 +234,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 5v14M15 5v14M5 19h14"/></svg></div>
         <h3>Library crate</h3>
-        <p>Use RavenClaws as a dependency — <code>ravenclaws</code> on crates.io exposes all 23 modules through a stable, semver-disciplined public API.</p>
+        <p>Use RavenClaws as a dependency — <code>ravenclaws</code> on crates.io exposes all 26 modules through a stable, semver-disciplined public API.</p>
       </div>
 
       <div class="card">
@@ -347,7 +347,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
     <div class="section-head center">
       <p class="eyebrow">See it in action</p>
       <h2 class="section-title">Watch the demo suite.</h2>
-      <p class="section-lead">Five focused asciinema recordings showcasing RavenClaws v1.2.0 — from quickstart and architecture through server/MCP, resilience, and deployment.</p>
+      <p class="section-lead">Five focused asciinema recordings showcasing RavenClaws v1.4.0 — from quickstart and architecture through server/MCP, resilience, and deployment.</p>
     </div>
     <div class="demo-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:32px">
       <div class="demo-card" style="background:var(--bg-card);border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);border:1px solid var(--border);transition:transform .2s,box-shadow .2s">
@@ -445,7 +445,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
           <tr><td class="name">MCP client <em>and</em> server</td><td class="col-rc rc-col"><span class="yes">✓ both</span></td><td><span class="yes">✓</span></td><td><span class="no">✕</span></td></tr>
           <tr><td class="name">Deny-by-default security model</td><td class="col-rc rc-col"><span class="yes">✓ wired</span></td><td><span class="mid">bolted on</span></td><td><span class="no">✕</span></td></tr>
           <tr><td class="name">Local-first / air-gapped</td><td class="col-rc rc-col"><span class="yes">✓ Ollama</span></td><td><span class="no">✕</span></td><td><span class="mid">varies</span></td></tr>
-          <tr><td class="name">~5 MB single binary, edge-deployable</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="no">✕ cloud</span></td><td><span class="mid">varies</span></td></tr>
+          <tr><td class="name">~7.7 MB single binary, edge-deployable</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="no">✕ cloud</span></td><td><span class="mid">varies</span></td></tr>
           <tr><td class="name">No telemetry · signed + SBOM</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="no">✕</span></td><td><span class="mid">varies</span></td></tr>
           <tr><td class="name">Autonomous heartbeat (days/weeks)</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="yes">✓</span></td><td><span class="no">✕</span></td></tr>
           <tr><td class="name">Scalable swarm (1000+ workers)</td><td class="col-rc rc-col"><span class="yes">✓</span></td><td><span class="no">✕</span></td><td><span class="no">✕</span></td></tr>
@@ -453,7 +453,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
         </tbody>
       </table>
     </div>
-    <p class="dim" style="margin-top:14px;font-size:.86rem">Self-reported from the project roadmap (v1.1.0). Capabilities of third-party tools vary by version and configuration. Azure provider added in v1.1.0.</p>
+    <p class="dim" style="margin-top:14px;font-size:.86rem">Self-reported from the project roadmap (v1.4.0). Capabilities of third-party tools vary by version and configuration. Azure provider added in v1.1.0.</p>
     <img src="/assets/raven-flock.webp" alt="A murder of ravens in flight, representing swarm orchestration" loading="lazy" width="1280" height="698" style="display:block;max-width:min(800px,100%);margin:32px auto 0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.35)">
   </div>
 </section>
