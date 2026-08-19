@@ -9,13 +9,13 @@
 [![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](docs/guides/verification.md)
 [![Binary](https://img.shields.io/badge/binary-~7.7MB-blue)]()
 [![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
-[![Status](https://img.shields.io/badge/status-v1.4.0-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v1.5.0-brightgreen)](ROADMAP.md)
 [![Demo](https://img.shields.io/badge/demo-asciinema-ff69b4)](docs/guides/demo.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v1.4.0 "Universal Parity" (2026-08-20).** Declarative agent blueprints
+> **Status: v1.5.0 (2026-08-20).** Declarative agent blueprints
 > (`--blueprint`); complexity-based model routing; sandbox filesystem snapshots; network-egress
 > operator approval; local inference discovery (Ollama/llama.cpp/vLLM); an interactive installer
 > (`install.sh`); and Windows CI targets — on top of everything shipped through v1.3: self-healing

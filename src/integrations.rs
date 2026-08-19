@@ -71,7 +71,7 @@ impl IntegrationResult {
 fn client() -> Result<reqwest::Client, reqwest::Error> {
     reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30))
-        .user_agent("RavenClaws/1.4.0")
+        .user_agent(concat!("RavenClaws/", env!("CARGO_PKG_VERSION")))
         .build()
 }
 

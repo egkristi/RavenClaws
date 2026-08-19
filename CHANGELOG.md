@@ -5,7 +5,7 @@ All notable changes to RavenClaws are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v1.5.0] — 2026-08-20
 
 ### Added
 - **Declarative agent blueprints** — New `src/blueprint.rs` with `AgentBlueprint`,
@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Critical `wasmtime` CVEs** — upgraded `wasmtime` 28.0.1 → 47.0.3, clearing two
   CRITICAL sandbox-escape advisories (RUSTSEC-2026-0095/0096) and 10+ lower issues;
   fixed the `Memory::grow` error-conversion API change.
+- **`h2` unbounded empty DATA frames** — upgraded `h2` 0.4.15 → 0.4.16
+  (RUSTSEC-2026-0258).
 - **Poisoned-mutex panics** — replaced 94 `std::sync::Mutex::lock().unwrap()` sites
   with `.lock().unwrap_or_else(|p| p.into_inner())` across 6 modules.
 - **K8s RBAC least-privilege** — scoped the `ravenclaws` Role's `secrets` access to
@@ -64,6 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   posture profiles (`dev`/`prod`/`airgap`) to `SECURITY.md`.
 - **Deterministic fuzz-style test** — `test_policy_engine_never_panics_on_adversarial_input`
   hammers `PolicyEngine` with 10,000 adversarial inputs (fixed-seed LCG, no deps).
+
+## [Unreleased]
 
 ## [v1.4.0] — 2026-08-13
 
