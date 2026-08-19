@@ -186,13 +186,18 @@ Deferred as a distinct, lower-priority enhancement (would add a
 
 - **Severity:** 🟡 High → ✅ Partially resolved (tool-call HITL exists; egress approval deferred)
 
-### 15. Sandbox filesystem snapshots
+### 15. ✅ Sandbox filesystem snapshots — IMPLEMENTED (2026-08-20)
 
-NemoClaw captures/rolls back sandbox state. RavenClaws has agent-loop checkpoints
-but no workdir snapshot/restore around tool execution.
+Added `Sandbox::snapshot()` and `Sandbox::restore()` plus a `SandboxSnapshot` type
+to `src/sandbox.rs`. Captures every regular file (relative path + contents) in the
+workdir; `restore()` wipes current contents and recreates the captured files,
+deleting anything added after the snapshot. Symlinks/special files are skipped.
+Complements the existing agent-loop checkpoints with workdir-level rollback.
+3 new tests (snapshot+restore round-trip, empty workdir, not-initialized). Exported
+`SandboxSnapshot` from the library crate. 592 tests pass, clippy clean.
 
-- **Severity:** 🟡 Medium
-- **Location:** `src/sandbox.rs`
+- **Severity:** 🟡 Medium → ✅ Implemented
+- **Location:** `src/sandbox.rs`, `src/lib.rs`
 
 ### 16. ✅ Declarative agent blueprints — IMPLEMENTED (2026-08-19)
 

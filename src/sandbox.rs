@@ -307,6 +307,129 @@ impl Sandbox {
 
         Ok(path)
     }
+
+    /// Capture the current state of the workdir into a [`SandboxSnapshot`].
+    ///
+    /// Records every regular file's path (relative to the workdir) and its byte
+    /// contents. Symlinks and directories are not stored directly — only their
+    /// file descendants are. An empty/nonexistent workdir yields an empty snapshot.
+    pub async fn snapshot(&self) -> Result<SandboxSnapshot, SandboxError> {
+        if !self.initialized {
+            return Err(SandboxError::NotInitialized(
+                "Sandbox must be initialized before taking a snapshot".to_string(),
+            ));
+        }
+
+        let mut files: Vec<(PathBuf, Vec<u8>)> = Vec::new();
+        let mut stack: Vec<PathBuf> = Vec::new();
+
+        if self.workdir.exists() {
+            stack.push(self.workdir.clone());
+        }
+
+        while let Some(dir) = stack.pop() {
+            let mut entries = match tokio::fs::read_dir(&dir).await {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
+
+            while let Some(entry) = entries.next_entry().await? {
+                let path = entry.path();
+                let meta = match tokio::fs::symlink_metadata(&path).await {
+                    Ok(m) => m,
+                    Err(_) => continue,
+                };
+
+                if meta.is_dir() {
+                    stack.push(path);
+                } else if meta.is_file() {
+                    let rel = path
+                        .strip_prefix(&self.workdir)
+                        .map_err(|_| {
+                            SandboxError::PathOutsideSandbox(
+                                path.to_string_lossy().to_string(),
+                            )
+                        })?
+                        .to_path_buf();
+                    let bytes = tokio::fs::read(&path).await?;
+                    files.push((rel, bytes));
+                }
+                // Symlinks and other special files are intentionally skipped.
+            }
+        }
+
+        Ok(SandboxSnapshot { files })
+    }
+
+    /// Restore the workdir to a previously captured [`SandboxSnapshot`].
+    ///
+    /// Removes the current workdir contents and recreates the files recorded in
+    /// the snapshot. Files present in the workdir but absent from the snapshot
+    /// are deleted; files in the snapshot are restored to their captured bytes.
+    pub async fn restore(&self, snapshot: &SandboxSnapshot) -> Result<(), SandboxError> {
+        if !self.initialized {
+            return Err(SandboxError::NotInitialized(
+                "Sandbox must be initialized before restoring a snapshot".to_string(),
+            ));
+        }
+
+        // Wipe current workdir contents (keep the workdir itself).
+        if self.workdir.exists() {
+            let mut entries = tokio::fs::read_dir(&self.workdir).await?;
+            while let Some(entry) = entries.next_entry().await? {
+                let path = entry.path();
+                let meta = tokio::fs::symlink_metadata(&path).await?;
+                if meta.is_dir() {
+                    tokio::fs::remove_dir_all(&path).await?;
+                } else {
+                    tokio::fs::remove_file(&path).await?;
+                }
+            }
+        } else {
+            tokio::fs::create_dir_all(&self.workdir).await?;
+        }
+
+        // Recreate files from the snapshot.
+        for (rel, bytes) in &snapshot.files {
+            let path = self.workdir.join(rel);
+            if let Some(parent) = path.parent() {
+                tokio::fs::create_dir_all(parent).await?;
+            }
+            tokio::fs::write(&path, bytes).await?;
+        }
+
+        info!(
+            workdir = %self.workdir.display(),
+            files = snapshot.files.len(),
+            "Sandbox state restored from snapshot"
+        );
+        Ok(())
+    }
+}
+
+/// A point-in-time capture of the sandbox workdir filesystem state.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, Default)]
+#[non_exhaustive]
+pub struct SandboxSnapshot {
+    /// Files captured as `(relative_path, contents)`.
+    files: Vec<(PathBuf, Vec<u8>)>,
+}
+
+impl SandboxSnapshot {
+    /// The number of files captured in this snapshot.
+    #[allow(dead_code)] // library accessor; exercised in tests
+    pub fn file_count(&self) -> usize {
+        self.files.len()
+    }
+
+    /// The captured file paths, relative to the sandbox workdir.
+    #[allow(dead_code)] // library accessor; exercised in tests
+    pub fn file_paths(&self) -> impl Iterator<Item = &PathBuf> {
+        self.files.iter().map(|(p, _)| p)
+    }
 }
 
 impl Drop for Sandbox {
@@ -601,5 +724,73 @@ mod tests {
         assert_eq!(config.workdir, "/custom/sandbox");
         assert_eq!(config.timeout_secs, 60);
         assert!(config.allow_network);
+    }
+
+    #[tokio::test]
+    async fn test_sandbox_snapshot_and_restore() {
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_snap_{}", std::process::id()));
+        let config = SandboxConfig {
+            workdir: dir.to_string_lossy().to_string(),
+            create_workdir: true,
+            ..SandboxConfig::default()
+        };
+        let mut sandbox = Sandbox::new(config);
+        sandbox.init().await.unwrap();
+
+        // Write initial files (including a nested file).
+        tokio::fs::write(dir.join("a.txt"), b"alpha").await.unwrap();
+        tokio::fs::create_dir_all(dir.join("sub")).await.unwrap();
+        tokio::fs::write(dir.join("sub").join("b.txt"), b"beta").await.unwrap();
+
+        // Snapshot the initial state.
+        let snap = sandbox.snapshot().await.unwrap();
+        assert_eq!(snap.file_count(), 2);
+
+        // Mutate: modify one file, delete another, add a new one.
+        tokio::fs::write(dir.join("a.txt"), b"changed").await.unwrap();
+        tokio::fs::remove_file(dir.join("sub").join("b.txt")).await.unwrap();
+        tokio::fs::write(dir.join("c.txt"), b"new").await.unwrap();
+
+        // Restore to snapshot.
+        sandbox.restore(&snap).await.unwrap();
+
+        // Verify original state is restored.
+        assert_eq!(tokio::fs::read(dir.join("a.txt")).await.unwrap(), b"alpha");
+        assert_eq!(
+            tokio::fs::read(dir.join("sub").join("b.txt")).await.unwrap(),
+            b"beta"
+        );
+        // The "new" file added after the snapshot should be gone.
+        assert!(!dir.join("c.txt").exists());
+
+        sandbox.cleanup().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_sandbox_snapshot_empty_workdir() {
+        let dir =
+            std::env::temp_dir().join(format!("ravenclaws_sandbox_snap_empty_{}", std::process::id()));
+        let config = SandboxConfig {
+            workdir: dir.to_string_lossy().to_string(),
+            create_workdir: true,
+            ..SandboxConfig::default()
+        };
+        let mut sandbox = Sandbox::new(config);
+        sandbox.init().await.unwrap();
+
+        let snap = sandbox.snapshot().await.unwrap();
+        assert_eq!(snap.file_count(), 0);
+        assert_eq!(snap.file_paths().count(), 0);
+
+        sandbox.cleanup().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_sandbox_snapshot_not_initialized() {
+        let config = SandboxConfig::default();
+        let sandbox = Sandbox::new(config);
+        let result = sandbox.snapshot().await;
+        assert!(matches!(result.unwrap_err(), SandboxError::NotInitialized(_)));
     }
 }

@@ -155,7 +155,7 @@ pub use persistence::{
 pub use plugins::{PluginError, PluginTool, WasmPlugin, WasmPluginManager};
 pub use policy::PolicyEngine;
 pub use ravenfabric::RavenFabricClient;
-pub use sandbox::Sandbox;
+pub use sandbox::{Sandbox, SandboxSnapshot};
 pub use scheduler::Scheduler;
 pub use server::run_server;
 pub use swarm::SwarmOrchestrator;
