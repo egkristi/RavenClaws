@@ -787,8 +787,10 @@ Per `RAVENCLAWS-MERGE.md`, the merge candidates were:
   generated (not hardcoded) and zeroized; ephemeral per-process by design.
 - [x] **`.unwrap()` on poisoned mutexes** ✅ **DONE (2026-08-14)** — 94 sites
   converted to `.lock().unwrap_or_else(|p| p.into_inner())`.
-- [ ] **`unsafe` in dependency** — `Cargo.lock` includes `security-framework`
-  (macOS). Verify no first-party `unsafe` and add a `#![forbid(unsafe_code)]` lint.
+- [x] **`unsafe` in dependency** ✅ **DONE (2026-08-19)** — no first-party
+  `unsafe` code exists; added `#![forbid(unsafe_code)]` to both `lib.rs` and
+  `main.rs` to enforce the memory-safety pillar at compile time. (`Cargo.lock`'s
+  `security-framework` is a macOS transitive dep, not first-party code.)
 
 ### 🟢 Low — Platform & Polish
 

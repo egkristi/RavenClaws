@@ -139,7 +139,9 @@ if cross-restart verification is required.
 
 ### 12. External security review + fuzzing + threat model outstanding
 
-The v1.0 hardening roadmap lists these as still to be done.
+**Partially resolved 2026-08-19:** added `#![forbid(unsafe_code)]` to both crate
+roots (no first-party `unsafe` exists). Remaining: fuzzing targets and a published
+threat model (see #18).
 
 ---
 

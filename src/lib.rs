@@ -1,6 +1,9 @@
 //! # RavenClaws
 //!
 //! Lightweight, secure Rust agent framework with multi-provider LLM support.
+
+// Memory-safety pillar: no first-party `unsafe` code is permitted.
+#![forbid(unsafe_code)]
 //!
 //! RavenClaws is a single-binary agent runtime that supports:
 //! - **Single agent mode** — one prompt, one response

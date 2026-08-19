@@ -3,6 +3,9 @@
 //! Built for efficiency, security, and easy deployment.
 //! Supports multiple LLM providers: LiteLLM, OpenRouter, Ollama, OpenAI.
 
+// Memory-safety pillar: no first-party `unsafe` code is permitted.
+#![forbid(unsafe_code)]
+
 mod agent;
 mod audit;
 mod background;
