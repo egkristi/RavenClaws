@@ -48,6 +48,7 @@ MODULES=(
     "vllm:test-provider-vllm.sh:test_provider_vllm:vLLM Provider"
     "llamacpp:test-provider-llamacpp.sh:test_provider_llamacpp:llama.cpp Provider"
     "mcp:test-mcp.sh:test_mcp_integration:MCP Integration (stdio + SSE)"
+    "installer:test-local.sh:test_installer:Installer (install.sh)"
 )
 
 list_modules() {

@@ -89,6 +89,54 @@ test_local_binary() {
     fi
 }
 
+# =============================================================================
+# Installer Verification (install.sh)
+# =============================================================================
+test_installer() {
+    log_step "Installer Verification"
+
+    local INSTALLER="$PROJECT_DIR/install.sh"
+    if [[ ! -f "$INSTALLER" ]]; then
+        log_skip "install.sh not found"
+        return
+    fi
+
+    log_sub "Installer syntax & help"
+    run_test "Installer --help" "$INSTALLER" --help
+
+    log_sub "Installer config generation (dev preset)"
+    local TMPDIR_INST
+    TMPDIR_INST="$(mktemp -d)"
+    # Run from a temp dir so the config is written there, not the repo.
+    (
+        cd "$TMPDIR_INST" || exit 1
+        "$INSTALLER" --preset dev --config-only >/dev/null 2>&1
+        test -f "ravenclaws.toml"
+    )
+    local status=$?
+    if [[ $status -eq 0 ]]; then
+        log_ok "Installer generates ravenclaws.toml (dev preset)"
+    else
+        log_fail "Installer failed to generate ravenclaws.toml (dev preset)"
+    fi
+    rm -rf "$TMPDIR_INST"
+
+    log_sub "Installer config generation (airgap preset)"
+    TMPDIR_INST="$(mktemp -d)"
+    (
+        cd "$TMPDIR_INST" || exit 1
+        "$INSTALLER" --preset airgap --config-only >/dev/null 2>&1
+        grep -q 'require_tls = true' ravenclaws.toml
+    )
+    status=$?
+    if [[ $status -eq 0 ]]; then
+        log_ok "Installer airgap preset sets require_tls = true"
+    else
+        log_fail "Installer airgap preset missing require_tls = true"
+    fi
+    rm -rf "$TMPDIR_INST"
+}
+
 # Run standalone
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     source "$(dirname "$0")/common.sh"

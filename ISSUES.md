@@ -212,12 +212,16 @@ remain deserialize-only by design (avoid serializing secrets).
 - **Severity:** 🟡 Medium → ✅ Implemented
 - **Location:** `src/blueprint.rs`, `src/main.rs`, `src/lib.rs`
 
-### 17. Interactive installer + platform presets
+### 17. ✅ Interactive installer + platform presets — IMPLEMENTED (2026-08-20)
 
-NemoClaw's guided express-install; RavenClaws relies on docs-only setup.
+Added `install.sh` (repo root) with OS/arch detection, three security-posture
+presets (`dev`/`prod`/`airgap`), prebuilt-binary download (with source-build
+fallback), and a `--config-only` mode that writes a starter `ravenclaws.toml`.
+Registered a new `installer` verification module in `scripts/verify.sh`
+(3 tests: `--help`, dev config generation, airgap `require_tls = true`). All pass.
 
-- **Severity:** 🟢 Low
-- **Location:** repo root (`install.sh`)
+- **Severity:** 🟢 Low → ✅ Implemented
+- **Location:** `install.sh`, `scripts/lib/test-local.sh`, `scripts/verify.sh`
 
 ### 18. ✅ Security posture profiles + published threat model — DONE (2026-08-19)
 
