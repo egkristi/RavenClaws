@@ -837,14 +837,13 @@ OpenShell sandboxes. Its headline capabilities are:
 
 1. ✅ **Complexity-based model routing** — DONE (2026-08-14) — `route_by_complexity()`
    heuristic in `src/llm.rs`.
-2. ✅ **Human-in-the-loop approval flow** — PARTIAL — tool-call HITL exists (v0.8);
-   network-egress operator approval deferred.
-3. ⏳ **Sandbox filesystem snapshots** — capture/restore workdir state around tool
-   execution, complementing the existing agent-loop checkpoints.
+2. ✅ **Human-in-the-loop approval flow** — DONE (2026-08-20) — tool-call HITL (v0.8)
+   + network-egress operator approval (`Decision::RequireApproval`).
+3. ✅ **Sandbox filesystem snapshots** — DONE (2026-08-20) — `Sandbox::snapshot()/restore()`.
 4. ✅ **Declarative agent blueprints** — DONE (2026-08-19) — `src/blueprint.rs` +
    `--blueprint` CLI flag.
-5. ⏳ **Interactive installer** — `install.sh` with platform presets (DGX/WSL/macOS/
-   rpi5) and guided onboarding, replacing docs-only setup.
+5. ✅ **Interactive installer** — DONE (2026-08-20) — `install.sh` with dev/prod/airgap
+   presets + verification module.
 6. ✅ **Security posture profiles** — DONE (2026-08-19) — threat model + dev/prod/airgap
    profiles in `SECURITY.md`.
 7. ⏳ **GPU/local inference management** — first-class llama.cpp/Ollama/vLLM

@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   provider/model, with round-robin/index-0 fallback. 4 new unit tests. Library API.
 - **Windows CI targets** — `x86_64-pc-windows-msvc` and `aarch64-pc-windows-msvc`
   added to the `build-binaries` matrix in `.github/workflows/build.yml`.
+- **Sandbox filesystem snapshots** — `Sandbox::snapshot()`/`restore()` + `SandboxSnapshot`
+  in `src/sandbox.rs` for workdir-level capture/rollback. 3 unit tests.
+- **Interactive installer** — `install.sh` with OS/arch detection, dev/prod/airgap
+  posture presets, prebuilt download + source-build fallback, `--config-only`. New
+  `installer` verification module (3 tests).
+- **Network-egress operator approval** — `Decision::RequireApproval` +
+  `NetworkPolicy::approve_unknown_hosts` for human-in-the-loop egress approval.
+  3 unit tests.
 
 ### Fixed
 - **`src/patterns.rs` compile error** — removed a stray closing brace in
