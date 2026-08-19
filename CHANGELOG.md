@@ -31,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `LocalInferenceKind` in `src/llm.rs`. Probes Ollama (`/api/tags`) and
   OpenAI-compatible (`/v1/models`) local endpoints (llama.cpp, vLLM, LM Studio, TGI)
   for "device discovery". 4 unit tests. Library API.
+- **CUA readiness gate** — `BrowserTool::check_availability()` probes the CDP
+  endpoint for a reachable browser target, gating computer-use-agent workflows with
+  fail-fast readiness. 2 unit tests.
 
 ### Fixed
 - **`src/patterns.rs` compile error** — removed a stray closing brace in

@@ -1559,6 +1559,22 @@ impl BrowserTool {
             })
     }
 
+    /// Gated computer-use-agent (CUA) readiness check.
+    ///
+    /// Probes the CDP endpoint to determine whether a browser is reachable and
+    /// has at least one page target. This is the "gated readiness" primitive that
+    /// gates CUA workflows: call it before entering a screenshot → plan → act loop
+    /// so the agent fails fast with a clear message when no browser is available.
+    ///
+    /// Returns `Ok(())` when a browser is reachable with an available target, or an
+    /// `Err(ToolError)` describing why CUA is not ready.
+    #[allow(dead_code)] // library API; exercised in tests
+    pub async fn check_availability(&self) -> ToolResultValue<()> {
+        // A successful `get_ws_url` proves the CDP endpoint is reachable and has a target.
+        let _ws_url = self.get_ws_url().await?;
+        Ok(())
+    }
+
     /// Navigate to a URL
     async fn navigate(&self, url: &str) -> ToolResultValue<String> {
         let ws_url = self.get_ws_url().await?;
@@ -3082,5 +3098,41 @@ mod tests {
         let cat = ToolCategory::Browser;
         let json = serde_json::to_string(&cat).unwrap();
         assert_eq!(json, "\"Browser\"");
+    }
+
+    #[test]
+    fn test_browser_tool_check_availability_success() {
+        // Serve a /json endpoint that returns a page target.
+        let mut server = mockito::Server::new();
+        let m = server
+            .mock("GET", "/json")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"[{"type":"page","webSocketDebuggerUrl":"ws://localhost/devtools/page/1"}]"#,
+            )
+            .create();
+
+        let tool = BrowserTool::with_config(server.url(), 2000);
+        let result = tokio_test::block_on(tool.check_availability());
+        m.assert();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_browser_tool_check_availability_no_targets() {
+        // /json returns an empty array → no target → error.
+        let mut server = mockito::Server::new();
+        let m = server
+            .mock("GET", "/json")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body("[]")
+            .create();
+
+        let tool = BrowserTool::with_config(server.url(), 2000);
+        let result = tokio_test::block_on(tool.check_availability());
+        m.assert();
+        assert!(result.is_err());
     }
 }

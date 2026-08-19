@@ -245,11 +245,18 @@ scheduling) remains future work.
 - **Severity:** 🟢 Low → ✅ Partially done (discovery shipped; provisioning deferred)
 - **Location:** `src/llm.rs` (`LocalInference`)
 
-### 20. Computer-use agent (CUA) loop
+### 20. 🟡 Computer-use agent (CUA) loop — PARTIAL (readiness gate added 2026-08-20)
 
 NemoClaw's gated CUA readiness; RavenClaws has raw `BrowserTool` (CDP) only.
 
-- **Severity:** 🟢 Low
+**Progress 2026-08-20:** added `BrowserTool::check_availability()` — a gated
+"readiness" probe that verifies a CDP browser is reachable with a page target,
+failing fast with a clear error before a CUA loop starts. 2 unit tests. The full
+screenshot → plan → act → observe loop still requires real WebSocket CDP + a
+vision-capable LLM (the current `screenshot` action extracts page *text*, not
+images) and remains deferred.
+
+- **Severity:** 🟢 Low → 🟡 Partially done (readiness gate shipped; vision loop deferred)
 - **Location:** `src/tools.rs` (`BrowserTool`)
 
 ---

@@ -849,8 +849,9 @@ OpenShell sandboxes. Its headline capabilities are:
 7. 🟡 **GPU/local inference management** — PARTIAL (2026-08-20) — `LocalInference`
    discovery probes Ollama/llama.cpp/vLLM endpoints; full provisioning (model
    warmup, GPU scheduling) deferred.
-8. ⏳ **Computer-use agent (CUA)** — extend `BrowserTool` (CDP) into a full CUA loop
-   with screenshot → plan → act and gated readiness.
+8. 🟡 **Computer-use agent (CUA)** — PARTIAL (2026-08-20) — `BrowserTool::check_availability()`
+   gated readiness probe added; full screenshot → plan → act vision loop deferred
+   (needs real WebSocket CDP + vision LLM).
 
 ### 🟢 Strategic note
 
