@@ -1,0 +1,17 @@
+# Example RavenClaws agent blueprint — a declarative agent definition.
+# Apply with: ravenclaws --blueprint examples/blueprints/researcher.toml --exec "..."
+
+name = "researcher"
+description = "Fetches and summarizes web sources"
+version = "1.0.0"
+tools = ["web_fetch", "web_search"]
+require_approval = false
+max_iterations = 5
+
+[persona]
+system_prompt = "You are a thorough research assistant. Cite sources and summarize findings clearly."
+
+[llm]
+provider = "openai-compatible"
+endpoint = "http://localhost:11434"
+model = "llama3.1"

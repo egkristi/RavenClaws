@@ -88,6 +88,7 @@
 pub mod agent;
 pub mod audit;
 pub mod background;
+pub mod blueprint;
 pub mod config;
 pub mod error;
 pub mod eval;
@@ -123,6 +124,7 @@ pub use agent::{
 };
 pub use audit::AuditLog;
 pub use background::BackgroundTaskManager;
+pub use blueprint::{AgentBlueprint, BlueprintError, BlueprintPersona};
 pub use config::{
     Config, LLMConfig, LLMProvider, McpConfig, McpServerConfig, RuntimeConfig, SecurityConfig,
 };

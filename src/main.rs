@@ -9,6 +9,7 @@
 mod agent;
 mod audit;
 mod background;
+mod blueprint;
 mod config;
 mod error;
 mod eval;
@@ -48,6 +49,10 @@ struct Args {
     /// Configuration file path
     #[arg(short, long, env = "RAVENCLAWS_CONFIG")]
     config: Option<String>,
+
+    /// Declarative agent blueprint file (TOML/JSON) — overlays on config
+    #[arg(long, env = "RAVENCLAWS_BLUEPRINT")]
+    blueprint: Option<String>,
 
     /// Agent mode: single, swarm, or supervisor
     #[arg(short, long, default_value = "single")]
@@ -407,6 +412,24 @@ async fn main() -> anyhow::Result<()> {
 
     // Load configuration
     let mut config = config::Config::load(args.config.as_deref())?;
+
+    // Apply declarative blueprint overlay (v1.5) — blueprint personas/LLM/security
+    // override the base config when provided.
+    if let Some(bp_path) = &args.blueprint {
+        let bp_text = std::fs::read_to_string(bp_path)
+            .map_err(|e| anyhow::anyhow!("Failed to read blueprint '{}': {}", bp_path, e))?;
+        let blueprint = if bp_path.ends_with(".json") {
+            blueprint::AgentBlueprint::from_json(&bp_text)
+        } else {
+            blueprint::AgentBlueprint::from_toml(&bp_text)
+        }
+        .map_err(|e| anyhow::anyhow!("Invalid blueprint '{}': {}", bp_path, e))?;
+        blueprint
+            .validate()
+            .map_err(|e| anyhow::anyhow!("Invalid blueprint '{}': {}", bp_path, e))?;
+        info!(blueprint = %blueprint.name, "Applying agent blueprint overlay");
+        config = blueprint.to_config(Some(&config));
+    }
 
     // Apply OpenTelemetry CLI overrides (v0.7.2)
     if let Some(endpoint) = args.otel_endpoint {

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Declarative agent blueprints** — New `src/blueprint.rs` with `AgentBlueprint`,
+  `BlueprintPersona`, and `BlueprintError`. A TOML/JSON document describing persona +
+  LLM + enabled tools + security + max iterations; `validate()` and `to_config()`
+  layer it over a base `Config`. New `--blueprint` CLI flag (`RAVENCLAWS_BLUEPRINT`).
+  8 unit tests + `examples/blueprints/researcher.toml`.
 - **Complexity-based model routing** — `MultiModelManager::route_by_complexity()`
   with `classify_complexity()` and `ComplexityTier` in `src/llm.rs`. Deterministic
   heuristic (Trivial/Simple/Complex) routes prompts to the most appropriate
@@ -34,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **K8s manifest documentation** — documented the `changeme` secret placeholder +
   rotation guidance, the in-cluster HTTP TLS rationale, and a NetworkPolicy
   CIDR-scoping hardening example.
+- **Memory-safety lint** — added `#![forbid(unsafe_code)]` to both crate roots
+  (no first-party `unsafe` exists).
+- **WASM plugin feature gating** — `wasmtime` + `src/plugins.rs` moved behind an
+  optional `plugins` cargo feature (matches the existing `k8s` pattern), keeping the
+  dependency graph honest and the default build lean.
 
 ## [v1.4.0] — 2026-08-13
 

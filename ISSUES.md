@@ -183,12 +183,18 @@ but no workdir snapshot/restore around tool execution.
 - **Severity:** 🟡 Medium
 - **Location:** `src/sandbox.rs`
 
-### 16. Declarative agent blueprints
+### 16. ✅ Declarative agent blueprints — IMPLEMENTED (2026-08-19)
 
-NemoClaw's blueprint lifecycle; RavenClaws lacks a reusable `[blueprint]` config.
+Added `src/blueprint.rs` with `AgentBlueprint`, `BlueprintPersona`, and
+`BlueprintError`. A blueprint is a deserialize-only declarative TOML/JSON document
+describing persona + LLM + enabled tools + security + max iterations, with
+`validate()` and `to_config()` (layers over a base `Config`). Wired a `--blueprint`
+CLI flag (`RAVENCLAWS_BLUEPRINT`) that overlays the blueprint onto the loaded config.
+8 unit tests + `examples/blueprints/researcher.toml`. `SecurityConfig`/`LLMConfig`
+remain deserialize-only by design (avoid serializing secrets).
 
-- **Severity:** 🟡 Medium
-- **Location:** `src/config.rs`
+- **Severity:** 🟡 Medium → ✅ Implemented
+- **Location:** `src/blueprint.rs`, `src/main.rs`, `src/lib.rs`
 
 ### 17. Interactive installer + platform presets
 

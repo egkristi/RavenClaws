@@ -2,6 +2,16 @@
 
 This directory contains runnable example programs demonstrating RavenClaws library usage.
 
+## Agent Blueprints
+
+The `blueprints/` subdirectory contains declarative agent definitions (TOML).
+A blueprint fully describes an agent — persona, LLM provider/model, enabled tools,
+and security policy — in one reusable file. Apply one with:
+
+```bash
+ravenclaws --blueprint examples/blueprints/researcher.toml --exec "Summarize the RavenClaws README"
+```
+
 ## Prerequisites
 
 All examples require a configured LLM provider. Set up your config via:
