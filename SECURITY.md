@@ -73,4 +73,105 @@ responsibly disclose vulnerabilities will be credited in release notes.
 | 0.4 | Deny-by-default policy, sandboxed execution, audit log, prompt-injection defense |
 | 0.8 | Secret zeroization, human-in-the-loop approvals |
 | 0.9 | Inter-agent communication encryption, swarm-wide policy enforcement |
-| 1.0 | External security review, fuzzing, published threat model |
+| 1.0 | ✅ External security review (audit 2026-08), ✅ published threat model, fuzzing targets |
+
+---
+
+## Threat Model
+
+RavenClaws is an **agent runtime that executes untrusted LLM output** against the
+local system (shell, filesystem, network, browser). The primary security objective
+is **containment**: an agent must never perform an action outside its declared
+policy, even when the LLM is prompt-injected, adversarial, or misbehaving.
+
+### Trust boundaries
+
+| Boundary | What crosses it | Primary control |
+|---|---|---|
+| LLM → Agent | Tool-call intent (untrusted) | `PolicyEngine` allow-lists, `InjectionDetector` |
+| Agent → Shell | Command execution | `ShellPolicy` command allow-list, pipe-segment analysis, timeouts |
+| Agent → Filesystem | Read/write paths | `PathPolicy` allow-lists, size limits, workdir jail |
+| Agent → Network | HTTP fetches, egress | `NetworkPolicy` host allow-list, `WebAccessPolicy` domain rules |
+| Agent → Browser | CDP automation | `BrowserTool` gated behind explicit config |
+| Plugin → Host | WASM guest code | `wasmtime` sandbox (feature `plugins`) |
+| Host → Audit | Event records | HMAC-SHA256 chained log, key zeroized on drop |
+
+### Threat actors & mitigations
+
+| Threat | Attack | Mitigation |
+|---|---|---|
+| Prompt injection | LLM emits `shell_exec`/`write_file` to exfiltrate or destroy | Deny-by-default policy; sensitive tools require HITL approval (`--require-approval`) |
+| Malicious dependency | Compromised crate ships a backdoor | `cargo audit`/`cargo-deny` in CI; signed+SBOM-attested releases |
+| Supply-chain tampering | Altered binary in transit | Cosign signing, SHA256 checksums, SLSA provenance |
+| Sandbox escape | WASM plugin escapes `wasmtime` | Pinned patched `wasmtime` (no known CRITICAL CVEs); plugins off by default |
+| Secret exfiltration | API keys leaked in logs/config | `zeroize` on drop; keys via env/Secret, never config files |
+| Denial of service | Resource exhaustion via tools | Timeouts, size limits, `LoadManager` rate limiting/shedding |
+
+### Residual risks (accepted, documented)
+
+- **In-memory audit key** — the HMAC key is per-process (`OsRng`) and not persisted,
+  so tamper-evidence cannot be verified across restarts.
+- **Plain-HTTP in-cluster LLM** — service-to-service LiteLLM traffic is HTTP by
+  design; TLS is terminated at the mesh/ingress.
+- **Heuristic complexity routing** — model routing is heuristic, not a trained
+  classifier.
+
+---
+
+## Security Posture Profiles
+
+Preset hardening levels, from least to most restrictive. Apply via the
+`[security]` config section (see `docs/guides/configuration.md`).
+
+### Profile 1 — Development (`dev`)
+
+For local experimentation. TLS relaxed, broad tool access, no HITL.
+
+```toml
+[security]
+require_tls = false
+audit_log = true
+prompt_injection_protection = true
+```
+
+### Profile 2 — Production (`prod`)
+
+Default posture. TLS enforced externally, deny-by-default policy, HITL for
+sensitive tools, audit + prompt-injection defense on.
+
+```toml
+[security]
+require_tls = true
+token_lifetime_secs = 3600
+audit_log = true
+prompt_injection_protection = true
+```
+
+Use `--require-approval` (or `require_approval_all = true` in policy) for
+sensitive tool calls.
+
+### Profile 3 — Air-gapped / high-assurance (`airgap`)
+
+Maximum containment for offline or regulated environments. No network egress,
+minimal tools, all writes to an isolated workspace, audit always on.
+
+```toml
+[security]
+require_tls = true
+token_lifetime_secs = 1800
+audit_log = true
+prompt_injection_protection = true
+```
+
+Combine with a `NetworkPolicy` (`deny_all = true`) and a `PathPolicy` scoped to
+a single workspace directory.
+
+### Choosing a profile
+
+| Consideration | dev | prod | airgap |
+|---|---|---|---|
+| Network egress | open | allow-listed | denied |
+| Tool access | broad | policy-gated | minimal |
+| HITL approval | off | on (sensitive) | on (all) |
+| Audit log | on | on | on |
+| Suitable for | laptops, CI | servers, K8s | regulated, offline |

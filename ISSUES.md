@@ -203,12 +203,15 @@ NemoClaw's guided express-install; RavenClaws relies on docs-only setup.
 - **Severity:** 🟢 Low
 - **Location:** repo root (`install.sh`)
 
-### 18. Security posture profiles + published threat model
+### 18. ✅ Security posture profiles + published threat model — DONE (2026-08-19)
 
-NemoClaw publishes controls reference, risk framework, and posture profiles.
+Added a full **Threat Model** section to `SECURITY.md` (trust boundaries table,
+threat-actor/mitigation matrix, residual/accepted risks) and three **Security
+Posture Profiles** (`dev`, `prod`, `airgap`) with TOML examples and a selection
+guide. Updated the hardening roadmap table.
 
-- **Severity:** 🟡 Medium
-- **Location:** `SECURITY.md`, `docs/`
+- **Severity:** 🟡 Medium → ✅ Done
+- **Location:** `SECURITY.md`
 
 ### 19. GPU / local inference management
 
