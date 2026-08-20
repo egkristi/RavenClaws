@@ -1,6 +1,6 @@
 # vLLM Integration
 
-[vLLM](https://github.com/vllm-project/vllm) is a high-throughput, memory-efficient inference engine for LLMs. RavenClaws supports vLLM via the generic `openai-compatible` provider — no special configuration needed.
+[vLLM](https://github.com/vllm-project/vllm) is a high-throughput, memory-efficient inference engine for LLMs. RavenClaws supports vLLM as a **first-class provider** (`provider = "vllm"`, default endpoint `http://localhost:8000`), as well as via the generic `openai-compatible` provider.
 
 ## Quick Start
 
@@ -23,16 +23,31 @@ python -m vllm.entrypoints.openai.api_server \
   --port 8000
 ```
 
-### 2. Configure RavenClaws
+### 2. Configure RavenClaws (first-class `vllm` provider)
+
+```toml
+[llm]
+provider = "vllm"
+endpoint = "http://localhost:8000"   # optional — this is the default
+model = "mistralai/Mistral-7B-Instruct-v0.3"
+```
+
+Or via environment variables:
 
 ```bash
-# Via environment variables:
-export RAVENCLAWS__LLM__PROVIDER="openai-compatible"
-export RAVENCLAWS__LLM__ENDPOINT="http://localhost:8000/v1/chat/completions"
+export RAVENCLAWS__LLM__PROVIDER="vllm"
 export RAVENCLAWS__LLM__MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 
 # Run a task:
 ravenclaws --exec "What is the capital of France?"
+```
+
+Alternatively, the generic `openai-compatible` provider also works:
+
+```bash
+export RAVENCLAWS__LLM__PROVIDER="openai-compatible"
+export RAVENCLAWS__LLM__ENDPOINT="http://localhost:8000/v1/chat/completions"
+export RAVENCLAWS__LLM__MODEL="mistralai/Mistral-7B-Instruct-v0.3"
 ```
 
 Or via config file (`ravenclaws.toml`):
