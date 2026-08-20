@@ -346,9 +346,7 @@ impl Sandbox {
                     let rel = path
                         .strip_prefix(&self.workdir)
                         .map_err(|_| {
-                            SandboxError::PathOutsideSandbox(
-                                path.to_string_lossy().to_string(),
-                            )
+                            SandboxError::PathOutsideSandbox(path.to_string_lossy().to_string())
                         })?
                         .to_path_buf();
                     let bytes = tokio::fs::read(&path).await?;
@@ -741,15 +739,21 @@ mod tests {
         // Write initial files (including a nested file).
         tokio::fs::write(dir.join("a.txt"), b"alpha").await.unwrap();
         tokio::fs::create_dir_all(dir.join("sub")).await.unwrap();
-        tokio::fs::write(dir.join("sub").join("b.txt"), b"beta").await.unwrap();
+        tokio::fs::write(dir.join("sub").join("b.txt"), b"beta")
+            .await
+            .unwrap();
 
         // Snapshot the initial state.
         let snap = sandbox.snapshot().await.unwrap();
         assert_eq!(snap.file_count(), 2);
 
         // Mutate: modify one file, delete another, add a new one.
-        tokio::fs::write(dir.join("a.txt"), b"changed").await.unwrap();
-        tokio::fs::remove_file(dir.join("sub").join("b.txt")).await.unwrap();
+        tokio::fs::write(dir.join("a.txt"), b"changed")
+            .await
+            .unwrap();
+        tokio::fs::remove_file(dir.join("sub").join("b.txt"))
+            .await
+            .unwrap();
         tokio::fs::write(dir.join("c.txt"), b"new").await.unwrap();
 
         // Restore to snapshot.
@@ -758,7 +762,9 @@ mod tests {
         // Verify original state is restored.
         assert_eq!(tokio::fs::read(dir.join("a.txt")).await.unwrap(), b"alpha");
         assert_eq!(
-            tokio::fs::read(dir.join("sub").join("b.txt")).await.unwrap(),
+            tokio::fs::read(dir.join("sub").join("b.txt"))
+                .await
+                .unwrap(),
             b"beta"
         );
         // The "new" file added after the snapshot should be gone.
@@ -769,8 +775,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_sandbox_snapshot_empty_workdir() {
-        let dir =
-            std::env::temp_dir().join(format!("ravenclaws_sandbox_snap_empty_{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!(
+            "ravenclaws_sandbox_snap_empty_{}",
+            std::process::id()
+        ));
         let config = SandboxConfig {
             workdir: dir.to_string_lossy().to_string(),
             create_workdir: true,
@@ -791,6 +799,9 @@ mod tests {
         let config = SandboxConfig::default();
         let sandbox = Sandbox::new(config);
         let result = sandbox.snapshot().await;
-        assert!(matches!(result.unwrap_err(), SandboxError::NotInitialized(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            SandboxError::NotInitialized(_)
+        ));
     }
 }

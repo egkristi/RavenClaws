@@ -3,7 +3,10 @@
 //! Lightweight, secure Rust agent framework with multi-provider LLM support.
 
 // Memory-safety pillar: no first-party `unsafe` code is permitted.
-#![forbid(unsafe_code)]
+// `deny` (rather than `forbid`) so that third-party generated code (e.g. Slint's
+// `include_modules!`) may lift the lint within its own module, while our own code
+// still cannot use `unsafe`.
+#![deny(unsafe_code)]
 //!
 //! RavenClaws is a single-binary agent runtime that supports:
 //! - **Single agent mode** — one prompt, one response
@@ -112,6 +115,7 @@ pub mod server;
 pub mod swarm;
 pub mod telemetry;
 pub mod tools;
+pub mod ui;
 pub mod web_policy;
 
 // ── Re-exports of commonly used types ──────────────────────────────────────
@@ -161,4 +165,5 @@ pub use server::run_server;
 pub use swarm::SwarmOrchestrator;
 pub use telemetry::TelemetryGuard;
 pub use tools::{ToolCall, ToolImpl, ToolRegistry, ToolResult};
+pub use ui::ChatEngine;
 pub use web_policy::{extract_domain, RateLimiter, WebAccessPolicy, WebCategory};

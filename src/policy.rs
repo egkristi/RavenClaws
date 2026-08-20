@@ -1262,8 +1262,13 @@ mod tests {
             );
 
             // Full tool-call dispatch
-            let tool = ["shell_exec", "read_file", "write_file", "web_fetch", "unknown_tool"]
-                [(rng.next() as usize) % 5];
+            let tool = [
+                "shell_exec",
+                "read_file",
+                "write_file",
+                "web_fetch",
+                "unknown_tool",
+            ][(rng.next() as usize) % 5];
             let cmd = random_string(&mut rng, 32);
             let url = urlish(&mut rng, 32);
             let path = random_string(&mut rng, 32);

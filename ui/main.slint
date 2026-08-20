@@ -1,0 +1,53 @@
+// RavenClaws — Graphical UI (Slint)
+//
+// A minimal chat window: a scrollable transcript, an input box, and a Send
+// button. The Rust side (see `src/ui.rs`) wires button presses and keyboard
+// input to the shared `ChatEngine`.
+
+import { Button, LineEdit, ScrollView, VerticalBox } from "std-widgets.slint";
+
+export component AppWindow inherits Window {
+    title: "RavenClaws";
+    preferred-width: 720px;
+    preferred-height: 560px;
+
+    in-out property <string> transcript: "";
+    in-out property <string> input: "";
+    in property <bool> busy: false;
+
+    callback send-requested();
+
+    VerticalBox {
+        padding: 12px;
+        spacing: 8px;
+
+        Text {
+            text: "RavenClaws — chat with your agent";
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        ScrollView {
+            vertical-stretch: 1;
+            Text {
+                text: root.transcript;
+                wrap: word-wrap;
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 8px;
+            LineEdit {
+                text <=> root.input;
+                placeholder-text: "Type a message…";
+                enabled: !root.busy;
+                accepted => { root.send-requested(); }
+            }
+            Button {
+                text: root.busy ? "…" : "Send";
+                enabled: !root.busy;
+                clicked => { root.send-requested(); }
+            }
+        }
+    }
+}

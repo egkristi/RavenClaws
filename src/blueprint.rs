@@ -207,9 +207,15 @@ model = "llama3.1"
     fn test_parse_toml() {
         let bp = AgentBlueprint::from_toml(sample_toml()).unwrap();
         assert_eq!(bp.name, "researcher");
-        assert_eq!(bp.description.as_deref(), Some("Fetches and summarizes web sources"));
+        assert_eq!(
+            bp.description.as_deref(),
+            Some("Fetches and summarizes web sources")
+        );
         assert_eq!(bp.version.as_deref(), Some("1.0.0"));
-        assert_eq!(bp.persona.system_prompt, "You are a thorough research assistant.");
+        assert_eq!(
+            bp.persona.system_prompt,
+            "You are a thorough research assistant."
+        );
         assert_eq!(bp.tools, vec!["web_fetch", "web_search"]);
         assert_eq!(bp.max_iterations, 5);
         assert!(!bp.require_approval);
@@ -269,9 +275,15 @@ model = "llama3.1"
         let bp = AgentBlueprint::from_toml(sample_toml()).unwrap();
         let cfg = bp.to_config(None);
 
-        assert_eq!(cfg.llm.system_prompt, "You are a thorough research assistant.");
+        assert_eq!(
+            cfg.llm.system_prompt,
+            "You are a thorough research assistant."
+        );
         assert_eq!(cfg.llm.model, "llama3.1");
-        assert_eq!(cfg.llm.provider, crate::config::LLMProvider::OpenAICompatible);
+        assert_eq!(
+            cfg.llm.provider,
+            crate::config::LLMProvider::OpenAICompatible
+        );
         assert_eq!(cfg.llm.endpoint, "http://localhost:11434");
     }
 

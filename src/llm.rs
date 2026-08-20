@@ -1338,9 +1338,9 @@ impl Default for LocalInference {
             endpoints: vec![
                 "http://localhost:11434".to_string(), // Ollama
                 "http://127.0.0.1:11434".to_string(),
-                "http://localhost:8080".to_string(),  // llama.cpp / vLLM
-                "http://localhost:8000".to_string(),  // vLLM / LM Studio / TGI
-                "http://localhost:1234".to_string(),  // LM Studio
+                "http://localhost:8080".to_string(), // llama.cpp / vLLM
+                "http://localhost:8000".to_string(), // vLLM / LM Studio / TGI
+                "http://localhost:1234".to_string(), // LM Studio
             ],
             timeout_ms: 500,
         }
@@ -1380,7 +1380,9 @@ impl LocalInference {
                     .and_then(|models| {
                         models.as_array().map(|arr| {
                             arr.iter()
-                                .filter_map(|m| m.get("name").and_then(|n| n.as_str()).map(String::from))
+                                .filter_map(|m| {
+                                    m.get("name").and_then(|n| n.as_str()).map(String::from)
+                                })
                                 .collect()
                         })
                     })
@@ -1404,7 +1406,9 @@ impl LocalInference {
                     .and_then(|data| {
                         data.as_array().map(|arr| {
                             arr.iter()
-                                .filter_map(|m| m.get("id").and_then(|n| n.as_str()).map(String::from))
+                                .filter_map(|m| {
+                                    m.get("id").and_then(|n| n.as_str()).map(String::from)
+                                })
                                 .collect()
                         })
                     })
@@ -1486,9 +1490,11 @@ impl MultiModelManager {
             }),
             ComplexityTier::Complex => self.clients.iter().position(|c| {
                 let m = c.model().to_lowercase();
-                ["gpt-4", "gpt-5", "opus", "sonnet", "deepseek", "large", "pro", "claude"]
-                    .iter()
-                    .any(|k| m.contains(k))
+                [
+                    "gpt-4", "gpt-5", "opus", "sonnet", "deepseek", "large", "pro", "claude",
+                ]
+                .iter()
+                .any(|k| m.contains(k))
             }),
         };
 
@@ -2969,10 +2975,7 @@ mod tests {
         // A code prompt is "complex" → prefers the capable gpt-4o model (index 1)
         let prompt = "fn main() { println!(\"hello\"); } explain this code in depth";
         assert_eq!(
-            manager
-                .route_by_complexity(prompt)
-                .unwrap()
-                .provider_name(),
+            manager.route_by_complexity(prompt).unwrap().provider_name(),
             "litellm"
         );
     }
@@ -3397,10 +3400,7 @@ mod tests {
     fn test_local_inference_discovers_openai_compatible() {
         let mut server = Server::new();
         // /api/tags returns 404 (not Ollama), /v1/models succeeds.
-        let _tags = server
-            .mock("GET", "/api/tags")
-            .with_status(404)
-            .create();
+        let _tags = server.mock("GET", "/api/tags").with_status(404).create();
         let models = server
             .mock("GET", "/v1/models")
             .with_status(200)

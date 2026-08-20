@@ -4,7 +4,10 @@
 //! Supports multiple LLM providers: LiteLLM, OpenRouter, Ollama, OpenAI.
 
 // Memory-safety pillar: no first-party `unsafe` code is permitted.
-#![forbid(unsafe_code)]
+// `deny` (rather than `forbid`) so that third-party generated code (e.g. Slint's
+// `include_modules!`) may lift the lint within its own module, while our own code
+// still cannot use `unsafe`.
+#![deny(unsafe_code)]
 
 mod agent;
 mod audit;
@@ -30,6 +33,7 @@ mod server;
 mod swarm;
 mod telemetry;
 mod tools;
+mod ui;
 mod web_policy;
 
 use clap::Parser;
@@ -85,6 +89,14 @@ struct Args {
     /// Interactive REPL mode (read-eval-print loop)
     #[arg(long, short = 'R', conflicts_with = "exec")]
     repl: bool,
+
+    /// Terminal UI mode (requires the `tui` feature)
+    #[arg(long, conflicts_with_all = ["exec", "repl"])]
+    tui: bool,
+
+    /// Graphical UI mode (requires the `gui` feature)
+    #[arg(long, conflicts_with_all = ["exec", "repl"])]
+    gui: bool,
 
     /// Require human approval for sensitive tool calls (HITL)
     #[arg(long, env = "RAVENCLAWS_REQUIRE_APPROVAL")]
@@ -960,6 +972,49 @@ async fn main() -> anyhow::Result<()> {
         }
         info!("RavenClaws shutdown complete");
         return Ok(());
+    }
+
+    // Handle --tui / --gui interactive modes (feature-gated).
+    if args.tui || args.gui {
+        // Resolve the LLM client (single-provider or first of multi-model).
+        #[cfg(any(feature = "tui", feature = "gui"))]
+        let system_prompt = config.llm.system_prompt.clone();
+
+        #[cfg(any(feature = "tui", feature = "gui"))]
+        let client: Option<std::sync::Arc<dyn llm::LLMProviderTrait>> = if !config.llms.is_empty() {
+            let multi_llm = llm::MultiModelManager::new(config.llms.clone())?;
+            multi_llm.get_client(0).cloned()
+        } else {
+            Some(llm::create_client(&config.llm)?)
+        };
+
+        #[cfg(any(feature = "tui", feature = "gui"))]
+        let client = match client {
+            Some(c) => c,
+            None => anyhow::bail!("No LLM providers available"),
+        };
+
+        #[cfg(feature = "tui")]
+        if args.tui {
+            info!("Running in TUI mode");
+            ui::tui::run(client, system_prompt).await?;
+            return Ok(());
+        }
+        #[cfg(not(feature = "tui"))]
+        if args.tui {
+            anyhow::bail!("--tui requires the `tui` cargo feature (build with `--features tui`)");
+        }
+
+        #[cfg(feature = "gui")]
+        if args.gui {
+            info!("Running in GUI mode");
+            ui::gui::run(client, system_prompt)?;
+            return Ok(());
+        }
+        #[cfg(not(feature = "gui"))]
+        if args.gui {
+            anyhow::bail!("--gui requires the `gui` cargo feature (build with `--features gui`)");
+        }
     }
 
     // Apply swarm CLI overrides (v0.9)
