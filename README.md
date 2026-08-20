@@ -24,12 +24,12 @@ support. One static binary, zero runtime dependencies — no Python, no Node, no
 > durable execution (checkpoint/resume), self-provisioning swarms, autonomous heartbeat,
 > scheduling, HTTP server, MCP client/server, RavenFabric mesh, eval harness, library crate,
 > and a verified supply chain.
-> **601 unit tests**, 114 verification checks, 9 LLM providers, 26 source modules.
+> **604 unit tests**, 114 verification checks, 9 LLM providers, 27 source modules.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
 | **~7.7 MB binary** | **Memory-safe Rust** | **9 providers** | **Binary · Docker · K8s** |
-| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **601 unit tests + 114 verification checks** |
+| **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **604 unit tests + 114 verification checks** |
 | **Library crate** | **27 modules** | **crates.io** | **AGPLv3 + Commercial** |
 
 ---
@@ -44,7 +44,7 @@ We don't aim to win by out-featuring them. We win by refusing to compromise on f
 pillars at once:
 
 - **Secure** — memory-safe Rust (`unsafe` forbidden), fail-closed, no creds in config, verified supply chain.
-- **Small** — one static binary (~5 MB), distroless image, lean dependency tree.
+- **Small** — one static binary (~7.7 MB), distroless image, lean dependency tree.
 - **Efficient** — native performance, low memory, fast cold start, streaming everywhere.
 - **Robust** — graceful degradation, provider fallback, deterministic config, verified across 4 deployment targets.
 - **Simple** — one command to run, sensible defaults, no external services required for single-agent use.
@@ -64,7 +64,7 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 
 ### Secure & trustworthy
 
-- **Memory-safe Rust** — `#![forbid(unsafe_code)]` at the crate root; whole classes of memory-corruption bugs eliminated at compile time.
+- **Memory-safe Rust** — `#![deny(unsafe_code)]` at the crate root; whole classes of memory-corruption bugs eliminated at compile time.
 - **No credentials in config** — environment variables and Kubernetes Secrets only, zeroized on drop via `zeroize`.
 - **Hardened containers** — distroless, non-root, read-only root filesystem, dropped capabilities, seccomp.
 - **Verified supply chain** — multi-arch images signed with **Cosign**, **SBOM** (Syft) and build **provenance** attestation, plus **CodeQL**, **cargo-audit**, **cargo-deny**, **Trivy**, **Hadolint**, **Kubescape**, and **OSSF Scorecard** in CI.
@@ -85,11 +85,11 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 - **vLLM** — high-throughput OpenAI-compatible local inference (`provider = "vllm"`, default `http://localhost:8000`).
 - **SGLang** — fast OpenAI-compatible local inference (`provider = "sglang"`, default `http://localhost:30000`).
 - **Multi-model mode** — complexity-based routing (`route_by_complexity()`) plus round-robin and intelligent fallback chains with circuit breaker.
-- **Local inference discovery** — `LocalInference` probes Ollama (`/api/tags`) and OpenAI-compatible (`/v1/models`) endpoints (llama.cpp, vLLM, LM Studio, TGI) for device discovery.
+- **Local inference discovery** — `LocalInference` probes Ollama (`/api/tags`) and OpenAI-compatible (`/v1/models`) endpoints (Ollama, vLLM, SGLang, llama.cpp, LM Studio, TGI), classifying vLLM/SGLang by their well-known default ports.
 
 ### Verified across every target
 
-- **601 Rust unit tests** across **26 modules** (incl. `mockito`-backed provider request/response/error paths for all 7 providers, plus RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load, blueprint, and local-inference tests), runnable anywhere via `cargo test`.
+- **604 Rust unit tests** across **27 modules** (incl. `mockito`-backed provider request/response/error paths for all 9 providers, plus RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load, blueprint, local inference, and UI tests), runnable anywhere via `cargo test`.
 - Plus a **114-check verification suite** (`scripts/verify.sh`) spanning **13 modules** across **4 deployment targets** — local binary, Docker, cross-compiled Linux, and Kubernetes — including security, performance, LLM quality, swarm, eval, MCP, and installer checks.
 - *Note:* the 114 verification checks are **system/integration level** (shell-orchestrated, requiring live services such as LiteLLM/Docker/kubectl).
 
@@ -103,6 +103,8 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 - **[MCP Integration Guide](docs/guides/mcp-integration.md)** — connect to MCP servers or expose tools via MCP
 - **[Heartbeat Mode Guide](docs/guides/heartbeat-mode.md)** — autonomous long-running agents
 - **[Server Mode Guide](docs/guides/server-mode.md)** — HTTP API, endpoints, deployment, config hot-reload
+- **[vLLM Guide](docs/guides/vllm.md)** — high-throughput local inference
+- **[SGLang Guide](docs/guides/sglang.md)** — fast local inference
 - **[Examples](examples/README.md)** — runnable Rust examples using the library API
 - **[Migration Guide](docs/guides/migration.md)** — upgrading between versions (v0.1 → v1.0)
 - **[API Reference](https://docs.rs/ravenclaws)** — full rustdoc API documentation
@@ -175,7 +177,7 @@ Add it to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-ravenclaws = "1.4"
+ravenclaws = "1.5"
 ```
 
 Then use the library API in your Rust project:
@@ -210,7 +212,7 @@ The library exposes all 27 modules with a stable public API:
 |---|---|
 | `ravenclaws::agent` | Agent implementations, agent loop, conversation memory |
 | `ravenclaws::blueprint` | Declarative agent blueprints (persona + LLM + tools + security) |
-| `ravenclaws::llm` | LLM provider abstraction + 7 client implementations + local inference discovery |
+| `ravenclaws::llm` | LLM provider abstraction + 9 client implementations + local inference discovery |
 | `ravenclaws::config` | Configuration structs, TOML/env loading, validation |
 | `ravenclaws::tools` | Tool abstraction, registry, 6 built-in tools + browser (CDP) |
 | `ravenclaws::policy` | Deny-by-default policy engine (incl. network-egress approval) |
@@ -347,7 +349,7 @@ model = "Qwen/Qwen2.5-7B-Instruct"
 
 ### Multi-model mode
 
-Configure several providers at once (basic round-robin today):
+Configure several providers at once (complexity-based routing + round-robin):
 
 ```toml
 [[llms]]
@@ -403,8 +405,8 @@ health_interval_secs = 60
 | `--exec "<task>"` | ✅ **Working** | One-shot task execution with streaming, then exit |
 | `--no-final-required` | ✅ **v0.9.4** | Don't require `FINAL:` marker — any non-tool-call response completes the loop |
 | `--repl` | ✅ **Working** | Interactive REPL with `/exit`, `/reset` commands |
-| `--tui` | ✅ **v1.6.0** | Terminal UI (`ratatui` + `crossterm`) — requires `--features tui` |
-| `--gui` | ✅ **v1.6.0** | Graphical UI (native Slint window) — requires `--features gui` |
+| `--tui` | ✅ **Working** | Terminal UI (`ratatui` + `crossterm`) — requires `--features tui` |
+| `--gui` | ✅ **Working** | Graphical UI (native Slint window) — requires `--features gui` |
 | `--require-approval` | ✅ **v0.8** | Human-in-the-loop approval for sensitive tool calls |
 | `--serve` | ✅ **v0.7.1** | Long-running HTTP server with health, metrics, agent execution API |
 | `--mcp-server` | ✅ **v0.7.0** | Expose RavenClaws tools over MCP protocol |
@@ -547,10 +549,13 @@ Container images target both `linux/amd64` and `linux/arm64`.
 │  │  ┌──────────┐ ┌──────────────┐ ┌────────┐      │    │
 │  │  │Anthropic │ │OpenAI-Compat │ │ Azure  │      │    │
 │  │  └──────────┘ └──────────────┘ └────────┘      │    │
+│  │  ┌────────┐ ┌────────┐                         │    │
+│  │  │ vLLM   │ │ SGLang │                         │    │
+│  │  └────────┘ └────────┘                         │    │
 │  │  ┌──────────────────────┐                       │    │
 │  │  │ MultiModelManager    │                       │    │
-│  │  └──────────┘ │ round-robin · fallback│         │    │
-│  │               │ circuit breaker       │         │    │
+│  │  └──────────┘ │ complexity routing· fallback│  │    │
+│  │               │ round-robin · circuit breaker│  │    │
 │  │               └──────────────────────┘          │    │
 │  └──────────────────────┬───────────────────────────┘    │
 │                         │                                 │
@@ -583,7 +588,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | CI/CD pipeline | ✅ Implemented | fmt + clippy + test, 5-target builds, multi-arch images, Cosign + SBOM + provenance + Trivy, crates.io publish, releases |
 | Security scanning | ✅ Implemented | CodeQL, cargo-audit, cargo-deny, Trivy (FS + config), Hadolint, Kubescape, OSSF Scorecard |
 | Verification suite | ✅ Working | 114 system/integration checks · 13 modules · 4 targets (`scripts/verify.sh`)
-| Rust unit tests | ✅ Working | 601 tests across 26 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load, blueprint, local inference |
+| Rust unit tests | ✅ Working | 604 tests across 27 modules, incl. `mockito`-backed provider request/response/error paths, RavenFabric, swarm, heartbeat, eval, scheduler, patterns, persistence, plugins, load, blueprint, local inference, UI |
 | Reproducible builds | ✅ Working | `Cargo.lock` committed (`--locked`), multi-arch Docker cross-linker, RavenFabric agent checksum-verified |
 | `--exec` one-shot mode | ✅ Working | Run a single task, then exit |
 | Interactive REPL | ✅ Working | `--repl` with `/exit`, `/reset` commands |
@@ -602,8 +607,8 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Deny-by-default policy | ✅ Working | PolicyEngine with shell/path/network allow-lists |
 | Sandboxed execution | ✅ Working | Workdir jail, resource limits, timeouts |
 | Tamper-evident audit log | ✅ Working | HMAC-SHA256 chained, structured JSON |
-| Multi-model routing | ✅ Working | `next_client()` round-robin wired into agent modes |
-| Multi-modal input | ✅ **v1.1.0** | `ContentPart` enum (`Text`, `ImageUrl`), `--image` CLI flag, multi-modal serialization for all 7 providers |
+| Multi-model routing | ✅ Working | `route_by_complexity()` + `next_client()` round-robin wired into agent modes |
+| Multi-modal input | ✅ **v1.1.0** | `ContentPart` enum (`Text`, `ImageUrl`), `--image` CLI flag, multi-modal serialization for all 9 providers |
 | Browser automation | ✅ **v1.1.0** | `BrowserTool` with 10 CDP actions (navigate, click, type, screenshot, extract, scroll, wait, evaluate) |
 | Graceful degradation | ✅ **v1.1.0** | `LoadManager` with rate limiting, concurrency control, load shedding; 429/503 under overload |
 | RavenFabric integration | ✅ **v0.6.1** | Full client module (`RavenFabricClient`) with health, list_agents, execute, broadcast; wired into all agent modes; 12 unit tests |
@@ -611,7 +616,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Complexity-based model routing | ✅ **v1.5.0** | `MultiModelManager::route_by_complexity()` heuristic (Trivial/Simple/Complex) |
 | Sandbox filesystem snapshots | ✅ **v1.5.0** | `Sandbox::snapshot()/restore()` workdir capture/rollback |
 | Network-egress approval | ✅ **v1.5.0** | `Decision::RequireApproval` + `approve_unknown_hosts` for HITL egress |
-| Local inference discovery | ✅ **v1.5.0** | `LocalInference` probes Ollama/llama.cpp/vLLM endpoints |
+| Local inference discovery | ✅ **v1.5.0** | `LocalInference` probes Ollama/llama.cpp/vLLM/SGLang endpoints |
 | CUA readiness gate | ✅ **v1.5.0** | `BrowserTool::check_availability()` gated computer-use readiness |
 | Interactive installer | ✅ **v1.5.0** | `install.sh` with dev/prod/airgap posture presets + verification |
 | Windows CI | ✅ **v1.5.0** | `x86_64`/`aarch64-pc-windows-msvc` in the build matrix |
@@ -674,11 +679,11 @@ RavenClaws is a **single static binary** (~7.7 MB) with zero runtime dependencie
 
 ### Do I need an API key?
 
-For local-only use, yes — use **Ollama** (fully local, no API key). For cloud providers (OpenAI, Anthropic, etc.), you'll need their respective API keys.
+For local-only use, use **Ollama**, **vLLM**, or **SGLang** (fully local, no API key). For cloud providers (OpenAI, Anthropic, etc.), you'll need their respective API keys.
 
 ### Can I use RavenClaws offline?
 
-Yes. With the **Ollama** provider, everything runs locally with no internet connection required.
+Yes. With the **Ollama**, **vLLM**, or **SGLang** providers, everything runs locally with no internet connection required.
 
 ### How is security handled?
 
