@@ -1,4 +1,4 @@
-{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977728,"command":"./scripts/demos/demo-resilience.sh","title":"RavenClaws v1.2.0 — Resilience","env":{"SHELL":"/bin/zsh"}}
+{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977728,"command":"./scripts/demos/demo-resilience.sh","title":"RavenClaws v1.6.0 — Resilience","env":{"SHELL":"/bin/zsh"}}
 [0.016, "o", "\r\n╔══════════════════════════════════════════════════════════════╗\r\n║  1. SELF-HEALING ENGINE OVERVIEW\r\n╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.003, "o", "$ cat src/healing.rs\r\n"]
 [0.000, "o", "//! Self-healing engine — automatic detection, retry, and recovery of failed agents\r\n//!\r\n//! # Dead code note\r\n//! Some fields and methods are `#[allow(dead_code)]` because they are used by\r\n//! library tests but not yet by the binary target. As healing is wired into\r\n//! more modules (swarm, heartbeat, background, patterns), these will become\r\n//! used by the binary as well.\r\n\r\n// Allow dead code for fields/methods used only by library tests\r\n#![allow(dead_code)]\r\n//!\r\n//! RavenClaws's self-healing system extends the v1.2.0 retry logic from individual\r\n//! LLM calls to the full agent, swarm, and task level. It provides:\r\n//!\r\n//! - **Failure tracking** — per-agent/worker failure records with timestamps\r\n//! - **Circuit breakers** — per-agent circuit state (Closed/Open/HalfOpen)\r\n//! - **Exponential backoff** — configurable retry delays for agent tasks\r\n//! - **Auto-replacement** — detect dead workers and trigger replacement\r\n//! - **Health checks** — verify agent health before delegation\r\n//!\r\n/"]
@@ -41,7 +41,7 @@
 [0.000, "o", "        assert_eq!(cb.failure_count, 2);\r\n--\r\n    #[test]\r\n"]
 [1.011, "o", "\r\n"]
 [0.001, "o", "╔══════════════════════════════════════════════════════════════╗\r\n"]
-[0.000, "o", "║  RavenClaws v1.2.0 — Resilience Demo Complete              ║\r\n║  https://ravenclaws.io                                      ║\r\n"]
+[0.000, "o", "║  RavenClaws v1.6.0 — Resilience Demo Complete              ║\r\n║  https://ravenclaws.io                                      ║\r\n"]
 [0.000, "o", "║  https://github.com/egkristi/RavenClaws                     ║\r\n"]
 [0.000, "o", "╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.001, "x", "0"]

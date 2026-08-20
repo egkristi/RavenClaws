@@ -1,4 +1,4 @@
-{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977717,"command":"./scripts/demos/demo-server-mcp.sh","title":"RavenClaws v1.2.0 — Server & MCP","env":{"SHELL":"/bin/zsh"}}
+{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977717,"command":"./scripts/demos/demo-server-mcp.sh","title":"RavenClaws v1.6.0 — Server & MCP","env":{"SHELL":"/bin/zsh"}}
 [0.016, "o", "\r\n╔══════════════════════════════════════════════════════════════╗\r\n║  1. HTTP SERVER MODE\r\n╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.014, "o", "$ curl -s http://localhost:9877/health\r\n"]
 [0.011, "o", "OK"]
@@ -26,6 +26,6 @@
 [0.000, "o", "          MCP SSE server port (v0.9.16) — overrides default 8081 [env: RAVENCLAWS_MCP_SSE_PORT=] [default: 8081]\r\n"]
 [1.017, "o", "\r\n"]
 [0.000, "o", "╔══════════════════════════════════════════════════════════════╗\r\n"]
-[0.000, "o", "║  RavenClaws v1.2.0 — Server & MCP Demo Complete            ║\r\n║  https://ravenclaws.io                                      ║\r\n║  https://github.com/egkristi/RavenClaws                     ║\r\n"]
+[0.000, "o", "║  RavenClaws v1.6.0 — Server & MCP Demo Complete            ║\r\n║  https://ravenclaws.io                                      ║\r\n║  https://github.com/egkristi/RavenClaws                     ║\r\n"]
 [0.000, "o", "╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.001, "x", "0"]

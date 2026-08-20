@@ -10,7 +10,7 @@ This guide explains how to record and share terminal demos of RavenClaws feature
 
 ## Demo Suite
 
-RavenClaws v1.2.0 ships with **5 focused demos**, each showcasing a specific set of features for different audiences:
+RavenClaws v1.6.0 ships with **5 focused demos**, each showcasing a specific set of features for different audiences:
 
 | # | Script | Focus | Audience | Duration |
 |---|---|---|---|---|
@@ -24,7 +24,7 @@ RavenClaws v1.2.0 ships with **5 focused demos**, each showcasing a specific set
 
 ```bash
 # Record a single demo
-asciinema rec --title "RavenClaws v1.2.0 — Quickstart" \
+asciinema rec --title "RavenClaws v1.6.0 — Quickstart" \
   --command "./scripts/demos/demo-quickstart.sh" \
   --overwrite demos/demo-quickstart.cast
 
@@ -37,7 +37,7 @@ asciinema upload demos/demo-quickstart.cast
 ```bash
 for demo in demo-quickstart demo-architecture demo-server-mcp \
             demo-resilience demo-deployment; do
-  asciinema rec --title "RavenClaws v1.2.0 — ${demo#demo-}" \
+  asciinema rec --title "RavenClaws v1.6.0 — ${demo#demo-}" \
     --command "./scripts/demos/$demo.sh" \
     --overwrite "demos/$demo.cast"
 done
@@ -64,7 +64,7 @@ done
 Shows the basics: version info, help output, binary profile (size, architecture, linked libraries), TOML configuration files, and one-shot `--exec` mode with an LLM response.
 
 ### 2. Architecture (`demo-architecture.sh`)
-Dives into the codebase: 22 source modules, public API surface, 552+ unit tests passing, multi-agent patterns (debate, review-loop, research-synthesize, voting), self-healing engine with circuit breakers, and graceful degradation with token bucket rate limiting.
+Dives into the codebase: 27 source modules, public API surface, 608+ unit tests passing, multi-agent patterns (debate, review-loop, research-synthesize, voting), self-healing engine with circuit breakers, and graceful degradation with token bucket rate limiting.
 
 ### 3. Server & MCP (`demo-server-mcp.sh`)
 Demonstrates all server modes: HTTP server with `/health`, `/ready`, `/metrics` endpoints, MCP server over stdio for tool exposure, MCP SSE server over HTTP with SSE transport, and CLI flag overview for all server-related options.
@@ -73,7 +73,7 @@ Demonstrates all server modes: HTTP server with `/health`, `/ready`, `/metrics` 
 Deep dive into the self-healing system: `SelfHealingEngine` architecture, `HealingCircuitState` (Closed/Open/HalfOpen), `FailureRecord` tracking, exponential backoff with jitter, `LoadManager` and `TokenBucket` for graceful degradation, and unit tests for circuit breakers.
 
 ### 5. Deployment (`demo-deployment.sh`)
-Covers production deployment: multi-stage Dockerfile with distroless security, Kubernetes manifests with NetworkPolicy, Helm chart configuration, Cloudflare-deployed website with security headers, verification suite with 15 test modules, and git hooks for CI.
+Covers production deployment: multi-stage Dockerfile with distroless security, Kubernetes manifests with NetworkPolicy, Helm chart configuration, Cloudflare-deployed website with security headers, verification suite with 14 test modules, and git hooks for CI.
 
 ## Linking asciinema to an Account
 

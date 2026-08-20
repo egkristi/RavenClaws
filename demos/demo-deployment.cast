@@ -1,4 +1,4 @@
-{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977740,"command":"./scripts/demos/demo-deployment.sh","title":"RavenClaws v1.2.0 — Deployment","env":{"SHELL":"/bin/zsh"}}
+{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977740,"command":"./scripts/demos/demo-deployment.sh","title":"RavenClaws v1.6.0 — Deployment","env":{"SHELL":"/bin/zsh"}}
 [0.016, "o", "\r\n"]
 [0.000, "o", "╔══════════════════════════════════════════════════════════════╗\r\n║  1. DOCKER MULTI-STAGE BUILD\r\n"]
 [0.000, "o", "╚══════════════════════════════════════════════════════════════╝\r\n"]
@@ -49,6 +49,6 @@
 [0.006, "o", "#!/usr/bin/env bash\r\n# =============================================================================\r\n# RavenClaws — Pre-Commit Hook\r\n# =============================================================================\r\n# Runs fast verification checks before each commit:\r\n#   1. cargo fmt --check        — formatting\r\n#   2. cargo clippy -D warnings — linting\r\n#   3. cargo test --locked      — unit tests\r\n#   4. Binary size check        — ensure under 5MB\r\n#   5. No hardcoded secrets     — basic scan\r\n#\r\n# These checks are designed to complete in under 30 seconds on modern hardware.\r\n# Longer-running checks (Docker, K8s, cross-compile) run in pre-push.\r\n#\r\n# Install: make this repo's .githooks directory active:\r\n#   git config core.hooksPath .githooks\r\n# Or run:  .githooks/setup.sh\r\n# =============================================================================\r\n\r\nset -euo pipefail\r\n"]
 [1.012, "o", "\r\n"]
 [0.000, "o", "╔══════════════════════════════════════════════════════════════╗\r\n"]
-[0.000, "o", "║  RavenClaws v1.2.0 — Deployment Demo Complete              ║\r\n║  https://ravenclaws.io                                      ║\r\n║  https://github.com/egkristi/RavenClaws                     ║\r\n"]
+[0.000, "o", "║  RavenClaws v1.6.0 — Deployment Demo Complete              ║\r\n║  https://ravenclaws.io                                      ║\r\n║  https://github.com/egkristi/RavenClaws                     ║\r\n"]
 [0.000, "o", "╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.001, "x", "0"]

@@ -1,4 +1,4 @@
-{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977675,"command":"./scripts/demos/demo-quickstart.sh","title":"RavenClaws v1.2.0 — Quickstart","env":{"SHELL":"/bin/zsh"}}
+{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977675,"command":"./scripts/demos/demo-quickstart.sh","title":"RavenClaws v1.6.0 — Quickstart","env":{"SHELL":"/bin/zsh"}}
 [6.617, "o", "\r\n╔══════════════════════════════════════════════════════════════╗\r\n║  1. VERSION & HELP\r\n╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.000, "o", "$ ./target/release/ravenclaws --version\r\n"]
 [0.009, "o", "ravenclaws 1.2.0\r\n"]
@@ -24,6 +24,6 @@
 [2.368, "o", "{\"timestamp\":\"2026-07-02T07:34:49.899533Z\",\"level\":\"INFO\",\"fields\":{\"message\":\"RavenClaws shutdown complete\"},\"target\":\"ravenclaws\"}\r\n"]
 [1.011, "o", "\r\n"]
 [0.000, "o", "╔══════════════════════════════════════════════════════════════╗\r\n"]
-[0.000, "o", "║  RavenClaws v1.2.0 — Quickstart Demo Complete              ║\r\n║  https://ravenclaws.io                                      ║\r\n"]
+[0.000, "o", "║  RavenClaws v1.6.0 — Quickstart Demo Complete              ║\r\n║  https://ravenclaws.io                                      ║\r\n"]
 [0.000, "o", "║  https://github.com/egkristi/RavenClaws                     ║\r\n╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.001, "x", "0"]

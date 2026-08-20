@@ -1,4 +1,4 @@
-{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977694,"command":"./scripts/demos/demo-architecture.sh","title":"RavenClaws v1.2.0 — Architecture","env":{"SHELL":"/bin/zsh"}}
+{"version":3,"term":{"cols":80,"rows":30,"type":"xterm-256color","version":"xterm.js(6.1.0-beta.285)"},"timestamp":1782977694,"command":"./scripts/demos/demo-architecture.sh","title":"RavenClaws v1.6.0 — Architecture","env":{"SHELL":"/bin/zsh"}}
 [0.015, "o", "\r\n╔══════════════════════════════════════════════════════════════╗\r\n║  1. SOURCE MODULES (22 modules)\r\n╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.004, "o", "      25\r\n"]
 [0.341, "o", "src/mcp.rs:24\r\nsrc/llm.rs:24\r\nsrc/agent.rs:19\r\nsrc/config.rs:17\r\nsrc/tools.rs:15\r\nsrc/swarm.rs:12\r\nsrc/eval.rs:12\r\nsrc/policy.rs:9\r\nsrc/patterns.rs:9\r\nsrc/load.rs:7\r\nsrc/healing.rs:5\r\nsrc/ravenfabric.rs:4\r\nsrc/plugins.rs:4\r\nsrc/persistence.rs:4\r\nsrc/audit.rs:4\r\n"]
@@ -50,6 +50,6 @@
 [0.001, "o", "  12 unit tests for graceful degradation\r\n"]
 [1.008, "o", "\r\n"]
 [0.000, "o", "╔══════════════════════════════════════════════════════════════╗\r\n"]
-[0.001, "o", "║  RavenClaws v1.2.0 — Architecture Demo Complete            ║\r\n"]
+[0.001, "o", "║  RavenClaws v1.6.0 — Architecture Demo Complete            ║\r\n"]
 [0.000, "o", "║  https://ravenclaws.io                                      ║\r\n║  https://github.com/egkristi/RavenClaws                     ║\r\n╚══════════════════════════════════════════════════════════════╝\r\n\r\n"]
 [0.001, "x", "0"]
