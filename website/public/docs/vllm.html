@@ -50,6 +50,7 @@
       <a href="/docs/heartbeat-mode">Heartbeat mode</a>
       <a href="/docs/server-mode">Server mode</a>
       <a href="/docs/vllm" class="active">vLLM</a>
+      <a href="/docs/sglang">SGLang</a>
       <a href="/docs/llamacpp">llama.cpp</a>
       <a href="/docs/demo">Demo</a>
       <a href="/docs/migration">Migration guide</a>
@@ -63,7 +64,7 @@
     <article class="doc-body">
       <p class="breadcrumb"><a href="/docs/">Docs</a> / vLLM</p>
       <h1>vLLM integration</h1>
-      <p class="lead-box"><a href="https://github.com/vllm-project/vllm" rel="noopener">vLLM</a> is a high-throughput, GPU-accelerated inference engine. RavenClaws supports vLLM via the generic <code>openai-compatible</code> provider — no special configuration needed.</p>
+      <p class="lead-box"><a href="https://github.com/vllm-project/vllm" rel="noopener">vLLM</a> is a high-throughput, GPU-accelerated inference engine. RavenClaws supports vLLM as a first-class provider (<code>provider = "vllm"</code>, default endpoint <code>http://localhost:8000</code>), or via the generic <code>openai-compatible</code> provider.</p>
 
       <h2 id="quick-start">Quick start</h2>
       <h3>1. Start vLLM server</h3>
@@ -94,8 +95,8 @@
       <table>
         <thead><tr><th>Field</th><th>Value</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>provider</code></td><td><code>openai-compatible</code></td><td>Must be set to <code>openai-compatible</code></td></tr>
-          <tr><td><code>endpoint</code></td><td><code>http://localhost:8000/v1/chat/completions</code></td><td>vLLM's OpenAI-compatible endpoint</td></tr>
+          <tr><td><code>provider</code></td><td><code>vllm</code></td><td>First-class provider (or <code>openai-compatible</code>)</td></tr>
+          <tr><td><code>endpoint</code></td><td><code>http://localhost:8000</code></td><td>vLLM's OpenAI-compatible endpoint (default)</td></tr>
           <tr><td><code>model</code></td><td>(model name)</td><td>The model loaded in vLLM</td></tr>
           <tr><td><code>api_key</code></td><td>(optional)</td><td>Not needed for local vLLM</td></tr>
         </tbody>
@@ -146,7 +147,7 @@ api_key = <span class="tok-s">"${OPENAI_API_KEY}"</span></code></pre></div>
 
       <nav class="doc-nav">
         <a class="prev" href="/docs/server-mode"><span class="dir">← Previous</span><br><span class="ttl">Server mode</span></a>
-        <a class="next" href="/docs/llamacpp"><span class="dir">Next →</span><br><span class="ttl">llama.cpp</span></a>
+        <a class="next" href="/docs/sglang"><span class="dir">Next →</span><br><span class="ttl">SGLang</span></a>
       </nav>
     </article>
   </div>

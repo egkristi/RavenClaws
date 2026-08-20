@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RavenClaws — The Ultimate AI Agentic Worker · Secure Rust agent framework</title>
-<meta name="description" content="RavenClaws is a lightweight, secure Rust AI-agent framework. One static ~7.7 MB binary, zero runtime dependencies, 7 LLM providers, swarm & autonomous heartbeat modes, MCP client/server, and a verified supply chain. Self-hostable and air-gappable.">
+<meta name="description" content="RavenClaws is a lightweight, secure Rust AI-agent framework. One static ~7.7 MB binary, zero runtime dependencies, 9 LLM providers, swarm & autonomous heartbeat modes, MCP client/server, and a verified supply chain. Self-hostable and air-gappable.">
 <link rel="canonical" href="https://ravenclaws.io/">
 <meta name="theme-color" content="#070a10">
 
@@ -12,14 +12,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="RavenClaws">
 <meta property="og:title" content="RavenClaws — The Ultimate AI Agentic Worker">
-<meta property="og:description" content="Secure AI agents in a single ~7.7 MB Rust binary. Zero runtime deps, 7 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain. Self-hostable & air-gappable.">
+<meta property="og:description" content="Secure AI agents in a single ~7.7 MB Rust binary. Zero runtime deps, 9 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain. Self-hostable & air-gappable.">
 <meta property="og:url" content="https://ravenclaws.io/">
 <meta property="og:image" content="https://ravenclaws.io/assets/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="RavenClaws — The Ultimate AI Agentic Worker">
-<meta name="twitter:description" content="Secure AI agents in a single ~7.7 MB Rust binary. Zero runtime deps, 7 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain.">
+<meta name="twitter:description" content="Secure AI agents in a single ~7.7 MB Rust binary. Zero runtime deps, 9 LLM providers, swarm + autonomous heartbeat, MCP, verified supply chain.">
 <meta name="twitter:image" content="https://ravenclaws.io/assets/og-image.png">
 
 <link rel="icon" href="/assets/favicon.ico" sizes="any">
@@ -110,7 +110,7 @@
           <div class="stat"><b>~7.7<span class="u">MB</span></b><span>stripped binary</span></div>
           <div class="stat"><b>0</b><span>runtime deps</span></div>
           <div class="stat"><b>7</b><span>LLM providers</span></div>
-          <div class="stat"><b>601</b><span>unit tests</span></div>
+          <div class="stat"><b>604</b><span>unit tests</span></div>
           <div class="stat"><b>26</b><span>modules</span></div>
         </div>
       </div>
@@ -203,7 +203,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg></div>
         <h3>Multi-provider routing</h3>
-        <p>Seven providers behind one trait, with complexity-based routing, round-robin, intelligent fallback chains, a circuit breaker, and token budgets.</p>
+        <p>Nine providers behind one trait, with complexity-based routing, round-robin, intelligent fallback chains, a circuit breaker, and token budgets.</p>
       </div>
 
       <div class="card col-span-2">
@@ -234,7 +234,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V5h16v2M9 5v14M15 5v14M5 19h14"/></svg></div>
         <h3>Library crate</h3>
-        <p>Use RavenClaws as a dependency — <code>ravenclaws</code> on crates.io exposes all 26 modules through a stable, semver-disciplined public API.</p>
+        <p>Use RavenClaws as a dependency — <code>ravenclaws</code> on crates.io exposes all 27 modules through a stable, semver-disciplined public API.</p>
       </div>
 
       <div class="card">
@@ -252,7 +252,7 @@
       <div class="card">
         <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z"/><path d="M9 12h6M12 9v6"/></svg></div>
         <h3>Multi-modal input</h3>
-        <p>Attach images alongside text in chat messages — PNG, JPEG, GIF, WebP. Supported across all 7 providers via <code>--image</code> CLI flag or library API.</p>
+        <p>Attach images alongside text in chat messages — PNG, JPEG, GIF, WebP. Supported across all 9 providers via <code>--image</code> CLI flag or library API.</p>
       </div>
 
       <div class="card">
@@ -347,7 +347,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
     <div class="section-head center">
       <p class="eyebrow">See it in action</p>
       <h2 class="section-title">Watch the demo suite.</h2>
-      <p class="section-lead">Five focused asciinema recordings showcasing RavenClaws v1.4.0 — from quickstart and architecture through server/MCP, resilience, and deployment.</p>
+      <p class="section-lead">Five focused asciinema recordings showcasing RavenClaws v1.5.0 — from quickstart and architecture through server/MCP, resilience, and deployment.</p>
     </div>
     <div class="demo-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-top:32px">
       <div class="demo-card" style="background:var(--bg-card);border-radius:12px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.3);border:1px solid var(--border);transition:transform .2s,box-shadow .2s">
@@ -407,8 +407,8 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
   <div class="wrap">
     <div class="section-head center">
       <p class="eyebrow">Bring your own model</p>
-      <h2 class="section-title">Seven providers, one unified API.</h2>
-      <p class="section-lead">Route across cloud and local models with a single trait — then fail over between them automatically. Run fully offline with Ollama, or bring any OpenAI-compatible backend.</p>
+      <h2 class="section-title">Nine providers, one unified API.</h2>
+      <p class="section-lead">Route across cloud and local models with a single trait — then fail over between them automatically. Run fully offline with Ollama, vLLM, or SGLang, or bring any OpenAI-compatible backend.</p>
     </div>
     <div class="providers">
       <div class="prov"><div class="badge">Li</div><b>LiteLLM</b><span>100+ models via proxy</span></div>
@@ -418,6 +418,8 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
       <div class="prov"><div class="badge">An</div><b>Anthropic</b><span>native Claude tool use</span></div>
       <div class="prov"><div class="badge">OC</div><b>OpenAI-Compat</b><span>vLLM, Groq, TGI, …</span></div>
       <div class="prov"><div class="badge">Az</div><b>Azure</b><span>Azure OpenAI</span></div>
+      <div class="prov"><div class="badge">vL</div><b>vLLM</b><span>high-throughput · local</span></div>
+      <div class="prov"><div class="badge">SG</div><b>SGLang</b><span>fast · local</span></div>
     </div>
   </div>
 </section>
@@ -453,7 +455,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
         </tbody>
       </table>
     </div>
-    <p class="dim" style="margin-top:14px;font-size:.86rem">Self-reported from the project roadmap (v1.4.0). Capabilities of third-party tools vary by version and configuration. Azure provider added in v1.1.0.</p>
+    <p class="dim" style="margin-top:14px;font-size:.86rem">Self-reported from the project roadmap (v1.5.0). Capabilities of third-party tools vary by version and configuration. vLLM and SGLang added in v1.5.0.</p>
     <img src="/assets/raven-flock.webp" alt="A murder of ravens in flight, representing swarm orchestration" loading="lazy" width="1280" height="698" style="display:block;max-width:min(800px,100%);margin:32px auto 0;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.35)">
   </div>
 </section>
@@ -493,7 +495,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
         <h3>AGPLv3 — Open source</h3>
         <p class="price">Free for personal use, OSS projects, and commercial use up to 50 agents / $5M revenue.</p>
         <ul>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Full agent runtime &amp; all 7 providers</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Full agent runtime &amp; all 9 providers</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Tools, MCP, sandbox, audit log</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Docker &amp; Kubernetes manifests</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 7"/></svg> Library crate &amp; the full source</li>
@@ -522,7 +524,7 @@ println!(<span class="tok-s">"{}"</span>, resp.content);</code></pre>
       <img src="/assets/raven-carved.webp" alt="A raven perched on a branch carved with RavenClaws.io" width="520" height="292" style="display:block;max-width:min(520px,86%);margin:0 auto 20px;filter:drop-shadow(0 24px 44px rgba(0,0,0,.55))" loading="lazy">
       <p class="eyebrow" style="justify-content:center">Secure · Small · Efficient · Robust · Simple</p>
       <h2>Ship an agent you can actually trust.</h2>
-      <p>One static binary. Seven providers. Swarms that scale to thousands. Self-hostable, air-gappable, and verifiable end to end.</p>
+      <p>One static binary. Nine providers. Swarms that scale to thousands. Self-hostable, air-gappable, and verifiable end to end.</p>
       <div class="btn-row" style="justify-content:center">
         <a class="btn btn--primary btn--lg" href="/docs/getting-started">Get started</a>
         <a class="btn btn--ghost btn--lg" href="https://github.com/egkristi/RavenClaws" rel="noopener">Star on GitHub</a>
