@@ -466,6 +466,8 @@ async fn main() -> anyhow::Result<()> {
             "anthropic" => config::LLMProvider::Anthropic,
             "openai-compatible" | "openai_compatible" => config::LLMProvider::OpenAICompatible,
             "azure" => config::LLMProvider::Azure,
+            "vllm" => config::LLMProvider::Vllm,
+            "sglang" => config::LLMProvider::SGLang,
             _ => config::LLMProvider::LiteLLM,
         };
     }
@@ -1334,6 +1336,8 @@ async fn main() -> anyhow::Result<()> {
             config::LLMProvider::Anthropic => "Anthropic",
             config::LLMProvider::OpenAICompatible => "OpenAI-Compatible",
             config::LLMProvider::Azure => "Azure OpenAI",
+            config::LLMProvider::Vllm => "vLLM",
+            config::LLMProvider::SGLang => "SGLang",
         };
 
         info!(provider = provider_name, endpoint = %config.llm.endpoint, model = %config.llm.model, "LLM client initialized");

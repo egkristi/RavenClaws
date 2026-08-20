@@ -24,11 +24,11 @@ support. One static binary, zero runtime dependencies — no Python, no Node, no
 > durable execution (checkpoint/resume), self-provisioning swarms, autonomous heartbeat,
 > scheduling, HTTP server, MCP client/server, RavenFabric mesh, eval harness, library crate,
 > and a verified supply chain.
-> **601 unit tests**, 114 verification checks, 7 LLM providers, 26 source modules.
+> **601 unit tests**, 114 verification checks, 9 LLM providers, 26 source modules.
 
 | Footprint | Security | Providers | Deployment |
 |---|---|---|---|
-| **~7.7 MB binary** | **Memory-safe Rust** | **7 providers** | **Binary · Docker · K8s** |
+| **~7.7 MB binary** | **Memory-safe Rust** | **9 providers** | **Binary · Docker · K8s** |
 | **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **601 unit tests + 114 verification checks** |
 | **Library crate** | **27 modules** | **crates.io** | **AGPLv3 + Commercial** |
 
@@ -82,6 +82,8 @@ See the **[ROADMAP](ROADMAP.md)** for how we get from here to there.
 - **OpenRouter** — unified API for many hosted models.
 - **Ollama** — local, private, air-gapped models.
 - **Anthropic** — direct Claude API (Sonnet, Opus, Haiku) with native tool use.
+- **vLLM** — high-throughput OpenAI-compatible local inference (`provider = "vllm"`, default `http://localhost:8000`).
+- **SGLang** — fast OpenAI-compatible local inference (`provider = "sglang"`, default `http://localhost:30000`).
 - **Multi-model mode** — complexity-based routing (`route_by_complexity()`) plus round-robin and intelligent fallback chains with circuit breaker.
 - **Local inference discovery** — `LocalInference` probes Ollama (`/api/tags`) and OpenAI-compatible (`/v1/models`) endpoints (llama.cpp, vLLM, LM Studio, TGI) for device discovery.
 
@@ -265,7 +267,7 @@ kubectl -n ravenclaws logs -l app.kubernetes.io/name=ravenclaws
 
 | Variable | Description | Default |
 |---|---|---|
-| `RAVENCLAWS__LLM__PROVIDER` | Provider: litellm, openrouter, ollama, openai, anthropic, openai-compatible, azure | `litellm` |
+| `RAVENCLAWS__LLM__PROVIDER` | Provider: litellm, openrouter, ollama, openai, anthropic, openai-compatible, azure, vllm, sglang | `litellm` |
 | `RAVENCLAWS__LLM__ENDPOINT` | LLM endpoint URL | (provider-dependent) |
 | `RAVENCLAWS__LLM__MODEL` | Default model | `gpt-4o-mini` |
 | `LITELLM_API_KEY` | API key for LiteLLM/OpenRouter/OpenAI | (required for cloud) |
@@ -325,6 +327,22 @@ endpoint = "http://localhost:8000/v1"
 model = "meta-llama/Llama-3.1-8B-Instruct"
 # No API key required for local inference; set via env var for cloud:
 # export RAVENCLAWS__LLM__API_KEY="your-key"
+```
+
+**vLLM (first-class provider, default `http://localhost:8000`):**
+```toml
+[llm]
+provider = "vllm"
+endpoint = "http://localhost:8000"
+model = "meta-llama/Llama-3.1-8B-Instruct"
+```
+
+**SGLang (first-class provider, default `http://localhost:30000`):**
+```toml
+[llm]
+provider = "sglang"
+endpoint = "http://localhost:30000"
+model = "Qwen/Qwen2.5-7B-Instruct"
 ```
 
 ### Multi-model mode
@@ -558,7 +576,7 @@ Container images target both `linux/amd64` and `linux/arm64`.
 | Component | Status | Details |
 |---|---|---|
 | Single agent (single + multi-model) | ✅ Working | Sends prompt(s), logs response(s) |
-| LLM providers (7) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama, Anthropic, OpenAI-Compatible, Azure (unified trait) |
+| LLM providers (9) | ✅ Working | LiteLLM, OpenAI, OpenRouter, Ollama, Anthropic, OpenAI-Compatible, Azure, vLLM, SGLang (unified trait) |
 | CLI & env-var overrides | ✅ Working | `--provider`, `--endpoint`, `--model`; layered TOML→env→flags |
 | Config validation | ✅ Working | TLS enforcement, endpoint checks |
 | Container & K8s security | ✅ Working | Distroless, non-root, read-only FS, dropped caps, seccomp, RBAC |

@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Graphical UI (`gui` feature)** — Native cross-platform window built with
   **Slint** (`--gui` flag), using `ui/main.slint` and compiled via `build.rs`.
   Declarative, memory-safe, no webview/Electron. Optional feature.
+- **vLLM + SGLang first-class providers** — New `LLMProvider::Vllm` and
+  `LLMProvider::SGLang` variants (and matching `OpenAICompatibleProvider`/
+  `LocalInferenceKind`), so vLLM (`http://localhost:8000`) and SGLang
+  (`http://localhost:30000`) are configured with `provider = "vllm"` / `"sglang"`
+  instead of the generic `openai-compatible`. Local-inference discovery now
+  classifies them by their well-known default ports.
 
 ## [v1.5.0] — 2026-08-20
 

@@ -44,6 +44,12 @@ pub enum LLMProvider {
     /// Azure OpenAI Service
     #[serde(rename = "azure")]
     Azure,
+    /// vLLM — high-throughput OpenAI-compatible inference server (default http://localhost:8000)
+    #[serde(rename = "vllm")]
+    Vllm,
+    /// SGLang — fast OpenAI-compatible inference server (default http://localhost:30000)
+    #[serde(rename = "sglang")]
+    SGLang,
 }
 
 /// Top-level configuration for RavenClaws.
@@ -602,6 +608,8 @@ impl Config {
                 "ollama" => LLMProvider::Ollama,
                 "openai" => LLMProvider::OpenAI,
                 "anthropic" => LLMProvider::Anthropic,
+                "vllm" => LLMProvider::Vllm,
+                "sglang" => LLMProvider::SGLang,
                 _ => LLMProvider::LiteLLM,
             };
         }
@@ -729,6 +737,14 @@ mod tests {
         let json = r#""openrouter""#;
         let provider: LLMProvider = serde_json::from_str(json).unwrap();
         assert_eq!(provider, LLMProvider::OpenRouter);
+
+        let json = r#""vllm""#;
+        let provider: LLMProvider = serde_json::from_str(json).unwrap();
+        assert_eq!(provider, LLMProvider::Vllm);
+
+        let json = r#""sglang""#;
+        let provider: LLMProvider = serde_json::from_str(json).unwrap();
+        assert_eq!(provider, LLMProvider::SGLang);
     }
 
     #[test]
