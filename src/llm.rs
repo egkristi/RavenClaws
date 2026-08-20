@@ -279,6 +279,159 @@ impl TokenBudget {
     }
 }
 
+/// Pricing for a model, in USD per 1,000,000 tokens.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
+#[allow(dead_code)] // library API; exercised in tests
+pub struct ModelPricing {
+    /// Cost per 1M input (prompt) tokens.
+    pub input_per_million: f64,
+    /// Cost per 1M output (completion) tokens.
+    pub output_per_million: f64,
+}
+
+impl ModelPricing {
+    /// Create a pricing entry from per-million-token prices.
+    #[allow(dead_code)] // library API; exercised in tests
+    pub fn new(input_per_million: f64, output_per_million: f64) -> Self {
+        Self {
+            input_per_million,
+            output_per_million,
+        }
+    }
+
+    /// A common "free/local" pricing entry (Ollama, llama.cpp, etc.).
+    #[allow(dead_code)] // library API; exercised in tests
+    pub fn free() -> Self {
+        Self {
+            input_per_million: 0.0,
+            output_per_million: 0.0,
+        }
+    }
+}
+
+/// A cost ledger for LLM usage — accumulates token usage across calls and computes
+/// an estimated cost from a per-model pricing table.
+///
+/// This is the "cost tracking" primitive: providers that report `usage` feed it
+/// here, and `summary()` returns totals (calls, prompt tokens, completion tokens,
+/// estimated cost). Models without a registered price are treated as free.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, Default)]
+#[non_exhaustive]
+#[allow(dead_code)] // library API; exercised in tests
+pub struct CostTracker {
+    /// Per-model pricing, keyed by lowercased model name.
+    pricing: std::collections::HashMap<String, ModelPricing>,
+    /// Per-model token accounting: (prompt_tokens, completion_tokens).
+    usage: std::collections::HashMap<String, (u64, u64)>,
+    /// Total number of `record()` calls.
+    calls: u64,
+}
+
+/// A summary of tracked LLM usage.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[non_exhaustive]
+#[allow(dead_code)] // library API; exercised in tests
+pub struct CostSummary {
+    /// Total number of calls.
+    pub calls: u64,
+    /// Total prompt (input) tokens.
+    pub prompt_tokens: u64,
+    /// Total completion (output) tokens.
+    pub completion_tokens: u64,
+    /// Total tokens (prompt + completion).
+    pub total_tokens: u64,
+    /// Estimated cost in USD.
+    pub estimated_cost: f64,
+}
+
+impl CostTracker {
+    /// Create an empty cost tracker.
+    #[allow(dead_code)] // library API; exercised in tests
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Register pricing for a model name (case-insensitive).
+    #[allow(dead_code)]
+    pub fn with_pricing(mut self, model: impl Into<String>, pricing: ModelPricing) -> Self {
+        self.pricing.insert(model.into().to_lowercase(), pricing);
+        self
+    }
+
+    /// Register a "free" (zero-cost) model.
+    #[allow(dead_code)]
+    pub fn with_free_model(mut self, model: impl Into<String>) -> Self {
+        self.pricing
+            .insert(model.into().to_lowercase(), ModelPricing::free());
+        self
+    }
+
+    /// Record usage for a single call. The model name is looked up (case-insensitively)
+    /// in the pricing table; an unregistered model is treated as free (zero cost).
+    #[allow(dead_code)]
+    pub fn record(&mut self, model: &str, usage: &Usage) {
+        let key = model.to_lowercase();
+        let entry = self.usage.entry(key).or_insert((0, 0));
+        entry.0 += usage.prompt_tokens as u64;
+        entry.1 += usage.completion_tokens as u64;
+        self.calls += 1;
+    }
+
+    /// Total number of calls recorded.
+    #[allow(dead_code)] // library API; exercised in tests
+    pub fn call_count(&self) -> u64 {
+        self.calls
+    }
+
+    /// Total tokens across all recorded calls.
+    #[allow(dead_code)] // library API; exercised in tests
+    pub fn total_tokens(&self) -> u64 {
+        self.usage.values().map(|(p, c)| p + c).sum()
+    }
+
+    /// Estimated cost in USD, computed per-model from prompt/completion token
+    /// counts against the registered pricing (unknown models are free).
+    #[allow(dead_code)]
+    pub fn estimated_cost(&self) -> f64 {
+        self.usage
+            .iter()
+            .map(|(model, (prompt, completion))| {
+                let price = self
+                    .pricing
+                    .get(model)
+                    .copied()
+                    .unwrap_or_else(ModelPricing::free);
+                (*prompt as f64 / 1_000_000.0) * price.input_per_million
+                    + (*completion as f64 / 1_000_000.0) * price.output_per_million
+            })
+            .sum()
+    }
+
+    /// Produce a summary of all tracked usage.
+    #[allow(dead_code)]
+    pub fn summary(&self) -> CostSummary {
+        let prompt_tokens: u64 = self.usage.values().map(|(p, _)| p).sum();
+        let completion_tokens: u64 = self.usage.values().map(|(_, c)| c).sum();
+        CostSummary {
+            calls: self.calls,
+            prompt_tokens,
+            completion_tokens,
+            total_tokens: prompt_tokens + completion_tokens,
+            estimated_cost: self.estimated_cost(),
+        }
+    }
+}
+
 /// A content part for multi-modal messages — text or image.
 ///
 /// # Stability
@@ -2097,6 +2250,72 @@ mod tests {
 
         // Estimated cost: 800 tokens / 1000 * $0.002 = $0.0016
         assert!((budget.estimated_cost() - 0.0016).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_cost_tracker_basic() {
+        let mut tracker = CostTracker::new();
+        let usage = Usage {
+            prompt_tokens: 100,
+            completion_tokens: 50,
+            total_tokens: 150,
+        };
+
+        tracker.record("gpt-4o", &usage);
+        tracker.record("gpt-4o", &usage);
+
+        let summary = tracker.summary();
+        assert_eq!(summary.calls, 2);
+        assert_eq!(summary.prompt_tokens, 200);
+        assert_eq!(summary.completion_tokens, 100);
+        assert_eq!(summary.total_tokens, 300);
+        // No pricing registered → free.
+        assert_eq!(summary.estimated_cost, 0.0);
+    }
+
+    #[test]
+    fn test_cost_tracker_pricing() {
+        let mut tracker = CostTracker::new()
+            .with_pricing("gpt-4o", ModelPricing::new(2.50, 10.00)); // $ per 1M
+
+        let usage = Usage {
+            prompt_tokens: 1_000_000, // 1M input
+            completion_tokens: 1_000_000, // 1M output
+            total_tokens: 2_000_000,
+        };
+        tracker.record("gpt-4o", &usage);
+
+        // 1M input * $2.50/M + 1M output * $10/M = $12.50
+        let summary = tracker.summary();
+        assert!((summary.estimated_cost - 12.50).abs() < 0.0001);
+    }
+
+    #[test]
+    fn test_cost_tracker_case_insensitive_and_free_model() {
+        let mut tracker = CostTracker::new().with_free_model("llama3.1");
+
+        let usage = Usage {
+            prompt_tokens: 1000,
+            completion_tokens: 500,
+            total_tokens: 1500,
+        };
+        // Model name case must not matter; "Llama3.1" vs "llama3.1".
+        tracker.record("Llama3.1", &usage);
+        tracker.record("gpt-4o", &usage); // unregistered → free
+
+        let summary = tracker.summary();
+        assert_eq!(summary.calls, 2);
+        assert_eq!(summary.total_tokens, 3000);
+        assert_eq!(summary.estimated_cost, 0.0);
+    }
+
+    #[test]
+    fn test_cost_tracker_empty() {
+        let tracker = CostTracker::new();
+        let summary = tracker.summary();
+        assert_eq!(summary.calls, 0);
+        assert_eq!(summary.total_tokens, 0);
+        assert_eq!(summary.estimated_cost, 0.0);
     }
 
     #[test]

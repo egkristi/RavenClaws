@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cost tracking** — New `CostTracker`, `CostSummary`, and `ModelPricing` types in
+  `src/llm.rs`. A per-model cost ledger that accumulates prompt/completion tokens
+  across calls and estimates cost from a pricing table (USD per 1M tokens); unknown
+  or local models are free. 4 unit tests. Library API.
 - **Terminal UI (`tui` feature)** — New `src/ui.rs` with a shared `ChatEngine` plus a
   `ratatui` + `crossterm` terminal interface (`--tui` flag). Streaming transcript,
   input box, Esc/Ctrl-C to quit. Optional feature; default binary unchanged.

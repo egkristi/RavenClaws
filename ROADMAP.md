@@ -733,7 +733,7 @@ Per `RAVENCLAWS-MERGE.md`, the merge candidates were:
 | 5 | Tool-aware `<tool_call>` parser | 🟠 SKIP (loop superior) | ✅ Skipped |
 | 6 | Web dashboard SPA | 🟡 DEFER | ⏳ Deferred |
 | 7 | Scheduled tasks (cron) | 🔴 SKIP (`scheduler.rs` exists) | ✅ Skipped |
-| 8 | Cost tracking / learning feedback | 🟡 AUDIT later | ⏳ Deferred |
+| 8 | Cost tracking / learning feedback | 🟡 AUDIT later | ✅ Cost tracking done (2026-08-20) — `CostTracker`/`CostSummary`/`ModelPricing`; learning feedback deferred |
 
 #### Completed in v1.4
 

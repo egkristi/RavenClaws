@@ -143,8 +143,9 @@ pub use integrations::{
 #[cfg(feature = "k8s")]
 pub use k8s::{K8sManager, K8sManagerConfig};
 pub use llm::{
-    create_client, load_image, ChatMessage, ChatResponse, ContentPart, ImageUrlContent,
-    LLMProviderTrait, LocalInference, LocalInferenceKind, LocalInferenceServer, MultiModelManager,
+    create_client, load_image, ChatMessage, ChatResponse, ContentPart, CostSummary, CostTracker,
+    ImageUrlContent, LLMProviderTrait, LocalInference, LocalInferenceKind, LocalInferenceServer,
+    ModelPricing, MultiModelManager,
 };
 pub use load::{Admission, LoadConfig, LoadManager, LoadMetrics, RequestOutcome};
 pub use mcp::{McpClient, McpClientManager, McpServer, McpSseServer};
