@@ -5,6 +5,16 @@ All notable changes to RavenClaws are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Terminal UI (`tui` feature)** — New `src/ui.rs` with a shared `ChatEngine` plus a
+  `ratatui` + `crossterm` terminal interface (`--tui` flag). Streaming transcript,
+  input box, Esc/Ctrl-C to quit. Optional feature; default binary unchanged.
+- **Graphical UI (`gui` feature)** — Native cross-platform window built with
+  **Slint** (`--gui` flag), using `ui/main.slint` and compiled via `build.rs`.
+  Declarative, memory-safe, no webview/Electron. Optional feature.
+
 ## [v1.5.0] — 2026-08-20
 
 ### Added

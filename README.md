@@ -30,7 +30,7 @@ support. One static binary, zero runtime dependencies — no Python, no Node, no
 |---|---|---|---|
 | **~7.7 MB binary** | **Memory-safe Rust** | **7 providers** | **Binary · Docker · K8s** |
 | **0 runtime deps** | **Signed images + SBOM** | **Multi-model** | **601 unit tests + 114 verification checks** |
-| **Library crate** | **26 modules** | **crates.io** | **AGPLv3 + Commercial** |
+| **Library crate** | **27 modules** | **crates.io** | **AGPLv3 + Commercial** |
 
 ---
 
@@ -202,7 +202,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The library exposes all 26 modules with a stable public API:
+The library exposes all 27 modules with a stable public API:
 
 | Module | Purpose |
 |---|---|
@@ -227,6 +227,7 @@ The library exposes all 26 modules with a stable public API:
 | `ravenclaws::persistence` | SQLite-backed conversation persistence with retention policies |
 | `ravenclaws::plugins` | WASM plugin system (Plugin ABI v1, optional `plugins` feature) |
 | `ravenclaws::load` | Graceful degradation (LoadManager, TokenBucket, ErrorTracker) |
+| `ravenclaws::ui` | Interactive UIs (shared `ChatEngine`, TUI, GUI) |
 | `ravenclaws::error` | Unified error types |
 
 ### Docker
@@ -384,6 +385,8 @@ health_interval_secs = 60
 | `--exec "<task>"` | ✅ **Working** | One-shot task execution with streaming, then exit |
 | `--no-final-required` | ✅ **v0.9.4** | Don't require `FINAL:` marker — any non-tool-call response completes the loop |
 | `--repl` | ✅ **Working** | Interactive REPL with `/exit`, `/reset` commands |
+| `--tui` | ✅ **v1.6.0** | Terminal UI (`ratatui` + `crossterm`) — requires `--features tui` |
+| `--gui` | ✅ **v1.6.0** | Graphical UI (native Slint window) — requires `--features gui` |
 | `--require-approval` | ✅ **v0.8** | Human-in-the-loop approval for sensitive tool calls |
 | `--serve` | ✅ **v0.7.1** | Long-running HTTP server with health, metrics, agent execution API |
 | `--mcp-server` | ✅ **v0.7.0** | Expose RavenClaws tools over MCP protocol |
@@ -408,6 +411,25 @@ cargo test                 # unit tests
 ./scripts/verify.sh        # full 114-check verification suite (needs LiteLLM/Docker/kubectl)
 docker build -t ravenclaws:latest .
 ```
+
+### Interactive UIs (optional)
+
+RavenClaws ships a **terminal UI** and a **graphical UI**, both off by default to
+keep the core binary small (~7.7 MB):
+
+```bash
+# Terminal UI (ratatui)
+cargo build --release --features tui
+./target/release/ravenclaws --tui
+
+# Graphical UI (Slint — needs a C++ toolchain on Linux)
+cargo build --release --features gui
+./target/release/ravenclaws --gui
+```
+
+The GUI uses [**Slint**](https://slint.dev) — a declarative, memory-safe Rust UI
+toolkit that compiles to native code (no webview, no Electron, no large runtime).
+The TUI uses `ratatui` + `crossterm`.
 
 ### Cross-compile for all architectures
 
@@ -649,15 +671,17 @@ RavenClaws uses a **deny-by-default** security model:
 - No credentials in config files — environment variables and K8s Secrets only
 - Memory-safe Rust with `unsafe` forbidden
 
-### What's the difference between `--exec`, `--repl`, and `--serve`?
+### What's the difference between `--exec`, `--repl`, `--tui`, `--gui`, and `--serve`?
 
 - `--exec "<task>"` — Run a single task and exit (one-shot)
 - `--repl` — Start an interactive REPL session for back-and-forth conversation
+- `--tui` — Start a terminal UI (requires `--features tui`)
+- `--gui` — Start a graphical UI (requires `--features gui`)
 - `--serve` — Start a long-running HTTP server with `/health`, `/ready`, `/metrics` endpoints
 
 ### Can I use RavenClaws as a library in my Rust project?
 
-Yes. RavenClaws is published on [crates.io](https://crates.io/crates/ravenclaws) as both a binary and library crate. Add `ravenclaws = "1.4"` to your `Cargo.toml` and use the public API via `use ravenclaws::...`. See the [examples](examples/README.md) directory for runnable code samples.
+Yes. RavenClaws is published on [crates.io](https://crates.io/crates/ravenclaws) as both a binary and library crate. Add `ravenclaws = "1.5"` to your `Cargo.toml` and use the public API via `use ravenclaws::...`. See the [examples](examples/README.md) directory for runnable code samples.
 
 ### How do I upgrade from an older version?
 
