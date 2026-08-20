@@ -3,7 +3,7 @@
 //! Optional, feature-gated interactive interfaces built on a shared [`ChatEngine`].
 //!
 //! - **TUI** (`tui` feature) — a terminal interface built with `ratatui` + `crossterm`.
-//! - **GUI** (`gui` feature) — a native graphical window built with `slint`.
+//! - **GUI** (`gui` feature) — a native graphical window built with `egui`/`eframe`.
 //!
 //! Both are off by default so the core binary stays small (~7.7 MB). Enable them
 //! with `--features tui` / `--features gui`, then launch with `--tui` / `--gui`.
@@ -443,86 +443,246 @@ pub mod tui {
 
 #[cfg(feature = "gui")]
 pub mod gui {
-    //! Graphical UI built with `slint`.
+    //! Graphical UI built with `eframe` / `egui` (immediate-mode, memory-safe Rust).
+    //!
+    //! The `ChatEngine` lives in a dedicated worker thread (it owns the conversation
+    //! memory), and the UI communicates with it over MPSC channels: the UI sends
+    //! `Cmd` requests, and the worker streams back `Event`s (tokens / completion).
+    use std::sync::mpsc;
     use std::sync::Arc;
 
-    use super::ChatEngine;
     use crate::llm::LLMProviderTrait;
 
-    slint::include_modules!();
+    /// Commands sent from the UI to the worker thread.
+    enum Cmd {
+        /// Send a user message.
+        Send(String),
+        /// Reset the conversation.
+        Reset,
+        /// Shut the worker down.
+        Quit,
+    }
 
-    /// Run the native graphical window in a tokio runtime.
+    /// Events streamed from the worker back to the UI.
+    enum Event {
+        /// A streamed token chunk for the current assistant reply.
+        Token(String),
+        /// A reply completed (Ok) or failed (Err).
+        Done(Result<String, String>),
+        /// The conversation was reset.
+        Reset,
+    }
+
+    /// A message in the transcript.
+    #[derive(Clone)]
+    struct Msg {
+        role: String,
+        content: String,
+    }
+
+    /// Run the native graphical window.
     pub fn run(llm: Arc<dyn LLMProviderTrait>, system_prompt: String) -> crate::error::Result<()> {
-        let app = AppWindow::new()
-            .map_err(|e| crate::error::RavenClawsError::CommandExecution(format!("GUI: {e}")))?;
+        let options = eframe::NativeOptions {
+            viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 560.0]),
+            ..Default::default()
+        };
 
-        // The Slint event loop must run on the thread that created the window.
-        let rt = tokio::runtime::Runtime::new().map_err(|e| {
-            crate::error::RavenClawsError::CommandExecution(format!("GUI runtime: {e}"))
-        })?;
-        let rt_handle = rt.handle().clone();
+        eframe::run_native(
+            "RavenClaws",
+            options,
+            Box::new(move |cc| Ok(Box::new(GuiApp::new(cc, llm, system_prompt)))),
+        )
+        .map_err(|e| crate::error::RavenClawsError::CommandExecution(format!("GUI: {e}")))
+    }
 
-        let app_handle = app.as_weak();
-        let llm = llm.clone();
-        let sp = system_prompt.clone();
+    struct GuiApp {
+        input: String,
+        busy: bool,
+        msgs: Vec<Msg>,
+        /// Sender to the worker thread.
+        cmd_tx: mpsc::Sender<Cmd>,
+        /// Receiver for events from the worker thread.
+        event_rx: mpsc::Receiver<Event>,
+        /// Worker join handle (aborted on exit).
+        worker: Option<std::thread::JoinHandle<()>>,
+    }
 
-        app.on_send_requested(move || {
-            let app = app_handle.unwrap();
-            let input = app.get_input().trim().to_string();
-            if input.is_empty() {
+    impl GuiApp {
+        fn new(
+            _cc: &eframe::CreationContext<'_>,
+            llm: Arc<dyn LLMProviderTrait>,
+            system_prompt: String,
+        ) -> Self {
+            let (cmd_tx, cmd_rx) = mpsc::channel::<Cmd>();
+            let (event_tx, event_rx) = mpsc::channel::<Event>();
+
+            let worker = std::thread::spawn(move || {
+                worker_loop(llm, system_prompt, cmd_rx, event_tx);
+            });
+
+            Self {
+                input: String::new(),
+                busy: false,
+                msgs: Vec::new(),
+                cmd_tx,
+                event_rx,
+                worker: Some(worker),
+            }
+        }
+
+        fn send(&mut self) {
+            if self.busy {
                 return;
             }
-            app.set_input("".into());
-            app.set_busy(true);
+            let text = self.input.trim().to_string();
+            if text.is_empty() {
+                return;
+            }
+            self.input.clear();
+            self.msgs.push(Msg {
+                role: "user".to_string(),
+                content: text.clone(),
+            });
+            self.msgs.push(Msg {
+                role: "assistant".to_string(),
+                content: String::new(),
+            });
+            self.busy = true;
+            let _ = self.cmd_tx.send(Cmd::Send(text));
+        }
 
-            let mut transcript = app.get_transcript();
-            transcript.push_str(&format!("\nyou: {input}\nagent: "));
-            app.set_transcript(transcript);
-
-            let llm = llm.clone();
-            let sp = sp.clone();
-            let handle = rt_handle.clone();
-            let app2 = app.as_weak();
-
-            handle.spawn(async move {
-                let mut engine = ChatEngine::new(llm, &sp);
-                let result = engine
-                    .send(&input, |tok| {
-                        let app = app2.clone();
-                        let s = tok.to_string();
-                        let _ = app.upgrade_in_event_loop(move |a| {
-                            let mut t = a.get_transcript();
-                            t.push_str(&s);
-                            a.set_transcript(t);
-                        });
-                    })
-                    .await;
-
-                let app = app2.clone();
-                match result {
-                    Ok(_) => {
-                        let _ = app.upgrade_in_event_loop(move |a| {
-                            let mut t = a.get_transcript();
-                            t.push_str("\n");
-                            a.set_transcript(t);
-                            a.set_busy(false);
-                        });
+        fn drain(&mut self) {
+            while let Ok(ev) = self.event_rx.try_recv() {
+                match ev {
+                    Event::Token(tok) => {
+                        if let Some(last) = self.msgs.last_mut() {
+                            if last.role == "assistant" {
+                                last.content.push_str(&tok);
+                            }
+                        }
                     }
-                    Err(e) => {
-                        let msg = e.to_string();
-                        let _ = app.upgrade_in_event_loop(move |a| {
-                            let mut t = a.get_transcript();
-                            t.push_str(&format!("\n[error] {msg}\n"));
-                            a.set_transcript(t);
-                            a.set_busy(false);
+                    Event::Done(Ok(full)) => {
+                        if let Some(last) = self.msgs.last_mut() {
+                            if last.role == "assistant" {
+                                last.content = full;
+                            }
+                        }
+                        self.busy = false;
+                    }
+                    Event::Done(Err(e)) => {
+                        self.msgs.push(Msg {
+                            role: "error".to_string(),
+                            content: e,
                         });
+                        self.busy = false;
+                    }
+                    Event::Reset => {
+                        self.msgs.clear();
+                        self.busy = false;
                     }
                 }
-            });
-        });
+            }
+        }
+    }
 
-        app.run().map_err(|e| {
-            crate::error::RavenClawsError::CommandExecution(format!("GUI event loop: {e}"))
-        })
+    impl eframe::App for GuiApp {
+        fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+            self.drain();
+            if self.busy {
+                ctx.request_repaint();
+            }
+        }
+
+        fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+            // Header.
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                ui.heading("🐦‍⬛ RavenClaws");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("Reset").clicked() {
+                        let _ = self.cmd_tx.send(Cmd::Reset);
+                        self.msgs.clear();
+                        self.busy = false;
+                    }
+                });
+            });
+            ui.add_space(6.0);
+
+            // Transcript.
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, false])
+                .stick_to_bottom(true)
+                .show(ui, |ui| {
+                    for m in &self.msgs {
+                        let (tag, color) = match m.role.as_str() {
+                            "user" => ("you", egui::Color32::LIGHT_BLUE),
+                            "assistant" => ("agent", egui::Color32::LIGHT_GREEN),
+                            _ => ("error", egui::Color32::LIGHT_RED),
+                        };
+                        ui.horizontal_wrapped(|ui| {
+                            ui.colored_label(color, format!("[{tag}] "));
+                            ui.label(&m.content);
+                        });
+                        ui.add_space(2.0);
+                    }
+                });
+
+            // Input row.
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                let response = ui.add(
+                    egui::TextEdit::singleline(&mut self.input)
+                        .hint_text("Type a message…")
+                        .desired_width(f32::INFINITY),
+                );
+                let enter = response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
+                let send_clicked = ui.button("Send").clicked();
+                if (enter || send_clicked) && !self.busy {
+                    self.send();
+                    response.request_focus();
+                }
+            });
+            ui.add_space(6.0);
+        }
+
+        fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+            let _ = self.cmd_tx.send(Cmd::Quit);
+            if let Some(worker) = self.worker.take() {
+                let _ = worker.join();
+            }
+        }
+    }
+
+    /// The worker thread owns the `ChatEngine` and processes commands.
+    fn worker_loop(
+        llm: Arc<dyn LLMProviderTrait>,
+        system_prompt: String,
+        cmd_rx: mpsc::Receiver<Cmd>,
+        event_tx: mpsc::Sender<Event>,
+    ) {
+        let mut engine = crate::ui::ChatEngine::new(llm, &system_prompt);
+
+        // Run a tokio runtime on this thread to drive the async `send`.
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .expect("tokio runtime for GUI worker");
+
+        for cmd in cmd_rx {
+            match cmd {
+                Cmd::Quit => break,
+                Cmd::Reset => {
+                    engine.reset(&system_prompt);
+                    let _ = event_tx.send(Event::Reset);
+                }
+                Cmd::Send(text) => {
+                    let tx = event_tx.clone();
+                    let result = rt.block_on(engine.send(&text, move |tok| {
+                        let _ = tx.send(Event::Token(tok.to_string()));
+                    }));
+                    let _ = event_tx.send(Event::Done(result.map_err(|e| e.to_string())));
+                }
+            }
+        }
     }
 }

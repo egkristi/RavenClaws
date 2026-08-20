@@ -5,7 +5,7 @@ All notable changes to RavenClaws are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [v1.6.0] — 2026-08-20
 
 ### Added
 - **Cost tracking** — New `CostTracker`, `CostSummary`, and `ModelPricing` types in
@@ -16,8 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ratatui` + `crossterm` terminal interface (`--tui` flag). Streaming transcript,
   input box, Esc/Ctrl-C to quit. Optional feature; default binary unchanged.
 - **Graphical UI (`gui` feature)** — Native cross-platform window built with
-  **Slint** (`--gui` flag), using `ui/main.slint` and compiled via `build.rs`.
-  Declarative, memory-safe, no webview/Electron. Optional feature.
+  **egui/eframe** (`--gui` flag). Immediate-mode, memory-safe, no webview/Electron.
+  Optional feature.
 - **vLLM + SGLang first-class providers** — New `LLMProvider::Vllm` and
   `LLMProvider::SGLang` variants (and matching `OpenAICompatibleProvider`/
   `LocalInferenceKind`), so vLLM (`http://localhost:8000`) and SGLang

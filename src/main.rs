@@ -4,7 +4,7 @@
 //! Supports multiple LLM providers: LiteLLM, OpenRouter, Ollama, OpenAI.
 
 // Memory-safety pillar: no first-party `unsafe` code is permitted.
-// `deny` (rather than `forbid`) so that third-party generated code (e.g. Slint's
+// `deny` (rather than `forbid`) so that third-party generated code (e.g. eframe's
 // `include_modules!`) may lift the lint within its own module, while our own code
 // still cannot use `unsafe`.
 #![deny(unsafe_code)]
@@ -425,8 +425,7 @@ async fn main() -> anyhow::Result<()> {
     // Load configuration
     let mut config = config::Config::load(args.config.as_deref())?;
 
-    // Apply declarative blueprint overlay (v1.5) — blueprint personas/LLM/security
-    // override the base config when provided.
+    // Apply declarative blueprint overlay (v1.5) — blueprint personas/LLM/security    // override the base config when provided.
     if let Some(bp_path) = &args.blueprint {
         let bp_text = std::fs::read_to_string(bp_path)
             .map_err(|e| anyhow::anyhow!("Failed to read blueprint '{}': {}", bp_path, e))?;

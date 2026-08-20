@@ -9,21 +9,16 @@
 [![Verification](https://img.shields.io/badge/verification-114%20checks-brightgreen)](docs/guides/verification.md)
 [![Binary](https://img.shields.io/badge/binary-~7.7MB-blue)]()
 [![Library](https://img.shields.io/badge/library-crates.io-blue)](https://crates.io/crates/ravenclaws)
-[![Status](https://img.shields.io/badge/status-v1.5.0-brightgreen)](ROADMAP.md)
+[![Status](https://img.shields.io/badge/status-v1.6.0-brightgreen)](ROADMAP.md)
 [![Demo](https://img.shields.io/badge/demo-asciinema-ff69b4)](docs/guides/demo.md)
 
 RavenClaws is a lightweight, secure Rust agent framework with multi-provider LLM
 support. One static binary, zero runtime dependencies — no Python, no Node, no JVM.
 
-> **Status: v1.5.0 (2026-08-20).** Declarative agent blueprints
-> (`--blueprint`); complexity-based model routing; sandbox filesystem snapshots; network-egress
-> operator approval; local inference discovery (Ollama/llama.cpp/vLLM); an interactive installer
-> (`install.sh`); and Windows CI targets — on top of everything shipped through v1.3: self-healing
-> engine, graceful degradation, multi-agent patterns (debate, review-loop, research-synthesize,
-> voting), multi-modal input, browser automation, WASM plugins, SQLite persistence, MCP SSE,
-> durable execution (checkpoint/resume), self-provisioning swarms, autonomous heartbeat,
-> scheduling, HTTP server, MCP client/server, RavenFabric mesh, eval harness, library crate,
-> and a verified supply chain.
+> **Status: v1.6.0 (2026-08-20).** Terminal UI (ratatui) and graphical UI (egui);
+> vLLM + SGLang first-class providers; cost tracking — on top of v1.5.0: declarative agent
+> blueprints (`--blueprint`), complexity-based routing, sandbox snapshots, network-egress approval,
+> local inference discovery, an interactive installer, and Windows CI targets.
 > **604 unit tests**, 114 verification checks, 9 LLM providers, 27 source modules.
 
 | Footprint | Security | Providers | Deployment |
@@ -406,7 +401,7 @@ health_interval_secs = 60
 | `--no-final-required` | ✅ **v0.9.4** | Don't require `FINAL:` marker — any non-tool-call response completes the loop |
 | `--repl` | ✅ **Working** | Interactive REPL with `/exit`, `/reset` commands |
 | `--tui` | ✅ **Working** | Terminal UI (`ratatui` + `crossterm`) — requires `--features tui` |
-| `--gui` | ✅ **Working** | Graphical UI (native Slint window) — requires `--features gui` |
+| `--gui` | ✅ **Working** | Graphical UI (native egui window) — requires `--features gui` |
 | `--require-approval` | ✅ **v0.8** | Human-in-the-loop approval for sensitive tool calls |
 | `--serve` | ✅ **v0.7.1** | Long-running HTTP server with health, metrics, agent execution API |
 | `--mcp-server` | ✅ **v0.7.0** | Expose RavenClaws tools over MCP protocol |
@@ -442,14 +437,14 @@ keep the core binary small (~7.7 MB):
 cargo build --release --features tui
 ./target/release/ravenclaws --tui
 
-# Graphical UI (Slint — needs a C++ toolchain on Linux)
+# Graphical UI (egui)
 cargo build --release --features gui
 ./target/release/ravenclaws --gui
 ```
 
-The GUI uses [**Slint**](https://slint.dev) — a declarative, memory-safe Rust UI
-toolkit that compiles to native code (no webview, no Electron, no large runtime).
-The TUI uses `ratatui` + `crossterm`.
+The GUI uses [**egui**](https://github.com/emilk/egui) (via `eframe`) — an
+immediate-mode, memory-safe Rust UI framework that compiles to native code (no
+webview, no Electron, no large runtime). The TUI uses `ratatui` + `crossterm`.
 
 ### Cross-compile for all architectures
 

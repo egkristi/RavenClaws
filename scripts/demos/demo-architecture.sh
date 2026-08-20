@@ -3,7 +3,7 @@
 # Shows: source modules, test suite, multi-agent patterns, self-healing, load
 #
 # Record:
-#   asciinema rec --title "RavenClaws v1.2.0 — Architecture" \
+#   asciinema rec --title "RavenClaws v1.6.0 — Architecture" \
 #     --command "./scripts/demos/demo-architecture.sh" \
 #     --overwrite demos/demo-architecture.cast
 #
@@ -86,7 +86,7 @@ sleep 1
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  RavenClaws v1.2.0 — Architecture Demo Complete            ║"
+echo "║  RavenClaws v1.6.0 — Architecture Demo Complete            ║"
 echo "║  https://ravenclaws.io                                      ║"
 echo "║  https://github.com/egkristi/RavenClaws                     ║"
 echo "╚══════════════════════════════════════════════════════════════╝"

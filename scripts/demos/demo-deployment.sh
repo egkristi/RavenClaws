@@ -3,7 +3,7 @@
 # Shows: Dockerfile, K8s manifests, Helm chart, website, verification suite
 #
 # Record:
-#   asciinema rec --title "RavenClaws v1.2.0 — Deployment" \
+#   asciinema rec --title "RavenClaws v1.6.0 — Deployment" \
 #     --command "./scripts/demos/demo-deployment.sh" \
 #     --overwrite demos/demo-deployment.cast
 #
@@ -80,7 +80,7 @@ sleep 1
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  RavenClaws v1.2.0 — Deployment Demo Complete              ║"
+echo "║  RavenClaws v1.6.0 — Deployment Demo Complete              ║"
 echo "║  https://ravenclaws.io                                      ║"
 echo "║  https://github.com/egkristi/RavenClaws                     ║"
 echo "╚══════════════════════════════════════════════════════════════╝"

@@ -8,9 +8,9 @@
 > `RAVENCLAWS-MERGE.md` / `RAVENCLAWS-IMPROVEMENTS.md`).
 
 **Date:** 2026-07-02 *(re-analyzed 2026-08-13)*  
-**Version:** v1.5.0 — Universal Parity + Hardening 🐦‍⬛  
+**Version:** v1.6.0 — Universal Parity + Hardening + UIs + Providers 🐦‍⬛  
 **Previous Release:** v1.3.0 (2026-07-02) — Advanced Reasoning  
-**Current Commit:** (v1.5.0 — blueprints + snapshots + egress approval + installer + discovery)
+**Current Commit:** (v1.6.0 — TUI + GUI + vLLM/SGLang + cost tracking)
 **CI Status:** Build & Release ✅ · Container Build ✅ · Security Scan ✅
 **Test Count:** 587 unit tests · 114 verification tests · 0 failures
 **v1.0 Hardening Progress:** v0.9.4–v0.9.16 all complete ✅. **v0.9.14 closed ALL remaining metrics and polish gaps** — token tracking, tool calls counter, `/ready` caching, MCP params optionality, RavenFabric pipe policy, `--eval /dev/null` handling, `imagePullPolicy` verification. **v0.9.15 closed ALL ecosystem expansion gaps** — vLLM docs + verification tests, llama.cpp docs + verification tests, distroless HTTP testing docs, website docs pages for both providers. **v0.9.16 closed the last v1.0 blocker** — SSE MCP ecosystem verification: `--mcp-sse-server` CLI flag wired, SSE transport for MCP client config, MCP integration tests (stdio + SSE), SSE transport documentation. All gaps identified in v0.9.11 rpi5 deployment feedback are now closed. **v1.0 is released — the stable release. All exit criteria are met.** **v1.0.1 fixes the 4 remaining critical rpi5 issues: `/tools/{name}` 404, RavenFabric URL builder, `/execute` empty result, and distroless SIGHUP — all resolved.** **v1.0.1 also adds WASM plugin system (Plugin ABI v1, 11 unit tests) and SQLite conversation persistence (15 unit tests) — 485 total unit tests across 20 modules.**

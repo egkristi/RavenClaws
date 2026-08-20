@@ -4,7 +4,7 @@
 #        graceful degradation, load management, retry with backoff
 #
 # Record:
-#   asciinema rec --title "RavenClaws v1.2.0 — Resilience" \
+#   asciinema rec --title "RavenClaws v1.6.0 — Resilience" \
 #     --command "./scripts/demos/demo-resilience.sh" \
 #     --overwrite demos/demo-resilience.cast
 #
@@ -69,7 +69,7 @@ sleep 1
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  RavenClaws v1.2.0 — Resilience Demo Complete              ║"
+echo "║  RavenClaws v1.6.0 — Resilience Demo Complete              ║"
 echo "║  https://ravenclaws.io                                      ║"
 echo "║  https://github.com/egkristi/RavenClaws                     ║"
 echo "╚══════════════════════════════════════════════════════════════╝"

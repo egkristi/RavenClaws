@@ -18,7 +18,7 @@ set of RavenClaws features. Designed for different audiences and use cases.
 ```bash
 # Record all demos
 for demo in demo-quickstart demo-architecture demo-server-mcp demo-resilience demo-deployment; do
-  asciinema rec --title "RavenClaws v1.2.0 — ${demo#demo-}" \
+  asciinema rec --title "RavenClaws v1.6.0 — ${demo#demo-}" \
     --command "./scripts/demos/$demo.sh" \
     --overwrite "demos/$demo.cast"
 done

@@ -3,7 +3,7 @@
 //! Lightweight, secure Rust agent framework with multi-provider LLM support.
 
 // Memory-safety pillar: no first-party `unsafe` code is permitted.
-// `deny` (rather than `forbid`) so that third-party generated code (e.g. Slint's
+// `deny` (rather than `forbid`) so that third-party generated code (e.g. eframe's
 // `include_modules!`) may lift the lint within its own module, while our own code
 // still cannot use `unsafe`.
 #![deny(unsafe_code)]

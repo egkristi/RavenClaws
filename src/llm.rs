@@ -2275,11 +2275,10 @@ mod tests {
 
     #[test]
     fn test_cost_tracker_pricing() {
-        let mut tracker = CostTracker::new()
-            .with_pricing("gpt-4o", ModelPricing::new(2.50, 10.00)); // $ per 1M
+        let mut tracker = CostTracker::new().with_pricing("gpt-4o", ModelPricing::new(2.50, 10.00)); // $ per 1M
 
         let usage = Usage {
-            prompt_tokens: 1_000_000, // 1M input
+            prompt_tokens: 1_000_000,     // 1M input
             completion_tokens: 1_000_000, // 1M output
             total_tokens: 2_000_000,
         };

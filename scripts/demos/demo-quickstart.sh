@@ -3,7 +3,7 @@
 # Shows: version, help, binary profile, config, one-shot exec mode
 #
 # Record:
-#   asciinema rec --title "RavenClaws v1.2.0 — Quickstart" \
+#   asciinema rec --title "RavenClaws v1.6.0 — Quickstart" \
 #     --command "./scripts/demos/demo-quickstart.sh" \
 #     --overwrite demos/demo-quickstart.cast
 #
@@ -71,7 +71,7 @@ sleep 1
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  RavenClaws v1.2.0 — Quickstart Demo Complete              ║"
+echo "║  RavenClaws v1.6.0 — Quickstart Demo Complete              ║"
 echo "║  https://ravenclaws.io                                      ║"
 echo "║  https://github.com/egkristi/RavenClaws                     ║"
 echo "╚══════════════════════════════════════════════════════════════╝"

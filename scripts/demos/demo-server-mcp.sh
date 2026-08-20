@@ -3,7 +3,7 @@
 # Shows: HTTP server (health/ready/metrics), MCP server, MCP SSE server
 #
 # Record:
-#   asciinema rec --title "RavenClaws v1.2.0 — Server & MCP" \
+#   asciinema rec --title "RavenClaws v1.6.0 — Server & MCP" \
 #     --command "./scripts/demos/demo-server-mcp.sh" \
 #     --overwrite demos/demo-server-mcp.cast
 #
@@ -84,7 +84,7 @@ sleep 1
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║  RavenClaws v1.2.0 — Server & MCP Demo Complete            ║"
+echo "║  RavenClaws v1.6.0 — Server & MCP Demo Complete            ║"
 echo "║  https://ravenclaws.io                                      ║"
 echo "║  https://github.com/egkristi/RavenClaws                     ║"
 echo "╚══════════════════════════════════════════════════════════════╝"

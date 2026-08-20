@@ -11,7 +11,7 @@
 #   ./scripts/demos/demo-deployment.sh     # Docker, K8s, website
 #
 # Record:
-#   asciinema rec --title "RavenClaws v1.2.0 Demo" \
+#   asciinema rec --title "RavenClaws v1.6.0 Demo" \
 #     --command "./scripts/demo.sh" \
 #     --overwrite demo.cast
 
