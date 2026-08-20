@@ -288,6 +288,22 @@ dropping OpenTelemetry from default, or `rusqlite` `bundled`→system) before a 
 - **Severity:** 🟢 Low (accepted tradeoff; hygiene improved)
 - **Location:** `Cargo.toml`, `src/lib.rs`
 
+---
+
+## 🔴 New — 2026-08-20 (v1.6.0 release)
+
+### 23. Intermittent flaky test in combined `cargo test` run
+
+A single test occasionally fails (599/600) when running the full `cargo test`
+suite, but passes consistently when run in isolation (`cargo test --bin ravenclaws`)
+or on re-run. This is a pre-existing parallel-test race (a timing-sensitive test
+racing against others), observed across multiple sessions and unrelated to any
+specific feature change (most recently observed during the v1.6.0 egui refactor).
+
+- **Severity:** 🟢 Low (flaky, not a regression)
+- **Repro:** `cargo test --locked` (intermittent); `cargo test --bin ravenclaws` (passes)
+- **Location:** unknown (needs `--test-threads=1` bisect to isolate)
+
 ## ✅ v1.4 Milestone — Merge Phase (2026-08-13)
 
 **Universal-parity merge from RavenAssistant01 shipped.** Four components merged,
