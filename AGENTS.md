@@ -403,8 +403,41 @@ for r in data.get('workflow_runs',[])[:6]:
 ### Phase 2: Fix Issues
 
 1. **ISSUES.md** — Read the file, address each issue by severity (Critical → High → Medium → Low)
-2. **VS Code Problems Tab** — Open the problems tab (`Cmd+Shift+M`), fix all errors/warnings
-3. **ROADMAP.md** — Read the file, pick the next uncompleted feature and implement it
+2. **GitHub Code Scanning** — Check for open alerts in the Security tab
+   (https://github.com/egkristi/RavenClaws/security/code-scanning) and resolve them.
+   - **List open alerts** (requires `gh` authenticated):
+     ```bash
+     gh api "repos/egkristi/RavenClaws/code-scanning/alerts?per_page=100&state=open" --paginate \
+       | python3 -c "import json,sys; d=json.load(sys.stdin); \
+         from collections import Counter; c=Counter(); \
+         [c.update([(a['tool']['name'], a['rule']['id'])]) for a in d]; \
+         [print(f'{v:4d}  {k}') for k,v in c.most_common()]"
+     ```
+   - **Fix or dismiss** each alert by source:
+     - **CodeQL** (`rust/*`) — fix in `src/*.rs`; a variable flagged
+       `rust/unused-variable` but used inside a `tracing!`/`format!` macro is a
+       **false positive** (confirm `cargo clippy -D warnings` is clean), then dismiss.
+     - **Trivy** (`KSV-*`, CVEs) — fix manifests (`k8s/*.yaml`,
+       `charts/*/templates/*.yaml`) or bump the vulnerable crate; `ghcr.io` images
+       trigger `KSV-0125` as a false positive (not in Trivy's default azurecr/ecr/gcr
+       allowlist).
+     - **Scorecard** — `Pinned-Dependencies` → pin every `uses:` action to a full
+       commit SHA; `Token-Permissions` → add top-level `permissions: contents: read`;
+       `Dependency-Update-Tool` → keep `.github/dependabot.yml`; process checks
+       (Branch-Protection, Code-Review, Fuzzing, CII) are repo-admin settings, not code
+       changes.
+   - **Dismiss** false positives / process alerts with a documented reason:
+     ```bash
+     gh api -X PATCH "repos/egkristi/RavenClaws/code-scanning/alerts/<NUMBER>" \
+       -f state=dismissed \
+       -f dismissed_reason="false positive" \   # or "won't fix" / "used in tests"
+       -f dismissed_comment="...documented reason..."
+     ```
+     Valid `dismissed_reason` values: `false positive`, `won't fix`, `used in tests`.
+   - Alerts fixed in source auto-clear on the next scan run (after `git push`);
+     re-check the Security tab once CI completes.
+3. **VS Code Problems Tab** — Open the problems tab (`Cmd+Shift+M`), fix all errors/warnings
+4. **ROADMAP.md** — Read the file, pick the next uncompleted feature and implement it
 
 ### Phase 3: Verify Locally on Orbstack
 
