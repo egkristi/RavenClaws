@@ -417,6 +417,16 @@ impl CostTracker {
             .sum()
     }
 
+    /// Look up the registered pricing for a model (case-insensitive). Models
+    /// without a registered price are treated as free.
+    #[allow(dead_code)]
+    pub fn pricing_for(&self, model: &str) -> ModelPricing {
+        self.pricing
+            .get(&model.to_lowercase())
+            .copied()
+            .unwrap_or_else(ModelPricing::free)
+    }
+
     /// Produce a summary of all tracked usage.
     #[allow(dead_code)]
     pub fn summary(&self) -> CostSummary {
@@ -1744,6 +1754,90 @@ impl LocalInference {
             },
         }
     }
+
+    /// Select the most capable model from a discovered server's model list —
+    /// the "quantized model selection" half of local inference provisioning.
+    ///
+    /// Ranks models by a quality heuristic: prefer larger/stronger families
+    /// (higher parameter counts, or names containing strong markers like `70b`,
+    /// `llama3`, `mixtral`, `deepseek`, `qwen`, `codestral`), and avoid tiny
+    /// "embedding" / "instruct" helpers where a larger general model exists.
+    ///
+    /// Returns `None` when the server advertised no models.
+    #[allow(dead_code)] // library API; exercised in tests
+    pub fn select_model(&self, server: &LocalInferenceServer) -> Option<String> {
+        if server.models.is_empty() {
+            return None;
+        }
+
+        // Score each model by a rough capability heuristic.
+        let best = server
+            .models
+            .iter()
+            .max_by_key(|name| model_capability_score(name))
+            .cloned();
+
+        best
+    }
+
+    /// Warm up every model advertised by a discovered server, returning results
+    /// in discovery order. A convenience over [`Self::warmup`] for provisioning
+    /// a whole server at once (e.g. an Ollama host with several models).
+    #[allow(dead_code)] // library API; exercised in tests
+    pub async fn warmup_all(&self, server: &LocalInferenceServer) -> Vec<WarmupResult> {
+        let mut results = Vec::with_capacity(server.models.len());
+        for model in &server.models {
+            results.push(self.warmup(&server.endpoint, model).await);
+        }
+        results
+    }
+}
+
+/// Score a model name by a rough capability heuristic (higher = more capable).
+/// Used by [`LocalInference::select_model`] to pick the best local model.
+fn model_capability_score(name: &str) -> u64 {
+    let n = name.to_lowercase();
+    let mut score: u64 = 0;
+
+    // Parameter-count signals (e.g. "70b", "8b", "7b", "1b").
+    for (marker, pts) in [
+        ("70b", 70),
+        ("65b", 65),
+        ("34b", 34),
+        ("32b", 32),
+        ("13b", 13),
+        ("8b", 8),
+        ("7b", 7),
+        ("3b", 3),
+        ("1b", 1),
+    ] {
+        if n.contains(marker) {
+            score += pts;
+            break;
+        }
+    }
+
+    // Strong family markers.
+    for (marker, pts) in [
+        ("deepseek", 50),
+        ("mixtral", 50),
+        ("llama3", 40),
+        ("qwen", 40),
+        ("codestral", 40),
+        ("mistral", 30),
+        ("gemma", 30),
+        ("phi", 20),
+        ("tiny", 5),
+        ("nomic-embed", 0),
+        ("embedding", 0),
+        ("instruct", 0),
+    ] {
+        if n.contains(marker) {
+            score += pts;
+        }
+    }
+
+    score
 }
 
 /// Multi-model manager for handling multiple providers simultaneously
@@ -1857,6 +1951,41 @@ impl MultiModelManager {
         }
 
         ComplexityTier::Simple
+    }
+
+    /// Cost-aware routing — select the cheapest client by registered pricing.
+    ///
+    /// Consults the given [`CostTracker`]'s pricing table to rank clients by
+    /// estimated input cost (per 1M tokens), preferring the cheapest (including
+    /// free/local models). Clients whose model has no registered price are treated
+    /// as free and ranked first, so a local Ollama/llama.cpp backend beats a paid
+    /// cloud model. Ties are broken by registration order (index 0 first).
+    ///
+    /// Falls back to index 0 when the manager is empty or no pricing is registered
+    /// (in which case all clients tie and index 0 wins).
+    ///
+    /// This closes the "cost/quality policy" half of complexity routing: combined
+    /// with [`Self::route_by_complexity`], embedders can route Trivial/Simple
+    /// prompts to the cheapest backend and Complex prompts to the most capable.
+    ///
+    /// Library-only API: exposed for embedders; the binary's `run_single_multi`
+    /// fans out to all providers rather than selecting one.
+    #[allow(dead_code)]
+    pub fn route_cheapest(&self, tracker: &CostTracker) -> Option<&Arc<dyn LLMProviderTrait>> {
+        if self.clients.is_empty() {
+            return None;
+        }
+
+        // Rank by input cost (ascending). Unknown/unregistered models are free.
+        let mut ranked: Vec<usize> = (0..self.clients.len()).collect();
+        ranked.sort_by_key(|&i| {
+            let model = self.clients[i].model();
+            let price = tracker.pricing_for(model);
+            // Order by cost; use a stable sort so ties keep index order.
+            (price.input_per_million * 1_000_000.0) as i64
+        });
+
+        Some(&self.clients[ranked[0]])
     }
 }
 
@@ -3383,6 +3512,92 @@ mod tests {
     }
 
     #[test]
+    fn test_cost_aware_routing_prefers_cheapest() {
+        let manager = MultiModelManager::new(vec![
+            LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://localhost:4000".to_string(),
+                model: "gpt-4o".to_string(),
+                api_key: Some("test".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+            LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+        ])
+        .unwrap();
+
+        // Register pricing: gpt-4o is expensive, llama3.1 is free → pick llama3.1.
+        let tracker = CostTracker::new()
+            .with_pricing("gpt-4o", ModelPricing::new(2.50, 10.00))
+            .with_free_model("llama3.1");
+
+        assert_eq!(
+            manager.route_cheapest(&tracker).unwrap().provider_name(),
+            "ollama"
+        );
+    }
+
+    #[test]
+    fn test_cost_aware_routing_falls_back_to_index0() {
+        let manager = MultiModelManager::new(vec![
+            LLMConfig {
+                provider: LLMProvider::LiteLLM,
+                endpoint: "http://localhost:4000".to_string(),
+                model: "gpt-4o".to_string(),
+                api_key: Some("test".to_string()),
+                timeout_secs: 30,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+            LLMConfig {
+                provider: LLMProvider::Ollama,
+                endpoint: "http://localhost:11434".to_string(),
+                model: "llama3.1".to_string(),
+                api_key: None,
+                timeout_secs: 60,
+                system_prompt: crate::config::default_system_prompt(),
+                token_budget: None,
+                retry_max: 3,
+                retry_base_delay_ms: 100,
+                retry_max_delay_ms: 10000,
+            },
+        ])
+        .unwrap();
+
+        // No pricing registered → all free → index 0 (LiteLLM) wins.
+        let tracker = CostTracker::new();
+        assert_eq!(
+            manager.route_cheapest(&tracker).unwrap().provider_name(),
+            "litellm"
+        );
+    }
+
+    #[test]
+    fn test_cost_aware_routing_empty_manager() {
+        let manager = MultiModelManager::new(Vec::<LLMConfig>::new()).unwrap();
+        let tracker = CostTracker::new();
+        assert!(manager.route_cheapest(&tracker).is_none());
+    }
+
+    #[test]
     fn test_chat_request_serialization() {
         let request = ChatRequest {
             model: "gpt-4o-mini".to_string(),
@@ -3960,5 +4175,51 @@ mod tests {
 
         assert!(!result.success);
         assert!(result.detail.is_some());
+    }
+
+    // ── Local inference model selection tests ─────────────────────────────
+
+    #[test]
+    fn test_select_model_prefers_capable() {
+        let inference = LocalInference::default();
+        let server = LocalInferenceServer {
+            endpoint: "http://localhost:11434".to_string(),
+            kind: LocalInferenceKind::Ollama,
+            models: vec![
+                "llama3.1:8b".to_string(),
+                "mistral:7b".to_string(),
+                "nomic-embed-text".to_string(),
+            ],
+        };
+        // llama3.1:8b (8b + llama3 family) should outrank mistral:7b and the embed model.
+        assert_eq!(
+            inference.select_model(&server).as_deref(),
+            Some("llama3.1:8b")
+        );
+    }
+
+    #[test]
+    fn test_select_model_empty_returns_none() {
+        let inference = LocalInference::default();
+        let server = LocalInferenceServer {
+            endpoint: "http://localhost:11434".to_string(),
+            kind: LocalInferenceKind::Ollama,
+            models: vec![],
+        };
+        assert_eq!(inference.select_model(&server), None);
+    }
+
+    #[test]
+    fn test_select_model_prefers_larger_params() {
+        let inference = LocalInference::default();
+        let server = LocalInferenceServer {
+            endpoint: "http://localhost:8000".to_string(),
+            kind: LocalInferenceKind::Vllm,
+            models: vec!["model-7b".to_string(), "model-70b".to_string()],
+        };
+        assert_eq!(
+            inference.select_model(&server).as_deref(),
+            Some("model-70b")
+        );
     }
 }
