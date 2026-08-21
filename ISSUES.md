@@ -340,6 +340,24 @@ added `rust-version = "1.88"` to `Cargo.toml`, and updated the MSRV references
 - **Severity:** 🔴 Critical (blocks container build) → ✅ Resolved
 - **Files:** `Dockerfile`, `Dockerfile.slim`, `Cargo.toml`, `src/lib.rs`, docs
 
+### 25. ✅ `RAVENCLAWS__LLM__PROVIDER` env override missing `azure`/`openai-compatible` — FIXED (2026-08-22)
+
+**Problem:** The `RAVENCLAWS__LLM__PROVIDER` environment override in
+`Config::load()` was missing the `azure` and `openai-compatible` cases that the
+`--provider` CLI flag supported. Setting `RAVENCLAWS__LLM__PROVIDER=azure` (or
+`openai-compatible`) silently fell through to the `_ => LiteLLM` arm, selecting
+the wrong provider. The provider-string parsing was also duplicated three times
+(env override, CLI flag, and test helpers), a source of drift.
+
+**Fix:** Added `LLMProvider::parse(&str)` as the single source of truth for
+provider-string parsing (case-insensitive, all 9 variants, LiteLLM fallback), and
+wired both `Config::load()` and the CLI `--provider` override to it. 1 new unit
+test (`test_llm_provider_parse`) covers all providers, case-insensitivity, and
+fallback. Verified 5× full runs (620+612+7 pass).
+
+- **Severity:** 🟡 Medium → ✅ Resolved
+- **Files:** `src/config.rs`, `src/main.rs`
+
 ---
 
 ## 🔴 New — 2026-08-19

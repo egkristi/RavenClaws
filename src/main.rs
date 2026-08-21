@@ -458,17 +458,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Apply CLI overrides
     if let Some(provider) = args.provider {
-        config.llm.provider = match provider.to_lowercase().as_str() {
-            "openrouter" => config::LLMProvider::OpenRouter,
-            "ollama" => config::LLMProvider::Ollama,
-            "openai" => config::LLMProvider::OpenAI,
-            "anthropic" => config::LLMProvider::Anthropic,
-            "openai-compatible" | "openai_compatible" => config::LLMProvider::OpenAICompatible,
-            "azure" => config::LLMProvider::Azure,
-            "vllm" => config::LLMProvider::Vllm,
-            "sglang" => config::LLMProvider::SGLang,
-            _ => config::LLMProvider::LiteLLM,
-        };
+        config.llm.provider = config::LLMProvider::parse(&provider);
     }
     if let Some(endpoint) = args.endpoint {
         config.llm.endpoint = endpoint;

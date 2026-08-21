@@ -52,6 +52,27 @@ pub enum LLMProvider {
     SGLang,
 }
 
+impl LLMProvider {
+    /// Parse a provider string (case-insensitive) into an [`LLMProvider`].
+    ///
+    /// Unknown strings fall back to [`LLMProvider::LiteLLM`]. This is the single
+    /// source of truth for provider-string parsing, used by both the CLI flag
+    /// (`--provider`) and the `RAVENCLAWS__LLM__PROVIDER` environment variable.
+    pub fn parse(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "openrouter" => Self::OpenRouter,
+            "ollama" => Self::Ollama,
+            "openai" => Self::OpenAI,
+            "anthropic" => Self::Anthropic,
+            "openai-compatible" | "openai_compatible" => Self::OpenAICompatible,
+            "azure" => Self::Azure,
+            "vllm" => Self::Vllm,
+            "sglang" => Self::SGLang,
+            _ => Self::LiteLLM,
+        }
+    }
+}
+
 /// Top-level configuration for RavenClaws.
 ///
 /// # Stability
@@ -603,15 +624,7 @@ impl Config {
             cfg.llm.api_key = Some(key);
         }
         if let Ok(provider) = std::env::var("RAVENCLAWS__LLM__PROVIDER") {
-            cfg.llm.provider = match provider.to_lowercase().as_str() {
-                "openrouter" => LLMProvider::OpenRouter,
-                "ollama" => LLMProvider::Ollama,
-                "openai" => LLMProvider::OpenAI,
-                "anthropic" => LLMProvider::Anthropic,
-                "vllm" => LLMProvider::Vllm,
-                "sglang" => LLMProvider::SGLang,
-                _ => LLMProvider::LiteLLM,
-            };
+            cfg.llm.provider = LLMProvider::parse(&provider);
         }
         if let Ok(endpoint) = std::env::var("RAVENCLAWS__LLM__ENDPOINT") {
             cfg.llm.endpoint = endpoint;
@@ -718,6 +731,35 @@ mod tests {
     #[test]
     fn test_llm_provider_default() {
         assert_eq!(LLMProvider::default(), LLMProvider::LiteLLM);
+    }
+
+    #[test]
+    fn test_llm_provider_parse() {
+        // Case-insensitive, all known providers.
+        assert_eq!(LLMProvider::parse("litellm"), LLMProvider::LiteLLM);
+        assert_eq!(LLMProvider::parse("openrouter"), LLMProvider::OpenRouter);
+        assert_eq!(LLMProvider::parse("ollama"), LLMProvider::Ollama);
+        assert_eq!(LLMProvider::parse("openai"), LLMProvider::OpenAI);
+        assert_eq!(LLMProvider::parse("anthropic"), LLMProvider::Anthropic);
+        assert_eq!(
+            LLMProvider::parse("openai-compatible"),
+            LLMProvider::OpenAICompatible
+        );
+        assert_eq!(
+            LLMProvider::parse("openai_compatible"),
+            LLMProvider::OpenAICompatible
+        );
+        assert_eq!(LLMProvider::parse("azure"), LLMProvider::Azure);
+        assert_eq!(LLMProvider::parse("vllm"), LLMProvider::Vllm);
+        assert_eq!(LLMProvider::parse("sglang"), LLMProvider::SGLang);
+
+        // Case-insensitivity.
+        assert_eq!(LLMProvider::parse("OpenAI"), LLMProvider::OpenAI);
+        assert_eq!(LLMProvider::parse("AZURE"), LLMProvider::Azure);
+
+        // Unknown → fallback to LiteLLM.
+        assert_eq!(LLMProvider::parse(""), LLMProvider::LiteLLM);
+        assert_eq!(LLMProvider::parse("unknown"), LLMProvider::LiteLLM);
     }
 
     #[test]
