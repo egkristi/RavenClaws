@@ -89,6 +89,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.7.1] — 2026-08-22
+
+### Fixed
+- **Provider-string parsing** — `RAVENCLAWS__LLM__PROVIDER=azure` (and
+  `openai-compatible`) silently fell back to LiteLLM because the env override in
+  `Config::load()` was missing those cases. Added `LLMProvider::parse()` as the
+  single source of truth for provider-string parsing (case-insensitive, all 9
+  providers, LiteLLM fallback) and wired both the env override and the
+  `--provider` CLI flag to it. 1 new unit test.
+
 ## [v1.7.0] — 2026-08-21
 
 ### Added
@@ -722,7 +732,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/egkristi/RavenClaws/compare/v1.7.0...HEAD
+[Unreleased]: https://github.com/egkristi/RavenClaws/compare/v1.7.1...HEAD
+[v1.7.1]: https://github.com/egkristi/RavenClaws/compare/v1.7.0...v1.7.1
 [v1.7.0]: https://github.com/egkristi/RavenClaws/compare/v0.8.0...v1.7.0
 [0.8.0]: https://github.com/egkristi/RavenClaws/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/egkristi/RavenClaws/compare/v0.7.1...v0.7.2
