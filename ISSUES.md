@@ -1374,29 +1374,34 @@ All v0.2 items are complete:
 
 ## Medium
 
-### K8s verification test fails on Orbstack (image pull)
+### ✅ K8s verification test fails on Orbstack (image pull) — FIXED (2026-08-21)
 
-**Problem:** The K8s verification test (`scripts/lib/test-k8s.sh`) fails because
-the locally-built Docker image (`ravenclaws-verify:latest`) is not available to
-the Orbstack K8s cluster's container runtime. The test builds the image but K8s
-tries to pull it from Docker Hub instead of using the local image.
+**Problem:** The K8s verification test (`scripts/lib/test-k8s.sh`) failed because
+the locally-built image was not available to the K8s cluster's container runtime.
+Two distinct bugs:
 
-**Root cause:** Orbstack K8s uses a separate container runtime namespace from
-the Docker CLI. Images built with `docker build` are not automatically visible
-to `kubectl`. The `imagePullPolicy: IfNotPresent` in `k8s/deployment-test.yaml`
-doesn't help because the image isn't in the K8s runtime's local store.
+1. **Tag mismatch** — `common.sh` built `ravenclaws-verify:${TIMESTAMP}` but the
+   manifest referenced a hardcoded `ravenclaws-verify:v1.6.0`. The pod could never
+   find the built image, guaranteeing `ImagePullBackOff`.
+2. **No image loading** — even with matching tags, a locally-built image must be
+   loaded into a separate cluster runtime (kind/minikube/k3s).
 
-**Workaround:** Build the image and it becomes available to K8s after a short
-delay. The test script's `docker build` output is discarded (`>/dev/null 2>&1`),
-and the image may not be registered in time for the K8s pull.
+**Fix:**
+- `common.sh` now exports a deterministic `K8S_TEST_IMAGE="ravenclaws-verify:test"`
+  and adds `ensure_k8s_test_image()` (podman-first, docker fallback) plus
+  `load_image_into_cluster()` (kind `load docker-image` / minikube `image load` /
+  k3d `image import`, no-op on shared-runtime setups).
+- `k8s/deployment-test.yaml` references `ravenclaws-verify:test` (a deterministic,
+  non-`:latest` tag, satisfying KSV-0013).
+- `test-k8s.sh` builds the deterministic tag and loads it into the cluster runtime
+  before `kubectl apply`.
 
-**Fix options:**
-1. Push to a local registry (e.g., `localhost:5000`) and reference that in the deployment
-2. Use `orbctl` to load the image into the K8s runtime
-3. Add a retry loop in the test script that waits for the image to be available
-4. Use `kind load docker-image` equivalent for Orbstack
+Verified: `bash -n` clean on both scripts, YAML valid, and `kubectl apply
+--dry-run=client -f k8s/deployment-test.yaml` creates the namespace/configmap/
+deployment cleanly.
 
-**Status:** ❌ Open — pre-existing test infrastructure issue. Does not affect production deployments (which use `ghcr.io/egkristi/ravenclaws`).
+**Severity:** 🟡 Medium → ✅ Resolved
+**Files:** `scripts/lib/common.sh`, `scripts/lib/test-k8s.sh`, `k8s/deployment-test.yaml`
 
 ---
 

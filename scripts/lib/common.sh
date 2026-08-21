@@ -30,6 +30,10 @@ export SUPERVISOR_CONFIG="$PROJECT_DIR/tests/config/ravenclaws-supervisor-test.t
 export RESULTS_DIR="$PROJECT_DIR/target/verification-results"
 export TIMESTAMP=$(date +%Y%m%d-%H%M%S)
 export DOCKER_TAG="ravenclaws-verify:${TIMESTAMP}"
+# Deterministic tag used by the K8s test manifest (k8s/deployment-test.yaml).
+# Kept distinct from DOCKER_TAG (timestamped) so the manifest never needs
+# rewriting at test time, while still avoiding the `:latest` anti-pattern.
+export K8S_TEST_IMAGE="ravenclaws-verify:test"
 
 # ── Global counters ───────────────────────────────────────────────────────────
 export PASS=0
@@ -100,6 +104,65 @@ check_docker_image() {
         log_skip "Docker image '$DOCKER_TAG' not found — run Docker build first"
         return 1
     fi
+    return 0
+}
+
+# Ensure the K8s test image exists under the deterministic tag the manifest
+# expects (ravenclaws-verify:test), building it if necessary. Prefer podman when
+# available (rootless-friendly); fall back to docker.
+ensure_k8s_test_image() {
+    local builder="${CONTAINER_CLI:-}"
+    if [[ -z "$builder" ]]; then
+        if command -v podman >/dev/null 2>&1; then builder="podman"; \
+        elif command -v docker >/dev/null 2>&1; then builder="docker"; fi
+    fi
+    if [[ -z "$builder" ]]; then
+        log_skip "No container CLI (podman/docker) available — cannot build K8s test image"
+        return 1
+    fi
+
+    if "$builder" image inspect "$K8S_TEST_IMAGE" >/dev/null 2>&1; then
+        log_detail "K8s test image '$K8S_TEST_IMAGE' already present"
+        return 0
+    fi
+
+    log_detail "Building K8s test image '$K8S_TEST_IMAGE' with $builder ..."
+    if "$builder" build -t "$K8S_TEST_IMAGE" "$PROJECT_DIR" >/dev/null 2>&1; then
+        log_ok "K8s test image built: $K8S_TEST_IMAGE"
+        return 0
+    fi
+    log_fail "Failed to build K8s test image '$K8S_TEST_IMAGE'"
+    return 1
+}
+
+# Load a locally-built image into the active Kubernetes cluster's container
+# runtime. Different cluster flavours expose different mechanisms:
+#   - kind        → `kind load docker-image`
+#   - minikube    → `minikube image load`
+#   - k3s/k3d     → `k3d image import`, or `ctr`/`crictl` import via the node
+#   - podman K8s  → `podman`-built images may already be visible; no-op
+# When no cluster-specific loader is available, this is a no-op (the caller has
+# already verified the image exists); the pod may still pull from a registry.
+load_image_into_cluster() {
+    local image="$1"
+    log_detail "Loading image '$image' into cluster runtime..."
+
+    if command -v kind >/dev/null 2>&1; then
+        run_test "Load image into kind" kind load docker-image "$image" && return 0
+    fi
+
+    if command -v minikube >/dev/null 2>&1; then
+        run_test "Load image into minikube" minikube image load "$image" && return 0
+    fi
+
+    if command -v k3d >/dev/null 2>&1; then
+        run_test "Import image into k3d" k3d image import "$image" && return 0
+    fi
+
+    # No cluster-specific loader found. On Orbstack / Rancher Desktop / Docker
+    # Desktop, the Docker daemon is the same runtime K8s uses, so the image is
+    # already visible. Log and continue.
+    log_detail "No kind/minikube/k3d loader found — assuming shared runtime (image already visible)"
     return 0
 }
 

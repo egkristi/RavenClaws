@@ -62,7 +62,10 @@ spec:
           type: RuntimeDefault
       containers:
         - name: ravenclaws
-          image: ravenclaws-verify:v1.6.0
+          # Built locally by scripts/lib/test-k8s.sh and loaded into the cluster
+          # runtime. Uses a deterministic non-`:latest` tag (KSV-0013) that the
+          # test harness constructs explicitly.
+          image: ravenclaws-verify:test
           imagePullPolicy: IfNotPresent
           args:
             - "--serve"

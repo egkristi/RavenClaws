@@ -21,15 +21,16 @@ test_kubernetes() {
     run_test "K8s node is ready" \
         bash -c 'kubectl get nodes -o jsonpath="{.items[0].status.conditions[?(@.type==\"Ready\")].status}" 2>&1 | grep -q True'
 
-    # ── Ensure Docker image is available ───────────────────────────────────
-    if ! check_docker_image; then
-        log_detail "Building Docker image first..."
-        docker build -t "$DOCKER_TAG" "$PROJECT_DIR" >/dev/null 2>&1 || true
-        if ! check_docker_image; then
-            log_skip "Cannot build Docker image — skipping K8s tests"
-            return
-        fi
+    # ── Ensure the K8s test image is available ────────────────────────────
+    # The manifest (k8s/deployment-test.yaml) references the deterministic tag
+    # ravenclaws-verify:test. Build it with podman/docker, then load it into the
+    # cluster's container runtime so ImagePullBackOff does not occur (locally
+    # built images are not visible to a separate K8s runtime by default).
+    if ! ensure_k8s_test_image; then
+        log_skip "Cannot build K8s test image — skipping K8s tests"
+        return
     fi
+    load_image_into_cluster "$K8S_TEST_IMAGE"
 
     # ── Clean up any previous test namespace ───────────────────────────────
     kubectl delete namespace "$K8S_NAMESPACE" --ignore-not-found --wait=true >/dev/null 2>&1 || true
