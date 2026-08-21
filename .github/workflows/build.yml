@@ -112,18 +112,24 @@ jobs:
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
       - name: Package binary
+        shell: bash
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/ravenclaws dist/${{ matrix.output }}
-          cd dist
-          if [[ "${{ matrix.archive }}" == "zip" ]]; then
-            zip ${{ matrix.output }}.zip ${{ matrix.output }}
-          else
-            tar czf ${{ matrix.output }}.tar.gz ${{ matrix.output }}
+          # Windows targets produce `ravenclaws.exe`; Unix targets produce `ravenclaws`.
+          BIN="target/${{ matrix.target }}/release/ravenclaws"
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            BIN="${BIN}.exe"
           fi
-          shasum -a 256 ${{ matrix.output }} > ${{ matrix.output }}.sha256
-          if [[ -f ${{ matrix.output }}.tar.gz ]]; then
-            shasum -a 256 ${{ matrix.output }}.tar.gz >> ${{ matrix.output }}.sha256
+          cp "$BIN" "dist/${{ matrix.output }}"
+          cd dist
+          # Write the binary's hash first, then append the archive's hash.
+          shasum -a 256 "${{ matrix.output }}" > "${{ matrix.output }}.sha256"
+          if [[ "${{ matrix.archive }}" == "zip" ]]; then
+            zip "${{ matrix.output }}.zip" "${{ matrix.output }}"
+            shasum -a 256 "${{ matrix.output }}.zip" >> "${{ matrix.output }}.sha256"
+          else
+            tar czf "${{ matrix.output }}.tar.gz" "${{ matrix.output }}"
+            shasum -a 256 "${{ matrix.output }}.tar.gz" >> "${{ matrix.output }}.sha256"
           fi
       - name: Upload artifact
         uses: actions/upload-artifact@v7
