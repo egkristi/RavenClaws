@@ -308,7 +308,23 @@ jobs:
           fi
       - name: Publish to crates.io
         if: steps.check_published.outputs.skip != 'true'
-        run: cargo publish --locked
+        shell: bash
+        # `cargo publish` fails if the version already exists on crates.io (which
+        # happens when the earlier build-matrix was broken but the publish job —
+        # which only depends on `check` — already succeeded). Treat "already
+        # exists" as a non-fatal, idempotent no-op.
+        run: |
+          set +e
+          OUT="$(cargo publish --locked 2>&1)"
+          CODE=$?
+          echo "$OUT"
+          if [ $CODE -ne 0 ]; then
+            if echo "$OUT" | grep -qiE "already exists"; then
+              echo "Version already published — treating as success."
+              exit 0
+            fi
+            exit $CODE
+          fi
         env:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
