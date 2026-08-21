@@ -306,6 +306,24 @@ deferred to preserve the ~5 MB "Small" pillar.
 - **Severity:** 🟢 Low → 🟡 Partially done (readiness gate + observe shipped; vision loop deferred)
 - **Location:** `src/tools.rs` (`BrowserTool`)
 
+### 24. ✅ Container build fails: rustc 1.86 vs tonic 0.14 MSRV — FIXED (2026-08-21)
+
+**Problem:** Container Build failed with `error: rustc 1.86.0 is not supported by
+the following packages: tonic@0.14.6 requires rustc 1.88`. The CVE-2026-48504 fix
+(opentelemetry 0.32 bump) transitively pulled `tonic 0.14`/`prost 0.14`, which
+require rustc 1.88, but both Dockerfiles pinned `rust:1.86-slim-bookworm`. The
+`check` job passed (uses `dtolnay/rust-toolchain@stable` = 1.97) but the container
+build used the pinned 1.86.
+
+**Fix:** Bumped the pinned base image to `rust:1.88-slim-bookworm` (digest
+`sha256:38bc5a86...`, verified multi-arch) in `Dockerfile` and `Dockerfile.slim`,
+added `rust-version = "1.88"` to `Cargo.toml`, and updated the MSRV references
+(`src/lib.rs`, `README.md`, `CONTRIBUTING.md`, `docs/guides/getting-started.md`,
+`AGENTS.md`).
+
+- **Severity:** 🔴 Critical (blocks container build) → ✅ Resolved
+- **Files:** `Dockerfile`, `Dockerfile.slim`, `Cargo.toml`, `src/lib.rs`, docs
+
 ---
 
 ## 🔴 New — 2026-08-19

@@ -343,7 +343,7 @@ git push --no-verify
 
 ### Docker
 
-- Multi-stage build: `rust:1.86-slim-bookworm` → `gcr.io/distroless/cc-debian12:nonroot`
+- Multi-stage build: `rust:1.88-slim-bookworm` → `gcr.io/distroless/cc-debian12:nonroot`
 - User: `nonroot` (UID 65532)
 - No shell, no package manager, minimal attack surface
 - HEALTHCHECK runs `--version`

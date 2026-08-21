@@ -412,7 +412,7 @@ health_interval_secs = 60
 
 ### Prerequisites
 
-- [Rust](https://rustup.rs/) 1.86+
+- [Rust](https://rustup.rs/) 1.88+
 - For Linux cross-compilation on macOS: `brew install FiloSottile/musl-cross/musl-cross`
 
 ### Build for host

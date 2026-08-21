@@ -4,7 +4,7 @@ This guide walks you through your first RavenClaws agent, from installation to r
 
 ## Prerequisites
 
-- **Rust 1.86+** (for building from source)
+- **Rust 1.88+** (for building from source)
 - **Docker** (optional, for containerized deployment)
 - **An LLM provider** — one of:
   - [LiteLLM](https://litellm.ai/) (recommended for local development)

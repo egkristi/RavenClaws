@@ -2,6 +2,7 @@
 name = "RavenClaws"
 version = "1.6.0"
 edition = "2021"
+rust-version = "1.88"
 authors = ["Erling G M Kristiansen <egkristi@gmail.com>"]
 description = "Lightweight, secure Rust agent framework with multi-provider LLM support"
 license = "AGPL-3.0-or-later"

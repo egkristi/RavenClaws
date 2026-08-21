@@ -75,7 +75,7 @@
 //!
 //! ## Minimum Supported Rust Version (MSRV)
 //!
-//! Rust 1.86 or later. This crate uses edition 2021.
+//! Rust 1.88 or later. This crate uses edition 2021.
 //!
 //! ## Semver Guarantees
 //!

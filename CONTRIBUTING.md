@@ -46,7 +46,7 @@ By participating, you agree to uphold its principles.
 
 ### Prerequisites
 
-- **Rust** 1.86+ (install via [rustup](https://rustup.rs/))
+- **Rust** 1.88+ (install via [rustup](https://rustup.rs/))
 - **Docker** (for container testing)
 - **Orbstack** or **minikube** (for K8s testing, optional)
 
