@@ -518,15 +518,25 @@ for r in data.get('workflow_runs',[])[:6]:
 - If any pipeline **fails**, investigate, fix, and re-push
 - If any issues arise, **register them in ISSUES.md**
 
-### Phase 7: Release (mandatory for all versions)
+### Phase 7: Release (mandatory for every stable feature)
 
-**Every completed version MUST be released.** No exceptions. Whether it's a minor version with new features or a patch version with bug fixes — if it's merged to master, it ships. A release includes:
+**Every stable feature, bug fix, or change that is committed and merged to master MUST be released immediately as its own minor/patch release.** No exceptions, and no bundling multiple features into a single release. The cadence is:
+
+- **Patch release** (`1.6.x`) — every bug fix, hardening change, or non-breaking improvement.
+- **Minor release** (`1.x.0`) — every new backward-compatible feature (e.g. a new provider, tool, or module).
+- **Major release** (`x.0.0`) — breaking changes only.
+
+Examples: a bug fix ships as `1.6.12`; the next independent feature ships as `1.6.13` (or `1.7.0` if it is substantial enough to warrant a minor bump), and so on — **one commit group = one release**. Do not accumulate multiple features/fixes under `[Unreleased]` waiting for a single milestone.
+
+Each release includes:
 - Version bump in `Cargo.toml`
-- Changelog section for the new version
+- Changelog section for the new version (move the feature's `[Unreleased]` entries into a dated `[vX.Y.Z]` section)
 - Signed git tag
 - GitHub Release with binary assets
 - Container images pushed to GHCR and Docker Hub
 - crates.io publication
+
+After releasing, clear that feature's entries from `[Unreleased]` so the next feature starts from an empty unreleased section.
 
 ### Cycle Checklist
 
@@ -582,9 +592,13 @@ for r in data.get('workflow_runs',[])[:6]:
 
 ## Release Process
 
-**Policy: Every completed version MUST be released.** No exceptions. Whether it's a minor version with new features or a patch version with bug fixes — if it's merged to master, it ships.
+**Policy: Every stable feature, fix, or change that is committed and merged to master MUST be released immediately as its own minor/patch release.** No exceptions, and no bundling — one commit group (feature/fix) = one release.
 
-When all TODOs and features for a version milestone are completed, GitHub Actions for the final commit are green, all tests pass, test coverage is good, and everything else is ready — follow this release process.
+- **Patch** (`1.6.x`) — bug fixes, hardening, non-breaking improvements.
+- **Minor** (`1.x.0`) — new backward-compatible features.
+- **Major** (`x.0.0`) — breaking changes.
+
+When a feature or fix is committed, its GitHub Actions are green, all tests pass, and test coverage is adequate — release it immediately following this process (do not wait for a multi-feature milestone).
 
 ### Phase 1: Pre-Release Checks
 
@@ -615,17 +629,20 @@ If any of these fail, **do not proceed** — fix the issue first.
 
 ### Phase 2: Version Bump
 
-Update the version in `Cargo.toml`:
+Update the version in `Cargo.toml`. For the per-feature cadence, increment the
+**patch** component for every committed fix/feature by default (e.g. `1.6.12` →
+`1.6.13`), and the **minor** component only when a feature is substantial enough
+to warrant it (e.g. `1.6.13` → `1.7.0`):
 
 ```bash
-# For a patch release (bug fixes only):
-sed -i '' 's/^version = "0\.1\.0"/version = "0.1.1"/' Cargo.toml
+# Patch release (bug fix / hardening / small improvement) — the default cadence:
+#   1.6.12 → 1.6.13
 
-# For a minor release (new features, backward-compatible):
-sed -i '' 's/^version = "0\.1\.0"/version = "0.2.0"/' Cargo.toml
+# Minor release (new backward-compatible feature):
+#   1.6.13 → 1.7.0
 
-# For a major release (breaking changes):
-sed -i '' 's/^version = "0\.1\.0"/version = "1.0.0"/' Cargo.toml
+# Major release (breaking changes):
+#   1.7.0 → 2.0.0
 ```
 
 Update the version reference in `AGENTS.md` itself (Project Overview section) and any other docs that reference the version.
