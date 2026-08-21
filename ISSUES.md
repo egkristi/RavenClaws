@@ -327,17 +327,24 @@ dropping OpenTelemetry from default, or `rusqlite` `bundled`→system) before a 
 
 ## 🔴 New — 2026-08-20 (v1.6.0 release)
 
-### 23. Intermittent flaky test in combined `cargo test` run
+### 23. ✅ Intermittent flaky test in combined `cargo test` run — FIXED (2026-08-21)
 
-A single test occasionally fails (599/600) when running the full `cargo test`
-suite, but passes consistently when run in isolation (`cargo test --bin ravenclaws`)
-or on re-run. This is a pre-existing parallel-test race (a timing-sensitive test
-racing against others), observed across multiple sessions and unrelated to any
-specific feature change (most recently observed during the v1.6.0 egui refactor).
+A single test occasionally failed (599/600) when running the full `cargo test`
+suite, but passed consistently in isolation or on re-run.
 
-- **Severity:** 🟢 Low (flaky, not a regression)
-- **Repro:** `cargo test --locked` (intermittent); `cargo test --bin ravenclaws` (passes)
-- **Location:** unknown (needs `--test-threads=1` bisect to isolate)
+**Root cause (bisected):** `integrations::tests::test_send_sms_requires_recipient`
+calls `std::env::set_var("TWILIO_*")`, which races against sibling tests
+(`test_send_sms_disabled_without_env`, `test_disabled_when_env_missing`) that
+`remove_var` the same keys. When the removal won the race, `send_sms` returned
+`disabled` instead of `error`, failing the `assert_eq!(status, "error")`.
+
+**Fix:** Annotated all 10 env-var-mutating tests in `src/integrations.rs` with
+`serial_test`'s `#[serial]` (the crate is already a dev-dependency, used by
+`src/config.rs`). The tests now run serially, eliminating the race. Verified with
+3 consecutive full runs (608/608 pass each) + `clippy -D warnings` + `fmt --check`.
+
+- **Severity:** 🟢 Low → ✅ Resolved
+- **Location:** `src/integrations.rs`
 
 ## ✅ v1.4 Milestone — Merge Phase (2026-08-13)
 

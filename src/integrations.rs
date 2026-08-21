@@ -342,8 +342,10 @@ pub async fn send_sms(to: &str, message: &str) -> IntegrationResult {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn test_disabled_when_env_missing() {
         // Ensure the env vars are not set for these tests.
         std::env::remove_var("SLACK_WEBHOOK_URL");
@@ -363,6 +365,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_slack_disabled_without_env() {
         std::env::remove_var("SLACK_WEBHOOK_URL");
         let result = send_slack("hello").await;
@@ -370,6 +373,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_discord_disabled_without_env() {
         std::env::remove_var("DISCORD_WEBHOOK_URL");
         let result = send_discord("hello").await;
@@ -377,6 +381,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_telegram_disabled_without_env() {
         std::env::remove_var("TELEGRAM_BOT_TOKEN");
         std::env::remove_var("TELEGRAM_CHAT_ID");
@@ -385,6 +390,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_teams_disabled_without_env() {
         std::env::remove_var("TEAMS_WEBHOOK_URL");
         let result = send_teams("hello", "title").await;
@@ -392,6 +398,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_email_disabled_without_env() {
         std::env::remove_var("MAILGUN_API_KEY");
         std::env::remove_var("MAILGUN_DOMAIN");
@@ -400,6 +407,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_sms_disabled_without_env() {
         std::env::remove_var("TWILIO_ACCOUNT_SID");
         std::env::remove_var("TWILIO_AUTH_TOKEN");
@@ -409,6 +417,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_sms_requires_recipient() {
         std::env::set_var("TWILIO_ACCOUNT_SID", "sid");
         std::env::set_var("TWILIO_AUTH_TOKEN", "token");
@@ -418,6 +427,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_signal_disabled_without_env() {
         std::env::remove_var("SIGNALD_REST_URL");
         let result = send_signal("+15551234567", "hello").await;
@@ -425,6 +435,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[serial]
     async fn test_send_matrix_disabled_without_env() {
         std::env::remove_var("MATRIX_HOMESERVER");
         std::env::remove_var("MATRIX_ACCESS_TOKEN");
