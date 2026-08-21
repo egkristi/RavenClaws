@@ -176,12 +176,16 @@ if cross-restart verification is required.
 
 - **`#![forbid(unsafe_code)]`** ✅ added to both crate roots (no first-party `unsafe`).
 - **Threat model** ✅ published in `SECURITY.md` (see #18).
-- **Fuzzing** ✅ added a deterministic fuzz-style test
-  (`test_policy_engine_never_panics_on_adversarial_input`) that hammers
-  `PolicyEngine` with 10,000 adversarial inputs per run (fixed-seed LCG, no
-  external deps). A formal `cargo-fuzz`/`libFuzzer` harness remains future work.
+- **Fuzzing** ✅ added deterministic fuzz-style tests that hammer security-critical
+  components with 10,000 adversarial inputs each (fixed-seed LCG, no external deps):
+  `test_policy_engine_never_panics_on_adversarial_input` (shell/network/file/tool-call
+  dispatch) and — added 2026-08-21 —
+  `test_injection_detector_never_panics_on_adversarial_input` (prompt-injection
+  detector, with curated attack fragments interleaved with noise). A formal
+  `cargo-fuzz`/`libFuzzer` harness remains future work (requires nightly + a
+  fuzz target, which conflicts with the zero-extra-deps "Small" pillar).
 
-- **Severity:** 🟢 Low → ✅ Partially done (fuzzing test in-repo; external review deferred)
+- **Severity:** 🟢 Low → ✅ Partially done (2 fuzz tests in-repo; external review deferred)
 
 ---
 
@@ -201,10 +205,16 @@ into Trivial/Simple/Complex (greetings, local/fast model preference, or
 code/long/"hard" markers) and routes to the most appropriate provider/model,
 falling back to round-robin/index-0 when no preference matches. 4 new tests.
 This is a library API (embedders wire it into their selection path); the binary's
-`run_single_multi` intentionally still fans out to all providers. A full LLM-based
-complexity classifier + cost/quality policy remains a future enhancement.
+`run_single_multi` intentionally still fans out to all providers.
 
-- **Severity:** 🟡 High → ✅ Implemented (heuristic v1)
+**Cost/quality policy (2026-08-21):** added `MultiModelManager::route_cheapest(&CostTracker)`
++ `CostTracker::pricing_for()` — cost-aware routing that ranks clients by registered
+per-model pricing (unregistered/free models first). Combined with
+`route_by_complexity`, embedders can route Simple prompts to the cheapest backend
+and Complex prompts to the most capable. 3 new tests. A full *LLM-based* complexity
+classifier (vs. the deterministic heuristic) remains a future enhancement.
+
+- **Severity:** 🟡 High → ✅ Implemented (heuristic v1 + cost-aware routing)
 - **Location:** `src/llm.rs` (`MultiModelManager`)
 
 ### 14. ✅ Human-in-the-loop approval flow — FULLY RESOLVED (2026-08-20)
@@ -281,10 +291,16 @@ a `WarmupResult` type. Sends a minimal single-token chat request (Ollama
 `/api/chat`, falling back to `/v1/chat/completions` for vLLM/SGLang/llama.cpp/LM
 Studio) to force the model to load into memory and confirm it can serve inference.
 This turns passive discovery into a verified, ready-to-use backend. 3 new tests.
-`WarmupResult` re-exported from the library crate. Full GPU scheduling (multi-GPU
-placement, quantized model selection) remains future work.
+`WarmupResult` re-exported from the library crate.
 
-- **Severity:** 🟢 Low → ✅ Discovery + warmup shipped; GPU scheduling deferred
+**Model selection (2026-08-21):** added `LocalInference::select_model()` (a
+capability-scoring heuristic that ranks advertised models by parameter count and
+family strength, avoiding tiny embed/instruct helpers) and `warmup_all()` (warm
+every model on a server). 3 new tests. Full multi-GPU placement remains future
+work (no GPU-specific libraries are pulled in — preserving the ~5 MB "Small"
+pillar).
+
+- **Severity:** 🟢 Low → ✅ Discovery + warmup + model selection shipped; multi-GPU placement deferred
 - **Location:** `src/llm.rs` (`LocalInference`)
 
 ### 20. 🟡 Computer-use agent (CUA) loop — PARTIAL (observe primitive added 2026-08-21)
@@ -1437,21 +1453,16 @@ deployment cleanly.
 
 ## 🔮 Future Considerations
 
-### No configuration hot-reload
+### ✅ Configuration hot-reload — RESOLVED (already implemented)
 
-Changes to `ravenclaws.toml` require a restart. No SIGHUP handler exists.
-Tracked in ROADMAP.md v0.9.6.
+Changes to `ravenclaws.toml` can be reloaded without a restart via SIGHUP
+(`src/server.rs::wait_for_sighup()`) or, for distroless containers, the
+`POST /reload` HTTP endpoint. This entry was stale.
 
-## Unresolved Syntax Error in src/patterns.rs
+## ✅ Unresolved Syntax Error in src/patterns.rs — FIXED (2026-08-14)
 
-- **Description**: The `run_voting` function in `src/patterns.rs` has an unresolved syntax error related to indentation and delimiter matching. Despite multiple attempts, the error persists.
-
-- **Steps to Reproduce**: Run `cargo test --locked` to trigger the compilation error.
-
-- **Expected Behavior**: The code should compile successfully without any syntax errors.
-
-- **Actual Behavior**: Compilation fails with an `unexpected closing delimiter` error at `src/patterns.rs:603`.
-
-- **Severity**: High
-
-- **Status**: Awaiting review and resolution by a human developer with Rust expertise.
+- **Description**: The `run_voting` function had an extra closing brace (a stray
+  `}` after `run_research_synthesize()`), causing `error: unexpected closing
+  delimiter` at `src/patterns.rs:603`.
+- **Fix**: Removed the stray brace and normalized indentation with `cargo fmt`.
+- **Status**: ✅ Resolved — the crate compiles; 600+ tests pass, clippy clean.

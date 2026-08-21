@@ -90,6 +90,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Cost-aware routing** — `MultiModelManager::route_cheapest(&CostTracker)` +
+  `CostTracker::pricing_for()` in `src/llm.rs`. Ranks clients by registered
+  per-model pricing (unregistered/free models first), complementing
+  `route_by_complexity` for cost/quality policy. 3 new unit tests. Library API.
+- **Local inference model selection** — `LocalInference::select_model()`
+  (capability-scoring heuristic by parameter count + model family) and
+  `warmup_all()` in `src/llm.rs`. 3 new unit tests. Library API.
+- **Prompt-injection fuzz coverage** — `test_injection_detector_never_panics_on_adversarial_input`
+  hammers `InjectionDetector` with 10,000 adversarial inputs (fixed-seed LCG +
+  curated attack fragments), complementing the existing `PolicyEngine` fuzz test.
 - **Local inference model warmup (provisioning)** — `LocalInference::warmup(endpoint, model)` +
   `WarmupResult` in `src/llm.rs`. Sends a minimal single-token chat request (Ollama
   `/api/chat`, falling back to `/v1/chat/completions` for vLLM/SGLang/llama.cpp/LM
