@@ -89,6 +89,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v1.7.0] — 2026-08-21
+
 ### Added
 - **Cost-aware routing** — `MultiModelManager::route_cheapest(&CostTracker)` +
   `CostTracker::pricing_for()` in `src/llm.rs`. Ranks clients by registered
@@ -720,7 +722,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/egkristi/RavenClaws/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/egkristi/RavenClaws/compare/v1.7.0...HEAD
+[v1.7.0]: https://github.com/egkristi/RavenClaws/compare/v0.8.0...v1.7.0
 [0.8.0]: https://github.com/egkristi/RavenClaws/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/egkristi/RavenClaws/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/egkristi/RavenClaws/compare/v0.7.0...v0.7.1
