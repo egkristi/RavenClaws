@@ -287,18 +287,23 @@ placement, quantized model selection) remains future work.
 - **Severity:** 🟢 Low → ✅ Discovery + warmup shipped; GPU scheduling deferred
 - **Location:** `src/llm.rs` (`LocalInference`)
 
-### 20. 🟡 Computer-use agent (CUA) loop — PARTIAL (readiness gate added 2026-08-20)
+### 20. 🟡 Computer-use agent (CUA) loop — PARTIAL (observe primitive added 2026-08-21)
 
 NemoClaw's gated CUA readiness; RavenClaws has raw `BrowserTool` (CDP) only.
 
 **Progress 2026-08-20:** added `BrowserTool::check_availability()` — a gated
 "readiness" probe that verifies a CDP browser is reachable with a page target,
-failing fast with a clear error before a CUA loop starts. 2 unit tests. The full
-screenshot → plan → act → observe loop still requires real WebSocket CDP + a
-vision-capable LLM (the current `screenshot` action extracts page *text*, not
-images) and remains deferred.
+failing fast with a clear error before a CUA loop starts. 2 unit tests.
 
-- **Severity:** 🟢 Low → 🟡 Partially done (readiness gate shipped; vision loop deferred)
+**Progress 2026-08-21:** added `BrowserTool::page_state()` + a `PageState` struct
+(title/url/text) — the "perceive" primitive of a perceive → plan → act → observe
+loop — plus a new `"observe"` browser action that returns the snapshot as JSON.
+1 new test. `PageState` and `BrowserTool` re-exported from the library. The full
+vision loop (real WebSocket CDP screenshot capture + a vision-capable LLM to plan
+from images) still requires a WebSocket client and vision model and remains
+deferred to preserve the ~5 MB "Small" pillar.
+
+- **Severity:** 🟢 Low → 🟡 Partially done (readiness gate + observe shipped; vision loop deferred)
 - **Location:** `src/tools.rs` (`BrowserTool`)
 
 ---

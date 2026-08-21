@@ -165,6 +165,6 @@ pub use scheduler::Scheduler;
 pub use server::run_server;
 pub use swarm::SwarmOrchestrator;
 pub use telemetry::TelemetryGuard;
-pub use tools::{ToolCall, ToolImpl, ToolRegistry, ToolResult};
+pub use tools::{BrowserTool, PageState, ToolCall, ToolImpl, ToolRegistry, ToolResult};
 pub use ui::ChatEngine;
 pub use web_policy::{extract_domain, RateLimiter, WebAccessPolicy, WebCategory};

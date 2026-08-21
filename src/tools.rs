@@ -1217,6 +1217,26 @@ impl ToolImpl for WebSearchTool {
 
 // ── Browser automation tool ────────────────────────────────────────────────
 
+/// A structured snapshot of the current page — the "perceive" primitive of a
+/// computer-use-agent (CUA) perceive → plan → act → observe loop.
+///
+/// Captures the document title, URL, and visible text in one atomic observation
+/// so an agent can reason about the current state before deciding its next action.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[non_exhaustive]
+#[allow(dead_code)] // library API; exercised in tests
+pub struct PageState {
+    /// The document title.
+    pub title: String,
+    /// The current page URL.
+    pub url: String,
+    /// The visible text content of the page body.
+    pub text: String,
+}
+
 /// Browser automation tool — controls a browser via Chrome DevTools Protocol (CDP)
 ///
 /// Connects to an existing Chrome/Chromium instance via its remote debugging port.
@@ -1248,7 +1268,7 @@ impl BrowserTool {
             JsonSchema {
                 schema_type: "string".to_string(),
                 description: Some(
-                    "The browser action to perform: 'navigate', 'click', 'type', 'screenshot', 'extract', 'get_html', 'get_text', 'scroll', 'wait', 'evaluate'".to_string(),
+                    "The browser action to perform: 'navigate', 'click', 'type', 'screenshot', 'extract', 'get_html', 'get_text', 'observe', 'scroll', 'wait', 'evaluate'".to_string(),
                 ),
                 properties: None,
                 required: None,
@@ -1261,6 +1281,7 @@ impl BrowserTool {
                     "extract".to_string(),
                     "get_html".to_string(),
                     "get_text".to_string(),
+                    "observe".to_string(),
                     "scroll".to_string(),
                     "wait".to_string(),
                     "evaluate".to_string(),
@@ -1426,6 +1447,11 @@ impl ToolImpl for BrowserTool {
                 self.get_html(selector).await?
             }
             "get_text" => self.get_page_text().await?,
+            "observe" => {
+                let state = self.page_state().await?;
+                serde_json::to_string_pretty(&state)
+                    .unwrap_or_else(|_| format!("{} — {}", state.title, state.url))
+            }
             "scroll" => {
                 let direction = args
                     .get("direction")
@@ -1573,6 +1599,32 @@ impl BrowserTool {
         // A successful `get_ws_url` proves the CDP endpoint is reachable and has a target.
         let _ws_url = self.get_ws_url().await?;
         Ok(())
+    }
+
+    /// Capture the current page state (title, URL, and visible text) in one
+    /// atomic observation — the "perceive" primitive of a computer-use-agent loop.
+    ///
+    /// The returned [`PageState`] is a serializable snapshot an agent (or a
+    /// vision-capable LLM downstream) can reason over to decide its next action.
+    #[allow(dead_code)] // library API; exercised in tests
+    pub async fn page_state(&self) -> ToolResultValue<PageState> {
+        let script = r#"(() => {
+            return JSON.stringify({
+                title: document.title || '',
+                url: window.location.href || '',
+                text: (document.body ? (document.body.innerText || document.body.textContent || '') : '')
+            });
+        })()"#;
+
+        let raw = self.evaluate(script).await?;
+        let value: serde_json::Value = serde_json::from_str(&raw)
+            .unwrap_or_else(|_| serde_json::json!({ "title": "", "url": "", "text": raw }));
+
+        Ok(PageState {
+            title: value["title"].as_str().unwrap_or_default().to_string(),
+            url: value["url"].as_str().unwrap_or_default().to_string(),
+            text: value["text"].as_str().unwrap_or_default().to_string(),
+        })
     }
 
     /// Navigate to a URL
@@ -3134,5 +3186,42 @@ mod tests {
         let result = tokio_test::block_on(tool.check_availability());
         m.assert();
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_browser_tool_page_state() {
+        // Mock the full observe flow: /json (target list) → /json/activate/{id}
+        // → /json/evaluate/{id}?script (returns the serialized PageState JSON).
+        let mut server = mockito::Server::new();
+        let target = server
+            .mock("GET", "/json")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"[{"type":"page","webSocketDebuggerUrl":"ws://localhost/devtools/page/42"}]"#,
+            )
+            .create();
+        let activate = server
+            .mock("POST", "/json/activate/42")
+            .with_status(200)
+            .create();
+        let evaluate = server
+            .mock("GET", mockito::Matcher::Regex(r"^/json/evaluate/42\?.*".to_string()))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{"result":{"result":{"value":"{\"title\":\"Example\",\"url\":\"https://example.com\",\"text\":\"Hello world\"}"}}}"#,
+            )
+            .create();
+
+        let tool = BrowserTool::with_config(server.url(), 2000);
+        let state = tokio_test::block_on(tool.page_state()).unwrap();
+
+        target.assert();
+        activate.assert();
+        evaluate.assert();
+        assert_eq!(state.title, "Example");
+        assert_eq!(state.url, "https://example.com");
+        assert_eq!(state.text, "Hello world");
     }
 }
