@@ -1478,6 +1478,26 @@ pub enum LocalInferenceKind {
     Unknown,
 }
 
+/// Result of a model warmup attempt against a discovered local inference server.
+///
+/// # Stability
+/// This struct is `#[non_exhaustive]` — new fields may be added in minor releases.
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[non_exhaustive]
+#[allow(dead_code)] // library API; exercised in tests
+pub struct WarmupResult {
+    /// The server endpoint the warmup targeted.
+    pub endpoint: String,
+    /// The model name that was warmed up.
+    pub model: String,
+    /// Whether the warmup request completed successfully (model loaded + responded).
+    pub success: bool,
+    /// Wall-clock duration of the warmup request in milliseconds.
+    pub duration_ms: u64,
+    /// Optional human-readable detail (e.g. the error message on failure).
+    pub detail: Option<String>,
+}
+
 /// Discovery of local inference servers (Ollama / llama.cpp / vLLM / LM Studio).
 ///
 /// Probes a configurable list of candidate endpoints using short HTTP requests.
@@ -1606,6 +1626,123 @@ impl LocalInference {
         }
 
         None
+    }
+
+    /// Warm up a model on a discovered server — the "provisioning" half of local
+    /// inference management.
+    ///
+    /// Sends a minimal single-token chat completion request to force the server
+    /// to load the model into memory (model warmup) and confirm it can actually
+    /// serve inference. This turns a passive discovery result into a verified,
+    /// ready-to-use backend.
+    ///
+    /// Supports Ollama (native `/api/chat`) and OpenAI-compatible servers
+    /// (`/v1/chat/completions`, used by vLLM / SGLang / llama.cpp / LM Studio).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use ravenclaws::llm::LocalInference;
+    ///
+    /// # async fn example() {
+    /// let inference = LocalInference::default();
+    /// for server in inference.discover().await {
+    ///     if let Some(model) = server.models.first() {
+    ///         let result = inference.warmup(&server.endpoint, model).await;
+    ///         println!("{:?}", result);
+    ///     }
+    /// }
+    /// # }
+    /// ```
+    #[allow(dead_code)] // library API; exercised in tests
+    pub async fn warmup(&self, endpoint: &str, model: &str) -> WarmupResult {
+        let base = endpoint.trim_end_matches('/');
+        let start = std::time::Instant::now();
+        let client = match reqwest::Client::builder()
+            .timeout(std::time::Duration::from_millis(self.timeout_ms))
+            .build()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                return WarmupResult {
+                    endpoint: base.to_string(),
+                    model: model.to_string(),
+                    success: false,
+                    duration_ms: start.elapsed().as_millis() as u64,
+                    detail: Some(format!("HTTP client build failed: {}", e)),
+                }
+            }
+        };
+
+        // 1) Ollama native chat endpoint.
+        let ollama_body = serde_json::json!({
+            "model": model,
+            "messages": [{"role": "user", "content": "OK"}],
+            "stream": false,
+        });
+        if let Ok(resp) = client
+            .post(format!("{}/api/chat", base))
+            .json(&ollama_body)
+            .send()
+            .await
+        {
+            let elapsed = start.elapsed().as_millis() as u64;
+            if resp.status().is_success() {
+                return WarmupResult {
+                    endpoint: base.to_string(),
+                    model: model.to_string(),
+                    success: true,
+                    duration_ms: elapsed,
+                    detail: None,
+                };
+            }
+            // Fall through to the OpenAI-compatible path if Ollama chat 404s.
+            if resp.status() != reqwest::StatusCode::NOT_FOUND {
+                return WarmupResult {
+                    endpoint: base.to_string(),
+                    model: model.to_string(),
+                    success: false,
+                    duration_ms: elapsed,
+                    detail: Some(format!("Ollama /api/chat returned {}", resp.status())),
+                };
+            }
+        }
+
+        // 2) OpenAI-compatible chat completions (vLLM / SGLang / llama.cpp / LM Studio).
+        let openai_body = serde_json::json!({
+            "model": model,
+            "messages": [{"role": "user", "content": "OK"}],
+            "max_tokens": 1,
+            "stream": false,
+        });
+        match client
+            .post(format!("{}/v1/chat/completions", base))
+            .json(&openai_body)
+            .send()
+            .await
+        {
+            Ok(resp) => {
+                let elapsed = start.elapsed().as_millis() as u64;
+                WarmupResult {
+                    endpoint: base.to_string(),
+                    model: model.to_string(),
+                    success: resp.status().is_success(),
+                    duration_ms: elapsed,
+                    detail: if resp.status().is_success() {
+                        None
+                    } else {
+                        Some(format!("/v1/chat/completions returned {}", resp.status()))
+                    },
+                }
+            }
+            Err(e) => WarmupResult {
+                endpoint: base.to_string(),
+                model: model.to_string(),
+                success: false,
+                duration_ms: start.elapsed().as_millis() as u64,
+                detail: Some(format!("warmup request failed: {}", e)),
+            },
+        }
     }
 }
 
@@ -3753,5 +3890,75 @@ mod tests {
         assert!(d.endpoints.contains(&"http://localhost:11434".to_string()));
         assert!(d.endpoints.contains(&"http://localhost:8000".to_string()));
         assert!(d.endpoints.contains(&"http://localhost:30000".to_string()));
+    }
+
+    // ── Local inference warmup (provisioning) tests ──────────────────────
+
+    #[test]
+    fn test_warmup_ollama_success() {
+        let mut server = Server::new();
+        let m = server
+            .mock("POST", "/api/chat")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"model":"llama3.1","message":{"role":"assistant","content":"OK"}}"#)
+            .create();
+
+        let inference = LocalInference {
+            endpoints: vec![],
+            timeout_ms: 2000,
+        };
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(inference.warmup(&server.url(), "llama3.1"));
+
+        m.assert();
+        assert!(result.success);
+        assert_eq!(result.model, "llama3.1");
+        assert_eq!(result.endpoint, server.url());
+        assert!(result.detail.is_none());
+    }
+
+    #[test]
+    fn test_warmup_openai_compatible_success() {
+        // /api/chat returns 404 → falls through to /v1/chat/completions.
+        let mut server = Server::new();
+        let _ollama = server.mock("POST", "/api/chat").with_status(404).create();
+        let openai = server
+            .mock("POST", "/v1/chat/completions")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"choices":[{"message":{"content":"OK"}}]}"#)
+            .create();
+
+        let inference = LocalInference {
+            endpoints: vec![],
+            timeout_ms: 2000,
+        };
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(inference.warmup(&server.url(), "vllm-model"));
+
+        openai.assert();
+        assert!(result.success);
+        assert_eq!(result.model, "vllm-model");
+    }
+
+    #[test]
+    fn test_warmup_failure_records_detail() {
+        let mut server = Server::new();
+        let _ollama = server.mock("POST", "/api/chat").with_status(404).create();
+        let _openai = server
+            .mock("POST", "/v1/chat/completions")
+            .with_status(500)
+            .create();
+
+        let inference = LocalInference {
+            endpoints: vec![],
+            timeout_ms: 2000,
+        };
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(inference.warmup(&server.url(), "broken-model"));
+
+        assert!(!result.success);
+        assert!(result.detail.is_some());
     }
 }

@@ -268,16 +268,23 @@ guide. Updated the hardening roadmap table.
 - **Severity:** 🟡 Medium → ✅ Done
 - **Location:** `SECURITY.md`
 
-### 19. ✅ GPU / local inference management — PARTIAL (discovery added 2026-08-20)
+### 19. ✅ GPU / local inference management — PROVISIONING SHIPPED (2026-08-21)
 
 Added `LocalInference` + `LocalInferenceServer` + `LocalInferenceKind` to
 `src/llm.rs` — the "device discovery" foundation. Probes Ollama's `/api/tags` and
 OpenAI-compatible `/v1/models` endpoints (llama.cpp, vLLM, LM Studio, TGI) across
 a configurable endpoint list with short timeouts, and returns discovered servers
-with their models. 4 unit tests. Full device provisioning (model warmup, GPU
-scheduling) remains future work.
+with their models. 4 unit tests.
 
-- **Severity:** 🟢 Low → ✅ Partially done (discovery shipped; provisioning deferred)
+**Provisioning (2026-08-21):** added `LocalInference::warmup(endpoint, model)` +
+a `WarmupResult` type. Sends a minimal single-token chat request (Ollama
+`/api/chat`, falling back to `/v1/chat/completions` for vLLM/SGLang/llama.cpp/LM
+Studio) to force the model to load into memory and confirm it can serve inference.
+This turns passive discovery into a verified, ready-to-use backend. 3 new tests.
+`WarmupResult` re-exported from the library crate. Full GPU scheduling (multi-GPU
+placement, quantized model selection) remains future work.
+
+- **Severity:** 🟢 Low → ✅ Discovery + warmup shipped; GPU scheduling deferred
 - **Location:** `src/llm.rs` (`LocalInference`)
 
 ### 20. 🟡 Computer-use agent (CUA) loop — PARTIAL (readiness gate added 2026-08-20)
