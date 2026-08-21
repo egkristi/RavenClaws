@@ -89,7 +89,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Local inference model warmup (provisioning)** — `LocalInference::warmup(endpoint, model)` +
+  `WarmupResult` in `src/llm.rs`. Sends a minimal single-token chat request (Ollama
+  `/api/chat`, falling back to `/v1/chat/completions` for vLLM/SGLang/llama.cpp/LM
+  Studio) to force model load and verify serving readiness. Turns passive device
+  discovery into a verified, ready-to-use backend. 3 new unit tests. Library API.
+- **CUA observe primitive** — `BrowserTool::page_state()` + `PageState`
+  (title/url/visible-text snapshot) and a new `"observe"` browser action in
+  `src/tools.rs` — the "perceive" primitive of a perceive → plan → act → observe
+  computer-use-agent loop. 1 new unit test. `PageState`/`BrowserTool` re-exported.
+
 ### Fixed
+- **Flaky test (#23)** — `integrations::tests::test_send_sms_requires_recipient`
+  raced against sibling tests mutating the same process-global `TWILIO_*` env vars.
+  Annotated all 10 env-var-mutating integration tests with `serial_test`'s
+  `#[serial]`. Verified 8× full runs (612/612) + single-threaded run.
+- **K8s verification test image-pull** — `test-k8s.sh` built `ravenclaws-verify:${TIMESTAMP}`
+  but the manifest referenced a hardcoded tag, guaranteeing `ImagePullBackOff`; the
+  image was also never loaded into a separate cluster runtime. Added a deterministic
+  `K8S_TEST_IMAGE` tag, `ensure_k8s_test_image()` (podman-first) and
+  `load_image_into_cluster()` (kind/minikube/k3d) helpers.
 - **Code scanning: 107 open alerts remediated** — Resolved every alert in the GitHub
   Security tab (code-scanning):
   - **CVE-2026-48504 / GHSA-w9wp-h8wv-79jx** — Upgraded the OpenTelemetry crate
