@@ -121,16 +121,32 @@ jobs:
             BIN="${BIN}.exe"
           fi
           cp "$BIN" "dist/${{ matrix.output }}"
-          cd dist
-          # Write the binary's hash first, then append the archive's hash.
-          shasum -a 256 "${{ matrix.output }}" > "${{ matrix.output }}.sha256"
-          if [[ "${{ matrix.archive }}" == "zip" ]]; then
-            zip "${{ matrix.output }}.zip" "${{ matrix.output }}"
-            shasum -a 256 "${{ matrix.output }}.zip" >> "${{ matrix.output }}.sha256"
-          else
-            tar czf "${{ matrix.output }}.tar.gz" "${{ matrix.output }}"
-            shasum -a 256 "${{ matrix.output }}.tar.gz" >> "${{ matrix.output }}.sha256"
-          fi
+          # Archive + checksum with Python (100% portable across Linux/macOS/Windows;
+          # avoids shell differences for `zip`/`tar`/`shasum` on Windows).
+          python3 -c '
+          import hashlib, os, sys, tarfile, zipfile
+          dist = "dist"
+          output = sys.argv[1]
+          archive_kind = sys.argv[2]  # "zip" or "tar.gz"
+          binary = os.path.join(dist, output)
+          if archive_kind == "zip":
+              archive = os.path.join(dist, output + ".zip")
+              with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
+                  z.write(binary, output)
+          else:
+              archive = os.path.join(dist, output + ".tar.gz")
+              with tarfile.open(archive, "w:gz") as t:
+                  t.add(binary, arcname=output)
+          def sha256(path):
+              h = hashlib.sha256()
+              with open(path, "rb") as fh:
+                  for chunk in iter(lambda: fh.read(65536), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+          with open(os.path.join(dist, output + ".sha256"), "w") as out:
+              out.write(sha256(binary) + "  " + output + "\n")
+              out.write(sha256(archive) + "  " + os.path.basename(archive) + "\n")
+          ' "${{ matrix.output }}" "${{ matrix.archive }}"
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
