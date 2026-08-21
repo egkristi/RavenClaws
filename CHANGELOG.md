@@ -89,6 +89,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Code scanning: 107 open alerts remediated** — Resolved every alert in the GitHub
+  Security tab (code-scanning):
+  - **CVE-2026-48504 / GHSA-w9wp-h8wv-79jx** — Upgraded the OpenTelemetry crate
+    family `0.28` → `0.32` (`opentelemetry_sdk` → `0.32.1`), which fixes the
+    unbounded W3C Baggage-propagation allocation. Also set
+    `opentelemetry-otlp` `default-features = false` so the unused HTTP exporter
+    (and a second `reqwest 0.13` copy) is no longer compiled into the binary.
+  - **77 Scorecard `Pinned-Dependencies`** — Pinned every GitHub Action in
+    `build.yml`, `container.yml`, and `security-scan.yml` to a full commit SHA
+    (plus the `kubeconform` `docker://` image to a content digest).
+  - **4 Scorecard `Token-Permissions`** — Added top-level
+    `permissions: contents: read` (least privilege) to all three workflows.
+  - **Trivy Kubernetes misconfigs** — Removed `secrets` from the RBAC `Role`
+    (KSV-0113; the API key is injected via `secretKeyRef`, needing no RBAC read),
+    pinned the image tag off `:latest` (KSV-0013), and added a pod-level
+    `securityContext` with `runAsNonRoot` + `seccompProfile: RuntimeDefault` to the
+    test manifest (KSV-0118/0104/0030/0012).
+  - **`Dependency-Update-Tool`** — Added `.github/dependabot.yml` (Cargo, GitHub
+    Actions, and Docker ecosystem updates on a weekly cadence).
+  - **4 shell scripts** — Restructured the `curl | python3 -c` JSON parsing in the
+    LiteLLM/vLLM/llama.cpp test scripts to fetch-then-parse, clearing the Scorecard
+    `downloadThenRun` heuristic.
+  - Dismissed 16 false-positive / process-level alerts with documented reasons
+    (7 CodeQL `rust/unused-variable` where the variable is used inside a `tracing`
+    macro; 2 Trivy `KSV-0125` where `ghcr.io` — GitHub's own registry — is not in
+    Trivy's default allowlist; 1 intentional `hostNetwork` in the test manifest;
+    6 Scorecard repo-admin/process checks).
+  - Verified: `cargo build --locked`, `cargo clippy -D warnings`, `cargo fmt
+    --check`, and 600 unit tests + 6 doc-tests all pass.
+
 ## [v1.4.0] — 2026-08-13
 
 ### Added

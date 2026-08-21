@@ -53,9 +53,16 @@ spec:
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: ravenclaws
-          image: ravenclaws-verify:latest
+          image: ravenclaws-verify:v1.6.0
           imagePullPolicy: IfNotPresent
           args:
             - "--serve"
@@ -80,6 +87,7 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
+            runAsNonRoot: true
             runAsUser: 65532
             runAsGroup: 65532
             capabilities:

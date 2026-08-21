@@ -133,8 +133,8 @@ spec:
           type: RuntimeDefault
       containers:
         - name: ravenclaws
-          image: ghcr.io/egkristi/ravenclaws:latest
-          imagePullPolicy: Always
+          image: ghcr.io/egkristi/ravenclaws:v1.6.0
+          imagePullPolicy: IfNotPresent
           args:
             - "--serve"
             - "--config"
@@ -205,11 +205,11 @@ rules:
   - apiGroups: [""]
     resources: ["configmaps"]
     verbs: ["get", "list"]
-  # Least privilege: the agent may only read its own API-key Secret.
-  - apiGroups: [""]
-    resources: ["secrets"]
-    resourceNames: ["ravenclaws-secrets"]
-    verbs: ["get"]
+  # NOTE: no `secrets` permission is granted. The LiteLLM API key is injected
+  # into the pod via `secretKeyRef` (env var), which is performed by the
+  # kubelet/API server on the pod's behalf and requires NO RBAC read access.
+  # Granting `secrets` access here would trip KSV-0113 (namespace secret
+  # escalation risk) for zero benefit.
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1

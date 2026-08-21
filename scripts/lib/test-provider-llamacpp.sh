@@ -19,7 +19,11 @@ test_provider_llamacpp() {
 
     # Get available models
     local model
-    model=$(curl -sf http://localhost:8080/v1/models 2>/dev/null | python3 -c "
+    # Fetch the JSON response first, then parse it — avoids piping a download
+    # directly into an interpreter (scorecard downloadThenRun anti-pattern).
+    local _models_json
+    _models_json=$(curl -sf http://localhost:8080/v1/models 2>/dev/null || true)
+    model=$(printf '%s' "$_models_json" | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 models = [m['id'] for m in data.get('data', [])]

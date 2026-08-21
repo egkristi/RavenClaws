@@ -5,6 +5,34 @@ Items are ordered by severity/impact.
 
 ---
 
+## ✅ Code Scanning — 107 open alerts remediated (2026-08-21)
+
+GitHub's Security tab showed 107 open code-scanning alerts. All are now resolved
+(either fixed in source, or dismissed with a documented reason). See
+`CHANGELOG.md` `[Unreleased]` for the full breakdown. Summary:
+
+- **CVE-2026-48504** (`opentelemetry_sdk` unbounded Baggage allocation) — fixed by
+  upgrading the OpenTelemetry family `0.28` → `0.32` (`opentelemetry_sdk` 0.32.1),
+  with `opentelemetry-otlp` `default-features = false` to avoid pulling a second
+  `reqwest 0.13` HTTP stack.
+- **77 Scorecard Pinned-Dependencies** — every action in the three workflows pinned
+  to a full commit SHA; `kubeconform` `docker://` image pinned to a content digest.
+- **4 Scorecard Token-Permissions** — top-level `permissions: contents: read`
+  added to all three workflows.
+- **Trivy Kubernetes** — `secrets` removed from RBAC `Role` (KSV-0113); image tag
+  pinned off `:latest` (KSV-0013); pod `securityContext` (runAsNonRoot + seccomp)
+  added to the test manifest (KSV-0118/0104/0030/0012).
+- **Dependency-Update-Tool** — `.github/dependabot.yml` added (Cargo + Actions +
+  Docker).
+- **16 dismissed** false-positives/process alerts (documented reasons).
+
+Verified: `cargo build --locked`, `cargo clippy -D warnings`, `cargo fmt --check`,
+and 600 unit tests + 6 doc-tests pass.
+
+- **Severity:** 🟢 Resolved
+
+---
+
 ## 🔴 Critical (2026-08-14 security & build audit)
 
 ### 1. ✅ `src/patterns.rs` does not compile — FIXED (2026-08-14)
@@ -70,6 +98,13 @@ The `ravenclaws` Role granted `get,list` on `secrets` without `resourceNames`.
 Scoped it to `resourceNames: ["ravenclaws-secrets"]` with `get` only, and kept
 `configmaps` as `get,list` (needed for config hot-reload). Verified live via
 `kubectl apply` (dry-run + real) in the `ravenclaws` namespace.
+
+**Follow-up (2026-08-21):** The `secrets` rule was **removed entirely** (both
+`k8s/deployment.yaml` and `charts/ravenclaws/templates/rbac.yaml`). The LiteLLM
+API key is injected via `secretKeyRef` (env var) — performed by the kubelet/API
+server on the pod's behalf, requiring **no RBAC read access** — and the agent
+code never reads Secrets through the Kubernetes API. This also clears Trivy
+`KSV-0113` (namespace secret-escalation risk) with zero functional loss.
 
 - **Severity:** 🟡 Medium → ✅ Resolved
 

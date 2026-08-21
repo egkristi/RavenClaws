@@ -8,8 +8,11 @@ metadata:
     {{- include "ravenclaws.labels" . | nindent 4 }}
 rules:
   - apiGroups: [""]
-    resources: ["configmaps", "secrets"]
+    resources: ["configmaps"]
     verbs: ["get", "list"]
+  # NOTE: no `secrets` permission is granted. API keys are injected via
+  # `secretKeyRef` (env var) which needs no RBAC read access, and granting
+  # `secrets` here would trip KSV-0113 (namespace secret escalation risk).
   {{- with .Values.rbac.extraRules }}
     {{- toYaml . | nindent 2 }}
   {{- end }}

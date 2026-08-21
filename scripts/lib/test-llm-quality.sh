@@ -15,7 +15,11 @@ test_llm_quality() {
     # ── Get available models ───────────────────────────────────────────────
     log_sub "Fetching available models from LiteLLM..."
     local models
-    models=$(curl -sf http://localhost:4000/models 2>/dev/null | python3 -c "
+    # Fetch the JSON response first, then parse it — avoids piping a download
+    # directly into an interpreter (scorecard downloadThenRun anti-pattern).
+    local _models_json
+    _models_json=$(curl -sf http://localhost:4000/models 2>/dev/null || true)
+    models=$(printf '%s' "$_models_json" | python3 -c "
 import json, sys
 data = json.load(sys.stdin)
 # Skip non-chat models

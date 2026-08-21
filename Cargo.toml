@@ -70,13 +70,14 @@ config = { version = "0.15", default-features = false, features = ["toml"] }
 # Logging / Tracing
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
-tracing-opentelemetry = "0.29"
+tracing-opentelemetry = "0.33"
 
 # OpenTelemetry (opt-in, for distributed tracing)
-opentelemetry = { version = "0.28", features = ["trace", "metrics"] }
-opentelemetry_sdk = { version = "0.28", features = ["trace", "rt-tokio"] }
-opentelemetry-otlp = { version = "0.28", features = ["trace", "grpc-tonic"], optional = true }
-opentelemetry-stdout = { version = "0.28", features = ["trace"], optional = true }
+# v0.32.1 fixes CVE-2026-48504 (unbounded allocation in W3C Baggage propagation).
+opentelemetry = { version = "0.32", features = ["trace", "metrics"] }
+opentelemetry_sdk = { version = "0.32", features = ["trace", "rt-tokio"] }
+opentelemetry-otlp = { version = "0.32", default-features = false, features = ["trace", "grpc-tonic"], optional = true }
+opentelemetry-stdout = { version = "0.32", features = ["trace"], optional = true }
 
 # Error handling
 thiserror = "2.0"

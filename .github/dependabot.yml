@@ -1,0 +1,56 @@
+# Dependabot configuration — automated dependency updates for RavenClaws.
+#
+# Enables the OpenSSF Scorecard "Dependency-Update-Tool" check and keeps the
+# dependency tree current (Cargo, GitHub Actions, and container base images).
+#
+# Docs: https://docs.github.com/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # ── Rust (crates.io) ─────────────────────────────────────────
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    # Group patch/minor updates to reduce PR noise; keep the default small
+    # dependency tree lean (RavenClaws "Small" pillar).
+    groups:
+      cargo-minor-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 10
+    # Respect the project's MSRV and lockfile.
+    versioning-strategy: "lockfile-only"
+
+  # ── GitHub Actions ───────────────────────────────────────────
+  # Keeps the pinned action SHAs up to date (works with the Scorecard
+  # "Pinned-Dependencies" check by updating to the latest commit of the
+  # major/minor tag declared inline).
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 10
+
+  # ── Docker (base images) ─────────────────────────────────────
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "chore(deps)"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 5
