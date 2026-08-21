@@ -99,7 +99,7 @@ RUN TARGET=$(cat /tmp/rust_target.txt) && \
     upx --best --lzma /app/ravenclaws
 
 # Stage 2: Runtime (slim Debian-based — enables MCP client, SIGHUP, debugging)
-FROM debian:stable-slim@sha256:ee12ffb55625b99d62837a72f037d9b2f18fd0c787a89c2b9a4f09666c48776c
+FROM debian:stable-slim@sha256:1710bde34461551a19a47c787885ec9ad7058d9a5bead2affb8d088fa2f8502b
 
 WORKDIR /app
 
