@@ -99,7 +99,7 @@ RUN TARGET=$(cat /tmp/rust_target.txt) && \
     upx --best --lzma /app/ravenclaws
 
 # Stage 2: Runtime (minimal)
-FROM gcr.io/distroless/cc-debian12:nonroot@sha256:b0ae8e989418b458e0f25489bc3be523718938a2b70864cc0f6a00af1ddbd985
+FROM gcr.io/distroless/cc-debian12:nonroot@sha256:adcd20c7b4c988b73cbfbddb26d2eee574571e6d7c9ffea29b3821e0690efb77
 
 WORKDIR /app
 
